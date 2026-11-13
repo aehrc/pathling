@@ -113,6 +113,17 @@ public class DateCollection extends Collection
     return DateCollection.build(new DefaultRepresentation(SystemDateTime.fromLiteral(dateString)));
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>A date's System value keeps the range annotations it carries.
+   */
+  @Override
+  @Nonnull
+  protected Column systemValueOf(@Nonnull final Column primitive) {
+    return SystemDateTime.withoutMetadata(primitive);
+  }
+
   @Nonnull
   @Override
   public StringCollection asStringPath() {
@@ -127,7 +138,9 @@ public class DateCollection extends Collection
   @Nonnull
   @Override
   public ColumnRepresentation getOutputColumn() {
-    return getColumn().transform(SystemDateTime::text);
+    // A date held with its id and extensions is given as its System value, without the elements
+    // that have no value.
+    return withoutPrimitiveMetadata().getColumn().transform(SystemDateTime::text);
   }
 
   @Nonnull

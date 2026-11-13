@@ -67,8 +67,9 @@ import org.springframework.beans.factory.annotation.Autowired;
  * convert ({@code AnnotatedTypesParityTest}), the comparison key of a complex value ({@code
  * ComparisonKeyTest}) and a date's output ({@code DateDeduplicationTest}).
  *
- * <p>Not covered: the examples with the primitive-extensions switch on, which is ticket 52, and the
- * System.Coding of §4.4, whose shape without {@code id} (decision 150) the engine does not build.
+ * <p>Not covered here: the examples with the primitive-extensions switch on, which {@code
+ * PrimitiveMetadataTest} shows (ticket 52), and the System.Coding of §4.4, whose shape without
+ * {@code id} (decision 150) the engine does not build.
  */
 @SpringBootUnitTest
 @TestInstance(Lifecycle.PER_CLASS)

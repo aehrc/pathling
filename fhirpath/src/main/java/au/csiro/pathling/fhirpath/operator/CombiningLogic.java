@@ -24,19 +24,26 @@ import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DateCollection;
 import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
+import au.csiro.pathling.fhirpath.collection.DateTimeComparable;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.QuantityCollection;
+import au.csiro.pathling.fhirpath.column.FlatStructure;
 import au.csiro.pathling.fhirpath.column.StoredDecimal;
+import au.csiro.pathling.fhirpath.column.StoredPrimitive;
 import au.csiro.pathling.fhirpath.column.SystemDateTime;
 import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
 import au.csiro.pathling.fhirpath.comparison.DefaultComparator;
+import au.csiro.pathling.fhirpath.definition.MetadataElementDefinition;
+import au.csiro.pathling.fhirpath.definition.PrimitiveMetadata;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
+import au.csiro.pathling.schema.LayoutFields;
 import au.csiro.pathling.schema.PrimitiveTypes;
 import au.csiro.pathling.sql.SqlFunctions;
 import au.csiro.pathling.utilities.CanonicalStructure;
 import jakarta.annotation.Nonnull;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -70,6 +77,20 @@ import org.apache.spark.sql.Column;
  */
 @UtilityClass
 public class CombiningLogic {
+
+  /**
+   * The canonical order of the fields of a primitive held with its id and extensions: its value,
+   * its id and extensions, and the annotations of any type.
+   */
+  @Nonnull
+  private static final List<String> PRIMITIVE_FIELDS =
+      List.of(
+          StoredPrimitive.VALUE,
+          PrimitiveMetadata.ID,
+          PrimitiveMetadata.EXTENSION,
+          LayoutFields.START_ANNOTATION,
+          LayoutFields.END_ANNOTATION,
+          LayoutFields.NUMERIC_ANNOTATION);
 
   /**
    * Unifies operands that must share a type: promotes their FHIR types to a common type where one
@@ -176,7 +197,15 @@ public class CombiningLogic {
   }
 
   @Nonnull
-  private static List<Collection> unifyShapes(@Nonnull final List<Collection> operands) {
+  private static List<Collection> unifyShapes(@Nonnull final List<Collection> given) {
+    // A primitive held with its id and extensions is compared and computed with as the System value
+    // it converts to, which has neither (decisions 142 and 151). A date is the exception: its
+    // comparator reads its text and bounds alone, and converting it first would keep Spark from
+    // pushing a filter on a stored bound down to the scan.
+    final List<Collection> operands =
+        given.stream()
+            .map(operand -> keepsItsForm(operand) ? operand : operand.withoutPrimitiveMetadata())
+            .toList();
     if (operands.size() < 2 || !typeEquivalent(operands)) {
       return operands;
     }
@@ -187,8 +216,17 @@ public class CombiningLogic {
     // quantity: its comparison reads a stored quantity's canonical form from its stored annotation
     // or else its stored text, which converting it first would lose (decision 150).
     return operands.stream()
-        .map(operand -> operand instanceof QuantityCollection ? operand : operand.toEngineForm())
+        .map(
+            operand ->
+                operand instanceof QuantityCollection || keepsItsForm(operand)
+                    ? operand
+                    : operand.toEngineForm())
         .toList();
+  }
+
+  /** Whether an operand is a date held with its id and extensions, which is compared as it is. */
+  private static boolean keepsItsForm(@Nonnull final Collection operand) {
+    return operand instanceof DateTimeComparable && operand.holdsPrimitiveMetadata();
   }
 
   /**
@@ -244,6 +282,12 @@ public class CombiningLogic {
   @Nonnull
   private static Optional<CanonicalStructure> mergeStructureOf(
       @Nonnull final List<Collection> operands) {
+    if (operands.stream().allMatch(Collection::holdsPrimitiveMetadata)) {
+      // FHIR primitives held with their ids and extensions, which are combined as they are only
+      // where every operand is one, union their ids and extensions and keep the annotations every
+      // operand has (decision 142, D9).
+      return primitiveStructureOf(operands.get(0));
+    }
     if (operands.stream()
         .allMatch(
             operand ->
@@ -265,6 +309,27 @@ public class CombiningLogic {
     return operands.stream().allMatch(Collection::holdsStoredStructures)
         ? structureOfOperands(operands)
         : Optional.empty();
+  }
+
+  /**
+   * Returns the canonical structure of a primitive held with its id and extensions: its value, its
+   * id and extensions, ordered as the Extension type orders them, then any of its annotations.
+   */
+  @Nonnull
+  private static Optional<CanonicalStructure> primitiveStructureOf(
+      @Nonnull final Collection primitive) {
+    return primitive
+        .getDefinition()
+        .filter(MetadataElementDefinition.class::isInstance)
+        .map(MetadataElementDefinition.class::cast)
+        .map(
+            definition ->
+                FlatStructure.of(
+                    PRIMITIVE_FIELDS,
+                    Map.of(
+                        PrimitiveMetadata.EXTENSION,
+                        DefinitionCanonicalStructure.of(
+                            definition.getExtensionDefinition(), false))));
   }
 
   /**

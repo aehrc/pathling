@@ -222,15 +222,37 @@ public final class ResourceRepresentation extends ColumnRepresentation {
       @Nonnull final DataType fallback) {
     if (DefaultRepresentation.isDecimal(fhirType) || DefaultRepresentation.isDate(fhirType)) {
       // A decimal or a date is read with the annotations in its metadata group, a column beside it.
-      return existing(
-          DefaultRepresentation.storedValues(
-              ColumnFunctions.columnOrNull(fieldName, fallback),
-              ColumnFunctions.columnOrNull(
-                  LayoutFields.metadataGroupName(fieldName), DataTypes.NullType),
-              fhirType,
-              fallback instanceof ArrayType));
+      return traverseStored(fieldName, fhirType, fallback, false);
     }
     return DefaultRepresentation.decodeField(getField(fieldName, fallback).removeNulls(), fhirType);
+  }
+
+  @Override
+  @Nonnull
+  public ColumnRepresentation traverseWithMetadata(
+      @Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final DataType fallback) {
+    // Every primitive is read with its id, its extensions and its annotations, from its metadata
+    // group, a column beside it.
+    return traverseStored(fieldName, fhirType, fallback, true);
+  }
+
+  @Nonnull
+  private ColumnRepresentation traverseStored(
+      @Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final DataType fallback,
+      final boolean withMetadata) {
+    return existing(
+        DefaultRepresentation.storedValues(
+            ColumnFunctions.columnOrNull(fieldName, fallback),
+            ColumnFunctions.columnOrNull(
+                LayoutFields.metadataGroupName(fieldName), DataTypes.NullType),
+            fhirType,
+            fallback instanceof ArrayType,
+            withMetadata,
+            false));
   }
 
   /**

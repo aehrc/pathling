@@ -217,9 +217,12 @@ public class DecimalCollection extends Collection
   @Override
   @Nonnull
   public DecimalCollection toEngineForm() {
-    return isStored()
-        ? DecimalCollection.build(getColumn().transform(StoredDecimal::number))
-        : this;
+    if (!isStored()) {
+      return this;
+    }
+    final ColumnRepresentation numbers = getColumn().transform(StoredDecimal::number);
+    // A decimal held with its id and extensions that has no value has no number, and is left out.
+    return DecimalCollection.build(holdsPrimitiveMetadata() ? numbers.removeNulls() : numbers);
   }
 
   @Override
@@ -332,6 +335,11 @@ public class DecimalCollection extends Collection
   @Override
   @Nonnull
   public ColumnComparator getComparator() {
-    return isStored() ? StoredDecimalComparator.getInstance() : DecimalComparator.getInstance();
+    if (!isStored()) {
+      return DecimalComparator.getInstance();
+    }
+    return holdsPrimitiveMetadata()
+        ? StoredDecimalComparator.withMetadata()
+        : StoredDecimalComparator.getInstance();
   }
 }

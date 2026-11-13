@@ -95,6 +95,8 @@ public class ReferenceCollection extends Collection {
     // reference elements.
     return filter(keyFilter(pattern))
         .traverse(FhirFieldNames.REFERENCE)
+        // A reference held with its id and extensions is keyed by its value.
+        .map(Collection::toEngineForm)
         // Strip the version from versioned references so they join to resource keys.
         .map(this::stripVersionFromKey)
         // If the reference column is not present, return an empty collection.

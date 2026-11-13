@@ -139,6 +139,17 @@ public class DateTimeCollection extends Collection
   }
 
   /**
+   * {@inheritDoc}
+   *
+   * <p>A date's System value keeps the range annotations it carries.
+   */
+  @Override
+  @Nonnull
+  protected Column systemValueOf(@Nonnull final Column primitive) {
+    return SystemDateTime.withoutMetadata(primitive);
+  }
+
+  /**
    * Returns the value as a string, its text. An instant needs no formatting, because it is held as
    * its text (decision 81), like every other date and time.
    *
@@ -158,7 +169,9 @@ public class DateTimeCollection extends Collection
   @Nonnull
   @Override
   public ColumnRepresentation getOutputColumn() {
-    return getColumn().transform(SystemDateTime::text);
+    // A date held with its id and extensions is given as its System value, without the elements
+    // that have no value.
+    return withoutPrimitiveMetadata().getColumn().transform(SystemDateTime::text);
   }
 
   @Nonnull

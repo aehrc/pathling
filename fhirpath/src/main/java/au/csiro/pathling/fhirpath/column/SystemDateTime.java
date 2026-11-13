@@ -29,8 +29,8 @@ import au.csiro.pathling.schema.date.FhirDateTime;
 import au.csiro.pathling.utilities.CanonicalStructure;
 import jakarta.annotation.Nonnull;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 
@@ -107,37 +107,53 @@ public final class SystemDateTime {
   }
 
   /**
-   * Returns the date of a stored text and its metadata group: its text and the range annotations
-   * the group's schema carries. Nothing is computed.
+   * Returns the date of a stored text and its metadata group, or the dates of a repeating one
+   * paired by position, each with its text, the named metadata fields of its group, such as a
+   * primitive's {@code id} and {@code extension}, and the range annotations the group's schema
+   * carries. Nothing is computed, and nothing is left out: a date without a text is a structure
+   * without a value.
    *
-   * @param text the stored text of the date
-   * @param group the metadata group beside it
-   * @return the date, null where the text is
+   * @param texts the stored text of the date, or the texts where it repeats
+   * @param groups the metadata group beside it, or the groups where it repeats
+   * @param metadata the names of the metadata fields to read from the groups, where they have them
+   * @param repeating whether the date repeats
+   * @return the dates, paired with their groups
    */
   @Nonnull
-  public static Column fromStored(@Nonnull final Column text, @Nonnull final Column group) {
-    return when(
-        text.isNotNull(),
-        ColumnFunctions.resolveOrNone(group, ANNOTATIONS, List.of(VALUE), List.of(text), false));
+  public static Column paired(
+      @Nonnull final Column texts,
+      @Nonnull final Column groups,
+      @Nonnull final List<String> metadata,
+      final boolean repeating) {
+    return ColumnFunctions.resolveOrNone(
+        groups, fieldsOf(metadata), List.of(VALUE), List.of(texts), repeating);
+  }
+
+  /** The names of the fields read from a metadata group: the metadata fields, then the bounds. */
+  @Nonnull
+  private static List<String> fieldsOf(@Nonnull final List<String> metadata) {
+    return Stream.concat(metadata.stream(), ANNOTATIONS.stream()).toList();
   }
 
   /**
-   * Returns the dates of a repeating stored date and its metadata groups, paired by position, each
-   * with its text and the range annotations the groups' schema carries, with the dates that have no
-   * text left out. Nothing is computed.
+   * Returns the System date of a date held with its id and extensions: its text and the range
+   * annotations it carries, without its {@code id} and {@code extension} (decision 142, D8). A date
+   * without a text has no System value. Nothing is computed.
    *
-   * <p>The groups are paired with the texts by position, so a missing array of groups leaves the
-   * dates without their stored bounds rather than shifting the bounds of other dates.
-   *
-   * @param texts the stored texts of the date
-   * @param groups the metadata groups beside them
-   * @return the dates present, null where the texts are
+   * @param date the date, held with its id and extensions
+   * @return the System date, null where the date or its text is
    */
   @Nonnull
-  public static Column fromStoredArray(@Nonnull final Column texts, @Nonnull final Column groups) {
-    return functions.filter(
-        ColumnFunctions.resolveOrNone(groups, ANNOTATIONS, List.of(VALUE), List.of(texts), true),
-        date -> date.getField(VALUE).isNotNull());
+  public static Column withoutMetadata(@Nonnull final Column date) {
+    // The date is bound once, as the guard and the fields both read it, and a traced date must be
+    // evaluated once (#2594).
+    return let(
+        date,
+        d ->
+            when(
+                text(d).isNotNull(),
+                ColumnFunctions.resolveOrNone(
+                    d, ANNOTATIONS, List.of(VALUE), List.of(text(d)), false)));
   }
 
   /**

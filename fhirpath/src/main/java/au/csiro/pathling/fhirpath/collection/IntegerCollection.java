@@ -27,7 +27,10 @@ import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
+import au.csiro.pathling.fhirpath.comparison.DefaultComparator;
+import au.csiro.pathling.fhirpath.comparison.StoredPrimitiveComparator;
 import com.google.common.collect.ImmutableSet;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
@@ -183,6 +186,19 @@ public class IntegerCollection extends Collection
     return COMPARABLE_TYPES.contains(path.getClass());
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>A primitive held with its id and extensions is compared by its value alone (decision 151).
+   */
+  @Override
+  @Nonnull
+  public ColumnComparator getComparator() {
+    return holdsPrimitiveMetadata()
+        ? StoredPrimitiveComparator.of(DefaultComparator.getInstance())
+        : DefaultComparator.getInstance();
+  }
+
   @Nonnull
   @Override
   public Function<Numeric, Collection> getMathOperation(@Nonnull final MathOperation operation) {
@@ -192,7 +208,8 @@ public class IntegerCollection extends Collection
   @Nonnull
   @Override
   public Optional<Column> getNumericValue() {
-    return Optional.ofNullable(this.getColumn().elementCast(DataTypes.LongType).getValue());
+    return Optional.ofNullable(
+        toEngineForm().getColumn().elementCast(DataTypes.LongType).getValue());
   }
 
   /**
@@ -234,7 +251,7 @@ public class IntegerCollection extends Collection
   @Override
   @Nonnull
   public Collection negate() {
-    return Numeric.defaultNegate(this);
+    return Numeric.defaultNegate(toEngineForm());
   }
 
   @Override
@@ -251,7 +268,7 @@ public class IntegerCollection extends Collection
     return other
         .getType()
         .filter(FhirPathType.QUANTITY::equals)
-        .map(t -> (Collection) QuantityCollection.fromNumeric(this.getColumn()))
+        .map(t -> (Collection) QuantityCollection.fromNumeric(toEngineForm().getColumn()))
         .orElseGet(() -> super.castAs(other));
   }
 }

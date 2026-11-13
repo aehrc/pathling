@@ -205,7 +205,9 @@ public class Projection {
             throw new IllegalArgumentException("Filter must be a boolean expression");
           }
           return whereResult.stream()
-              .map(cr -> cr.collection().asSingular().getColumn().getValue())
+              // A FHIR boolean is taken as its System value, which a primitive held with its id
+              // and extensions converts to.
+              .map(cr -> cr.collection().asBooleanSingleton().getColumn().getValue())
               .reduce(Column::and);
         });
   }

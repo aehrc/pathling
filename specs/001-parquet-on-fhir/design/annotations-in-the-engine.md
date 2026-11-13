@@ -167,7 +167,7 @@ out, not filled with null. The value is the stored value: for a decimal, its tex
 `__numeric` where the schema has it and parsing the text otherwise, and a decimal whose
 number does not, such as `1.0E40`, is null: empty where it is singular, and a null item
 under a repeating parent or in a repeating field, as decoding its text alone gave before
-the element held its text (`StoredDecimal.fromStored`, `DefaultRepresentation.traverseStored`).
+the element held its text (`StoredDecimal.decodable`, `DefaultRepresentation.storedValues`).
 This is a test, not an annotation: nothing is added to the element. A quantity whose
 `value` does not decode has no System form either (§4.2).
 
@@ -192,7 +192,7 @@ raw `_x` read 182.4 MB against 17.6 MB for the named fields
 | Switch | The element carries | `x.extension(…)`, `x.id` on a primitive |
 |---|---|---|
 | Off (default) | `value` and annotations | Empty, as if `_x.id` and `_x.extension` were absent from the JSON; no error |
-| On | `value`, `id`, `extension` and annotations | As stored. Every such element reads its whole `_x`; the cost falls only on users who opt in |
+| On | `value`, `id`, `extension` and annotations | As stored. `id` and `extension` are read from `_x` by name, never the whole group, wherever the element is read, because they decide whether a position without a value is an element. The cost falls only on users who opt in (ticket 52) |
 
 Annotations are never switched off in the engine; FR-021's switch governs only what ingest
 stores (decision 135). The switch is configuration, not an analysis of
@@ -210,6 +210,17 @@ elements   : [ {value:"Anne", id:null, extension:null},
 
 With the switch off, a string has no annotations to carry, so its element is the bare
 value, as today.
+
+With the switch on, a position with no value but with an id or extensions is an element without a
+value, `{value: null, id: …, extension: […]}`, as FHIRPath takes it, and a position with neither is
+no element (owner, 2026-11-13, ticket 52). Its System value is empty. Whether a singular primitive
+is an element therefore depends on its `id` and `extension`, which are read wherever it is read.
+The test `_x.extension IS NOT NULL` reads the whole Extension struct, which on 1M Patients with
+extension-heavy `_birthDate` is about 182.4 MB against 17.6 MB for a test through one subfield,
+such as `extension.url`. The owner accepted the full read (2026-11-13); the subfield test is a
+candidate of "Profiling and optimising query performance" (ticket 26, #2889).
+With the switch off, a position without a value is no element, except that a repeating primitive
+under a repeating parent keeps it as a null item, as `main` does.
 
 This keeps one column per element, so `where`, `forEach` and `repeat` work unchanged:
 
@@ -787,7 +798,18 @@ If A is markedly slower than B or C on these, those options are reconsidered.
   would change where views generate, but it is deferred (below).
 - **Code, switch (D14, decision 141):** a configuration option, off by default. Traversal
   puts `id` and `extension` into the element only when it is on. With it off, `x.extension(…)`
-  and `x.id` on a primitive are empty, with no error.
+  and `x.id` on a primitive are empty, with no error. Built in ticket 52 as
+  `FhirpathConfiguration.readPrimitiveMetadata`, set for views and `PathlingContext` by
+  `PathlingContext.Builder.readPrimitiveMetadata`, and not on `QueryConfiguration`, so that the
+  server cannot set it (owner, 2026-11-13). With it on, the engine resolves every resource under definitions that wrap
+  each primitive's (`PrimitiveMetadata`), which give a primitive the children `id` and
+  `extension` and travel with a collection wherever its definition does; traversal pairs every
+  primitive with its group by position (`StoredPrimitive`, `SystemDateTime`, `StoredDecimal`),
+  and the one conversion step, `Collection.toEngineForm()`, drops `id` and `extension` (D8).
+  Comparison operands, typed function arguments, `castAs`, Boolean and string coercion and
+  output all take that step, except a date compared, whose comparator reads only its text and
+  bounds, so that a filter on a stored bound is still pushed down; a merge of FHIR primitives
+  unions the two fields by name (D9), and compares and deduplicates by value (decision 151).
 - **Code, emission shapes (L2, decision 143):** compute first, then generate (deferred,
   below); existence
   tests (`exists()`, `count()`, multi-column `where`) are rewritten into the checked

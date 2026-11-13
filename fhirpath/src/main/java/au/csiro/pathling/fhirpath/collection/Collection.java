@@ -34,8 +34,10 @@ import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.mixed.MixedCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.column.StoredPrimitive;
 import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
 import au.csiro.pathling.fhirpath.comparison.Equatable;
+import au.csiro.pathling.fhirpath.definition.PrimitiveMetadata;
 import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
@@ -253,7 +255,10 @@ public class Collection implements Equatable {
    * @return A new {@link StringCollection} representing the String representation of the input
    */
   protected static StringCollection defaultAsStringPath(@Nonnull final Collection collection) {
-    return collection.asSingular().map(ColumnRepresentation::asString, StringCollection::build);
+    return collection
+        .withoutPrimitiveMetadata()
+        .asSingular()
+        .map(ColumnRepresentation::asString, StringCollection::build);
   }
 
   /**
@@ -714,7 +719,8 @@ public class Collection implements Equatable {
    */
   @Nonnull
   public ColumnRepresentation getOutputColumn() {
-    return getColumn();
+    // A primitive held with its id and extensions is given as its value alone (decision 142, D10).
+    return holdsPrimitiveMetadata() ? toEngineForm().getOutputColumn() : getColumn();
   }
 
   /**
@@ -903,7 +909,44 @@ public class Collection implements Equatable {
    * @return true where the values are stored FHIR structures
    */
   public boolean holdsStoredStructures() {
-    return getFhirType().filter(PrimitiveTypes::isStructure).isPresent();
+    return getFhirType().filter(PrimitiveTypes::isStructure).isPresent()
+        || holdsPrimitiveMetadata();
+  }
+
+  /**
+   * Returns whether the values of this collection are FHIR primitives held with their id and
+   * extensions, as a structure of their value, their {@code id} and {@code extension}, and their
+   * annotations (decisions 141 and 152). They are where the engine reads a primitive's id and
+   * extensions, and the collection was reached by traversal.
+   *
+   * @return true where the values are primitives held with their id and extensions
+   */
+  public boolean holdsPrimitiveMetadata() {
+    return PrimitiveMetadata.carriedBy(getDefinition());
+  }
+
+  /**
+   * Returns this collection as System values where it holds primitives with their id and extensions
+   * (see {@link #holdsPrimitiveMetadata()}), and as it is otherwise.
+   *
+   * @return this collection, without primitive ids and extensions
+   */
+  @Nonnull
+  public Collection withoutPrimitiveMetadata() {
+    return holdsPrimitiveMetadata() ? toEngineForm() : this;
+  }
+
+  /**
+   * Returns the System value of one primitive held with its id and extensions: by default its
+   * value, as the System types without annotations hold it. A type whose System value carries
+   * annotations keeps those the primitive has.
+   *
+   * @param primitive the primitive, held with its id and extensions
+   * @return its System value
+   */
+  @Nonnull
+  protected Column systemValueOf(@Nonnull final Column primitive) {
+    return StoredPrimitive.value(primitive);
   }
 
   /**
@@ -914,15 +957,24 @@ public class Collection implements Equatable {
    * <p>A quantity reached by traversal, of any of the quantity types, is held in the stored shape,
    * so as to keep the extensions that a System quantity cannot carry, and is taken here as a System
    * quantity (FR-059, decision 150). A stored decimal converts in the same way (see {@link
-   * DecimalCollection#toEngineForm()}). Every other collection is returned as it is.
+   * DecimalCollection#toEngineForm()}), and so does a primitive held with its id and extensions
+   * (see {@link #holdsPrimitiveMetadata()}). Every other collection is returned as it is.
    *
    * @return the collection, in the form the engine computes with
    */
   @Nonnull
   public Collection toEngineForm() {
-    return QuantityCollection.holdsStoredQuantities(this)
-        ? QuantityCollection.build(getColumn().transform(QuantityEncoding::fromStored))
-        : this;
+    if (QuantityCollection.holdsStoredQuantities(this)) {
+      return QuantityCollection.build(getColumn().transform(QuantityEncoding::fromStored));
+    } else if (holdsPrimitiveMetadata()) {
+      // A primitive held with its id and extensions converts to its System value, which has
+      // neither, and keeps the annotations it has (decision 142, D8). An element without a value
+      // has no System value, so it is left out. The result is no longer a FHIR value, so it has no
+      // definition.
+      return Collection.build(
+          getColumn().transform(this::systemValueOf).removeNulls(), getFhirType().orElseThrow());
+    }
+    return this;
   }
 
   /**
@@ -950,7 +1002,11 @@ public class Collection implements Equatable {
                   // the type of a stored value is a computed one.
                   other
                       .toEngineForm()
-                      .map(t -> this.getColumn().elementTryCast(castType.getSqlDataType())))
+                      .map(
+                          t ->
+                              this.withoutPrimitiveMetadata()
+                                  .getColumn()
+                                  .elementTryCast(castType.getSqlDataType())))
           .orElse(this);
     } else {
       throw new IllegalArgumentException("Cannot cast " + this + " to " + other);
@@ -975,7 +1031,9 @@ public class Collection implements Equatable {
    */
   @Nonnull
   public BooleanCollection asBooleanSingleton() {
-    return asSingular().map(ColumnRepresentation::toBoolean, BooleanCollection::build);
+    return withoutPrimitiveMetadata()
+        .asSingular()
+        .map(ColumnRepresentation::toBoolean, BooleanCollection::build);
   }
 
   /**

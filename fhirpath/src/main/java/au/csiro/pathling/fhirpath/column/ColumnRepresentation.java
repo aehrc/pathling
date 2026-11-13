@@ -32,6 +32,7 @@ import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.definition.ElementDefinition;
 import au.csiro.pathling.encoders.ColumnFunctions;
+import au.csiro.pathling.fhirpath.definition.PrimitiveMetadata;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
@@ -217,8 +218,35 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation traverse(@Nonnull final ElementDefinition definition) {
+    if (PrimitiveMetadata.carriedBy(Optional.of(definition))) {
+      return traverseWithMetadata(
+          definition.getElementName(), definition.getFhirType(), AbsentElementTypes.of(definition));
+    }
     return traverse(
         definition.getElementName(), definition.getFhirType(), AbsentElementTypes.of(definition));
+  }
+
+  /**
+   * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a
+   * primitive that is read with its id and extensions (decision 141, D14): a structure of its
+   * value, its {@code id} and {@code extension}, and its annotations, where the schema carries them
+   * (decision 152). Where the input schema does not carry the field, the result is as {@link
+   * #traverse(String, Optional, DataType)} gives it.
+   *
+   * <p>By default the primitive is traversed as it is without them, which suits a representation
+   * that holds no stored data.
+   *
+   * @param fieldName The name of the field to traverse to
+   * @param fhirType The FHIR type of the field
+   * @param fallback The type of the null that stands for the field where it is absent
+   * @return A new {@link ColumnRepresentation} representing the result of the traversal
+   */
+  @Nonnull
+  public ColumnRepresentation traverseWithMetadata(
+      @Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final DataType fallback) {
+    return traverse(fieldName, fhirType, fallback);
   }
 
   /**

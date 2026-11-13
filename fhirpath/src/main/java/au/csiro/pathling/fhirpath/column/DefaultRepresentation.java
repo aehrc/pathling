@@ -19,16 +19,20 @@ package au.csiro.pathling.fhirpath.column;
 
 import static au.csiro.pathling.sql.SqlFunctions.let;
 import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.encoders.ValueFunctions;
+import au.csiro.pathling.fhirpath.definition.PrimitiveMetadata;
 import au.csiro.pathling.schema.LayoutFields;
 import au.csiro.pathling.schema.annotation.AnnotationKind;
 import au.csiro.pathling.schema.annotation.kinds.DecimalNumericKind;
 import au.csiro.pathling.utilities.SystemDecimal;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -148,7 +152,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final DataType fallback) {
     if (isDecimal(fhirType) || isDate(fhirType)) {
-      return traverseStored(fieldName, fhirType, fallback);
+      return traverseStored(fieldName, fhirType, fallback, false);
     }
     final Column field =
         ValueFunctions.ifArray(
@@ -161,8 +165,23 @@ public class DefaultRepresentation extends ColumnRepresentation {
   }
 
   /**
-   * Traverses to a decimal or a date, read as the engine holds it from the values and the metadata
-   * groups beside them, as {@link #storedValues} reads them.
+   * {@inheritDoc}
+   *
+   * <p>Every primitive is read as {@link #storedValues} reads it, paired with its metadata group.
+   */
+  @Override
+  @Nonnull
+  public ColumnRepresentation traverseWithMetadata(
+      @Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final DataType fallback) {
+    return traverseStored(fieldName, fhirType, fallback, true);
+  }
+
+  /**
+   * Traverses to a primitive read as the engine holds it from the values and the metadata groups
+   * beside them, as {@link #storedValues} reads them: a decimal or a date, or, with its id and
+   * extensions, any primitive.
    *
    * <p>Each parent's values are read from the field and its metadata group, so that the read names
    * only the annotations, a repeating field's annotations paired with its values by position. A
@@ -173,20 +192,29 @@ public class DefaultRepresentation extends ColumnRepresentation {
   private ColumnRepresentation traverseStored(
       @Nonnull final String fieldName,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final DataType fallback) {
-    final UnaryOperator<Column> stored =
-        parent ->
-            let(
-                parent,
-                p ->
-                    storedValues(
-                        ColumnFunctions.resolveOrNull(p, fieldName, fallback),
-                        ColumnFunctions.resolveOrNull(
-                            p, LayoutFields.metadataGroupName(fieldName), DataTypes.NullType),
-                        fhirType,
-                        fallback instanceof ArrayType));
-    if (isDecimal(fhirType) && !(fallback instanceof ArrayType)) {
-      // Only the parents without a value are left out, so that a decimal whose number does not
+      @Nonnull final DataType fallback,
+      final boolean withMetadata) {
+    final boolean repeating = fallback instanceof ArrayType;
+    final Function<Boolean, UnaryOperator<Column>> stored =
+        keepAbsent ->
+            parent ->
+                let(
+                    parent,
+                    p ->
+                        storedValues(
+                            ColumnFunctions.resolveOrNull(p, fieldName, fallback),
+                            groupOf(p, fieldName),
+                            fhirType,
+                            repeating,
+                            withMetadata,
+                            keepAbsent));
+    // Without its id and extensions, a repeating primitive under a repeating parent keeps its items
+    // without a value as null items, as the engine has always given them (decision 152 changes
+    // nothing that is read without the metadata).
+    final UnaryOperator<Column> underRepeating = stored.apply(!withMetadata);
+    final UnaryOperator<Column> underSingular = stored.apply(false);
+    if (isDecimal(fhirType) && !repeating) {
+      // Only the parents without an element are left out, so that a decimal whose number does not
       // decode stays as a null item, as decoding its text alone gave.
       return vectorize(
               array ->
@@ -194,48 +222,117 @@ public class DefaultRepresentation extends ColumnRepresentation {
                       functions.filter(
                           array,
                           parent ->
-                              ColumnFunctions.resolveOrNull(parent, fieldName, fallback)
-                                  .isNotNull()),
-                      stored::apply),
-              stored)
+                              isElement(
+                                  ColumnFunctions.resolveOrNull(parent, fieldName, fallback),
+                                  groupOf(parent, fieldName),
+                                  withMetadata)),
+                      underRepeating::apply),
+              underSingular)
           .flatten();
     }
-    // Only the parents without a value are left out.
+    // Only the parents without an element are left out.
     return vectorize(
-            array -> functions.filter(functions.transform(array, stored::apply), Column::isNotNull),
-            stored)
+            array ->
+                functions.filter(
+                    functions.transform(array, underRepeating::apply), Column::isNotNull),
+            underSingular)
         .flatten();
   }
 
+  /** The metadata group of a field of a parent, null where the schema has none. */
+  @Nonnull
+  private static Column groupOf(@Nonnull final Column parent, @Nonnull final String fieldName) {
+    return ColumnFunctions.resolveOrNull(
+        parent, LayoutFields.metadataGroupName(fieldName), DataTypes.NullType);
+  }
+
   /**
-   * Returns the values of a decimal or a date as the engine holds them, read from the stored values
-   * and the metadata groups beside them (FR-004, FR-022, FR-023): a structure of the stored text
-   * and the annotations the schema carries, with no annotation computed (design §4.1, decision
-   * 152). A decimal whose number does not decode is null.
+   * Returns whether a stored value and its metadata group make an element: where the value is
+   * present, and, where a primitive's id and extensions are read, where either is present beside a
+   * value that is not (decision 141, D14), as FHIRPath takes an element with no value.
+   */
+  @Nonnull
+  private static Column isElement(
+      @Nonnull final Column value, @Nonnull final Column group, final boolean withMetadata) {
+    if (!withMetadata) {
+      return value.isNotNull();
+    }
+    return value
+        .isNotNull()
+        .or(
+            ColumnFunctions.resolveOrNull(group, PrimitiveMetadata.ID, DataTypes.StringType)
+                .isNotNull())
+        .or(
+            ColumnFunctions.resolveOrNull(group, PrimitiveMetadata.EXTENSION, DataTypes.NullType)
+                .isNotNull());
+  }
+
+  /** Returns whether one primitive, as {@link #storedValues} pairs it, is an element. */
+  @Nonnull
+  private static Column isElement(@Nonnull final Column primitive, final boolean withMetadata) {
+    return isElement(primitive.getField(StoredPrimitive.VALUE), primitive, withMetadata);
+  }
+
+  /**
+   * Returns the values of a primitive as the engine holds them, read from the stored values and the
+   * metadata groups beside them (FR-004, FR-022, FR-023): a structure of the stored value and the
+   * annotations the schema carries, with no annotation computed (design §4.1, decision 152). A
+   * decimal whose number does not decode is null.
    *
-   * <p>A repeating field's values are paired with its annotations by position, and the values that
-   * are absent are left out.
+   * <p>Without its id and extensions, only a decimal or a date is read in this way, and a value
+   * that is absent is no element. With them, any primitive is, its {@code id} and {@code extension}
+   * are read too, where the schema carries them, and a value that is absent beside an id or
+   * extensions is an element without a value, as FHIRPath takes it (decision 141, D14). Every field
+   * is read from the group by name, never the group itself.
+   *
+   * <p>A repeating field's values are paired with its metadata by position. A position that is no
+   * element is left out, or, where asked, kept as a null item.
    *
    * @param values the stored values, an array of them where the field repeats
    * @param groups the metadata groups beside them, aligned with them by position
-   * @param fhirType the FHIR type of the field, a decimal or a date
+   * @param fhirType the FHIR type of the field
    * @param repeating whether the field repeats
-   * @return the value, or an array of the values present where the field repeats
+   * @param withMetadata whether the primitive's id and extensions are read
+   * @param keepAbsent whether a position of a repeating field that is no element is kept as a null
+   *     item rather than left out
+   * @return the value, or an array of the values where the field repeats
    */
   @Nonnull
   static Column storedValues(
       @Nonnull final Column values,
       @Nonnull final Column groups,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      final boolean repeating) {
+      final boolean repeating,
+      final boolean withMetadata,
+      final boolean keepAbsent) {
+    final List<String> metadata =
+        withMetadata ? List.of(PrimitiveMetadata.ID, PrimitiveMetadata.EXTENSION) : List.of();
+    final Column paired;
     if (isDate(fhirType)) {
-      return repeating
-          ? SystemDateTime.fromStoredArray(values, groups)
-          : SystemDateTime.fromStored(values, groups);
+      paired = SystemDateTime.paired(values, groups, metadata, repeating);
+    } else if (isDecimal(fhirType)) {
+      paired = StoredDecimal.paired(values, groups, metadata, repeating);
+    } else {
+      // A base64Binary is held as its base64 text, as it is without its metadata.
+      final Column decoded =
+          fhirType.filter(FHIRDefinedType.BASE64BINARY::equals).isPresent()
+              ? (repeating
+                  ? functions.transform(values, functions::base64)
+                  : functions.base64(values))
+              : values;
+      paired = StoredPrimitive.paired(decoded, groups, metadata, repeating);
     }
-    return repeating
-        ? StoredDecimal.fromStoredArray(values, groups)
-        : StoredDecimal.fromStored(values, groups);
+    final UnaryOperator<Column> decode =
+        isDecimal(fhirType) ? StoredDecimal::decodable : UnaryOperator.identity();
+    if (!repeating) {
+      return when(isElement(values, groups, withMetadata), decode.apply(paired));
+    }
+    final Column elements =
+        keepAbsent
+            ? functions.transform(
+                paired, primitive -> when(isElement(primitive, withMetadata), primitive))
+            : functions.filter(paired, primitive -> isElement(primitive, withMetadata));
+    return isDecimal(fhirType) ? functions.transform(elements, decode::apply) : elements;
   }
 
   /**

@@ -27,6 +27,7 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
+import au.csiro.pathling.fhirpath.comparison.StoredPrimitiveComparator;
 import au.csiro.pathling.fhirpath.comparison.TemporalComparator;
 import jakarta.annotation.Nonnull;
 import java.text.ParseException;
@@ -118,13 +119,20 @@ public class TimeCollection extends Collection
   @Nonnull
   @Override
   public StringCollection asStringPath() {
-    return map(ColumnRepresentation::asString, StringCollection::build);
+    return toEngineForm().map(ColumnRepresentation::asString, StringCollection::build);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>A primitive held with its id and extensions is compared by its value alone (decision 151).
+   */
   @Override
   @Nonnull
   public ColumnComparator getComparator() {
-    return TemporalComparator.forTime();
+    return holdsPrimitiveMetadata()
+        ? StoredPrimitiveComparator.of(TemporalComparator.forTime())
+        : TemporalComparator.forTime();
   }
 
   @Override

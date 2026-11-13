@@ -340,7 +340,8 @@ public class QuantityCollection extends Collection implements Comparable, String
    */
   @Nonnull
   public Collection toUnit(@Nonnull final Collection targetUnit) {
-    final Column unitColumn = targetUnit.getColumn().singular().getValue();
+    final Column unitColumn =
+        targetUnit.withoutPrimitiveMetadata().getColumn().singular().getValue();
     // The quantity is converted from its System.Decimal value (decision 153): a stored one reaches
     // here already converted to a System quantity (toEngineForm), and the conversion reads the
     // text of its decimal (QuantityEncoding.asSystemText). The result is a System quantity.
@@ -357,7 +358,8 @@ public class QuantityCollection extends Collection implements Comparable, String
    */
   @Nonnull
   public Collection convertibleToUnit(@Nonnull final Collection targetUnit) {
-    final Column unitColumn = targetUnit.getColumn().singular().getValue();
+    final Column unitColumn =
+        targetUnit.withoutPrimitiveMetadata().getColumn().singular().getValue();
     final Column result = QuantityValue.of(getColumn()).convertibleToUnit(unitColumn);
     return BooleanCollection.build(new DefaultRepresentation(result));
   }

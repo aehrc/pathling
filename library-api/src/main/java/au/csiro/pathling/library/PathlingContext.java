@@ -120,6 +120,12 @@ public class PathlingContext {
   /** Which annotations encoding stores, and what it does with those already present. */
   @Nonnull @Getter private final SchemaConfiguration schemaConfiguration;
 
+  /**
+   * Whether queries read a primitive's id and extensions, from data stored with them (see {@link
+   * FhirpathConfiguration#isReadPrimitiveMetadata()}). Off is the default.
+   */
+  @Getter private final boolean readPrimitiveMetadata;
+
   @Nonnull @Getter private final Gson gson;
 
   /** Reads resources given as text into the Parquet on FHIR layout. */
@@ -139,13 +145,15 @@ public class PathlingContext {
    * @param terminologyServiceFactory the terminology service factory to use
    * @param queryConfiguration the query configuration to use
    * @param schemaConfiguration the schema configuration to use
+   * @param readPrimitiveMetadata whether queries read a primitive's id and extensions
    */
   private PathlingContext(
       @Nonnull final SparkSession spark,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
       @Nonnull final QueryConfiguration queryConfiguration,
-      @Nonnull final SchemaConfiguration schemaConfiguration) {
+      @Nonnull final SchemaConfiguration schemaConfiguration,
+      final boolean readPrimitiveMetadata) {
     requireLegacySizeOfNullDisabled(spark);
     warnUnlessTimestampsInMicros(spark);
     this.spark = spark;
@@ -153,6 +161,7 @@ public class PathlingContext {
     this.terminologyServiceFactory = terminologyServiceFactory;
     this.queryConfiguration = queryConfiguration;
     this.schemaConfiguration = schemaConfiguration;
+    this.readPrimitiveMetadata = readPrimitiveMetadata;
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
     PathlingUdfConfigurer.registerUdfs(spark);
     gson = buildGson();
@@ -238,7 +247,8 @@ public class PathlingContext {
         fhirEncoders,
         terminologyServiceFactory,
         QueryConfiguration.builder().build(),
-        SchemaConfiguration.builder().build());
+        SchemaConfiguration.builder().build(),
+        false);
   }
 
   /** Builder for creating {@link PathlingContext} instances with configurable options. */
@@ -249,6 +259,7 @@ public class PathlingContext {
     @Nullable private TerminologyConfiguration terminologyConfiguration;
     @Nullable private QueryConfiguration queryConfiguration;
     @Nullable private SchemaConfiguration schemaConfiguration;
+    private boolean readPrimitiveMetadata;
 
     Builder() {}
 
@@ -320,6 +331,19 @@ public class PathlingContext {
     }
 
     /**
+     * Sets whether queries read a primitive's id and extensions, from data stored with them (see
+     * {@link FhirpathConfiguration#isReadPrimitiveMetadata()}). Off is the default.
+     *
+     * @param readPrimitiveMetadata whether queries read a primitive's id and extensions
+     * @return this builder
+     */
+    @Nonnull
+    public Builder readPrimitiveMetadata(final boolean readPrimitiveMetadata) {
+      this.readPrimitiveMetadata = readPrimitiveMetadata;
+      return this;
+    }
+
+    /**
      * Builds a new {@link PathlingContext} instance with the configured options.
      *
      * @return a new {@link PathlingContext} instance
@@ -343,7 +367,8 @@ public class PathlingContext {
           finalEncodingConfig,
           finalTerminologyConfig,
           finalQueryConfig,
-          finalSchemaConfig);
+          finalSchemaConfig,
+          readPrimitiveMetadata);
     }
 
     @Nonnull
@@ -367,7 +392,8 @@ public class PathlingContext {
         @Nonnull final EncodingConfiguration encodingConfig,
         @Nonnull final TerminologyConfiguration terminologyConfig,
         @Nonnull final QueryConfiguration queryConfig,
-        @Nonnull final SchemaConfiguration schemaConfig) {
+        @Nonnull final SchemaConfiguration schemaConfig,
+        final boolean readPrimitiveMetadata) {
       final FhirEncoderBuilder encoderBuilder = getEncoderBuilder(encodingConfig);
       final TerminologyServiceFactory terminologyServiceFactory =
           getTerminologyServiceFactory(spark, terminologyConfig);
@@ -377,7 +403,8 @@ public class PathlingContext {
           encoderBuilder.getOrCreate(),
           terminologyServiceFactory,
           queryConfig,
-          schemaConfig);
+          schemaConfig,
+          readPrimitiveMetadata);
     }
   }
 
@@ -1172,6 +1199,7 @@ public class PathlingContext {
     final FhirpathConfiguration fhirpathConfig =
         FhirpathConfiguration.builder()
             .maxUnboundTraversalDepth(queryConfiguration.getMaxUnboundTraversalDepth())
+            .readPrimitiveMetadata(readPrimitiveMetadata)
             .build();
 
     return SingleInstanceEvaluator.evaluate(

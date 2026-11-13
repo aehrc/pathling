@@ -47,8 +47,8 @@ public class SchemaConfiguration {
    * trip keeps them. The group widens the stored schema wherever the source carries one, which is
    * why it is paid for only where it is asked for. Egress writes a stored group whatever this
    * option is set to when it writes. Reading what is stored, from FHIRPath, is a setting of the
-   * engine's own, and until ticket 52 (Primitive metadata in the engine) lands, querying data
-   * stored with this option on is not supported.
+   * engine's own, {@code readPrimitiveMetadata} on its configuration, off by default: with it off,
+   * data stored with this option on is queried as if it carried no ids or extensions.
    */
   @Builder.Default private boolean storePrimitiveMetadata = false;
 

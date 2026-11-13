@@ -27,8 +27,8 @@ import au.csiro.pathling.utilities.CanonicalStructure;
 import au.csiro.pathling.utilities.SystemDecimal;
 import jakarta.annotation.Nonnull;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
 
 /**
  * The columns of a FHIR decimal as the engine holds it after traversal (decisions 141, 147 and
@@ -65,49 +65,45 @@ public final class StoredDecimal {
   private StoredDecimal() {}
 
   /**
-   * Returns the decimal of a stored text and its metadata group: its text and the numeric
-   * annotation where the group's schema carries it. A decimal whose number the engine's
-   * System.Decimal cannot hold, such as {@code 1.0E40}, is null, as decoding its text alone gave
-   * before the element held its text.
+   * Returns the decimal of a stored text and its metadata group, or the decimals of a repeating one
+   * paired by position, each with its text, the named metadata fields of its group, such as a
+   * primitive's {@code id} and {@code extension}, and the numeric annotation where the group's
+   * schema carries it. Nothing is decoded, and nothing is left out: a decimal without a text is a
+   * structure without a value.
    *
-   * @param text the stored text of the decimal
-   * @param group the metadata group beside it
-   * @return the decimal, null where the text is or where its number does not decode
+   * @param texts the stored text of the decimal, or the texts where it repeats
+   * @param groups the metadata group beside it, or the groups where it repeats
+   * @param metadata the names of the metadata fields to read from the groups, where they have them
+   * @param repeating whether the decimal repeats
+   * @return the decimals, paired with their groups
    */
   @Nonnull
-  public static Column fromStored(@Nonnull final Column text, @Nonnull final Column group) {
-    return when(
-        text.isNotNull(),
-        decodable(
-            ColumnFunctions.resolveOrNone(
-                group, ANNOTATIONS, List.of(VALUE), List.of(text), false)));
+  public static Column paired(
+      @Nonnull final Column texts,
+      @Nonnull final Column groups,
+      @Nonnull final List<String> metadata,
+      final boolean repeating) {
+    return ColumnFunctions.resolveOrNone(
+        groups, fieldsOf(metadata), List.of(VALUE), List.of(texts), repeating);
+  }
+
+  /** The names of the fields read from a metadata group: the metadata fields, then the number. */
+  @Nonnull
+  private static List<String> fieldsOf(@Nonnull final List<String> metadata) {
+    return Stream.concat(metadata.stream(), ANNOTATIONS.stream()).toList();
   }
 
   /**
-   * Returns the decimals of a repeating stored decimal and its metadata groups, paired by position,
-   * each with its text and the numeric annotation where the groups' schema carries it, with the
-   * decimals that have no text left out. A decimal whose number the engine's System.Decimal cannot
-   * hold is a null item, as decoding its text alone gave.
+   * Returns a decimal where its number decodes, and null where it does not. A decimal without a
+   * text, which only a primitive held with its id and extensions can be, is returned as it is.
    *
-   * @param texts the stored texts of the decimal
-   * @param groups the metadata groups beside them
-   * @return the decimals present, null where the texts are
+   * @param decimal the decimal
+   * @return the decimal, null where its text does not decode
    */
   @Nonnull
-  public static Column fromStoredArray(@Nonnull final Column texts, @Nonnull final Column groups) {
-    return functions.transform(
-        functions.filter(
-            ColumnFunctions.resolveOrNone(
-                groups, ANNOTATIONS, List.of(VALUE), List.of(texts), true),
-            decimal -> decimal.getField(VALUE).isNotNull()),
-        StoredDecimal::decodable);
-  }
-
-  /** Returns a decimal where its number decodes, and null where it does not. */
-  @Nonnull
-  private static Column decodable(@Nonnull final Column decimal) {
+  static Column decodable(@Nonnull final Column decimal) {
     // The decimal is bound once, as the guard and the value both read it.
-    return let(decimal, d -> when(number(d).isNotNull(), d));
+    return let(decimal, d -> when(text(d).isNull().or(number(d).isNotNull()), d));
   }
 
   /**

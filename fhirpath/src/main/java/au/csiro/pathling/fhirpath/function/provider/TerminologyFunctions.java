@@ -233,7 +233,9 @@ public abstract class TerminologyFunctions {
       return BooleanCollection.empty();
     }
     if (input instanceof StringCollection) {
-      return BooleanCollection.build(input.getColumn().singularOrNull().callUdf("member_of", url));
+      // A code or string is taken as its value, its System value.
+      return BooleanCollection.build(
+          input.toEngineForm().getColumn().singularOrNull().callUdf("member_of", url));
     }
     return input
         .toConcepts()

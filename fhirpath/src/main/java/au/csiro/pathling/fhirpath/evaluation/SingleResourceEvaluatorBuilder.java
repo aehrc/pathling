@@ -18,7 +18,9 @@
 package au.csiro.pathling.fhirpath.evaluation;
 
 import au.csiro.pathling.config.FhirpathConfiguration;
+import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.definition.PrimitiveMetadata;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.sql.TraceCollector;
@@ -215,8 +217,14 @@ public class SingleResourceEvaluatorBuilder {
    */
   @Nonnull
   public SingleResourceEvaluator build() {
-    final ResourceResolver resolver =
+    final ResourceResolver fhirResolver =
         new FhirResourceResolver(subjectResourceCode, fhirContext, crossResourceStrategy);
+    // With the switch on, every resource is read with its primitives' ids and extensions.
+    final ResourceResolver resolver =
+        configuration.isReadPrimitiveMetadata()
+            ? new PrimitiveMetadataResolver(
+                fhirResolver, PrimitiveMetadata.of(FhirDefinitionContext.of(fhirContext)))
+            : fhirResolver;
     return new SingleResourceEvaluator(
         resolver, functionRegistry, variables, configuration, traceCollector);
   }

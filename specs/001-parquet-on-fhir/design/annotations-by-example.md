@@ -198,6 +198,12 @@ null
 // type without an annotation kind
 { "value": "final", "id": null, "extension": null }
 
+// Patient.name.given, switch on, where the JSON has given: [null, "Peter"] and
+// _given: [{ "id": "Jacomus1Id", "extension": [ … ] }, null]: an element without a value, whose
+// System value is empty (ticket 52, owner, 2026-11-13)
+[ { "value": null, "id": "Jacomus1Id", "extension": [ … ] },
+  { "value": "Peter", "id": null, "extension": null } ]
+
 // Stored: _birthDate = { "__start": …, "__end": …, "__acme_hash": "9f2c" } from another producer.
 // The element reads named fields only, so __acme_hash never enters it
 { "value": "1970-03", "__start": "1970-03-01T00:00:00.000Z", "__end": "1970-03-31T23:59:59.999999Z" }
@@ -205,7 +211,10 @@ null
 
 An annotation field the schema lacks is left out of the element, never filled with null, because a null
 stored annotation is read as an absent value. Over unannotated data, an accessor computes the
-annotation where an operation reads it.
+annotation where an operation reads it. With the switch on, `id` and `extension` are left out in the
+same way where the schema lacks them, so a code whose data carries no metadata group is
+`{ "value": "final" }`, and `id` and `extension` on it are empty (ticket 52). A merge fills them
+with null where only another operand has them (D9).
 
 ### 3.2 Complex types: the stored structure as it is
 

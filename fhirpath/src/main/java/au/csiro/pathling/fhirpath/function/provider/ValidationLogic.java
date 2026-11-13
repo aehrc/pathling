@@ -109,9 +109,13 @@ class ValidationLogic {
     final BiFunction<FhirPathType, Column, Column> validationLogic =
         VALIDATION_REGISTRY.get(targetType);
 
-    // A stored decimal is validated as the number it converts to. A stored quantity is validated
-    // as it is stored, because whether it has a System form depends on its comparator.
-    final Collection source = input instanceof DecimalCollection ? input.toEngineForm() : input;
+    // A stored decimal is validated as the number it converts to, and a primitive held with its id
+    // and extensions as its System value. A stored quantity is validated as it is stored, because
+    // whether it has a System form depends on its comparator.
+    final Collection source =
+        input instanceof DecimalCollection
+            ? input.toEngineForm()
+            : input.withoutPrimitiveMetadata();
     final Column singularValue = source.getColumn().singular().getValue();
     // Use Nothing when the type is not known to enforce default value for a non-convertible type
     final FhirPathType sourceType = input.getType().orElse(FhirPathType.NOTHING);

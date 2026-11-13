@@ -33,6 +33,7 @@ import au.csiro.pathling.test.SpringBootUnitTest;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.function.LongSupplier;
 import java.util.stream.IntStream;
 import org.apache.spark.sql.Column;
@@ -173,7 +174,7 @@ class AnnotationMemoisationTest {
     // A repeating date without stored annotations computes each bound where it is read, here in a
     // pass of its own. Changed by ticket 43: traversal computes nothing, so the bounds are read
     // through the accessors rather than by converting the dates.
-    final Column traversed = SystemDateTime.fromStoredArray(col("a"), lit(null));
+    final Column traversed = SystemDateTime.paired(col("a"), lit(null), List.of(), true);
     final Dataset<Row> query =
         dates(1161)
             .select(

@@ -122,8 +122,12 @@ The option decides only what encoding stores. Writing resources out always
 writes the ids and extensions the data holds, whatever the option is set to
 when they are written.
 
-Queries do not yet read the ids and extensions of primitive elements, and
-querying data stored with the option on is not supported in this release.
+Queries read the ids and extensions of primitive elements only where the
+engine's own `readPrimitiveMetadata` setting is turned on, on the Pathling
+context's builder in Java; it is not yet available from Python, R or the
+server. With it off,
+which is the default, data stored with the option on is queried as if the ids
+and extensions were not there, and navigating to them gives an empty result.
 
 ## The schema is fitted to the data
 

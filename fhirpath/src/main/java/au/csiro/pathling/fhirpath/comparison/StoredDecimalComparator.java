@@ -21,6 +21,7 @@ import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 
 /**
  * The comparator of stored decimals, which are held as their text and numeric annotation (see
@@ -31,11 +32,21 @@ import org.apache.spark.sql.Column;
  */
 public final class StoredDecimalComparator implements ColumnComparator, ElementWiseEquality {
 
-  private static final StoredDecimalComparator INSTANCE = new StoredDecimalComparator();
+  private static final StoredDecimalComparator INSTANCE = new StoredDecimalComparator(false);
+
+  private static final StoredDecimalComparator WITH_METADATA = new StoredDecimalComparator(true);
 
   private static final DecimalComparator NUMERIC = DecimalComparator.getInstance();
 
-  private StoredDecimalComparator() {}
+  /**
+   * Whether the decimals are held with their id and extensions, so that the ones without a value
+   * share one deduplication key.
+   */
+  private final boolean withMetadata;
+
+  private StoredDecimalComparator(final boolean withMetadata) {
+    this.withMetadata = withMetadata;
+  }
 
   /**
    * Gets the singleton instance.
@@ -45,6 +56,18 @@ public final class StoredDecimalComparator implements ColumnComparator, ElementW
   @Nonnull
   public static StoredDecimalComparator getInstance() {
     return INSTANCE;
+  }
+
+  /**
+   * Gets the comparator of decimals held with their id and extensions: the decimals without a value
+   * share one deduplication key, so that a deduplication keeps one of them, as it keeps one of
+   * every other primitive without a value.
+   *
+   * @return the instance
+   */
+  @Nonnull
+  public static StoredDecimalComparator withMetadata() {
+    return WITH_METADATA;
   }
 
   @Override
@@ -80,6 +103,8 @@ public final class StoredDecimalComparator implements ColumnComparator, ElementW
   @Override
   @Nonnull
   public Optional<UnaryOperator<Column>> deduplicationKey() {
-    return Optional.of(StoredDecimal::number);
+    return withMetadata
+        ? Optional.of(decimal -> functions.struct(StoredDecimal.number(decimal)))
+        : Optional.of(StoredDecimal::number);
   }
 }
