@@ -483,6 +483,12 @@ public class SnomedRf2Importer {
           Await.result(
               observation.future(),
               Duration.create(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS));
+      // Spark completes the observation with an empty row that has no schema when the query
+      // collected no metrics, as it does when a file contributes no active rows.
+      if (metrics.schema() == null) {
+        log.debug("Row count metric '{}' was not collected.", observation.name());
+        return null;
+      }
       return metrics.getAs(OBSERVED_ROWS);
     } catch (final TimeoutException e) {
       log.debug("Row count metric '{}' was not reported.", observation.name());
