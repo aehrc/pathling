@@ -38,7 +38,9 @@ import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.DecimalType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -220,9 +222,22 @@ public class DecimalCollection extends Collection
     if (!isStored()) {
       return this;
     }
-    final ColumnRepresentation numbers = getColumn().transform(StoredDecimal::number);
     // A decimal held with its id and extensions that has no value has no number, and is left out.
-    return DecimalCollection.build(holdsPrimitiveMetadata() ? numbers.removeNulls() : numbers);
+    // A null item, as distinct from a structure without a value, is kept as a null item: a decimal
+    // whose number does not decode (ticket 50), and equally an element absent at a position of a
+    // repeating parent, wherever one reaches the conversion.
+    final ColumnRepresentation decimals =
+        holdsPrimitiveMetadata()
+            ? getColumn()
+                .vectorize(
+                    array ->
+                        functions.filter(
+                            array,
+                            decimal ->
+                                decimal.isNull().or(StoredDecimal.text(decimal).isNotNull())),
+                    UnaryOperator.identity())
+            : getColumn();
+    return DecimalCollection.build(decimals.transform(StoredDecimal::number));
   }
 
   @Override

@@ -126,7 +126,7 @@ class TraceFunctionTest {
     void trace_boolean_returnsSameValues() {
       Assertions.assertThat(evaluate("Patient.active.trace('active-check')"))
           .hasClass(BooleanCollection.class)
-          .toCanonicalResult()
+          .toExternalResult()
           .hasRowsUnordered(
               RowFactory.create("1", true),
               RowFactory.create("2", false),
@@ -137,7 +137,7 @@ class TraceFunctionTest {
     void trace_string_returnsSameValues() {
       Assertions.assertThat(evaluate("Patient.gender.trace('debug')"))
           .hasClass(StringCollection.class)
-          .toCanonicalResult()
+          .toExternalResult()
           .hasRowsUnordered(
               RowFactory.create("1", "female"),
               RowFactory.create("2", "male"),

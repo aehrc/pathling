@@ -34,14 +34,14 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 /**
  * The definitions under which a primitive's id and extensions are read (decision 141, D14).
  *
- * <p>With the engine's switch on, the definition of every resource the engine resolves is wrapped
- * so that each definition reached from it is wrapped too. A wrapped primitive is held as one
- * structure of its value, its {@code id} and {@code extension}, and its annotations (decision 152),
- * and has the children {@code id} and {@code extension}, which the definitions of FHIR primitives
- * do not declare. Traversal and the primitive collections recognise the wrapped definition, so the
- * switch travels with a collection through every operation that keeps its definition. With the
- * switch off nothing is wrapped, and a primitive has no children, so that navigating to them is
- * empty.
+ * <p>The definition of every resource the engine resolves is wrapped (decision 154), so that each
+ * definition reached from it is wrapped too. A wrapped primitive is held as one structure of its
+ * value, its {@code id} and {@code extension}, and its annotations (decision 152), and has the
+ * children {@code id} and {@code extension}, which the definitions of FHIR primitives do not
+ * declare. Traversal and the primitive collections recognise the wrapped definition, so it travels
+ * with a collection through every operation that keeps its definition. A definition that is not
+ * wrapped, such as one an arbitrary object is resolved under, gives a primitive no children, so
+ * that navigating to them is empty.
  *
  * <p>The {@code id} of a primitive is a plain string, not itself a primitive with an id and
  * extensions, so its definition is not wrapped.

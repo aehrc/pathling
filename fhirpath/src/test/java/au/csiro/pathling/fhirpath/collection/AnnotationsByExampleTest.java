@@ -67,9 +67,9 @@ import org.springframework.beans.factory.annotation.Autowired;
  * convert ({@code AnnotatedTypesParityTest}), the comparison key of a complex value ({@code
  * ComparisonKeyTest}) and a date's output ({@code DateDeduplicationTest}).
  *
- * <p>Not covered here: the examples with the primitive-extensions switch on, which {@code
- * PrimitiveMetadataTest} shows (ticket 52), and the System.Coding of §4.4, whose shape without
- * {@code id} (decision 150) the engine does not build.
+ * <p>A primitive carries the id and extensions the data stores for it (decision 154), which {@code
+ * PrimitiveMetadataTest} shows in detail (tickets 52 and 54). Not covered here: the System.Coding
+ * of §4.4, whose shape without {@code id} (decision 150) the engine does not build.
  */
 @SpringBootUnitTest
 @TestInstance(Lifecycle.PER_CLASS)
@@ -167,17 +167,19 @@ class AnnotationsByExampleTest {
     return Stream.of(
         // §3.1 Primitives: struct(value, ...), flat.
         arguments(
-            "§3.1 a dateTime over annotated data",
+            "§3.1 a dateTime over annotated data, with the extension it carries",
             "annotated",
             "effective.ofType(dateTime)",
-            "struct<value:string,__start:timestamp,__end:timestamp>",
-            "[2024-03-15T10:30+10:00,2024-03-15 00:30:00.0,2024-03-15 00:30:59.999999]"),
+            "struct<value:string,extension:array<struct<url:string,valueString:string>>,"
+                + "__start:timestamp,__end:timestamp>",
+            "[2024-03-15T10:30+10:00,ArraySeq([http://example.org/source,device]),"
+                + "2024-03-15 00:30:00.0,2024-03-15 00:30:59.999999]"),
         arguments(
             "§3.1 the same over unannotated data",
             "unannotated",
             "effective.ofType(dateTime)",
-            "struct<value:string>",
-            "[2024-03-15T10:30+10:00]"),
+            "struct<value:string,extension:array<struct<url:string,valueString:string>>>",
+            "[2024-03-15T10:30+10:00,ArraySeq([http://example.org/source,device])]"),
         arguments(
             "§3.1 the same where the schema has __start but not __end",
             "partial",
@@ -203,12 +205,17 @@ class AnnotationsByExampleTest {
             "struct<value:string>",
             "[72.50]"),
         arguments(
-            "§3.1 a string has no annotation kind, so it is a bare value",
+            "§3.1 a string has no annotation kind, so it is its value and the metadata it has",
             "foreign",
             "name.given",
-            "array<string>",
-            "ArraySeq(Anne, Mary)"),
-        arguments("§3.1 a code is a bare value", "annotated", "status", "string", "final"),
+            "array<struct<value:string>>",
+            "ArraySeq([Anne], [Mary])"),
+        arguments(
+            "§3.1 a code is its value and the metadata it has",
+            "annotated",
+            "status",
+            "struct<value:string>",
+            "[final]"),
         arguments(
             "§3.1 another producer's annotation never enters the element",
             "foreign",

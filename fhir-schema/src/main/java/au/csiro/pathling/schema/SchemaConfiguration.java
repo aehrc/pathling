@@ -46,9 +46,8 @@ public class SchemaConfiguration {
    * annotations (FR-016's exception 3). On, they are stored and written back out, so that a round
    * trip keeps them. The group widens the stored schema wherever the source carries one, which is
    * why it is paid for only where it is asked for. Egress writes a stored group whatever this
-   * option is set to when it writes. Reading what is stored, from FHIRPath, is a setting of the
-   * engine's own, {@code readPrimitiveMetadata} on its configuration, off by default: with it off,
-   * data stored with this option on is queried as if it carried no ids or extensions.
+   * option is set to when it writes. FHIRPath always reads what is stored: a primitive's id and
+   * extensions are navigable wherever they were stored, and empty where they were not.
    */
   @Builder.Default private boolean storePrimitiveMetadata = false;
 

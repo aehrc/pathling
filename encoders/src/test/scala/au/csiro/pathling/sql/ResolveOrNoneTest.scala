@@ -154,6 +154,25 @@ class ResolveOrNoneTest extends SparkSessionSupport {
     assertFalse(pushedFilters(control).contains("__end"), pushedFilters(control))
   }
 
+  /**
+   * A primitive read with its id and extensions is an element where any of them is present, so its
+   * guard is a disjunction. One of its tests is of the value, so the guard is false only where the
+   * value is absent, and the stored field is read past it and pushed down; a disjunction with no
+   * test of the value is read through.
+   */
+  @Test
+  def accessorSeesThroughADisjunctionThatTestsTheValue(): Unit = {
+    val withMetadata = F.when(F.col("v").isNotNull.or(F.col("g.id").isNotNull),
+      element(F.col("g")))
+    val query = both.filter(annotationOrElse(withMetadata, "__end", F.lit(-2)) >= 15)
+    assertTrue(pushedFilters(query).contains("GreaterThanOrEqual(g.__end,15)"), pushedFilters(query))
+    assertEquals(Seq("[1]"), rows(query.select("id")))
+    val unrelated = F.when(F.col("g.id").isNotNull.or(F.col("vs").isNotNull),
+      element(F.col("g")))
+    assertFalse(pushedFilters(both.filter(annotationOrElse(unrelated, "__end", F.lit(-2)) >= 15))
+      .contains("__end"))
+  }
+
   private def pushedFilters(query: DataFrame): String =
     query.queryExecution.executedPlan.collectLeaves()
       .collectFirst { case scan: FileSourceScanExec => scan.metadata.getOrElse("PushedFilters", "") }

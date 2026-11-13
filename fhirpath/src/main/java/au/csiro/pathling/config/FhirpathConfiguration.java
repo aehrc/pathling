@@ -42,17 +42,4 @@ public class FhirpathConfiguration {
   @Min(1)
   @Builder.Default
   private int maxUnboundTraversalDepth = 10;
-
-  /**
-   * Whether a primitive's id and extensions are read from the metadata group stored beside it
-   * (decision 141, D14). Off is the default.
-   *
-   * <p>On, every FHIR primitive reached by traversal is held as one structure of its value, its
-   * {@code id} and {@code extension}, and the annotations the schema carries (decision 152), so
-   * that {@code x.id} and {@code x.extension(...)} on a primitive return what was stored. Off, a
-   * primitive carries its value and annotations only, and those navigations are empty, with no
-   * error, as if the source had carried no id or extensions. This is separate from the ingest
-   * option that stores them, so that data stored with them can be read without them.
-   */
-  @Builder.Default private boolean readPrimitiveMetadata = false;
 }

@@ -23,7 +23,7 @@
 package au.csiro.pathling.sql
 
 import org.apache.spark.sql.catalyst.expressions.{CaseWhen, CreateNamedStruct, Expression,
-  IsNotNull, RuntimeReplaceable}
+  IsNotNull, Or, RuntimeReplaceable}
 import org.apache.spark.sql.catalyst.trees.BinaryLike
 
 /**
@@ -40,9 +40,11 @@ import org.apache.spark.sql.catalyst.trees.BinaryLike
  * structure and carries the field, the accessor is therefore the field's own expression, a plain
  * read of the stored annotation that Parquet can push down. Only guards that test the element's
  * own `value`, or a constant that is present, are seen through, as traversal builds them at each
- * level it descends through. Any other guard, such as the criteria of a `where()`, can be false
- * where the value is present, so an element under one is read through it as [[ResolveOrElse]]
- * reads it.
+ * level it descends through. A primitive read with its id and extensions is an element where any
+ * of them is present (decision 154), so its guard is a disjunction of such tests; it is seen
+ * through where one of its tests is of the value, because the guard is then false only where the
+ * value is absent too. Any other guard, such as the criteria of a `where()`, can be false where
+ * the value is present, so an element under one is read through it as [[ResolveOrElse]] reads it.
  *
  * @param child     the element
  * @param fieldName the name of the annotation field
@@ -63,18 +65,34 @@ case class AnnotationOrElse(child: Expression, fieldName: String, fallback: Expr
 
   /**
    * The structure a guarded element builds, where it is built in the plan under guards that are
-   * each false only where the element's value is absent.
+   * each false only where the element's value is absent. Each guard is given as the expressions
+   * its disjuncts test.
    */
-  private def structOf(element: Expression, guards: Seq[Expression]): Option[CreateNamedStruct] =
+  private def structOf(element: Expression,
+                       guards: Seq[Seq[Expression]]): Option[CreateNamedStruct] =
     element match {
-      case CaseWhen(Seq((IsNotNull(tested), value)), None) => structOf(value, guards :+ tested)
+      case CaseWhen(Seq((condition, value)), None) if testsOf(condition).isDefined =>
+        structOf(value, guards :+ testsOf(condition).get)
       case struct: CreateNamedStruct
-        if guards.forall(tested =>
-          present(tested) || valueOf(struct).exists(tested.semanticEquals)) =>
+        if guards.forall(_.exists(tested =>
+          present(tested) || valueOf(struct).exists(tested.semanticEquals))) =>
         Some(struct)
       case resolved: ResolveOrNone if !resolved.repeating => structOf(resolved.replacement, guards)
       case _ => None
     }
+
+  /**
+   * The expressions a guard tests, where it is a test that one expression is present or a
+   * disjunction of such tests.
+   */
+  private def testsOf(condition: Expression): Option[Seq[Expression]] = condition match {
+    case IsNotNull(tested) => Some(Seq(tested))
+    case Or(left, right) => for {
+      l <- testsOf(left)
+      r <- testsOf(right)
+    } yield l ++ r
+    case _ => None
+  }
 
   /** Whether a guard's tested expression is a constant that is present. */
   private def present(tested: Expression): Boolean = tested.foldable && tested.eval() != null

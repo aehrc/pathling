@@ -45,6 +45,7 @@ import au.csiro.pathling.views.FhirViewExecutor;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -89,9 +90,9 @@ import scala.jdk.javaapi.CollectionConverters;
  *       nullness of, an array of whole elements. Their expected results were recorded from the
  *       engine before the forms were rewritten, over data with an absent array, an empty one, null
  *       elements and elements whose read fields are all null.
- *   <li><b>Pairing a repeating primitive.</b> Its values are zipped with the extracted annotation
- *       arrays under the names of the singular form, with no projection in between, so that the
- *       read leaves out the rest of the metadata.
+ *   <li><b>Pairing a repeating primitive.</b> Its values are zipped with the extracted metadata and
+ *       annotation arrays under the names of the singular form, with no projection in between, so
+ *       that the read names the fields of the metadata group, not the group.
  * </ul>
  *
  * <p>On Spark 4.0 the read of an array is not pruned through a lambda, so a pruned read is asserted
@@ -117,6 +118,9 @@ class EmissionShapesTest {
           "{\"resourceType\":\"Patient\",\"id\":\"p4\",\"name\":[{\"given\":[\"W\"]}]}",
           "{\"resourceType\":\"Patient\",\"id\":\"p5\",\"name\":[{\"use\":\"official\"}]}",
           "{\"resourceType\":\"Patient\",\"id\":\"p6\",\"name\":[{\"use\":\"old\"}]}");
+
+  private static final String EXTENSION_TYPE =
+      "extension:array<struct<url:string,valueString:string>>";
 
   private static final String EXTENSION =
       "{\"extension\":[{\"url\":\"http://example.org/source\",\"valueString\":\"device\"}]}";
@@ -295,18 +299,22 @@ class EmissionShapesTest {
             .apply("value")
             .dataType()
             .simpleString();
-    assertThat(singular).isEqualTo("struct<value:string,__start:timestamp,__end:timestamp>");
+    assertThat(singular)
+        .isEqualTo("struct<value:string," + EXTENSION_TYPE + ",__start:timestamp,__end:timestamp>");
     assertThat(repeating).isEqualTo("array<" + singular + ">");
   }
 
   /**
-   * The values are zipped directly with the annotation arrays extracted from the metadata groups,
-   * each extracted array guarded against an absent array of groups and nothing else, and no alias
-   * or projection stands between them, so the read names the annotations alone: the extensions in
-   * the same metadata group are not read.
+   * The values are zipped directly with the metadata and annotation arrays extracted from the
+   * metadata groups, each extracted array guarded against an absent array of groups and nothing
+   * else, and no alias or projection stands between them: each is a read of a named field of the
+   * groups, never of the group itself, which {@link #assertPairedDirectly} checks in the plan. The
+   * read schema cannot show it here, because the fixture's group holds only the fields that are
+   * read. The extensions are read with the annotations, because they decide whether a position
+   * without a value is an element (decision 154).
    */
   @Test
-  void aRepeatingPrimitiveIsPairedWithItsAnnotationsAlone() {
+  void aRepeatingPrimitiveIsPairedWithItsMetadataAndAnnotations() {
     final String expression = "effective.ofType(Timing).event.where($this > @2019-06-01).count()";
     final Dataset<Row> annotated =
         evaluate(observationsAnnotated, ResourceType.OBSERVATION, expression);
@@ -324,18 +332,17 @@ class EmissionShapesTest {
     assertThat(observationsAnnotated.schema().simpleString())
         .contains("_event:array<struct<extension:");
     assertThat(readSchema(annotated))
-        .contains("_event:array<struct<__start:timestamp,__end:timestamp>>")
-        .doesNotContain("extension");
+        .contains("_event:array<struct<" + EXTENSION_TYPE + ",__start:timestamp,__end:timestamp>>");
   }
 
   /**
-   * Asserts that a pairing zips the values with the annotation arrays under the singular names,
-   * each annotation array extracted from the metadata groups and guarded against their absence,
-   * with no alias between, and no guard around a transform.
+   * Asserts that a pairing zips the values with the metadata and annotation arrays under the
+   * singular names, each array extracted from the metadata groups and guarded against their
+   * absence, with no alias between, and no guard around a transform.
    */
   private static void assertPairedDirectly(@Nonnull final ArraysZip zip) {
     assertThat(CollectionConverters.asJava(zip.names()).stream().map(String::valueOf))
-        .containsExactly("value", "__start", "__end");
+        .containsExactly("value", "extension", "__start", "__end");
     final List<Expression> inputs = CollectionConverters.asJava(zip.children());
     assertThat(inputs).noneMatch(Alias.class::isInstance);
     assertThat(inputs.subList(1, inputs.size()))
@@ -353,9 +360,13 @@ class EmissionShapesTest {
                         .anyMatch(ArrayTransform.class::isInstance));
   }
 
-  /** The same pairing, output by a view. */
+  /**
+   * The same pairing, output by a view. The read schema shows that the extensions and annotations
+   * are read; that they are read as named fields, not as the group, is checked by {@link
+   * #aRepeatingPrimitiveIsPairedWithItsMetadataAndAnnotations}.
+   */
   @Test
-  void aViewOfARepeatingPrimitiveReadsItsAnnotationsAlone() {
+  void aViewOfARepeatingPrimitiveReadsItsMetadataAndAnnotations() {
     final Dataset<Row> result =
         view(
             Map.of("Observation", observationsAnnotated),
@@ -371,13 +382,14 @@ class EmissionShapesTest {
     assertThat(result.collectAsList().stream().map(Row::toString).sorted().toList())
         .containsExactly("[o1,ArraySeq(2020-01-01, 2020-02, 2019),true]", "[o2,ArraySeq(),false]");
     assertThat(readSchema(result))
-        .contains("_event:array<struct<__start:timestamp,__end:timestamp>>")
-        .doesNotContain("extension");
+        .contains("_event:array<struct<" + EXTENSION_TYPE + ",__start:timestamp,__end:timestamp>>");
   }
 
   /**
    * The size and null tests in a plan that are taken of an array of whole elements, which Spark's
-   * schema pruning reads in full.
+   * schema pruning reads in full. An array of primitives as the engine pairs them, each a structure
+   * of its value and the fields it names from its metadata group (decision 154), is not one: it is
+   * built from the fields the expression reads, not read whole.
    */
   @Nonnull
   private static List<Expression> testsOfWholeElements(@Nonnull final LogicalPlan plan) {
@@ -392,7 +404,20 @@ class EmissionShapesTest {
   }
 
   private static boolean isArrayOfStructures(@Nonnull final DataType type) {
-    return type instanceof final ArrayType array && array.elementType() instanceof StructType;
+    return type instanceof final ArrayType array
+        && array.elementType() instanceof final StructType structure
+        && !isPairedPrimitive(structure);
+  }
+
+  /** Whether a structure is a primitive as the engine pairs it with its metadata group. */
+  private static boolean isPairedPrimitive(@Nonnull final StructType structure) {
+    // A paired primitive has its value; a metadata group read whole, which has none, is not one.
+    final List<String> names = Arrays.asList(structure.fieldNames());
+    return names.contains("value")
+        && names.stream()
+            .allMatch(
+                name ->
+                    List.of("value", "id", "extension").contains(name) || name.startsWith("__"));
   }
 
   @Nonnull

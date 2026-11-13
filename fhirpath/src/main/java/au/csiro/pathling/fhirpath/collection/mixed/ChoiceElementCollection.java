@@ -137,7 +137,7 @@ public class ChoiceElementCollection extends MixedCollection implements Material
   private static UnaryOperator<Column> systemValueOf(@Nonnull final FhirPathType fhirpathType) {
     return fhirpathType == FhirPathType.DATETIME || fhirpathType == FhirPathType.DATE
         ? SystemDateTime::withoutMetadata
-        : StoredPrimitive::value;
+        : StoredPrimitive::valueOf;
   }
 
   @Nonnull

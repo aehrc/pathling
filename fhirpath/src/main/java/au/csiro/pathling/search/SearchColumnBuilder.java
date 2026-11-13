@@ -21,6 +21,7 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.DateTimeComparable;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.evaluation.CrossResourceStrategy;
@@ -345,14 +346,17 @@ public class SearchColumnBuilder {
 
   /**
    * Returns the column a search filter matches against. A decimal is matched as its number, so a
-   * stored decimal is converted to one; any other value, including a stored quantity, whose matcher
-   * reads its stored annotations, is matched as it is held.
+   * stored decimal is converted to one, and a primitive held with its id and extensions is matched
+   * as its System value. Any other value is matched as it is held: a stored quantity, whose matcher
+   * reads its stored annotations, and a date, whose matcher reads only its text and bounds, so that
+   * a filter on a stored bound is pushed down to the scan, which converting it would prevent.
    */
   @Nonnull
   private static ColumnRepresentation matchedColumn(@Nonnull final Collection result) {
-    return result instanceof DecimalCollection
-        ? result.toEngineForm().getColumn()
-        : result.getColumn();
+    final boolean converted =
+        result instanceof DecimalCollection
+            || (result.holdsPrimitiveMetadata() && !(result instanceof DateTimeComparable));
+    return converted ? result.toEngineForm().getColumn() : result.getColumn();
   }
 
   /**

@@ -26,8 +26,8 @@ import org.apache.spark.sql.Column;
  * A primitive with no annotation kind, such as a string, a code, an integer or a boolean, as the
  * engine holds it where a primitive's id and extensions are read (decisions 141 and 152): a flat
  * structure of its stored value, {@code value}, and the metadata fields of its metadata group that
- * the schema carries, its {@code id} and {@code extension}. With the switch that reads them off,
- * such a primitive is its bare value, and is never held in this form.
+ * the schema carries, its {@code id} and {@code extension}. Under a definition that does not read
+ * them, such a primitive is its bare value, and is never held in this form.
  *
  * <p>The fields are read from the metadata group by name, never as the group, so that a read names
  * only the fields an expression uses.
@@ -68,7 +68,7 @@ public final class StoredPrimitive {
    * @return its value
    */
   @Nonnull
-  public static Column value(@Nonnull final Column primitive) {
+  public static Column valueOf(@Nonnull final Column primitive) {
     return primitive.getField(VALUE);
   }
 }

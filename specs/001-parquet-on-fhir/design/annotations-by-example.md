@@ -18,7 +18,10 @@ decides nothing; where the two disagree, the design and the decisions govern.
 - A FlexiDecimal is a structure of an unscaled `DECIMAL(38,0)` and a scale: `{ value: 72500, scale: 0 }`
   is 72500, and `{ value: 18, scale: 1 }` is 1.8.
 - The primitive-extensions switch (D14, decision 141) is **off**, the default, unless an example says
-  otherwise.
+  otherwise. _Amended (decision 154, ticket 54): the switch is removed and primitive metadata is
+  always on, so read every "switch on" example as the engine's form and every "switch off" example as
+  superseded. A primitive without an annotation kind is `struct(value, …)` too, `{ "value": "final" }`
+  where the data carries no metadata group, and leaves the engine as its bare value._
 - The values are invented for illustration.
 
 ## 1. The source resource

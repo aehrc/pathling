@@ -863,3 +863,21 @@ engine as its bare value, by `toEngineForm()`, unless the expression ends in `id
 Search converts a wrapped primitive and leaves a stored quantity as held (ticket 54). The "switch off"
 rows of §4.1 and the exceptions to the §2 pruning constraint that they covered are no longer met; an
 optional switch is ticket 55 (Optional switch to skip reading primitive metadata), to triage in stage 5.
+
+_Built (ticket 54, 2026-11-13)._ Three consequences surfaced in the build, each kept to what the
+existing tests required:
+
+- **Pushdown through the element's guard.** With metadata read, a singular primitive's guard is
+  `isnotnull(value) OR isnotnull(_x.id) OR isnotnull(_x.extension)`, which the annotation accessor
+  (`AnnotationOrElse`) did not see through, so a filter on a stored date bound stopped reaching the
+  scan. The accessor now sees through a disjunction of presence tests where one of them tests the
+  value: the guard is then false only where the value is absent, and the annotation is null there
+  too (ticket 31's trust contract).
+- **Search keeps a date as held.** `SearchColumnBuilder.matchedColumn` converts a wrapped primitive
+  to its System value, except a date, whose matcher reads only its text and bounds, as a comparison
+  does (§8); converting it would keep the filter on a stored bound from being pushed down.
+- **A null decimal item stays one when converted.** Conversion leaves out a decimal element without
+  a value, a structure whose value is null, but keeps every null item as it is: a decimal whose
+  text does not decode, which §4.1 and ticket 50 make a null item under a repeating parent, and
+  equally an element absent at a position of a repeating parent, wherever one reaches the
+  conversion.

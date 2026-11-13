@@ -57,33 +57,33 @@ public final class StoredPrimitiveComparator implements ColumnComparator, Elemen
     // one of them, as a deduplication by key does. An operator compares System values, never these.
     return functions
         .when(
-            StoredPrimitive.value(left).isNull().and(StoredPrimitive.value(right).isNull()),
+            StoredPrimitive.valueOf(left).isNull().and(StoredPrimitive.valueOf(right).isNull()),
             functions.lit(true))
-        .otherwise(system.equalsTo(StoredPrimitive.value(left), StoredPrimitive.value(right)));
+        .otherwise(system.equalsTo(StoredPrimitive.valueOf(left), StoredPrimitive.valueOf(right)));
   }
 
   @Override
   @Nonnull
   public Column lessThan(@Nonnull final Column left, @Nonnull final Column right) {
-    return system.lessThan(StoredPrimitive.value(left), StoredPrimitive.value(right));
+    return system.lessThan(StoredPrimitive.valueOf(left), StoredPrimitive.valueOf(right));
   }
 
   @Override
   @Nonnull
   public Column lessThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
-    return system.lessThanOrEqual(StoredPrimitive.value(left), StoredPrimitive.value(right));
+    return system.lessThanOrEqual(StoredPrimitive.valueOf(left), StoredPrimitive.valueOf(right));
   }
 
   @Override
   @Nonnull
   public Column greaterThan(@Nonnull final Column left, @Nonnull final Column right) {
-    return system.greaterThan(StoredPrimitive.value(left), StoredPrimitive.value(right));
+    return system.greaterThan(StoredPrimitive.valueOf(left), StoredPrimitive.valueOf(right));
   }
 
   @Override
   @Nonnull
   public Column greaterThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
-    return system.greaterThanOrEqual(StoredPrimitive.value(left), StoredPrimitive.value(right));
+    return system.greaterThanOrEqual(StoredPrimitive.valueOf(left), StoredPrimitive.valueOf(right));
   }
 
   @Override
@@ -94,10 +94,10 @@ public final class StoredPrimitiveComparator implements ColumnComparator, Elemen
     // one key and are kept once, as FHIRPath implementations keep them. Otherwise there is no key,
     // and the values are compared.
     if (system.usesDefaultSqlEquality()) {
-      return Optional.of(primitive -> functions.struct(StoredPrimitive.value(primitive)));
+      return Optional.of(primitive -> functions.struct(StoredPrimitive.valueOf(primitive)));
     }
     return system
         .deduplicationKey()
-        .map(key -> primitive -> key.apply(StoredPrimitive.value(primitive)));
+        .map(key -> primitive -> key.apply(StoredPrimitive.valueOf(primitive)));
   }
 }

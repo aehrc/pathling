@@ -318,7 +318,7 @@ class DatasetEvaluatorTest {
       // Verify evaluation works with data from the data source
       Assertions.assertThat(result)
           .hasClass(BooleanCollection.class)
-          .toCanonicalResult()
+          .toExternalResult()
           .hasRowsUnordered(
               RowFactory.create("1", true),
               RowFactory.create("2", false),

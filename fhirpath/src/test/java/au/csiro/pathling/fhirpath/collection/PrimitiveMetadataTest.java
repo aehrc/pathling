@@ -23,8 +23,6 @@ import static org.apache.spark.sql.functions.col;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
-import au.csiro.pathling.config.FhirpathConfiguration;
-import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.evaluation.CollectionDataset;
@@ -69,9 +67,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import scala.jdk.javaapi.CollectionConverters;
 
 /**
- * A primitive's id and extensions in the engine (ticket 52; decisions 141, 142 and 152): read with
- * the engine's switch on from data stored with them, and empty with it off. Every expression is
- * evaluated over data stored with them both annotated and unannotated, which give the same results.
+ * A primitive's id and extensions in the engine (tickets 52 and 54; decisions 141, 142, 152 and
+ * 154): read from data stored with them, and empty from data stored without them. Every expression
+ * is evaluated over data stored with them both annotated and unannotated, which give the same
+ * results.
  */
 @SpringBootUnitTest
 @TestInstance(Lifecycle.PER_CLASS)
@@ -159,12 +158,6 @@ class PrimitiveMetadataTest {
           + "\"quality\":[{\"type\":\"snp\",\"roc\":{\"precision\":[null,null,0.5],"
           + "\"_precision\":[{\"id\":\"a\"},{\"id\":\"b\"},null]}}]}";
 
-  private static final FhirpathConfiguration ON =
-      FhirpathConfiguration.builder().readPrimitiveMetadata(true).build();
-
-  private static final FhirpathConfiguration OFF =
-      FhirpathConfiguration.builder().readPrimitiveMetadata(false).build();
-
   @Autowired SparkSession spark;
 
   @Autowired FhirEncoders fhirEncoders;
@@ -239,37 +232,26 @@ class PrimitiveMetadataTest {
   }
 
   /**
-   * With the switch on, a primitive's id and extensions are as stored, singular and repeating, and
-   * empty where the source carried neither. A metadata group without its value is an element
-   * without a value.
+   * A primitive's id and extensions are as stored, singular and repeating, and empty where the
+   * source carried neither. A metadata group without its value is an element without a value.
    */
   @ParameterizedTest(name = "{0}")
   @MethodSource("navigation")
-  void withTheSwitchOnAPrimitiveHasItsIdAndExtensions(
+  void aPrimitiveHasItsIdAndExtensions(
       @Nonnull final String expression, @Nonnull final String expected) {
-    assertThat(rows(unannotated, ResourceType.PATIENT, expression, ON)).isEqualTo(expected);
-    assertThat(rows(annotated, ResourceType.PATIENT, expression, ON)).isEqualTo(expected);
+    assertThat(rows(unannotated, ResourceType.PATIENT, expression)).isEqualTo(expected);
+    assertThat(rows(annotated, ResourceType.PATIENT, expression)).isEqualTo(expected);
   }
 
-  /** With the switch off, the same navigations are empty, with no error. */
-  @ParameterizedTest(name = "{0}")
-  @MethodSource("navigation")
-  void withTheSwitchOffAPrimitiveHasNoIdOrExtensions(
-      @Nonnull final String expression, @Nonnull final String ignoredOn) {
-    final String result = rows(unannotated, ResourceType.PATIENT, expression, OFF);
-    assertThat(result.split(" "))
-        .allSatisfy(row -> assertThat(row).matches("p\\d=(null|false|ArraySeq\\(\\))"));
-  }
-
-  /** Data stored without the metadata groups gives empty with the switch on, silently. */
+  /** Data stored without the metadata groups gives empty, silently. */
   @Test
   void dataStoredWithoutTheGroupsHasNoIdOrExtensions() {
     final Map<String, Dataset<Row>> without = Map.of("Patient", patientsWithout);
-    assertThat(rows(without, ResourceType.PATIENT, "gender.id", ON))
+    assertThat(rows(without, ResourceType.PATIENT, "gender.id"))
         .isEqualTo("p1=null p2=null p3=null p4=null");
-    assertThat(rows(without, ResourceType.PATIENT, "name.given.extension.exists()", ON))
+    assertThat(rows(without, ResourceType.PATIENT, "name.given.extension.exists()"))
         .isEqualTo("p1=false p2=false p3=false p4=false");
-    assertThat(rows(without, ResourceType.PATIENT, "name.given.count()", ON))
+    assertThat(rows(without, ResourceType.PATIENT, "name.given.count()"))
         .isEqualTo("p1=4 p2=1 p3=1 p4=2");
   }
 
@@ -311,123 +293,95 @@ class PrimitiveMetadataTest {
   }
 
   /**
-   * With the switch on, a primitive with an id or extensions but no value is an element without a
-   * value, as FHIRPath takes it (owner, 2026-11-13): it is counted and indexed, its id is read, and
-   * its value is empty wherever it is used as a System value. Off, it is not read as one.
+   * A primitive with an id or extensions but no value is an element without a value, as FHIRPath
+   * takes it (owner, 2026-11-13): it is counted and indexed, its id is read, and its value is empty
+   * wherever it is used as a System value.
    */
   @Test
   void aPrimitiveWithMetadataButNoValueIsAnElement() {
     for (final Map<String, Dataset<Row>> data : List.of(unannotated, annotated)) {
-      assertThat(rows(data, ResourceType.PATIENT, "name.given.count()", ON))
+      assertThat(rows(data, ResourceType.PATIENT, "name.given.count()"))
           .isEqualTo("p1=4 p2=2 p3=1 p4=2");
       // The elements without a value are kept once by a deduplication.
-      assertThat(rows(data, ResourceType.PATIENT, "name.given.distinct().count()", ON))
+      assertThat(rows(data, ResourceType.PATIENT, "name.given.distinct().count()"))
           .isEqualTo("p1=4 p2=2 p3=1 p4=1");
-      assertThat(rows(data, ResourceType.PATIENT, "gender.exists()", ON))
+      assertThat(rows(data, ResourceType.PATIENT, "gender.exists()"))
           .isEqualTo("p1=true p2=true p3=true p4=false");
-      assertThat(rows(data, ResourceType.PATIENT, "name.given[0].all(id = 'orphan')", ON))
+      assertThat(rows(data, ResourceType.PATIENT, "name.given[0].all(id = 'orphan')"))
           .isEqualTo("p1=false p2=true p3=false p4=false");
-      assertThat(rows(data, ResourceType.PATIENT, "name.given[0].startsWith('B')", ON))
+      assertThat(rows(data, ResourceType.PATIENT, "name.given[0].startsWith('B')"))
           .isEqualTo("p1=false p2=null p3=false p4=false");
-      assertThat(rows(data, ResourceType.PATIENT, "name.given[0].toString()", ON))
+      assertThat(rows(data, ResourceType.PATIENT, "name.given[0].toString()"))
           .isEqualTo("p1=Anne p2=null p3=C p4=Ann");
-      assertThat(rows(data, ResourceType.PATIENT, "gender = 'female'", ON))
+      assertThat(rows(data, ResourceType.PATIENT, "gender = 'female'"))
           .isEqualTo("p1=true p2=null p3=false p4=null");
-      assertThat(rows(data, ResourceType.PATIENT, "name.given", ON))
+      assertThat(rows(data, ResourceType.PATIENT, "name.given"))
           .isEqualTo(
               "p1=ArraySeq(Anne, Mary, Jo, Sue) p2=ArraySeq(B) p3=ArraySeq(C) "
                   + "p4=ArraySeq(Ann, Ann)");
     }
-    assertThat(rows(unannotated, ResourceType.PATIENT, "gender.exists()", OFF))
-        .isEqualTo("p1=true p2=false p3=true p4=false");
   }
 
   /**
-   * With the switch on, a repeating date, time and decimal without a value are elements too: they
-   * are counted, a deduplication keeps one of them, and they are output as nothing. With it off,
-   * under a repeating parent each is kept as a null item, as {@code main} keeps it.
+   * A repeating date, time and decimal without a value are elements too: they are counted, a
+   * deduplication keeps one of them, and they are output as nothing.
    */
   @Test
   void aRepeatingDateTimeOrDecimalWithoutAValue() {
     for (final Map<String, Dataset<Row>> data : List.of(unannotated, annotated)) {
       final ResourceType request = ResourceType.MEDICATIONREQUEST;
       final ResourceType sequence = ResourceType.MOLECULARSEQUENCE;
-      assertThat(rows(data, request, "dosageInstruction.timing.event", ON))
+      assertThat(rows(data, request, "dosageInstruction.timing.event"))
           .isEqualTo("m1=ArraySeq(2020-01-01)");
-      assertThat(rows(data, request, "dosageInstruction.timing.event.count()", ON))
-          .isEqualTo("m1=3");
-      assertThat(rows(data, request, "dosageInstruction.timing.event.distinct().count()", ON))
+      assertThat(rows(data, request, "dosageInstruction.timing.event.count()")).isEqualTo("m1=3");
+      assertThat(rows(data, request, "dosageInstruction.timing.event.distinct().count()"))
           .isEqualTo("m1=2");
-      assertThat(rows(data, request, "dosageInstruction.timing.event.id", ON))
+      assertThat(rows(data, request, "dosageInstruction.timing.event.id"))
           .isEqualTo("m1=ArraySeq(a, b)");
       assertThat(
-              rows(
-                  data,
-                  request,
-                  "dosageInstruction.timing.repeat.timeOfDay.distinct().count()",
-                  ON))
+              rows(data, request, "dosageInstruction.timing.repeat.timeOfDay.distinct().count()"))
           .isEqualTo("m1=2");
-      assertThat(rows(data, sequence, "quality.roc.precision", ON)).isEqualTo("s1=ArraySeq(0.5)");
-      assertThat(rows(data, sequence, "quality.roc.precision.count()", ON)).isEqualTo("s1=3");
-      assertThat(rows(data, sequence, "quality.roc.precision.distinct().count()", ON))
+      assertThat(rows(data, sequence, "quality.roc.precision")).isEqualTo("s1=ArraySeq(0.5)");
+      assertThat(rows(data, sequence, "quality.roc.precision.count()")).isEqualTo("s1=3");
+      assertThat(rows(data, sequence, "quality.roc.precision.distinct().count()"))
           .isEqualTo("s1=2");
-      assertThat(rows(data, sequence, "(quality.roc.precision | 1.0).count()", ON))
-          .isEqualTo("s1=2");
-      assertThat(rows(data, request, "dosageInstruction.timing.event.count()", OFF))
-          .isEqualTo("m1=3");
-      assertThat(rows(data, sequence, "quality.roc.precision.count()", OFF)).isEqualTo("s1=3");
+      assertThat(rows(data, sequence, "(quality.roc.precision | 1.0).count()")).isEqualTo("s1=2");
     }
   }
 
   /**
    * A System type that a choice holds as several FHIR types is taken as the System values of all of
-   * them, with the switch on as off.
+   * them.
    */
   @Test
   void aChoiceOfSeveralFhirTypesIsTakenAsSystemValues() {
-    for (final FhirpathConfiguration configuration : List.of(ON, OFF)) {
-      assertThat(
-              rows(
-                  unannotated,
-                  ResourceType.PATIENT,
-                  "birthDate.extension.value.ofType(System.String)",
-                  configuration))
-          .isEqualTo(
-              configuration == ON
-                  ? "p1=ArraySeq(month) p2=null p3=null p4=null"
-                  : "p1=null p2=null p3=null p4=null");
-      assertThat(
-              rows(
-                  unannotated,
-                  ResourceType.PATIENT,
-                  "gender.extension.value.ofType(System.String) = 'device'",
-                  configuration))
-          .isEqualTo(
-              configuration == ON
-                  ? "p1=true p2=null p3=null p4=null"
-                  : "p1=null p2=null p3=null p4=null");
-    }
+    assertThat(
+            rows(
+                unannotated,
+                ResourceType.PATIENT,
+                "birthDate.extension.value.ofType(System.String)"))
+        .isEqualTo("p1=ArraySeq(month) p2=null p3=null p4=null");
+    assertThat(
+            rows(
+                unannotated,
+                ResourceType.PATIENT,
+                "gender.extension.value.ofType(System.String) = 'device'"))
+        .isEqualTo("p1=true p2=null p3=null p4=null");
   }
 
-  /**
-   * A primitive's value is the same with the switch on as off, and with it on, over annotated and
-   * unannotated data alike.
-   */
+  /** A primitive's value is the same over annotated and unannotated data alike. */
   @ParameterizedTest(name = "{0}: {1}")
   @MethodSource("values")
-  void theSwitchLeavesTheValuesAsTheyAre(
+  void aPrimitiveHasTheSameValueOverAnnotatedAndUnannotatedData(
       @Nonnull final String resourceType,
       @Nonnull final String expression,
       @Nonnull final String expected) {
     final ResourceType type = ResourceType.fromCode(resourceType);
-    assertThat(rows(unannotated, type, expression, ON)).isEqualTo(expected);
-    assertThat(rows(annotated, type, expression, ON)).isEqualTo(expected);
-    if (!expression.contains(".id") && !expression.contains("extension")) {
-      assertThat(rows(unannotated, type, expression, OFF)).isEqualTo(expected);
-    }
+    assertThat(rows(unannotated, type, expression)).isEqualTo(expected);
+    assertThat(rows(annotated, type, expression)).isEqualTo(expected);
   }
 
-  // The engine form: design annotations-by-example.md §3.1, with the switch on.
+  // The engine form: design annotations-by-example.md §3.1.
 
   @Nonnull
   Stream<Arguments> engineForms() {
@@ -473,7 +427,7 @@ class PrimitiveMetadataTest {
       @Nonnull final String type,
       @Nonnull final String value) {
     final Dataset<Row> result =
-        evaluate(data, ResourceType.OBSERVATION, expression, ON).toIdValueDataset();
+        evaluate(data, ResourceType.OBSERVATION, expression).toIdValueDataset();
     assertThat(result.schema().apply("value").dataType().simpleString()).isEqualTo(type);
     assertThat(valueOf(result, "o1")).isEqualTo(value);
   }
@@ -482,7 +436,7 @@ class PrimitiveMetadataTest {
   @Test
   void aRepeatingStringIsPairedWithItsIdAndExtensions() {
     final Dataset<Row> result =
-        evaluate(unannotated, ResourceType.PATIENT, "name.given", ON).toIdValueDataset();
+        evaluate(unannotated, ResourceType.PATIENT, "name.given").toIdValueDataset();
     assertThat(result.schema().apply("value").dataType().simpleString())
         .isEqualTo(
             "array<struct<value:string,id:string,"
@@ -542,9 +496,9 @@ class PrimitiveMetadataTest {
   }
 
   /**
-   * With the switch on, a primitive that carries an extension converts to a System value without
-   * its id and extension, and keeps its stored annotations; a merge whose result is System drops
-   * them; a merge of FHIR values unions them.
+   * A primitive that carries an extension converts to a System value without its id and extension,
+   * and keeps its stored annotations; a merge whose result is System drops them; a merge of FHIR
+   * values unions them.
    */
   @ParameterizedTest(name = "{0}")
   @MethodSource("conversions")
@@ -554,7 +508,7 @@ class PrimitiveMetadataTest {
       @Nonnull final String type,
       @Nonnull final String value) {
     final Dataset<Row> result =
-        evaluate(annotated, ResourceType.OBSERVATION, expression, ON).toIdValueDataset();
+        evaluate(annotated, ResourceType.OBSERVATION, expression).toIdValueDataset();
     assertThat(result.schema().apply("value").dataType().simpleString()).isEqualTo(type);
     assertThat(valueOf(result, "o1")).isEqualTo(value);
   }
@@ -566,7 +520,7 @@ class PrimitiveMetadataTest {
   @Test
   void aMergeOfFhirValuesUnionsTheirIdsAndExtensions() {
     final Dataset<Row> merged =
-        evaluate(unannotated, ResourceType.PATIENT, "gender | name.given", ON).toIdValueDataset();
+        evaluate(unannotated, ResourceType.PATIENT, "gender | name.given").toIdValueDataset();
     assertThat(merged.schema().apply("value").dataType().simpleString())
         .isEqualTo(
             "array<struct<value:string,id:string,extension:"
@@ -581,15 +535,15 @@ class PrimitiveMetadataTest {
                 + ",true,null])], [Jo,n3,null],"
                 + " [Sue,null,null])");
     // The elements without a value are kept once by a deduplication.
-    assertThat(rows(unannotated, ResourceType.PATIENT, "(name.given | name.given).id", ON))
+    assertThat(rows(unannotated, ResourceType.PATIENT, "(name.given | name.given).id"))
         .isEqualTo("p1=ArraySeq(n2, n3) p2=ArraySeq(orphan) p3=ArraySeq() p4=ArraySeq(first)");
-    assertThat(rows(unannotated, ResourceType.PATIENT, "name.given.distinct().id", ON))
+    assertThat(rows(unannotated, ResourceType.PATIENT, "name.given.distinct().id"))
         .isEqualTo("p1=ArraySeq(n2, n3) p2=ArraySeq(orphan) p3=ArraySeq() p4=ArraySeq(first)");
   }
 
   // Output (D10).
 
-  /** A view outputs a primitive as its value alone, with the switch on. */
+  /** A view outputs a primitive as its value alone. */
   @Test
   void aViewOutputsAPrimitiveAsItsValue() {
     final Dataset<Row> result =
@@ -625,17 +579,16 @@ class PrimitiveMetadataTest {
   @Test
   void aSingularPrimitiveReadsOnlyTheFieldsItNeeds() {
     final Dataset<Row> output =
-        evaluate(annotated, ResourceType.PATIENT, "birthDate", ON).toIdExternalValueDataset();
+        evaluate(annotated, ResourceType.PATIENT, "birthDate").toIdExternalValueDataset();
     assertThat(readSchema(output))
         .contains("_birthDate:struct<extension:")
         .doesNotContain("__start")
         .doesNotContain("__end");
     final Dataset<Row> compared =
-        evaluate(annotated, ResourceType.PATIENT, "birthDate < @1975", ON)
-            .toIdExternalValueDataset();
+        evaluate(annotated, ResourceType.PATIENT, "birthDate < @1975").toIdExternalValueDataset();
     assertThat(readSchema(compared)).contains("__start:timestamp,__end:timestamp>");
     final Dataset<Row> asked =
-        evaluate(annotated, ResourceType.PATIENT, "gender.id", ON).toIdExternalValueDataset();
+        evaluate(annotated, ResourceType.PATIENT, "gender.id").toIdExternalValueDataset();
     assertThat(readSchema(asked)).contains("_gender:struct<id:string,extension:");
   }
 
@@ -651,8 +604,7 @@ class PrimitiveMetadataTest {
         evaluate(
                 annotated,
                 ResourceType.OBSERVATION,
-                "effective.ofType(Timing).event.where($this > @2019-06).count()",
-                ON)
+                "effective.ofType(Timing).event.where($this > @2019-06).count()")
             .toIdExternalValueDataset();
     assertThat(rows(result)).isEqualTo("o1=0 o2=0 o3=2 o4=0");
     final LogicalPlan plan = result.queryExecution().optimizedPlan();
@@ -698,11 +650,9 @@ class PrimitiveMetadataTest {
   private CollectionDataset evaluate(
       @Nonnull final Map<String, Dataset<Row>> data,
       @Nonnull final ResourceType resourceType,
-      @Nonnull final String expression,
-      @Nonnull final FhirpathConfiguration configuration) {
+      @Nonnull final String expression) {
     return DatasetEvaluatorBuilder.create(resourceType, fhirEncoders.getContext())
         .withDataset(data.get(resourceType.toCode()))
-        .withConfiguration(configuration)
         .build()
         .evaluate(PARSER.parse(expression));
   }
@@ -712,9 +662,8 @@ class PrimitiveMetadataTest {
   private String rows(
       @Nonnull final Map<String, Dataset<Row>> data,
       @Nonnull final ResourceType resourceType,
-      @Nonnull final String expression,
-      @Nonnull final FhirpathConfiguration configuration) {
-    return rows(evaluate(data, resourceType, expression, configuration).toIdExternalValueDataset());
+      @Nonnull final String expression) {
+    return rows(evaluate(data, resourceType, expression).toIdExternalValueDataset());
   }
 
   @Nonnull
@@ -748,9 +697,7 @@ class PrimitiveMetadataTest {
             return unannotated.keySet();
           }
         };
-    return new FhirViewExecutor(
-            fhirEncoders.getContext(), source, QueryConfiguration.builder().build(), true)
-        .buildQuery(view);
+    return new FhirViewExecutor(fhirEncoders.getContext(), source).buildQuery(view);
   }
 
   @Nonnull

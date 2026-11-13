@@ -49,11 +49,7 @@ public class QueryContext {
   public QueryContext(
       @Nonnull final PathlingContext context, @Nonnull final DataSource dataSource) {
     this.viewExecutor =
-        new FhirViewExecutor(
-            context.getFhirContext(),
-            dataSource,
-            context.getQueryConfiguration(),
-            context.isReadPrimitiveMetadata());
+        new FhirViewExecutor(context.getFhirContext(), dataSource, context.getQueryConfiguration());
     this.searchExecutor =
         FhirSearchExecutor.withDefaultRegistry(context.getFhirContext(), dataSource);
     this.gson = context.getGson();

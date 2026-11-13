@@ -217,14 +217,11 @@ public class SingleResourceEvaluatorBuilder {
    */
   @Nonnull
   public SingleResourceEvaluator build() {
-    final ResourceResolver fhirResolver =
-        new FhirResourceResolver(subjectResourceCode, fhirContext, crossResourceStrategy);
-    // With the switch on, every resource is read with its primitives' ids and extensions.
+    // Every resource is read with its primitives' ids and extensions (decision 154).
     final ResourceResolver resolver =
-        configuration.isReadPrimitiveMetadata()
-            ? new PrimitiveMetadataResolver(
-                fhirResolver, PrimitiveMetadata.of(FhirDefinitionContext.of(fhirContext)))
-            : fhirResolver;
+        new PrimitiveMetadataResolver(
+            new FhirResourceResolver(subjectResourceCode, fhirContext, crossResourceStrategy),
+            PrimitiveMetadata.of(FhirDefinitionContext.of(fhirContext)));
     return new SingleResourceEvaluator(
         resolver, functionRegistry, variables, configuration, traceCollector);
   }

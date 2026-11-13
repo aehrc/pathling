@@ -946,7 +946,7 @@ public class Collection implements Equatable {
    */
   @Nonnull
   protected Column systemValueOf(@Nonnull final Column primitive) {
-    return StoredPrimitive.value(primitive);
+    return StoredPrimitive.valueOf(primitive);
   }
 
   /**

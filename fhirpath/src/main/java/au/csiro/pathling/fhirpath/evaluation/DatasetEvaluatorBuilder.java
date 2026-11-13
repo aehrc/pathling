@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhirpath.evaluation;
 
-import au.csiro.pathling.config.FhirpathConfiguration;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
@@ -71,8 +70,6 @@ public class DatasetEvaluatorBuilder {
   @Nonnull private CrossResourceStrategy crossResourceStrategy = CrossResourceStrategy.FAIL;
 
   @Nonnull private Optional<TraceCollector> traceCollector = Optional.empty();
-
-  @Nonnull private FhirpathConfiguration configuration = FhirpathConfiguration.DEFAULT;
 
   /** Private constructor. Use factory methods to create instances. */
   private DatasetEvaluatorBuilder(
@@ -191,21 +188,6 @@ public class DatasetEvaluatorBuilder {
   }
 
   /**
-   * Sets the FHIRPath evaluation configuration.
-   *
-   * <p>Default is {@link FhirpathConfiguration#DEFAULT}.
-   *
-   * @param configuration the FHIRPath configuration
-   * @return this builder for method chaining
-   */
-  @Nonnull
-  public DatasetEvaluatorBuilder withConfiguration(
-      @Nonnull final FhirpathConfiguration configuration) {
-    this.configuration = configuration;
-    return this;
-  }
-
-  /**
    * Sets the trace collector for capturing trace() output.
    *
    * <p>Default is none (no collection, SLF4J logging only).
@@ -237,8 +219,7 @@ public class DatasetEvaluatorBuilder {
         SingleResourceEvaluatorBuilder.create(subjectResourceCode, fhirContext)
             .withCrossResourceStrategy(crossResourceStrategy)
             .withFunctionRegistry(functionRegistry)
-            .withVariables(variables)
-            .withConfiguration(configuration);
+            .withVariables(variables);
     traceCollector.ifPresent(evalBuilder::withTraceCollector);
     final SingleResourceEvaluator evaluator = evalBuilder.build();
 

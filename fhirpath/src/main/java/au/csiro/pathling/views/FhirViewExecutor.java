@@ -77,33 +77,7 @@ public class FhirViewExecutor {
   @Nonnull private final QueryConfiguration queryConfiguration;
 
   /**
-   * Whether a primitive's id and extensions are read (see {@link
-   * FhirpathConfiguration#isReadPrimitiveMetadata()}).
-   */
-  private final boolean readPrimitiveMetadata;
-
-  /**
    * Constructs a new FhirViewExecutor.
-   *
-   * @param fhirContext The FHIR context to use for the execution context
-   * @param dataset The data source to use for the execution context
-   * @param queryConfiguration The query configuration to control query execution behavior
-   * @param readPrimitiveMetadata whether a primitive's id and extensions are read
-   */
-  public FhirViewExecutor(
-      @Nonnull final FhirContext fhirContext,
-      @Nonnull final DataSource dataset,
-      @Nonnull final QueryConfiguration queryConfiguration,
-      final boolean readPrimitiveMetadata) {
-    this.fhirContext = fhirContext;
-    this.dataSource = dataset;
-    this.queryConfiguration = queryConfiguration;
-    this.readPrimitiveMetadata = readPrimitiveMetadata;
-    this.parser = new Parser();
-  }
-
-  /**
-   * Constructs a new FhirViewExecutor that does not read a primitive's id and extensions.
    *
    * @param fhirContext The FHIR context to use for the execution context
    * @param dataset The data source to use for the execution context
@@ -113,7 +87,10 @@ public class FhirViewExecutor {
       @Nonnull final FhirContext fhirContext,
       @Nonnull final DataSource dataset,
       @Nonnull final QueryConfiguration queryConfiguration) {
-    this(fhirContext, dataset, queryConfiguration, false);
+    this.fhirContext = fhirContext;
+    this.dataSource = dataset;
+    this.queryConfiguration = queryConfiguration;
+    this.parser = new Parser();
   }
 
   /**
@@ -153,12 +130,10 @@ public class FhirViewExecutor {
             .collect(toMap(ConstantDeclaration::getName, c -> Collection.fromValue(c.getValue())));
 
     // Build FHIRPath configuration from query configuration so that FHIRPath functions like
-    // repeat() and repeatAll() respect the user-configured depth limit, and primitives carry their
-    // ids and extensions where the user has asked for them.
+    // repeat() and repeatAll() respect the user-configured depth limit.
     final FhirpathConfiguration fhirpathConfig =
         FhirpathConfiguration.builder()
             .maxUnboundTraversalDepth(queryConfiguration.getMaxUnboundTraversalDepth())
-            .readPrimitiveMetadata(readPrimitiveMetadata)
             .build();
 
     // Create evaluator (uses ResourceRepresentation with id column).

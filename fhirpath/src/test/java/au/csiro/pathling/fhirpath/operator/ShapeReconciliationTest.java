@@ -30,6 +30,7 @@ import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
+import au.csiro.pathling.test.helpers.PrimitiveValues;
 import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
@@ -357,7 +358,7 @@ class ShapeReconciliationTest {
       @Nonnull final Dataset<Row> dataset,
       @Nonnull final ResourceType resourceType,
       @Nonnull final String expression) {
-    return evaluateToDataset(dataset, resourceType, expression)
+    return PrimitiveValues.of(evaluateToDataset(dataset, resourceType, expression))
         .toCanonical()
         .toIdValueDataset()
         .collectAsList()

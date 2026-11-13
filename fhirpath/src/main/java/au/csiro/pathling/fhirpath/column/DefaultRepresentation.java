@@ -239,6 +239,12 @@ public class DefaultRepresentation extends ColumnRepresentation {
         .flatten();
   }
 
+  /** The base64 text of a stored binary value, or of each of them where the field repeats. */
+  @Nonnull
+  private static Column base64Text(@Nonnull final Column values, final boolean repeating) {
+    return repeating ? functions.transform(values, functions::base64) : functions.base64(values);
+  }
+
   /** The metadata group of a field of a parent, null where the schema has none. */
   @Nonnull
   private static Column groupOf(@Nonnull final Column parent, @Nonnull final String fieldName) {
@@ -316,9 +322,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
       // A base64Binary is held as its base64 text, as it is without its metadata.
       final Column decoded =
           fhirType.filter(FHIRDefinedType.BASE64BINARY::equals).isPresent()
-              ? (repeating
-                  ? functions.transform(values, functions::base64)
-                  : functions.base64(values))
+              ? base64Text(values, repeating)
               : values;
       paired = StoredPrimitive.paired(decoded, groups, metadata, repeating);
     }

@@ -31,6 +31,7 @@ import au.csiro.pathling.schema.annotation.kinds.DateRangeKind;
 import au.csiro.pathling.search.SearchColumnBuilder;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
+import au.csiro.pathling.test.helpers.PrimitiveValues;
 import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
@@ -494,8 +495,7 @@ class DateRangeComparisonTest {
                 ResourceType.fromCode(resourceType), fhirEncoders.getContext())
             .withDataset(dataset)
             .build();
-    return evaluator
-        .evaluate(PARSER.parse(expression))
+    return PrimitiveValues.of(evaluator.evaluate(PARSER.parse(expression)))
         .toCanonical()
         .toIdValueDataset()
         .collectAsList()

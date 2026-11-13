@@ -28,13 +28,23 @@
 
 **Status:** ready-for-agent
 
-- [ ] No switch for primitive metadata remains in the code, including the `PathlingContext.Builder` option and the four-argument `FhirViewExecutor` constructor.
-- [ ] The cases listed above run, and pass, with their exclusions removed.
-- [ ] Search of every parameter type passes with primitive metadata on, and a quantity search still reads its stored annotations.
-- [ ] The tests above read the output form (or assert the new plan shape), and the full build passes, including Python and R.
+- [x] No switch for primitive metadata remains in the code, including the `PathlingContext.Builder` option and the four-argument `FhirViewExecutor` constructor.
+- [x] The cases listed above run, and pass, with their exclusions removed.
+- [x] Search of every parameter type passes with primitive metadata on, and a quantity search still reads its stored annotations.
+- [x] The tests above read the output form (or assert the new plan shape), and the full build passes, including Python and R.
 
 ## Comments
 
 ### Owner decision, 2026-11-13 (decision 154)
 
 Primitive metadata has one mode, on; the off switch is removed from the code and becomes ticket 55 (in stage 5, to triage). A primitive leaves the engine as its bare value. Server exposure is out of scope. This replaces the ticket's first version, which kept the switch off by default and asked for the baselines to depend on it and for a full build run in both modes.
+
+### Built, 2026-11-13 (branch issue/2832_54_primitive-metadata-always-on)
+
+- **The switch is gone.** `FhirpathConfiguration.readPrimitiveMetadata`, `PathlingContext.Builder.readPrimitiveMetadata` and `isReadPrimitiveMetadata`, the four-argument `FhirViewExecutor` constructor and `DatasetEvaluatorBuilder.withConfiguration` (added only for it) are removed; `SingleResourceEvaluatorBuilder` always resolves under `PrimitiveMetadataResolver`. A definition that is not wrapped (an arbitrary object in the YAML harness) still gives a primitive no children.
+- **Search.** `matchedColumn` converts a wrapped primitive, except a date, which is matched as held (its matcher reads only text and bounds), because converting it lost the filter pushed down on a stored bound (`AnnotationPlanBaselineTest.aDateSearchPushesAFilterOnTheStoredRange`). A stored quantity is left as held.
+- **Pushdown.** With metadata read, a singular primitive's guard is a disjunction (`value`, `_x.id`, `_x.extension` present), which `AnnotationOrElse` did not see through, so `DatePushdownTest` and `AnnotationPlanBaselineTest` lost their pushed filters. The accessor now sees through a disjunction of presence tests of which one tests the value (`ResolveOrNoneTest.accessorSeesThroughADisjunctionThatTestsTheValue`).
+- **Decimals.** Conversion dropped every null, so a repeating decimal that does not decode lost its null item (`AnnotatedTypesParityTest`, `(component.valueQuantity.value | 2).count()`). It now drops only elements without a value.
+- **Fixtures.** `PofDatasets.fromJson` stores primitive metadata. `AbsentElementTest` covers a name holding only `_given` or `_family` both ways (owner, 2026-11-13): read without the metadata (default ingest), its expectations stand; stored with it, `name.given.count()` is 2 and `name.family.count()` is 1, as fhirpath.js counts them.
+- **Baselines.** The 18 fhirpath.js exclusions are removed (seven rules emptied and deleted); fhirpath-ptl needed no change.
+- **Sonar.** `java:S3358` fixed (`DefaultRepresentation.base64Text`); `java:S1845` fixed (`StoredPrimitive.value` renamed `valueOf`).
