@@ -182,7 +182,7 @@ is split on the first `=` only, a value may itself contain `=` (for example
 "spark.sql.shuffle.partitions" = 16
 "spark.sql.adaptive.enabled" = true
 "spark.executor.memory" = "4g"
-"spark.jars.packages" = "org.apache.hadoop:hadoop-aws:3.4.1"
+"spark.jars.packages" = "org.apache.hadoop:hadoop-aws:3.4.2"
 "spark.hadoop.fs.s3a.secret.key" = "@/run/secrets/s3-key"
 ```
 
