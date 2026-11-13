@@ -10,7 +10,7 @@ Python applications and data science workflows.
 
 Prerequisites:
 
-- Python 3.9+ with pip
+- Python 3.10+ with pip
 
 To install, run this command:
 
@@ -360,13 +360,8 @@ the `au.csiro.pathling:library-api`
 Maven package. Once the cluster is restarted, the libraries should be available
 for import and use within all notebooks.
 
-By default, Databricks uses Java 8 within its clusters, while Pathling requires
-Java 21. To enable Java 21 support within your cluster, navigate to **Advanced
-Options > Spark > Environment Variables** and add the following:
-
-```bash
-JNAME=zulu21-ca-amd64
-```
+Pathling is built for Databricks Runtime 18 LTS, which uses Java 21 by default,
+the version Pathling requires.
 
 See the Databricks documentation on
 [Libraries](https://docs.databricks.com/libraries/index.html) for more

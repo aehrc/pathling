@@ -110,7 +110,6 @@ import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.expressions.Window;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
-import scala.Option;
 import scala.concurrent.Await;
 import scala.concurrent.duration.Duration;
 
@@ -392,17 +391,19 @@ public class SnomedRf2Importer {
       return List.of();
     }
     final Dataset<Row> denseByCode = codeOrdered.select(COLUMN_CODE, COLUMN_DENSE_ID);
+    // Both sides are drawn from the same dataset, so each is aliased and its code column is named
+    // through the alias. Spark 4.1 rejects the join as an ambiguous self-join otherwise.
     final Dataset<Row> childDense =
-        denseByCode.withColumnRenamed(COLUMN_DENSE_ID, COLUMN_SOURCE_DENSE_ID);
+        denseByCode.withColumnRenamed(COLUMN_DENSE_ID, COLUMN_SOURCE_DENSE_ID).alias("child");
     final Dataset<Row> parentDense =
-        denseByCode.withColumnRenamed(COLUMN_DENSE_ID, COLUMN_TARGET_DENSE_ID);
+        denseByCode.withColumnRenamed(COLUMN_DENSE_ID, COLUMN_TARGET_DENSE_ID).alias("parent");
     final Dataset<Row> isaRaw =
         readRf2(files.relationship, "sourceId", "destinationId", "typeId")
             .filter(col(COLUMN_ACTIVE).equalTo("1"))
             .filter(col("typeId").equalTo(IS_A));
     return isaRaw
-        .join(childDense, isaRaw.col("sourceId").equalTo(childDense.col(COLUMN_CODE)))
-        .join(parentDense, isaRaw.col("destinationId").equalTo(parentDense.col(COLUMN_CODE)))
+        .join(childDense, col("sourceId").equalTo(col("child." + COLUMN_CODE)))
+        .join(parentDense, col("destinationId").equalTo(col("parent." + COLUMN_CODE)))
         .select(col(COLUMN_SOURCE_DENSE_ID), col(COLUMN_TARGET_DENSE_ID))
         .collectAsList();
   }
@@ -478,12 +479,11 @@ public class SnomedRf2Importer {
   @Nullable
   private static Long rowCount(@Nonnull final Observation observation, final long deadline) {
     try {
-      final scala.collection.immutable.Map<String, Object> metrics =
+      final Row metrics =
           Await.result(
               observation.future(),
               Duration.create(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS));
-      final Option<Object> rows = metrics.get(OBSERVED_ROWS);
-      return rows.isDefined() ? (Long) rows.get() : null;
+      return metrics.getAs(OBSERVED_ROWS);
     } catch (final TimeoutException e) {
       log.debug("Row count metric '{}' was not reported.", observation.name());
       return null;
@@ -1091,20 +1091,20 @@ public class SnomedRf2Importer {
                 .filter(col(COLUMN_ACTIVE).equalTo("1")),
             resolution.input);
 
+    // Both sides are drawn from the same dataset, so each is aliased and its code column is named
+    // through the alias. Spark 4.1 rejects the join as an ambiguous self-join otherwise.
     final Dataset<Row> sourceDense =
-        denseByCode.withColumnRenamed(COLUMN_DENSE_ID, COLUMN_SOURCE_DENSE_ID);
+        denseByCode.withColumnRenamed(COLUMN_DENSE_ID, COLUMN_SOURCE_DENSE_ID).alias("source");
     final Dataset<Row> targetDense =
-        denseByCode.withColumnRenamed(COLUMN_DENSE_ID, COLUMN_TARGET_DENSE_ID);
+        denseByCode.withColumnRenamed(COLUMN_DENSE_ID, COLUMN_TARGET_DENSE_ID).alias("target");
 
     // A relationship resolves only when both its source and its destination concept are present,
     // so the resolved count is taken after both joins.
     final Dataset<Row> mapped =
         observeRowCount(
                 relRaw
-                    .join(sourceDense, relRaw.col("sourceId").equalTo(sourceDense.col(COLUMN_CODE)))
-                    .join(
-                        targetDense,
-                        relRaw.col("destinationId").equalTo(targetDense.col(COLUMN_CODE)))
+                    .join(sourceDense, col("sourceId").equalTo(col("source." + COLUMN_CODE)))
+                    .join(targetDense, col("destinationId").equalTo(col("target." + COLUMN_CODE)))
                     .select(
                         col("typeId"),
                         col("relationshipGroup"),
