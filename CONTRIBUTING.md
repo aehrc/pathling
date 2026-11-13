@@ -127,7 +127,7 @@ You will need the following software to build the core libraries:
 
 - Java 21
 - Maven 3.9+
-- Python 3.9+
+- Python 3.10+
 - uv (Python package manager)
 - R 3.5+
 
@@ -172,7 +172,7 @@ data.
 
 You will need the following software to build the Python library:
 
-- Python 3.9+
+- Python 3.10+
 - uv (Python package manager)
 
 To build and install the Python library locally, run:
