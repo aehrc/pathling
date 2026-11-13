@@ -5068,3 +5068,28 @@ digits, such as the 0.0000005 either side of a six-digit value, is raised to the
 the range keeps the same values, and Spark does not widen the comparison to a scale at which a value
 with 32 integer digits no longer fits.
 
+
+## 154. Primitive metadata is always on
+
+Owner decision (2026-11-13), in the discussion of ticket 54 (Primitive metadata in the conformance
+baselines and the default build, now Primitive metadata always on). Amends decision 141 (D14).
+Design: `design/annotations-in-the-engine.md`, amendment of 2026-11-13.
+
+Ticket 52 (Primitive metadata in the engine) read a primitive's `id` and `extension` behind a switch, off by
+default. Run with the switch forced on, the engine suite failed in Search and in tests that read the
+engine's raw form: if the build cannot pass with it on, support for primitive metadata is not complete.
+
+_Decision_:
+
+- **One mode, on.** The switch is removed from the code: `FhirpathConfiguration.readPrimitiveMetadata`,
+  `PathlingContext.Builder.readPrimitiveMetadata` and `isReadPrimitiveMetadata` (never released), and the
+  four-argument `FhirViewExecutor` constructor. An optional off switch is ticket 55 (Optional switch to
+  skip reading primitive metadata), to triage in stage 5.
+- **A primitive leaves the engine as its bare value.** The structure of value, `id` and `extension` is the
+  form of evaluation only, so that they can be navigated; it is converted by `toEngineForm()` wherever a
+  value is handed on, and is kept only where the expression ends in `id` or `extension`. Search converts a
+  wrapped primitive and leaves a stored quantity as held, whose matcher reads its stored annotations.
+- **The full build passes in that mode**, including Search, Python and R, and the 18 fhirpath.js
+  exclusions that primitive metadata resolves are removed. The tests that read the raw form move to the
+  output form (approved by the owner for the Search and higher-level tests, 2026-11-13).
+- **Server exposure is out of scope.**

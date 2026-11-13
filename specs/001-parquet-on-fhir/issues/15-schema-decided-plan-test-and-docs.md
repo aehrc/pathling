@@ -25,4 +25,4 @@ Can start once any one annotation kind has landed, and is extended as each furth
 
 - *Fill* keeps a stored annotation that is null, so a table merged from annotated and unannotated sources needs *recompute*. Deciding *fill* per row moved to a GitHub issue after #2367 (ticket 38).
 - Encoding a streaming dataset is refused in this release. A stream is encoded batch by batch, for example in `foreachBatch`. Dense mode and streaming encode moved to a GitHub issue after #2367 (tickets 18 and 19).
-- If tickets 17 and 52 land, the primitive metadata group, its ingest option, and its navigation from FHIRPath with the engine's switch.
+- If tickets 17 and 52 land, the primitive metadata group, its ingest option, and its navigation from FHIRPath, which is always on (ticket 54, Primitive metadata always on, decision 154; owner, 2026-11-13), so the documentation names no switch for it and does not say it is off by default.

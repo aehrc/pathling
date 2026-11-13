@@ -86,7 +86,7 @@ extensions are stored and navigable.
 - [52](52-primitive-metadata-in-the-engine.md) Primitive metadata in the engine (US6, #437)
 - [15](15-schema-decided-plan-test-and-docs.md) Test that annotation use is decided from the schema, and document annotations
 - [53](53-system-coding-without-id.md) Drop `id` from System.Coding (needs triage; tentatively in this stage)
-- [54](54-primitive-metadata-in-the-conformance-baselines.md) Primitive metadata in the conformance baselines and the default build (needs triage; tentatively in this stage)
+- [54](54-primitive-metadata-in-the-conformance-baselines.md) Primitive metadata always on (US6, #437): remove the switch, and the full build, Search, Python, R and the fhirpath.js baseline pass with it
 - ~~[34](34-placeholder-content-outside-definitions.md) PLACEHOLDER: Carry content the definitions do not describe through ingest, egress and the engine~~ (moved to a follow-up issue, ticket 26)
 
 The remaining tickets run in the order listed (owner, 2026-11-02). 42 and 43
@@ -99,7 +99,7 @@ fields flat; 43 builds the lazy accessors on it (owner, 2026-11-10). 43 was spli
 applies them to decimals and System.Quantity, and 51 builds the emission shapes
 and the level and by-example tests. 17 was triaged and split (owner, 2026-11-12): 17 stores the group and
 round-trips it, behind an ingest option that is off by default, and 52 reads it in the engine, behind its own
-switch. 15 comes last, so that its
+switch, which 54 removes (owner, 2026-11-13: primitive metadata is always on). 15 comes last, so that its
 plan tests and documentation describe the final shape.
 
 Ticket 17 moved here from stage 3 (owner, 2026-10-23): it builds on the interim
@@ -133,6 +133,7 @@ Follow-ups and completion:
 - [26](26-raise-github-followups.md) Raise the GitHub follow-up issues, including everything the re-plan moved out of #2367
 - [36](36-followup-extra-fields.md) Scope the follow-up issue on extra fields: their support, and their place in the conformance levels
 - [48](48-annotation-decisions-to-adr.md) Decide which annotation decisions belong in an ADR
+- [55](55-optional-switch-to-skip-primitive-metadata.md) Optional switch to skip reading primitive metadata (needs triage; raised from 54)
 - [49](49-dependency-vulnerabilities.md) Clear the dependency vulnerabilities that the pre-release scan reports (after #2879, the move to Spark 4.1)
 - [28](28-completion-checklist.md) Completion checklist
 - ~~[33](33-engine-layout-tolerance-modes.md) The engine handles non-conformant layout shapes in the same four modes~~ (moved to the follow-up, ticket 26)

@@ -11,7 +11,7 @@ FR-004, FR-005, FR-021–FR-023, FR-059 · **Decisions:** 140–152 in
 1. **One column per element stays.** A FHIR primitive is held in the engine as one
    flat struct of its `value` and its **named stored annotations** (D2, decision 141;
    decision 152). Its `id` and `extension` are carried only when a switch, off by
-   default, turns them on (D14). Every engine value follows one rule: plain fields are
+   default, turns them on (D14; amended 2026-11-13, decision 154: always carried, no switch). Every engine value follows one rule: plain fields are
    content, `__` fields are annotations, all at one level. This is the pairing decision 135 already
    chose. It fits the existing evaluation model without change.
 2. **Annotations are accessors, not data.** No annotation is computed when a value is
@@ -851,3 +851,15 @@ If A is markedly slower than B or C on these, those options are reconsidered.
 5. Prototype memoised `date_start` and `date_end`, and measure.
 6. Prototype the accessor model for dates, and rerun step 2.
 7. Change quantities after the FR-005 review.
+
+## Amendment, 2026-11-13 (decision 154): primitive metadata is always on
+
+The switch of D14 (decision 141) is removed. Wherever this document speaks of the switch (§2, §4.1 and
+its switch table, §6, §8 and the code list that names `FhirpathConfiguration.readPrimitiveMetadata` and
+`PathlingContext.Builder.readPrimitiveMetadata`), read it as the single mode that was "on": every
+primitive reached by traversal is `struct(value, id, extension, <annotation fields>)`, and
+`id` and `extension` are read from `_x` by name wherever the element is read. A primitive leaves the
+engine as its bare value, by `toEngineForm()`, unless the expression ends in `id` or `extension`.
+Search converts a wrapped primitive and leaves a stored quantity as held (ticket 54). The "switch off"
+rows of §4.1 and the exceptions to the §2 pruning constraint that they covered are no longer met; an
+optional switch is ticket 55 (Optional switch to skip reading primitive metadata), to triage in stage 5.

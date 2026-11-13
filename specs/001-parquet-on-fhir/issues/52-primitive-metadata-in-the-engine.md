@@ -6,7 +6,7 @@
 
 - **Pairing.** Ticket 11 (Annotation registry, per-annotation toggles and SchemaConfiguration) builds the pairing of `x` with `_x` for annotation fields, and ticket 51 (Emission shapes, level tests and the by-example tests) builds its emission shape for repeating primitives. This ticket extends it to `id` and `extension`, for singular and repeating elements alike. It names only the fields an expression needs, so that the read prunes. Nothing tests whether `_x` exists on its own.
 - **Navigation.** Navigation to the id and extensions goes through sibling resolution (T124), and both yield empty where the source carried neither (T120–T123).
-- **The switch (decision 141, D14; owner, 2026-11-10).** A configuration option, off by default, puts a primitive's `id` and `extension` into its engine element as content fields beside `value` (decision 152). With it off, `x.id` and `x.extension(…)` on a primitive are empty, with no error. It is a separate setting from the ingest option of ticket 17 (owner, 2026-11-12), so that data stored with the group can be read without it.
+- **The switch (decision 141, D14; owner, 2026-11-10). _Superseded in part by ticket 54 (Primitive metadata always on, decision 154, owner, 2026-11-13): the switch is removed and primitive metadata is always on; what follows records what was built._** A configuration option, off by default, puts a primitive's `id` and `extension` into its engine element as content fields beside `value` (decision 152). With it off, `x.id` and `x.extension(…)` on a primitive are empty, with no error. It is a separate setting from the ingest option of ticket 17 (owner, 2026-11-12), so that data stored with the group can be read without it.
 - **Conversion to System and a System merge (decision 142, D8 and D9; moved from ticket 43, owner, 2026-11-11).** With the switch on, the conversion to System drops `id`, `extension` and any other content the System type lacks, and a merge whose result is a System value drops each operand's `id` and `extension`, while a merge of FHIR values unions them. The rules are as decision 153 now states them, which changes what a converted System value is made from. They are not restated here.
 - **Equality.** Primitive `id` and `extension` in comparisons stay as decision 151 settles, until the equality review of ticket 26.
 
@@ -25,7 +25,7 @@
 1. **The element form.** With the switch on, every FHIR primitive is `struct(value, id, extension,
    <annotation fields>)`, flat, as design §3.1 of `annotations-by-example.md` shows, and every
    primitive collection reads its value from `value`.
-2. **The switch.** A new boolean on `FhirpathConfiguration`, off by default, wired through
+2. **The switch** _(superseded in part by ticket 54, Primitive metadata always on: removed, and its Python and R exposure with it)_**.** A new boolean on `FhirpathConfiguration`, off by default, wired through
    `PathlingContext`'s existing configuration only. Its Python, R and server exposure is a
    follow-up.
 3. **Plan tests.** They assert a pruned read where Spark 4.0.2 can prune (a primitive outside a
@@ -108,7 +108,7 @@ the owner's decision below resolved.
    repeating parent keeps its positions without a value as null items, because null items are
    removed before the parents' arrays are flattened, while at the root and under a singular parent
    they are removed.
-3. Follow-up: ticket 54 (Primitive metadata in the conformance baselines and the default build).
+3. Follow-up: ticket 54 (Primitive metadata always on). _Superseded in part by ticket 54: it removes the switch, and with it the Python and R follow-up above and the server exposure here; an optional off switch is ticket 55 (Optional switch to skip reading primitive metadata)._
 
 ### Built after the owner's decisions, 2026-11-13
 
@@ -142,7 +142,7 @@ the owner's decision below resolved.
 - **The switch is off `QueryConfiguration`** (owner, review finding 4: no server surface). The
   server binds `QueryConfiguration` from its Spring configuration, so the library sets the switch
   through `PathlingContext.Builder.readPrimitiveMetadata`, which `PathlingContext` passes to
-  `FhirViewExecutor` and `evaluateFhirPath`. Server exposure is part of ticket 54.
+  `FhirViewExecutor` and `evaluateFhirPath`. Server exposure is part of ticket 54. _(Superseded in part by ticket 54 (Primitive metadata always on): there is no switch to expose, and `PathlingContext.Builder.readPrimitiveMetadata` is removed.)_
 - Dead code removed: `SystemDateTime.fromStored` and `fromStoredArray`, `StoredDecimal.fromStored`
   and `fromStoredArray`; `AnnotationMemoisationTest` reads the date through `SystemDateTime.paired`.
 - Tests added to `PrimitiveMetadataTest` for each of the above, and one that pins the switch off:
