@@ -15,6 +15,11 @@ jobs:
   site:
     name: Build and deploy site
     runs-on: ubuntu-latest
+    # Shared with the benchmark workflow's publish job, which also writes to
+    # gh-pages.
+    concurrency:
+      group: gh-pages
+      cancel-in-progress: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -39,6 +44,10 @@ jobs:
           trivyignore: site/.trivyignore
           skip-db-update: "true"
 
+      - name: Run site tests
+        working-directory: site
+        run: bun test
+
       - name: Run install goal
         env:
           R_KEEP_PKG_SOURCE: yes
@@ -58,12 +67,14 @@ jobs:
           mkdir -p site/target/site/R
           cp lib/R/target/pathling_*.tar.gz site/target/site/R/
 
-      - name: Preserve helm directory from gh-pages
+      - name: Preserve helm and benchmark data directories from gh-pages
         run: |
           git fetch origin gh-pages:gh-pages || true
-          if git show gh-pages:helm/index.yaml >/dev/null 2>&1; then
-            git archive gh-pages helm | tar -x -C site/target/site/
-          fi
+          for DIR in helm benchmarks/data; do
+            if git cat-file -e "gh-pages:${DIR}" 2>/dev/null; then
+              git archive gh-pages "${DIR}" | tar -x -C site/target/site/
+            fi
+          done
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4
