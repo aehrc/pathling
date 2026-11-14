@@ -1,4 +1,5 @@
-# This workflow benchmarks the library API using a previously successful build.
+# This workflow benchmarks the library API using a previously successful build,
+# and publishes the results to the benchmarks page of the site.
 #
 # It is triggered manually and requires the user to input the workflow run ID of the build.
 
@@ -14,6 +15,10 @@ on:
 jobs:
   benchmark:
     runs-on: ubuntu-latest
+    outputs:
+      commit_sha: ${{ steps.get_run_info.outputs.commit_sha }}
+      short_sha: ${{ steps.get_short_sha.outputs.short_sha }}
+      date: ${{ steps.run_benchmark.outputs.date }}
     permissions:
       actions: read
       contents: read
@@ -107,16 +112,78 @@ jobs:
       - name: Build benchmark JAR
         run: mvn --batch-mode package -pl benchmark
 
+      # TerminologyBenchmark is excluded, as it needs a terminology source that
+      # is not available here.
       - name: Run benchmark
+        id: run_benchmark
         run: |
           java -Xshare:off -Xmx8g -ea -Duser.timezone=UTC \
             --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
             --add-opens=java.base/java.net=ALL-UNNAMED \
             -jar benchmark/target/benchmark-${{ steps.get_version.outputs.version }}.jar \
-            -rf json -rff benchmark-${{ steps.get_short_sha.outputs.short_sha }}.json
+            -rf json -rff benchmark-${{ steps.get_short_sha.outputs.short_sha }}.json \
+            PathlingBenchmark
+          echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       - name: Save results
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-results-${{ steps.get_short_sha.outputs.short_sha }}
           path: benchmark-*.json
+
+  # Adds the results to the data served at /benchmarks/data on the site. The
+  # site deployment preserves this directory, and shares the concurrency group
+  # so that the two never write to gh-pages at the same time.
+  publish:
+    needs: benchmark
+    runs-on: ubuntu-latest
+    concurrency:
+      group: gh-pages
+      cancel-in-progress: false
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-tools
+        with:
+          java: "false"
+          bun: "true"
+
+      - name: Download results
+        uses: actions/download-artifact@v4
+        with:
+          name: benchmark-results-${{ needs.benchmark.outputs.short_sha }}
+
+      - name: Add results to benchmark data
+        env:
+          SHORT_SHA: ${{ needs.benchmark.outputs.short_sha }}
+          COMMIT_SHA: ${{ needs.benchmark.outputs.commit_sha }}
+          DATE: ${{ needs.benchmark.outputs.date }}
+        run: |
+          bun site/scripts/publishBenchmark.js \
+            --results "benchmark-${SHORT_SHA}.json" \
+            --data-dir gh-pages/benchmarks/data \
+            --run-id "${{ github.run_id }}" \
+            --commit "${COMMIT_SHA}" \
+            --date "${DATE}"
+
+      - name: Commit and push
+        working-directory: gh-pages
+        env:
+          SHORT_SHA: ${{ needs.benchmark.outputs.short_sha }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add benchmarks/data
+          git commit -m "Publish benchmark results for ${SHORT_SHA}"
+          git push

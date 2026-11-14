@@ -1,0 +1,135 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Author: John Grimes
+ */
+
+.page h2 {
+    margin-top: 2rem;
+}
+
+.chart {
+    margin: 0;
+}
+
+.chart svg {
+    width: 100%;
+    height: auto;
+}
+
+.gridLine {
+    stroke: var(--ifm-color-emphasis-200);
+}
+
+.axisLabel {
+    fill: var(--ifm-color-emphasis-700);
+    font-size: 12px;
+}
+
+.commitLabel {
+    fill: var(--ifm-link-color);
+    font-family: var(--ifm-font-family-monospace);
+    font-size: 13px;
+}
+
+.point {
+    cursor: pointer;
+}
+
+.errorBar {
+    pointer-events: none;
+}
+
+.point:hover {
+    stroke: var(--ifm-font-color-base);
+    stroke-width: 2;
+}
+
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    font-size: 0.875rem;
+}
+
+.legendItem {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.swatch {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+}
+
+.compareForm {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.navigation {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.metadata {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.metadata dt {
+    flex: 0 0 10rem;
+    margin: 0 0 0.5rem;
+}
+
+.metadata dd {
+    flex: 1 1 calc(100% - 10rem);
+    margin: 0 0 0.5rem;
+    overflow-wrap: anywhere;
+}
+
+.tableWrapper {
+    overflow-x: auto;
+}
+
+.number {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.iterations {
+    font-size: 0.8rem;
+}
+
+.improvement {
+    color: var(--ifm-color-success-darker);
+    font-weight: 600;
+}
+
+.regression {
+    color: var(--ifm-color-danger-dark);
+    font-weight: 600;
+}
+
+.error {
+    color: var(--ifm-color-danger-dark);
+}
