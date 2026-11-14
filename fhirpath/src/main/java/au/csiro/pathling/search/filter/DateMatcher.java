@@ -17,19 +17,23 @@
 
 package au.csiro.pathling.search.filter;
 
+import static au.csiro.pathling.encoders.ColumnFunctions.resolveOrElse;
+import static au.csiro.pathling.encoders.ColumnFunctions.resolveOrNull;
 import static au.csiro.pathling.encoders.ColumnFunctions.resolveStringOrNull;
-import static org.apache.spark.sql.functions.callUDF;
+import static au.csiro.pathling.sql.SqlFunctions.let;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.FhirPathDateTime;
-import au.csiro.pathling.sql.misc.HighBoundaryForDateTime;
-import au.csiro.pathling.sql.misc.LowBoundaryForDateTime;
+import au.csiro.pathling.fhirpath.column.SystemDateTime;
+import au.csiro.pathling.schema.LayoutFields;
+import au.csiro.pathling.schema.annotation.kinds.DateRangeKind;
 import jakarta.annotation.Nonnull;
-import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.types.DataTypes;
 
 /**
  * Matches elements using range-based comparisons for date search parameters.
@@ -39,9 +43,10 @@ import org.apache.spark.sql.Column;
  * prefixed with a comparison operator (e.g., "ge2023-01-15" for greater-or-equal).
  *
  * <p>This matcher supports both scalar date types (date, dateTime, instant) and Period types. For
- * scalar types, UDFs are used to compute precision-aware boundaries. For Period types, the start
- * and end fields are extracted and boundaries computed, with null values treated as negative and
- * positive infinity respectively.
+ * scalar types, the precision-aware boundaries are read through the date's accessors: the stored
+ * range annotations where the schema carries them, and computed from one memoised parse of each
+ * value otherwise. For Period types, the lower bound of the start and the upper bound of the end
+ * are read the same way, with null values treated as negative and positive infinity respectively.
  *
  * <p>Supported prefixes:
  *
@@ -71,15 +76,15 @@ public class DateMatcher implements ElementMatcher {
    * Practical minimum timestamp for unbounded Period start. Using year 0001 to avoid Spark
    * timestamp overflow issues with Instant.MIN.
    */
-  private static final Timestamp MIN_TIMESTAMP =
-      Timestamp.from(LocalDateTime.of(1, 1, 1, 0, 0, 0).toInstant(ZoneOffset.UTC));
+  private static final Instant MIN_TIMESTAMP =
+      LocalDateTime.of(1, 1, 1, 0, 0, 0).toInstant(ZoneOffset.UTC);
 
   /**
    * Practical maximum timestamp for unbounded Period end. Using year 9999 to avoid Spark timestamp
    * overflow issues with Instant.MAX.
    */
-  private static final Timestamp MAX_TIMESTAMP =
-      Timestamp.from(LocalDateTime.of(9999, 12, 31, 23, 59, 59).toInstant(ZoneOffset.UTC));
+  private static final Instant MAX_TIMESTAMP =
+      LocalDateTime.of(9999, 12, 31, 23, 59, 59).toInstant(ZoneOffset.UTC);
 
   private final boolean isPeriodType;
 
@@ -116,57 +121,84 @@ public class DateMatcher implements ElementMatcher {
   @Override
   @Nonnull
   public Column match(@Nonnull final Column element, @Nonnull final String searchValue) {
-    // Parse prefix and date from search value
+    if (isPeriodType) {
+      // Period: start/end are STRING fields representing dateTime values. The lower bound of the
+      // start and the upper bound of the end are each read from the stored range annotation where
+      // the schema carries it, and computed from one parse of the text otherwise, and a null one is
+      // taken as infinity. Each bound is read through the tolerant traversal, so a bound the
+      // schema does not carry is open, as a null one is (FR-024, FR-054).
+      final Column resourceLow =
+          coalesce(bound(element, "start", LayoutFields.START_ANNOTATION), lit(MIN_TIMESTAMP));
+      final Column resourceHigh =
+          coalesce(bound(element, "end", LayoutFields.END_ANNOTATION), lit(MAX_TIMESTAMP));
+      // The element itself must not be null (the resource must have a period).
+      return element.isNotNull().and(compare(searchValue, resourceLow, resourceHigh));
+    }
+    // Scalar date/dateTime/instant: a date, whose bounds are read through its accessors, as the
+    // stored annotations where the schema carries them, which Parquet can push a filter on. It is
+    // bound once, so that a traced element is evaluated once however many times its bounds are read
+    // (#2594); a bound computed more than once shares one memoised parse (decision 145).
+    return let(
+        element,
+        date ->
+            compare(searchValue, SystemDateTime.lowerBound(date), SystemDateTime.upperBound(date)));
+  }
+
+  /**
+   * Returns one bound of one of a Period's dates: the stored range annotation where the schema
+   * carries it, and the bound computed from the date's text otherwise.
+   */
+  @Nonnull
+  private static Column bound(
+      @Nonnull final Column period, @Nonnull final String date, @Nonnull final String annotation) {
+    return resolveOrElse(
+        resolveOrNull(period, LayoutFields.metadataGroupName(date), DataTypes.NullType),
+        annotation,
+        DateRangeKind.INSTANCE.compute(annotation, resolveStringOrNull(period, date)));
+  }
+
+  /**
+   * Compares the range of an element with the range of the search value, as the search value's
+   * prefix says.
+   */
+  @Nonnull
+  private static Column compare(
+      @Nonnull final String searchValue,
+      @Nonnull final Column resourceLow,
+      @Nonnull final Column resourceHigh) {
+    // Parse the prefix and the date from the search value.
     final SearchPrefix prefix = SearchPrefix.fromValue(searchValue);
     final String dateValue = SearchPrefix.stripPrefix(searchValue);
 
-    // Parse the date value to determine its precision and compute boundaries
+    // Parse the date value to determine its precision and compute its boundaries.
     final FhirPathDateTime searchDateTime = FhirPathDateTime.parse(dateValue);
-    final Timestamp paramLow = Timestamp.from(searchDateTime.getLowerBoundary());
-    final Timestamp paramHigh = Timestamp.from(searchDateTime.getUpperBoundary());
+    // Instants, which Spark takes as they are, as it takes the range annotation's bounds.
+    final Instant paramLow = searchDateTime.getLowerBoundary();
+    final Instant paramHigh = searchDateTime.getUpperBoundary();
+    return compare(prefix, resourceLow, resourceHigh, paramLow, paramHigh);
+  }
 
-    // Get element boundaries based on FHIR type
-    final Column resourceLow;
-    final Column resourceHigh;
-
-    if (isPeriodType) {
-      // Period: start/end are STRING fields representing dateTime values
-      // Apply UDFs to get precision-aware boundaries, coalesce null to infinity. Each bound is read
-      // through the tolerant traversal, so a bound the schema does not carry is open, as a null one
-      // is (FR-024, FR-054).
-      resourceLow =
-          coalesce(
-              callUDF(LowBoundaryForDateTime.FUNCTION_NAME, resolveStringOrNull(element, "start")),
-              lit(MIN_TIMESTAMP));
-      resourceHigh =
-          coalesce(
-              callUDF(HighBoundaryForDateTime.FUNCTION_NAME, resolveStringOrNull(element, "end")),
-              lit(MAX_TIMESTAMP));
-    } else {
-      // Scalar date/dateTime/instant: apply UDFs directly to the element
-      resourceLow = callUDF(LowBoundaryForDateTime.FUNCTION_NAME, element);
-      resourceHigh = callUDF(HighBoundaryForDateTime.FUNCTION_NAME, element);
-    }
-
-    // Apply comparison based on prefix
-    final Column comparison =
-        switch (prefix) {
-          case EQ ->
-              resourceLow
-                  .leq(lit(paramHigh))
-                  .and(lit(paramLow).leq(resourceHigh)); // overlap (current behavior)
-          case NE ->
-              resourceLow.gt(lit(paramHigh)).or(resourceHigh.lt(lit(paramLow))); // no overlap
-          case GT -> resourceHigh.gt(lit(paramHigh));
-          case GE -> resourceLow.geq(lit(paramLow));
-          case LT -> resourceLow.lt(lit(paramLow));
-          case LE -> resourceHigh.leq(lit(paramHigh));
-        };
-
-    // For Period type, ensure the element itself is not null (resource must have a period)
-    if (isPeriodType) {
-      return element.isNotNull().and(comparison);
-    }
-    return comparison;
+  /** Compares the range of an element with the range of the search value, as a prefix says. */
+  @Nonnull
+  private static Column compare(
+      @Nonnull final SearchPrefix prefix,
+      @Nonnull final Column resourceLow,
+      @Nonnull final Column resourceHigh,
+      @Nonnull final Instant paramLow,
+      @Nonnull final Instant paramHigh) {
+    return switch (prefix) {
+      case EQ ->
+          resourceLow
+              .leq(lit(paramHigh))
+              .and(lit(paramLow).leq(resourceHigh)); // Overlap (current behavior).
+      case NE -> resourceLow.gt(lit(paramHigh)).or(resourceHigh.lt(lit(paramLow))); // No overlap.
+      case GT -> resourceHigh.gt(lit(paramHigh));
+      // The conjunct relies on invariant per-1, start <= end: the upper bound is at or after the
+      // lower bound, so it is at or after the parameter's start wherever the lower bound is. It is
+      // a plain conjunct on the upper bound, which Parquet can test (decision 144).
+      case GE -> resourceLow.geq(lit(paramLow)).and(resourceHigh.geq(lit(paramLow)));
+      case LT -> resourceLow.lt(lit(paramLow));
+      case LE -> resourceHigh.leq(lit(paramHigh));
+    };
   }
 }

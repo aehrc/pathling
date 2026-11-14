@@ -26,6 +26,7 @@ import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.test.helpers.PrimitiveValues;
 import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -130,11 +131,12 @@ class StoredQuantityTest {
         // A union with a System quantity takes the stored quantity as a System quantity, which has
         // no extensions, and keeps its value.
         arguments("(" + value + " | 7 'g').extension.exists()", "q1=false", "q2=false"),
-        arguments("(" + value + " | 7 'g').count()", "q1=2", "q2=2"),
-        arguments("(7 'g' | " + value + ").count()", "q1=2", "q2=2"),
-        // A union deduplicates by the canonical value, whichever the form of the operands. A bound
-        // is equal to nothing, so it is never deduplicated.
-        arguments("(" + value + " | 1500 'mg').count()", "q1=2", "q2=2"),
+        // A bound has no System quantity, so it drops out of a union with a System quantity
+        // (decision 150).
+        arguments("(" + value + " | 7 'g').count()", "q1=1", "q2=2"),
+        arguments("(7 'g' | " + value + ").count()", "q1=1", "q2=2"),
+        // A union deduplicates by the canonical value, whichever the form of the operands.
+        arguments("(" + value + " | 1500 'mg').count()", "q1=1", "q2=2"),
         // Equality and comparison decode the stored quantity. Any involving a bound is empty.
         arguments(value + " = 1500 'mg'", "q1=null", "q2=false"),
         arguments(value + " = " + value, "q1=null", "q2=true"),
@@ -190,9 +192,9 @@ class StoredQuantityTest {
 
   /**
    * A conversion builds a quantity, so it has no id or comparator, whether or not the quantity
-   * already had the unit. These are not reachable by navigation from a System quantity, so the
-   * fields of the result are read directly. A quantity with a comparator is a bound and does not
-   * convert, so its result is empty.
+   * already had the unit: a System quantity has no such fields (decision 150). These are not
+   * reachable by navigation from a System quantity, so the fields of the result are read directly.
+   * A quantity with a comparator is a bound and does not convert, so its result is empty.
    */
   @ParameterizedTest(name = "toQuantity(''{1}'') over {0}")
   @MethodSource("conversions")
@@ -205,8 +207,8 @@ class StoredQuantityTest {
             row -> {
               final Row quantity = row.getStruct(1);
               if (quantity != null) {
-                assertThat(quantity.<String>getAs(QuantityEncoding.ID_COLUMN)).isNull();
-                assertThat(quantity.<String>getAs(QuantityEncoding.COMPARATOR_COLUMN)).isNull();
+                assertThat(quantity.schema().fieldNames())
+                    .doesNotContain("id", QuantityEncoding.COMPARATOR_COLUMN);
               }
             });
   }
@@ -234,8 +236,7 @@ class StoredQuantityTest {
         DatasetEvaluatorBuilder.create(ResourceType.OBSERVATION, fhirEncoders.getContext())
             .withDataset(dataset)
             .build();
-    return evaluator
-        .evaluate(PARSER.parse(expression))
+    return PrimitiveValues.of(evaluator.evaluate(PARSER.parse(expression)))
         .toCanonical()
         .toIdValueDataset()
         .collectAsList();

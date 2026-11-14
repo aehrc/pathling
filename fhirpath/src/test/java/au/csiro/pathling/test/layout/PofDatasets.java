@@ -22,6 +22,7 @@ import static org.apache.spark.sql.functions.not;
 
 import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.io.FhirReader;
+import au.csiro.pathling.schema.SchemaConfiguration;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
@@ -142,7 +143,12 @@ public final class PofDatasets {
       @Nonnull final String resourceType,
       @Nonnull final List<String> json) {
     TestSchemaMode.active();
-    return FhirReader.of(spark, FhirDefinitionContext.of(fhirContext))
+    // The ids and extensions of primitives are stored, so that the engine reads them as it does
+    // wherever they were stored (decision 154).
+    return FhirReader.of(
+            spark,
+            FhirDefinitionContext.of(fhirContext),
+            SchemaConfiguration.builder().storePrimitiveMetadata(true).build())
         .json()
         .read(resourceType, spark.createDataset(json, Encoders.STRING()));
   }

@@ -20,7 +20,6 @@ package au.csiro.pathling.fhirpath.collection;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.definition.NodeDefinition;
-import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
@@ -28,30 +27,39 @@ import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.column.StoredDecimal;
 import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.comparison.DecimalComparator;
+import au.csiro.pathling.fhirpath.comparison.StoredDecimalComparator;
 import au.csiro.pathling.sql.misc.DecimalToLiteral;
+import au.csiro.pathling.utilities.SystemDecimal;
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.DecimalType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
- * Represents a FHIRPath decimal literal.
+ * Represents a collection of decimals.
+ *
+ * <p>A decimal is either stored or computed, as its collection's definition tells (decision 147). A
+ * stored decimal, reached by traversal, is held as its stored text and its numeric annotation (see
+ * {@link StoredDecimal}), and keeps its definition through {@code where()}, {@code first()}, {@code
+ * distinct()} and a union of stored decimals. A computed decimal, such as a literal, the result of
+ * arithmetic or {@code toDecimal()}, or an integer promoted to a decimal, has no definition, and is
+ * held as the engine's System.Decimal, {@link SystemDecimal#TYPE}. A stored decimal is converted to
+ * a computed one wherever it is computed with ({@link #toEngineForm()}), and is compared and
+ * deduplicated by its number either way.
  *
  * @author John Grimes
  */
 public class DecimalCollection extends Collection
     implements Comparable, Numeric, StringCoercible, Materializable {
-
-  /** The Spark SQL decimal type used for FHIR decimal values. */
-  public static final org.apache.spark.sql.types.DecimalType DECIMAL_TYPE =
-      DataTypes.createDecimalType(DecimalCustomCoder.precision(), DecimalCustomCoder.scale());
 
   /**
    * Creates a new DecimalCollection.
@@ -133,10 +141,12 @@ public class DecimalCollection extends Collection
   public static BigDecimal parseLiteral(final @Nonnull String literal) {
     final BigDecimal value = new BigDecimal(literal);
 
-    if (value.precision() > DecimalCollection.getDecimalType().precision()) {
+    // A literal with more integer digits than the type holds would become null wherever it is cast
+    // to the type. Together with the scale, this also bounds the literal's precision.
+    if (value.precision() - value.scale() > SystemDecimal.INTEGER_DIGITS) {
       throw new InvalidUserInputError(
-          "Decimal literal exceeded maximum precision supported ("
-              + DecimalCollection.getDecimalType().precision()
+          "Decimal literal exceeded maximum integer digits supported ("
+              + SystemDecimal.INTEGER_DIGITS
               + "): "
               + literal);
     }
@@ -151,43 +161,83 @@ public class DecimalCollection extends Collection
   }
 
   /**
-   * Decodes a stored decimal to the type the engine computes with, {@code DECIMAL(32,6)} (FR-035).
-   *
-   * <p>A decimal is stored as text, in the lexical form of a FHIR decimal. A value with more
-   * fractional digits than the type holds is rounded, and one beyond its range is null. The cast is
-   * a safe one, so the result does not depend on the session's ANSI setting.
-   *
-   * @param stored the stored decimal, or array of decimals, as text
-   * @return the decimal, or array of decimals, as {@code DECIMAL(32,6)}
-   */
-  @Nonnull
-  public static ColumnRepresentation decode(@Nonnull final ColumnRepresentation stored) {
-    return stored.elementTryCast(DECIMAL_TYPE);
-  }
-
-  /**
-   * Gets the decimal data type used for representing decimal values in Spark.
+   * Gets the decimal data type used for representing decimal values in Spark, which is the type of
+   * the engine's System.Decimal, {@link SystemDecimal#TYPE}.
    *
    * @return the {@link org.apache.spark.sql.types.DataType} used for representing decimal values in
    *     Spark
    */
+  @Nonnull
   public static org.apache.spark.sql.types.DecimalType getDecimalType() {
-    return DECIMAL_TYPE;
+    return SystemDecimal.TYPE;
   }
 
   /**
-   * Returns this collection with its values as {@code DECIMAL(32,6)}, so that decimals of different
-   * precisions share one SQL type and can be held in one array.
+   * Returns this collection with its values as {@link SystemDecimal#TYPE}, so that decimals of
+   * different precisions share one SQL type and can be held in one array.
    *
    * <p>The cast is a safe one, so an out-of-range value yields null rather than raising under ANSI
    * mode, independent of the session-wide setting. It keeps the cardinality of the collection.
    *
-   * @return this collection, with its values as {@code DECIMAL(32,6)}
+   * @return this collection, with its values as {@link SystemDecimal#TYPE}
    */
   @Override
   @Nonnull
   public DecimalCollection withSharedSqlType() {
-    return copyWith(getColumn().elementTryCast(DECIMAL_TYPE));
+    // Stored decimals combined into one array are reconciled by the merge, as their annotation
+    // fields can differ.
+    return isStored() ? this : copyWith(getColumn().elementTryCast(getDecimalType()));
+  }
+
+  /**
+   * Returns whether the values of this collection are stored decimals, as traversal reached them
+   * from the data, rather than computed ones. A computed decimal has no definition.
+   *
+   * @return true where the values are stored decimals
+   */
+  public boolean isStored() {
+    return getDefinition().isPresent();
+  }
+
+  /**
+   * Stored decimals are held in the shape the stored data gives them, so a combination of them
+   * alone keeps them stored (decision 147). A combination with a computed decimal converts them.
+   *
+   * @return true where the values are stored decimals
+   */
+  @Override
+  public boolean holdsStoredStructures() {
+    return isStored();
+  }
+
+  /**
+   * Gets this collection as computed decimals: a stored decimal is taken as its number, the stored
+   * numeric annotation or else its decoded text, deferred until it is read (decision 142, D8).
+   *
+   * @return the collection, as computed decimals
+   */
+  @Override
+  @Nonnull
+  public DecimalCollection toEngineForm() {
+    if (!isStored()) {
+      return this;
+    }
+    // A decimal held with its id and extensions that has no value has no number, and is left out.
+    // A null item, as distinct from a structure without a value, is kept as a null item: a decimal
+    // whose number does not decode (ticket 50), and equally an element absent at a position of a
+    // repeating parent, wherever one reaches the conversion.
+    final ColumnRepresentation decimals =
+        holdsPrimitiveMetadata()
+            ? getColumn()
+                .vectorize(
+                    array ->
+                        functions.filter(
+                            array,
+                            decimal ->
+                                decimal.isNull().or(StoredDecimal.text(decimal).isNotNull())),
+                    UnaryOperator.identity())
+            : getColumn();
+    return DecimalCollection.build(decimals.transform(StoredDecimal::number));
   }
 
   @Override
@@ -205,7 +255,7 @@ public class DecimalCollection extends Collection
 
       return switch (operation) {
         case ADDITION, SUBTRACTION, MULTIPLICATION, DIVISION, MODULUS -> {
-          // Safe cast so a result that overflows DECIMAL(32,6) yields NULL rather than raising
+          // Safe cast so a result that overflows System.Decimal yields NULL rather than raising
           // under ANSI mode, independent of the session-wide setting.
           result = result.try_cast(getDecimalType());
           yield DecimalCollection.build(new DefaultRepresentation(result));
@@ -217,12 +267,21 @@ public class DecimalCollection extends Collection
   @Nonnull
   @Override
   public Optional<Column> getNumericValue() {
-    return Optional.of(this.getColumn().getValue());
+    return Optional.of(toEngineForm().getColumn().getValue());
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>A stored decimal is given as its stored text (decision 147), and a computed one as its
+   * number, without trailing fractional zeros.
+   */
   @Override
   @Nonnull
   public StringCollection asStringPath() {
+    if (isStored()) {
+      return asSingular().map(cr -> cr.transform(StoredDecimal::text), StringCollection::build);
+    }
     // Convert the decimal to a singular string using a UDF to ensure correct formatting.
     return asSingular()
         .map(
@@ -239,15 +298,34 @@ public class DecimalCollection extends Collection
   @Override
   @Nonnull
   public Collection negate() {
-    return Numeric.defaultNegate(this);
+    return Numeric.defaultNegate(toEngineForm());
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>A decimal is output as its number, a stored one as well as a computed one, until a stored
+   * decimal's text reaches views (ticket 16).
+   */
   @Override
   @Nonnull
   public Column toExternalValue() {
-    return getColumn()
+    return toEngineForm()
+        .getColumn()
         .transformWithUdf(DecimalToLiteral.FUNCTION_NAME, DefaultRepresentation.empty())
         .getValue();
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>A decimal is given to a caller as its number, the engine's System.Decimal, whether stored or
+   * computed (decision 147).
+   */
+  @Override
+  @Nonnull
+  public ColumnRepresentation getOutputColumn() {
+    return toEngineForm().getColumn();
   }
 
   @Override
@@ -265,13 +343,18 @@ public class DecimalCollection extends Collection
     return other
         .getType()
         .filter(FhirPathType.QUANTITY::equals)
-        .map(t -> (Collection) QuantityCollection.fromNumeric(this.getColumn()))
+        .map(t -> (Collection) QuantityCollection.fromNumeric(toEngineForm().getColumn()))
         .orElseGet(() -> super.castAs(other));
   }
 
   @Override
   @Nonnull
   public ColumnComparator getComparator() {
-    return DecimalComparator.getInstance();
+    if (!isStored()) {
+      return DecimalComparator.getInstance();
+    }
+    return holdsPrimitiveMetadata()
+        ? StoredDecimalComparator.withMetadata()
+        : StoredDecimalComparator.getInstance();
   }
 }

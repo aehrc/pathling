@@ -22,6 +22,23 @@ checklist, closes. It is not by itself a release: what the release needs beyond
 it is raised as follow-up issues by ticket 26. Tickets that #2367 does not wait
 for are named on ticket 28.
 
+## Scope of #2367
+
+#2367 delivers a core library that matches the functionality of the legacy
+line, with primitive ids and extensions (US6) as its one extension, and a
+layout reconciled with the Parquet on FHIR specification: the amendments
+Pathling proposes are agreed upstream, and the layout matches the agreed text
+before #2367 closes. The requirements below are part of the end state but are
+deferred to GitHub issues after #2367, and are marked _Deferred_ where they
+appear:
+
+- the dense schema mode and streaming encode: FR-009's dense schema, FR-010,
+  FR-016's exception 4, FR-017, FR-043's streaming clause and FR-044, User Story
+  4's scenario 7, the dense subset of SC-002, and SC-010;
+- deciding the annotation step's *fill* per row. Until then, *fill* keeps a
+  stored annotation that is null beside its value, as in a table merged from
+  annotated and unannotated sources, and *recompute* repairs it.
+
 ## Why
 
 1. **Performance** of encoding, decoding and FHIRPath execution through reduced
@@ -43,7 +60,7 @@ for are named on ticket 28.
 A user loads FHIR JSON or XML, as resources or bundles, and the data is written in
 the PoF layout: decimals as text with a numeric annotation, primitive ids and
 extensions in metadata groups, extensions inline, dates with range annotations,
-and quantities with both canonical annotations.
+and quantities with the exact canonical annotations.
 
 **Independent Test**: Load a corpus; inspect the stored schema and values against
 the specification, without FHIRPath evaluation.
@@ -60,9 +77,9 @@ the specification, without FHIRPath evaluation.
 3. **Given** a resource carrying an extension on a complex element, **When** it is
    stored, **Then** the extension appears inline on that element, and no
    root-level extension map or field-id column is emitted.
-4. **Given** a quantity, **When** it is stored, **Then** the specification's
-   canonical annotation accompanies it, followed by the exact canonical
-   annotation.
+4. **Given** a quantity, **When** it is stored, **Then** its canonical code and
+   exact canonical value accompany it, flat inside its structure, and the
+   specification's fixed-scale canonical annotation is not emitted.
 5. **Given** a resource carrying content the layout does not store, such as a
    contained resource, **When** it is loaded, **Then** the load succeeds and the
    content is dropped silently.
@@ -147,7 +164,7 @@ expression over an absent element yields empty.
    **When** it is evaluated, **Then** it succeeds.
 7. **Given** one column expression, **When** it is applied to a fitted dataset
    and to a dense dataset holding the same resources, **Then** the results are
-   equal.
+   equal. _Deferred (Scope of #2367)._
 8. **Given** two collections of the same FHIR type reached by different paths,
    whose fitted schemas differ, **When** they are combined, **Then** the result
    holds every element of both and can be traversed.
@@ -277,8 +294,8 @@ the legacy encoder, re-import the result, and compare it with the source data.
 - An array of arrays where a repeating element is declared, such as
   `"given":[["a","b"]]`: not conformant input, so the outcome is undefined and
   nothing is reported (FR-063).
-- A source key named like one of the layout's annotations, such as
-  `__birthDate_start`, or like the layout column, `__layout_v1`: neither is
+- A source key named like one of the layout's annotations, such as `__start`
+  in `_birthDate`, or like the layout column, `__layout_v1`: neither is
   read from the source, so the key is undescribed content, and is not reported
   (FR-063).
 - A Bundle: accepted as a transport carrier and exploded to one table per
@@ -307,14 +324,21 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   double holds it until OQ-1 is answered; whether it preserves the source's
   lexical form, and its precision beyond a double, is OQ-1.
 - **FR-003**: Primitive element ids and extensions MUST be stored in the
-  primitive metadata group beside the element; extensions on complex elements
-  MUST be stored inline. No root-level extension map and no per-composite field
+  primitive metadata group beside the element, when the ingest option that
+  stores them is on; it is off by default, and they are then dropped silently
+  (FR-016's exception 3; ticket 17). Extensions on complex elements MUST be
+  stored inline. No root-level extension map and no per-composite field
   id is emitted.
 - **FR-004**: Dates MUST carry the specification's range annotations.
-- **FR-005**: Quantities MUST carry two canonical annotations: the
-  specification's own, at its fixed-point type, and immediately after it an
-  exact one carrying the canonicalised unit
-  ([ADR-0003](../../docs/adr/0003-annotations-are-optional.md)).
+- **FR-005**: Quantities MUST carry their canonical form as two flat
+  annotations inside the quantity's structure: `__canonical_code`, the
+  canonicalised UCUM code, and `__canonical_value_exact`, the canonicalised
+  value at a precision that preserves magnitude. The specification's
+  fixed-scale canonical value is not emitted, since annotations are optional
+  ([ADR-0003](../../docs/adr/0003-annotations-are-optional.md); decision 149,
+  owner note of 2026-11-06, superseding the grouped `__canonical_exact` of
+  decision 137). The layout itself remains the specification owner's call
+  (ticket 46).
 - **FR-006**: `contained` resources MUST NOT be represented. They are dropped
   silently.
 - **FR-007**: `Bundle` MUST NOT be stored as a resource type.
@@ -327,11 +351,16 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   ([ADR-0005](../../docs/adr/0005-types-from-definitions-only.md)). Content it
   does not describe is typed only as FR-012 allows.
 - **FR-009**: The system MUST support a fitted schema and a dense schema. The
-  fitted schema is the default.
+  fitted schema is the default. _Deferred: the dense schema (Scope of #2367)._
+  A dense schema carries a primitive's metadata group only when the ingest
+  option that stores primitive ids and extensions is on, and then beside every
+  primitive, populated where the source has an id or extensions and null
+  otherwise (owner, 2026-11-12; ticket 17). Which further options limit the
+  full dense schema is ticket 18's to decide.
 - **FR-010**: The dense schema MUST be produced by the same traversal as the
   fitted one, differing only in the strategy that decides which children it
   descends into and where it stops, so the two cannot diverge in type,
-  cardinality or field order.
+  cardinality or field order. _Deferred (Scope of #2367)._
 - **FR-011**: A complex element MUST appear in a fitted schema only where some
   descendant leaf is populated. A primitive the source carried only as its id
   and extensions counts as populated.
@@ -377,9 +406,10 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   1. `contained` resources (FR-006) and `Bundle` (FR-007);
   2. an inline resource held by an element declared as the abstract
      `Resource`, such as `Parameters.parameter.resource`;
-  3. primitive ids and extensions, until ticket 17 stores the metadata group;
+  3. primitive ids and extensions, when the ingest option that stores them (ticket 17)
+     is off, as it is by default;
   4. on a dense schema, content beyond the configured nesting, extension and
-     open-type bounds (FR-017);
+     open-type bounds (FR-017, deferred);
   5. `base64Binary` whitespace, which decoding and re-encoding canonicalises.
 
   OQ-1 lists further exceptions that hold until ticket 16 decides
@@ -390,10 +420,14 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   Evidence: [null-and-empty-handling.md](evidence/null-and-empty-handling.md).
 - **FR-017**: On a dense schema the guarantee in FR-016 MUST hold within the
   configured nesting, extension and open-type bounds. What those bounds drop is
-  an exception to the guarantee (FR-016), and is not reported.
+  an exception to the guarantee (FR-016), and is not reported. _Deferred
+  (Scope of #2367)._
 - **FR-019**: Export MUST omit an absent element, a structure whose every field
   is null, and an array holding only nulls, except a repeating primitive's
-  positional nulls, which align with its metadata group. *(Subject to OQ-1.)*
+  positional nulls, which align with its metadata group. A value array that
+  holds only nulls beside a metadata group is omitted all the same, as the
+  source of a primitive carried only as `_x` had no `x` (ticket 17).
+  *(Subject to OQ-1.)*
 - **FR-063**: Ingest and the engine run in `trust` (decision 133's addendum of
   2026-10-22). Ingest assumes its input is conformant and checks nothing: its
   behaviour on non-conformant content is undefined, and it may fail the read,
@@ -443,8 +477,17 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   [t136-benchmark.md](evidence/t136-benchmark.md).
 - **FR-034**: The engine MUST be able to navigate to a primitive element's id
   and extensions.
-- **FR-035**: Query-time decimal precision MUST remain as it was before this
-  programme, and the cap MUST be documented.
+- **FR-035**: Query-time decimal precision MUST be the engine's System.Decimal,
+  `DECIMAL(38,6)`, the type the Parquet on FHIR specification gives the
+  `numeric` annotation, and the cap MUST be documented. It was `DECIMAL(32,6)`
+  before ticket 41, which keeps the six fractional digits and widens the range
+  to 32 integer digits, so a value with 27 to 32 integer digits, null before,
+  now has a value (owner, 2026-10-26). **Known deviation.** FHIRPath requires a
+  Decimal to provide at least the range (-10^28+1)/10^8 to (10^28-1)/10^8 with a
+  step of 10^-8, which is `DECIMAL(28,8)`. `DECIMAL(38,6)` covers the range but
+  keeps 6 fractional digits. Whether to move to `DECIMAL(38,8)`, with an
+  upstream proposal for the annotation's type, is a follow-up issue that ticket
+  26 raises.
 - **FR-036**: Unnesting MUST NOT reduce a read to a single leaf of a repeated
   element, because that drops rows from files lacking that leaf.
 - **FR-054**: A column expression MUST be valid over every schema conforming to
@@ -468,9 +511,18 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   inputs, and one implementation MUST serve both FR-056 and FR-041.
 - **FR-059**: A complex value of a FHIR type MUST leave the engine in the fitted
   shape of the data it came from, and this MUST be documented. A complex value
-  of a System type MUST have one fixed, complete shape, whatever produced it.
-  The engine-built `System.Quantity` and `System.Coding` MUST NOT carry the
-  legacy layout's shape, including its `_fid` field. Distinguishing
+  of a System type MUST have one fixed, complete set of content fields, the
+  fields its literal can set, whatever produced it (decision 150). The
+  engine-built `System.Quantity` and `System.Coding` MUST NOT carry the legacy
+  layout's shape, including its `_fid` field. `System.Quantity` is
+  `{value, unit, code, system}`, with `value` a `DECIMAL(38,6)` and no `_value`
+  group. Its annotations, `__canonical_code` and `__canonical_value_exact`, are
+  flat fields beside its content (decision 152), present where they are
+  available without computing, and otherwise computed where an operation reads
+  them. Its annotations do not leave the engine: a `System.Quantity` returned
+  to a caller as a column has its content fields only (owner, 2026-11-10, for
+  review in ticket 40). `System.Coding` is
+  `{system, code, version, display, userSelected}`. Distinguishing
   `System.Coding` from `FHIR.Coding` in the type system is
   [#2804](https://github.com/aehrc/pathling/issues/2804).
 
@@ -528,10 +580,12 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
 
 - **FR-043**: `encode`, `encodeBundle` and `decode` MUST be preserved in Java,
   Python and R, in the forms taking a resource name. Encoding a streaming
-  dataset MUST work in the dense schema mode.
+  dataset MUST work in the dense schema mode. _Deferred: the streaming clause
+  (Scope of #2367); until then a streaming dataset is refused with a message
+  that names encoding each batch as the remedy._
 - **FR-044**: The nesting, extension and open-type options MUST bound the dense
   schema and MUST NOT apply to the fitted one. Evidence:
-  [encoder-scope.md](evidence/encoder-scope.md).
+  [encoder-scope.md](evidence/encoder-scope.md). _Deferred (Scope of #2367)._
 - **FR-047**: The published documentation MUST describe the PoF layout, its
   schema modes and annotations, the refusal of the legacy layout, the legacy
   export, and the caveat for direct SQL consumers.
@@ -565,7 +619,8 @@ reconciliation, legacy export, layout column.
   subject to FR-016's exceptions.
 - **SC-002**: The FHIRPath test suite, both conformance baselines and the
   SQL-on-FHIR compliance suite pass over the PoF layout with fitted schemas, and
-  a curated subset passes with dense schemas.
+  a curated subset passes with dense schemas. _Deferred: the dense subset
+  (Scope of #2367)._
 - **SC-003**: The conformance exclusion baselines gain no new entries, and every
   obsolete entry is removed.
 - **SC-004**: The full engine test suite passes over files written with every
@@ -588,6 +643,7 @@ reconciliation, legacy export, layout column.
 - **SC-010**: One column expression, built without reference to any dataset,
   applied to a fitted and to a dense dataset holding the same resources, yields
   equal results for every expression in the engine's expression-level test set.
+  _Deferred (Scope of #2367)._
 - **SC-011**: Encode and decode are no slower than at the PoF switch, measured on
   the same benchmark, within the measured drift of about 10%
   ([t136-benchmark.md](evidence/t136-benchmark.md)).

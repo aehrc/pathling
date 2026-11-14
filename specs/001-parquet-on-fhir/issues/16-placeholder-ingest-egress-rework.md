@@ -1,5 +1,9 @@
 # 16 — DEFERRED: the ingest mechanism, per-value validation and lossless decimals
 
+> **Moved after #2367 (owner, 2026-11-02).** This ticket becomes a GitHub issue raised by ticket 26, and is not dispatched within #2367. See this ticket's comments.
+
+> **Raised as #2883 (2026-11-09).**
+
 **Spec:** `specs/001-parquet-on-fhir/spec.md` — OQ-1, FR-002, FR-016, FR-019, FR-049, FR-050, FR-060, FR-063, SC-011. Decisions 133 and 134. Old task: T078e. T124c is likely made moot.
 
 **What to build:** The ingest and egress mechanism ticket 08 measured, chosen and built, so that ingest meets decision 133's per-value scope and removes OQ-1's losses. Decision 134 deferred the choice until the owner has settled the requirements with colleagues: how much of decision 133's per-value scope is needed, and how much code the project is willing to own for it. Until then, ingest runs on the interim of decision 134, and ticket 32 takes XML and bundles off HAPI.
@@ -13,6 +17,8 @@
 - A UDF that returns zero or more rows to be exploded, which would need no non-deterministic flag and is the shape bundles need.
 - JSON bundles, for any candidate.
 - The formal JMH check of SC-011 (`evidence/t136-benchmark.md`).
+
+**A stored decimal's text in views (decision 147; handed on from ticket 41, owner, 2026-11-10).** Once a decimal's lexical form is kept, a view outputs a stored decimal as its stored text, and a computed one as today, the `DECIMAL(38,6)` value as text with trailing zeros trimmed. The column stays a string. `fhirPathToColumn` and `$fhirpath` still return `DECIMAL(38,6)` for every decimal; ticket 40 specifies what they return. Ticket 50 builds the detection of stored and computed decimals this rests on (moved from ticket 43, owner, 2026-11-11).
 
 **Blocked by:** The owner's choice of mechanism (decision 134). Ticket 32, because the rework replaces what it builds. Ticket 31, for the date grammar it puts in `fhir-schema`.
 
@@ -29,6 +35,7 @@ Criteria that hold whichever mechanism is chosen:
 - [ ] Ingest validates dates and decimals with the shared grammar in `fhir-schema`, so ingest and engine agree on what is valid (decision 133, principle 7). Ticket 31 puts the date grammar there; the decimal grammar, and whether ingest validates per value at all, come with the follow-up issue that ticket 26 raises.
 - [ ] Ingest's handling of non-conformant data, the modes of "Modes" in `evidence/ingress-strictness/README.md` among it, follows the follow-up issue that ticket 26 raises. #2367's ingest is `trust` (decision 133's addendum of 2026-10-22).
 - [ ] If the stored form of any value changes from the interim's, such as a decimal's text, the layout column's version (ticket 29) is bumped, and data written by the interim is read or refused as that rule says.
+- [ ] A view outputs a stored decimal as its stored text, and `fhirPathToColumn` and `$fhirpath` still return `DECIMAL(38,6)`.
 - [ ] Any thread that outlives this programme, such as the upstream Spark issue T132 describes, is raised as a GitHub issue by this ticket. Ticket 26 closes before #2367 does, which does not wait for this one.
 
 ## Comments
@@ -80,3 +87,7 @@ to read, from NDJSON and from a bundle alike, in Spark's schema inference. The b
 reads the text of values that resolution does not need, so a large resource of a type not asked for no longer fails
 the bundle. Whichever mechanism this rework chooses should settle the limit: lift it, at the risk of one huge
 string exhausting an executor's memory, make it a reader setting, or keep it as a stated exception.
+
+### Moved after #2367 (owner, 2026-11-02)
+
+The re-plan limits #2367 to a core library that matches the legacy line, with primitive metadata as its one extension. This ticket becomes a GitHub issue, raised by ticket 26 and labelled `enhancement` and `PoF_line`, and whether it goes into a release is decided separately.

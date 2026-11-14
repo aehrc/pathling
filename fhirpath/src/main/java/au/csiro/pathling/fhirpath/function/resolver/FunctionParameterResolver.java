@@ -242,8 +242,12 @@ public record FunctionParameterResolver(
 
     } else if (parameter.getType().isAssignableFrom(collection.getClass())) {
       // Check if the parameter type can directly accept the collection type. Return the collection
-      // directly as it's already compatible.
-      return collection;
+      // directly as it's already compatible, except that a parameter of a primitive type accepts
+      // System values, to which a primitive held with its id and extensions converts (decision 142,
+      // D8).
+      return Collection.class.equals(parameter.getType()) || !collection.holdsPrimitiveMetadata()
+          ? collection
+          : collection.toEngineForm();
 
     } else if (collection instanceof EmptyCollection
         && Collection.class.isAssignableFrom(parameter.getType())) {

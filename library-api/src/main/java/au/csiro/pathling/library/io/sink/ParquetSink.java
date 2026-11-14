@@ -104,12 +104,15 @@ final class ParquetSink implements DataSink {
    * @throws au.csiro.pathling.library.io.source.UnsupportedLayoutException if the files an append
    *     would add to are in a layout this release does not read, or the source refuses its own data
    * @throws PersistenceError if the save mode is error-if-exists and a type already has files
+   * @throws IllegalStateException if the data carries the range annotations of dates and the
+   *     session does not write timestamps to Parquet as INT64 microseconds (decision 138)
    */
   @Override
   @Nonnull
   public WriteDetails write(@Nonnull final DataSource source) {
     final Map<String, Dataset<Row>> datasets = new LinkedHashMap<>();
     source.getResourceTypes().forEach(type -> datasets.put(type, source.read(type)));
+    StoredTimestamps.requireMicros(context.getSpark(), datasets);
     final Map<String, List<Path>> existing = new LinkedHashMap<>();
     datasets
         .keySet()

@@ -23,14 +23,20 @@ import static org.apache.spark.sql.functions.not;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.column.QuantityValue;
-import au.csiro.pathling.sql.types.FlexiDecimal;
+import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import jakarta.annotation.Nonnull;
 import java.util.function.BinaryOperator;
+import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Column;
 
 /**
- * Implementation of Spark SQL comparator for the Quantity type. It uses canonicalized values and
- * units for comparison rather than the original values.
+ * Implementation of Spark SQL comparator for the Quantity type. It compares the exact canonical
+ * forms of the quantities where they are comparable, and their original values otherwise.
+ *
+ * <p>Each operand may be a stored quantity or a System quantity, and every field is read by name. A
+ * canonical form is the stored annotation where the quantity carries it, and is otherwise computed
+ * from the most exact source the quantity has: a stored quantity's text, so that a stored quantity
+ * is compared from every digit it was stored with, and a System quantity's decimal (decision 150).
  *
  * <p>A quantity that carries a comparator (e.g. {@code <5 mg}) records a bound rather than a known
  * value, so any comparison involving one is empty.
@@ -49,9 +55,16 @@ public class QuantityComparator implements ColumnComparator, ElementWiseEquality
   @SuppressWarnings("MissingJavadoc")
   private QuantityComparator() {}
 
+  /**
+   * Builds a comparison that compares the exact canonical forms the quantities carry where both
+   * have one in the same unit, and their values otherwise, where their systems and codes match.
+   *
+   * @param decimalComparator compares two decoded values
+   * @param test tests the sign of the comparison of two canonical forms
+   */
   private static BinaryOperator<Column> wrap(
       @Nonnull final BinaryOperator<Column> decimalComparator,
-      @Nonnull final BinaryOperator<Column> flexComparator) {
+      @Nonnull final UnaryOperator<Column> test) {
 
     return (left, right) ->
         let(
@@ -64,9 +77,12 @@ public class QuantityComparator implements ColumnComparator, ElementWiseEquality
               return when(
                   not(eitherBounded),
                   coalesce(
-                      leftQuantity
-                          .normalizedValue()
-                          .compare(rightQuantity.normalizedValue(), flexComparator),
+                      test.apply(
+                          QuantityEncoding.compareCanonical(
+                              QuantityEncoding.canonicalCode(l),
+                              QuantityEncoding.canonicalValueExact(l),
+                              QuantityEncoding.canonicalCode(r),
+                              QuantityEncoding.canonicalValueExact(r))),
                       leftQuantity
                           .originalValue()
                           .compare(rightQuantity.originalValue(), decimalComparator)));
@@ -76,30 +92,30 @@ public class QuantityComparator implements ColumnComparator, ElementWiseEquality
   @Override
   @Nonnull
   public Column equalsTo(@Nonnull final Column left, @Nonnull final Column right) {
-    return wrap(Column::equalTo, FlexiDecimal::equalTo).apply(left, right);
+    return wrap(Column::equalTo, sign -> sign.equalTo(0)).apply(left, right);
   }
 
   @Override
   @Nonnull
   public Column lessThan(@Nonnull final Column left, @Nonnull final Column right) {
-    return wrap(Column::lt, FlexiDecimal::lt).apply(left, right);
+    return wrap(Column::lt, sign -> sign.lt(0)).apply(left, right);
   }
 
   @Override
   @Nonnull
   public Column lessThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
-    return wrap(Column::leq, FlexiDecimal::leq).apply(left, right);
+    return wrap(Column::leq, sign -> sign.leq(0)).apply(left, right);
   }
 
   @Override
   @Nonnull
   public Column greaterThan(@Nonnull final Column left, @Nonnull final Column right) {
-    return wrap(Column::gt, FlexiDecimal::gt).apply(left, right);
+    return wrap(Column::gt, sign -> sign.gt(0)).apply(left, right);
   }
 
   @Override
   @Nonnull
   public Column greaterThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
-    return wrap(Column::geq, FlexiDecimal::geq).apply(left, right);
+    return wrap(Column::geq, sign -> sign.geq(0)).apply(left, right);
   }
 }

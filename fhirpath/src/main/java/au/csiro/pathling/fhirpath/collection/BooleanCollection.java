@@ -23,6 +23,9 @@ import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
+import au.csiro.pathling.fhirpath.comparison.DefaultComparator;
+import au.csiro.pathling.fhirpath.comparison.StoredPrimitiveComparator;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.BooleanType;
@@ -147,7 +150,7 @@ public class BooleanCollection extends Collection implements StringCoercible, Ma
   @Override
   @Nonnull
   public BooleanCollection asBooleanPath() {
-    return this;
+    return (BooleanCollection) toEngineForm();
   }
 
   /**
@@ -158,6 +161,19 @@ public class BooleanCollection extends Collection implements StringCoercible, Ma
   @Override
   @Nonnull
   public BooleanCollection asBooleanSingleton() {
-    return (BooleanCollection) this.asSingular();
+    return (BooleanCollection) asBooleanPath().asSingular();
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>A primitive held with its id and extensions is compared by its value alone (decision 151).
+   */
+  @Override
+  @Nonnull
+  public ColumnEquality getComparator() {
+    return holdsPrimitiveMetadata()
+        ? StoredPrimitiveComparator.of(DefaultComparator.getInstance())
+        : DefaultComparator.getInstance();
   }
 }

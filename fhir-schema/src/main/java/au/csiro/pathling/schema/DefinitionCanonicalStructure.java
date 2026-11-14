@@ -37,7 +37,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * <p>The order at a node is the order the definitions declare, with a choice expanded in place into
  * one field per type it can take, {@code contained} omitted because it is not represented, and the
- * layout's own fields at the positions {@link LayoutFields} declares.
+ * layout's own fields at the positions {@link LayoutFields} declares. A complex element's
+ * annotations close its structure, and a primitive's are in its metadata group.
  *
  * <p>The same enumeration serves the transform that writes the layout, so that the order a stored
  * structure is built in and the order a merge imposes cannot drift apart. They are the same list
@@ -211,19 +212,44 @@ public final class DefinitionCanonicalStructure implements CanonicalStructure {
   public Optional<MetadataGroupStructure> metadataGroup(@Nonnull final String name) {
     return entry(name)
         .filter(LayoutEntry::isMetadataGroup)
-        .map(unused -> new MetadataGroupStructure(extensionElement(), memo));
+        .flatMap(LayoutEntry::getElement)
+        .map(element -> new MetadataGroupStructure(element, extensionElement(), memo));
   }
 
   /**
    * Returns the extension element of this node, which is the definition every extension carried
    * here takes its shape from, including the extensions within a metadata group.
    *
-   * @return the extension element, or empty where this node carries no extensions
+   * <p>A resource that is not a domain resource, such as {@code Binary}, {@code Bundle} or {@code
+   * Parameters}, has no {@code extension} of its own, yet its primitives carry extensions in their
+   * groups all the same, and those take the Extension type's own shape (T061a). The shape is then
+   * taken from the first complex element beneath the node that carries extensions, which for a
+   * resource is {@code meta}: every element declares {@code extension} with the Extension type, so
+   * the shape is the same wherever it is found.
+   *
+   * @return the extension element, or empty where neither this node nor any complex element
+   *     directly beneath it carries extensions
    */
   @Nonnull
   public Optional<ElementDefinition> extensionElement() {
+    return ownExtensionElement()
+        .or(
+            () ->
+                entries().stream()
+                    .filter(LayoutEntry::isElement)
+                    .map(this::elementStructure)
+                    .flatMap(Optional::stream)
+                    .map(DefinitionCanonicalStructure::ownExtensionElement)
+                    .flatMap(Optional::stream)
+                    .findFirst());
+  }
+
+  /** Returns the extension element this node declares itself, where it declares one. */
+  @Nonnull
+  private Optional<ElementDefinition> ownExtensionElement() {
     // The entries are memoised, so finding one among them needs no memo of its own.
     return entries().stream()
+        .filter(LayoutEntry::isElement)
         .filter(entry -> LayoutFields.METADATA_GROUP_EXTENSION.equals(entry.getName()))
         .findFirst()
         .flatMap(LayoutEntry::getElement);
@@ -244,6 +270,10 @@ public final class DefinitionCanonicalStructure implements CanonicalStructure {
         addElement(result, element);
       }
     }
+    // A complex element's annotations are the last fields of its own structure.
+    if (node instanceof final ElementDefinition element) {
+      result.addAll(annotationEntries(element));
+    }
     return List.copyOf(result);
   }
 
@@ -263,7 +293,19 @@ public final class DefinitionCanonicalStructure implements CanonicalStructure {
     if (PrimitiveTypes.isPrimitive(type.orElseThrow())) {
       result.add(LayoutEntry.metadataGroup(LayoutFields.metadataGroupName(name), element));
     }
-    LayoutFields.annotationNames(name, type.orElseThrow())
-        .forEach(annotation -> result.add(LayoutEntry.annotation(annotation, element)));
+  }
+
+  /**
+   * Returns the entries of the annotations an element carries, in the order {@link LayoutFields}
+   * declares, for the container the element owns to place at its end.
+   *
+   * @param element the element the annotations accompany
+   * @return the annotation entries, empty where the element's type carries none
+   */
+  @Nonnull
+  static List<LayoutEntry> annotationEntries(@Nonnull final ElementDefinition element) {
+    return element.getFhirType().map(LayoutFields::annotationNames).orElse(List.of()).stream()
+        .map(name -> LayoutEntry.annotation(name, element))
+        .toList();
   }
 }

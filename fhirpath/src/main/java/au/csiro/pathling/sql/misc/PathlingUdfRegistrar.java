@@ -28,14 +28,10 @@ public class PathlingUdfRegistrar extends AbstractUdfRegistrar {
         .register(new CodingToLiteral())
         .register(new DecimalToLiteral())
         .register(new ToNull())
-        .register(new LowBoundaryForDateTime())
-        .register(new HighBoundaryForDateTime())
         .register(new LowBoundaryForTime())
         .register(new HighBoundaryForTime())
         .register(new QuantityToLiteral())
         .register(new StringToQuantity())
-        .register(new ConvertQuantityToUnit())
-        .register(new CanonicalQuantityValue())
-        .register(new CanonicalQuantityCode());
+        .register(new ConvertQuantityToUnit());
   }
 }

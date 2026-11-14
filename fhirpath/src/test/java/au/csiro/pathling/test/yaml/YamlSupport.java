@@ -135,16 +135,14 @@ public class YamlSupport {
         throws IOException {
       final FhirPathQuantity quantity = FhirPathQuantity.parse(quantityLiteral.toString());
 
-      // The quantity is written in the fixed shape of a System quantity (FR-059): its value is the
-      // plain text of the literal's value, and no canonical form is written, because the engine
-      // computes it from the value and code.
+      // The quantity is written as the content of a System quantity (decision 150): its value is
+      // the literal's value, which reading it at System.Decimal's type rounds as the engine does,
+      // and no canonical form is written, because the engine computes it from the value and code.
       gen.writeStartObject();
-      gen.writeNullField("id");
-      gen.writeStringField("value", quantity.getValue().toPlainString());
-      gen.writeNullField("comparator");
+      gen.writeNumberField("value", quantity.getValue());
       gen.writeStringField("unit", quantity.getUnitName());
-      gen.writeStringField("system", quantity.getSystem());
       gen.writeStringField("code", quantity.getCode());
+      gen.writeStringField("system", quantity.getSystem());
       gen.writeEndObject();
     }
   }
@@ -199,7 +197,7 @@ public class YamlSupport {
           Map.entry(FHIRDefinedType.CODE, DataTypes.StringType),
           Map.entry(FHIRDefinedType.INTEGER, DataTypes.IntegerType),
           Map.entry(FHIRDefinedType.BOOLEAN, DataTypes.BooleanType),
-          Map.entry(FHIRDefinedType.DECIMAL, DecimalCollection.DECIMAL_TYPE),
+          Map.entry(FHIRDefinedType.DECIMAL, DecimalCollection.getDecimalType()),
           Map.entry(FHIRDefinedType.CODING, CodingSchema.codingStructType()),
           Map.entry(FHIRDefinedType.QUANTITY, QuantityEncoding.dataType()),
           Map.entry(FHIRDefinedType.TIME, DataTypes.StringType),

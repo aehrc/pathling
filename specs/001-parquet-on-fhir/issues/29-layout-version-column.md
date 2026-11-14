@@ -23,7 +23,7 @@ If a probe contradicts the design, stop and report to the owner.
 
 **Out of scope:** existing PoF test data and the R package's example data are not regenerated. Unmarked PoF data stays accepted, and that data is its regression test.
 
-**Blocked by:** 32
+**Blocked by:** 32, and the specification's agreement on the layout column's name and version rule (tickets 30 and 46)
 
 **Status:** ready-for-agent
 

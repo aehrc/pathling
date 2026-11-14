@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.fhirpath.FhirPathQuantity;
+import au.csiro.pathling.fhirpath.column.SystemDateTime;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.search.InvalidModifierException;
 import au.csiro.pathling.search.SearchParameterType;
@@ -247,7 +248,8 @@ class ElementMatcherTest {
     final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.STRING()).toDF("value");
 
     final DateMatcher matcher = DateMatcher.forScalarDates();
-    final Column result = matcher.match(col("value"), searchValue);
+    // The engine holds a date as a System date, with its range.
+    final Column result = matcher.match(SystemDateTime.fromText(col("value")), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);
     assertEquals(expected, actual);

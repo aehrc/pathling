@@ -1,0 +1,13 @@
+PLAN chars=57 casewhen=0 udf=0 exactReads=0 best=44ms rows=8781 :: value.ofType(Quantity).value
+PLAN chars=552 casewhen=2 udf=2 exactReads=2 best=83ms rows=8781 :: value.ofType(Quantity)
+PLAN chars=783 casewhen=9 udf=1 exactReads=1 best=61ms rows=1035 :: value.ofType(Quantity) > 100 'mg/dL'
+PLAN chars=71 casewhen=0 udf=0 exactReads=0 best=34ms rows=7238 :: value.ofType(Quantity).value > 5.5
+PLAN chars=304 casewhen=1 udf=0 exactReads=0 best=33ms rows=629 :: value.ofType(Quantity).unit = 'cm'
+PLAN chars=374 casewhen=0 udf=0 exactReads=0 best=30ms rows=586 :: component.value.ofType(Quantity).value
+PLAN chars=194 casewhen=0 udf=0 exactReads=0 best=30ms rows=0 :: referenceRange.low.value
+PLAN chars=1562 casewhen=18 udf=2 exactReads=2 best=63ms rows=1830 :: value.ofType(Quantity) > 1 'mg/dL' and value.ofType(Quantity) < 1000 'mg/dL'
+PLAN chars=4668 casewhen=36 udf=7 exactReads=9 best=59ms rows=1830 :: value.ofType(Quantity) > 1 'mg/dL' and value.ofType(Quantity) < 1000 'mg/dL' and value.ofType(Quantity) != 50 'mg/dL'
+PLAN chars=1632 casewhen=10 udf=3 exactReads=3 best=37ms rows=586 :: component.value.ofType(Quantity).where($this > 100 'mm[Hg]')
+PLAN chars=2449 casewhen=19 udf=4 exactReads=4 best=42ms rows=586 :: component.value.ofType(Quantity).where($this > 100 'mm[Hg]' and $this < 200 'mm[Hg]')
+PLAN chars=574 casewhen=2 udf=2 exactReads=2 best=58ms rows=8781 :: value.ofType(Quantity).toString()
+PLAN chars=1618 casewhen=4 udf=2 exactReads=4 best=56ms rows=10000 :: value.ofType(Quantity) | 7 'g'

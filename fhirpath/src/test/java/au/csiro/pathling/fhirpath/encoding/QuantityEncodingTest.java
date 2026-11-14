@@ -21,9 +21,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.fhirpath.FhirPathQuantity;
+import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
+import au.csiro.pathling.fhirpath.unit.UcumUnit;
+import au.csiro.pathling.schema.annotation.kinds.QuantityCanonicalKind;
+import au.csiro.pathling.sql.types.FlexiDecimal;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
-import java.util.stream.IntStream;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.DataTypes;
@@ -62,20 +67,30 @@ class QuantityEncodingTest {
   }
 
   @Test
-  void encodedQuantityDecodesToTheSameQuantity() {
-    final FhirPathQuantity quantity = FhirPathQuantity.parse("1.50 'mg'");
-    assertThat(QuantityEncoding.decode(QuantityEncoding.encode(quantity))).isEqualTo(quantity);
+  void encodedQuantityIsItsContentAtSystemDecimal() {
+    final Row encoded = QuantityEncoding.encode(FhirPathQuantity.parse("1.50 'mg'"));
+    assertThat(encoded.get(0)).isEqualTo(new BigDecimal("1.500000"));
+    assertThat(encoded.toSeq().drop(1).mkString(",")).isEqualTo("mg,mg,http://unitsofmeasure.org");
   }
 
+  /**
+   * A quantity is formatted and converted from its value as text, so a value beyond six fractional
+   * digits, such as a stored quantity's text, keeps every digit there (decision 150). A quantity a
+   * function builds holds its value at System.Decimal, as every System quantity does.
+   */
   @Test
   void valueBeyondSixFractionalDigitsIsKeptByTheStringFormAndASameUnitConversion() {
-    final FhirPathQuantity quantity = FhirPathQuantity.parse("0.1234567891 'mg'");
-    final FhirPathQuantity decoded = QuantityEncoding.decode(QuantityEncoding.encode(quantity));
+    final FhirPathQuantity decoded =
+        QuantityEncoding.decode(
+            new GenericRowWithSchema(
+                new Object[] {"0.1234567891", "mg", "mg", "http://unitsofmeasure.org"},
+                QuantityEncoding.textType()));
 
     assertThat(decoded).isNotNull();
     assertThat(decoded.toString()).isEqualTo("0.1234567891 'mg'");
     assertThat(decoded.convertToUnit("mg"))
         .hasValueSatisfying(q -> assertThat(q.getValue()).isEqualByComparingTo("0.1234567891"));
+    assertThat(QuantityEncoding.encode(decoded).get(0)).isEqualTo(new BigDecimal("0.123457"));
   }
 
   @Test
@@ -85,13 +100,12 @@ class QuantityEncodingTest {
   }
 
   @Test
-  void rowWithTheFixedShapeAndASchemaDecodes() {
+  void rowWithTheTextShapeAndASchemaDecodes() {
     final FhirPathQuantity quantity = FhirPathQuantity.parse("1.50 'mg'");
-    final Row encoded = QuantityEncoding.encode(quantity);
     final Row row =
         new GenericRowWithSchema(
-            IntStream.range(0, encoded.size()).mapToObj(encoded::get).toArray(),
-            QuantityEncoding.dataType());
+            new Object[] {"1.50", "mg", "mg", "http://unitsofmeasure.org"},
+            QuantityEncoding.textType());
     assertThat(QuantityEncoding.decode(row)).isEqualTo(quantity);
   }
 
@@ -109,5 +123,28 @@ class QuantityEncodingTest {
   @Test
   void nullRowDecodesToNull() {
     assertThat(QuantityEncoding.decode(null)).isNull();
+  }
+
+  @Test
+  void theExactCanonicalValueIsAFlexibleDecimal() {
+    // The comparison reads the value of the exact annotation with the functions of FlexiDecimal,
+    // which read it by position, and the annotation is defined in a module that cannot see it.
+    assertThat(QuantityCanonicalKind.EXACT_VALUE_TYPE).isEqualTo(FlexiDecimal.DATA_TYPE);
+  }
+
+  @Test
+  void theKindSharesTheEnginesSystemsAndCalendarDurations() {
+    // The engine's units take their systems and which durations are definite from the annotation,
+    // but each unit's UCUM equivalent is its own.
+    assertThat(QuantityCanonicalKind.UCUM_SYSTEM).isEqualTo(UcumUnit.UCUM_SYSTEM_URI);
+    assertThat(QuantityCanonicalKind.CALENDAR_DURATION_SYSTEM)
+        .isEqualTo(CalendarDurationUnit.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI);
+    assertThat(
+            Stream.of(CalendarDurationUnit.values())
+                .filter(CalendarDurationUnit::isDefinite)
+                .collect(
+                    Collectors.toMap(
+                        CalendarDurationUnit::code, CalendarDurationUnit::getUcumEquivalent)))
+        .isEqualTo(QuantityCanonicalKind.DEFINITE_CALENDAR_DURATIONS);
   }
 }

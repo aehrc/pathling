@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.utilities.SystemDecimal;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
@@ -49,8 +50,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 @SpringBootUnitTest
 class ColumnRepresentationSafeCastTest {
 
-  /** The canonical decimal type used by Pathling, permitting 26 integer digits. */
-  private static final DataType DECIMAL_TYPE = DataTypes.createDecimalType(32, 6);
+  /** The canonical decimal type used by Pathling, permitting 32 integer digits. */
+  private static final DataType DECIMAL_TYPE = SystemDecimal.TYPE;
 
   private static final boolean[] ANSI_SETTINGS = {true, false};
 
@@ -102,10 +103,10 @@ class ColumnRepresentationSafeCastTest {
 
   @Test
   void scalarOutOfRangeDecimalYieldsNull() {
-    // 1e30 has 31 integer digits, exceeding the 26 permitted by DECIMAL(32,6).
+    // 1e33 has 34 integer digits, exceeding the 32 permitted by DECIMAL(38,6).
     for (final boolean ansi : ANSI_SETTINGS) {
       final Row row =
-          evalUnderAnsi(ansi, () -> scalar("1e30").elementTryCast(DECIMAL_TYPE).getValue());
+          evalUnderAnsi(ansi, () -> scalar("1e33").elementTryCast(DECIMAL_TYPE).getValue());
       assertNull(row.isNullAt(0) ? null : row.get(0), "out-of-range scalar decimal, ansi=" + ansi);
     }
   }
@@ -137,7 +138,7 @@ class ColumnRepresentationSafeCastTest {
   void arrayOutOfRangeDecimalYieldsNullPerElementUnderBothSettings() {
     for (final boolean ansi : ANSI_SETTINGS) {
       final List<Object> result =
-          evalUnderAnsi(ansi, () -> arrayOf("1.5", "1e30").elementTryCast(DECIMAL_TYPE).getValue())
+          evalUnderAnsi(ansi, () -> arrayOf("1.5", "1e33").elementTryCast(DECIMAL_TYPE).getValue())
               .getList(0);
       assertEquals(2, result.size(), "array size, ansi=" + ansi);
       assertNotNull(result.get(0), "conforming decimal retained, ansi=" + ansi);

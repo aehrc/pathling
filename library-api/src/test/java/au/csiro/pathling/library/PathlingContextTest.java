@@ -38,11 +38,13 @@ import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.schema.SchemaConfiguration;
 import au.csiro.pathling.search.UnknownSearchParameterException;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirVersionEnum;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nonnull;
 import jakarta.validation.ConstraintViolationException;
 import java.io.File;
@@ -60,6 +62,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -526,6 +529,116 @@ public class PathlingContextTest {
     assertNotNull(pathlingContext.getQueryConfiguration());
     assertFalse(pathlingContext.getQueryConfiguration().isExplainQueries());
     assertEquals(10, pathlingContext.getQueryConfiguration().getMaxUnboundTraversalDepth());
+  }
+
+  @Test
+  void testBuildContextWithSchemaConfiguration() {
+    final SchemaConfiguration schemaConfig =
+        SchemaConfiguration.builder()
+            .enableRangeAnnotation(false)
+            .recomputeAnnotations(true)
+            .keepUnrequestedAnnotations(true)
+            .dropUnknownAnnotations(true)
+            .build();
+
+    final PathlingContext pathlingContext =
+        PathlingContext.builder(spark).schemaConfiguration(schemaConfig).build();
+
+    assertEquals(schemaConfig, pathlingContext.getSchemaConfiguration());
+  }
+
+  @Test
+  void testBuildContextWithDefaultSchemaConfiguration() {
+    final SchemaConfiguration schemaConfig =
+        PathlingContext.builder(spark).build().getSchemaConfiguration();
+
+    // Every kind is stored, an annotation already present is kept, one of a kind that is off is
+    // left out, and one Pathling does not compute is kept.
+    assertTrue(schemaConfig.isEnableNumericAnnotation());
+    assertTrue(schemaConfig.isEnableRangeAnnotation());
+    assertTrue(schemaConfig.isEnableCanonicalAnnotation());
+    assertFalse(schemaConfig.isRecomputeAnnotations());
+    assertFalse(schemaConfig.isKeepUnrequestedAnnotations());
+    assertFalse(schemaConfig.isDropUnknownAnnotations());
+  }
+
+  @Test
+  void annotatesStoredResources() {
+    final PathlingContext pathlingContext =
+        PathlingContext.builder(spark)
+            .schemaConfiguration(SchemaConfiguration.builder().dropUnknownAnnotations(true).build())
+            .build();
+    final Dataset<Row> stored =
+        pathlingContext
+            .encode(
+                spark
+                    .createDataset(
+                        List.of(
+                            "{\"resourceType\":\"Patient\",\"id\":\"p1\",\"birthDate\":\"1974-12-25\"}"),
+                        Encoders.STRING())
+                    .toDF(),
+                "Patient")
+            .withColumn("__unknown", functions.lit("u"));
+
+    final Dataset<Row> annotated = pathlingContext.annotate(stored, "Patient");
+
+    // A patient carries no quantity, so the built-in kind has nothing to annotate. The step leaves
+    // out the annotation Pathling does not define, as the configuration says, and changes nothing
+    // else.
+    assertEquals(stored.drop("__unknown").schema(), annotated.schema());
+  }
+
+  /**
+   * The ingest option that stores the ids and extensions of primitives reaches encoding through the
+   * context, and what it stores is annotated and decoded back out unchanged (ticket 17): a singular
+   * primitive's group beside its annotations, a repeating primitive's positional null, and a
+   * repeating annotated primitive carried only as its groups.
+   */
+  @Test
+  void storesAndDecodesPrimitiveMetadataWhereTheSchemaConfigurationAsks() throws IOException {
+    final String extension =
+        "{\"extension\":[{\"url\":\"http://hl7.org/fhir/StructureDefinition/data-absent-reason\","
+            + "\"valueCode\":\"masked\"}]}";
+    final String patient =
+        "{\"resourceType\":\"Patient\",\"id\":\"p1\",\"birthDate\":\"1974-12-25\","
+            + "\"_birthDate\":{\"id\":\"b\"},\"name\":[{\"given\":[\"Ann\",null],"
+            + "\"_given\":[null,"
+            + extension
+            + "]}]}";
+    final String activity =
+        "{\"resourceType\":\"ActivityDefinition\",\"id\":\"a1\",\"status\":\"active\","
+            + "\"timingTiming\":{\"_event\":["
+            + extension
+            + "]}}";
+    final PathlingContext storing =
+        PathlingContext.builder(spark)
+            .schemaConfiguration(SchemaConfiguration.builder().storePrimitiveMetadata(true).build())
+            .build();
+    final PathlingContext defaults = PathlingContext.builder(spark).build();
+    final ObjectMapper mapper = new ObjectMapper();
+
+    for (final String[] typeAndSource :
+        List.of(new String[] {"Patient", patient}, new String[] {"ActivityDefinition", activity})) {
+      final Dataset<Row> source =
+          spark.createDataset(List.of(typeAndSource[1]), Encoders.STRING()).toDF();
+      final Dataset<Row> encoded = storing.encode(source, typeAndSource[0]);
+      final String decoded =
+          storing.decode(encoded, typeAndSource[0], PathlingContext.FHIR_JSON).first();
+
+      assertEquals(mapper.readTree(typeAndSource[1]), mapper.readTree(decoded));
+      assertFalse(
+          Pattern.compile("_[a-zA-Z]+:struct<(?:id|extension)")
+              .matcher(defaults.encode(source, typeAndSource[0]).schema().catalogString())
+              .find(),
+          "the default configuration stores no id or extensions of a primitive");
+    }
+    assertTrue(
+        storing
+            .encode(spark.createDataset(List.of(patient), Encoders.STRING()).toDF(), "Patient")
+            .schema()
+            .catalogString()
+            .contains("_birthDate:struct<id:string,__start"),
+        "the group carries the annotations after the id");
   }
 
   @Test

@@ -83,6 +83,12 @@
       <artifactId>commons-lang3</artifactId>
     </dependency>
 
+    <!-- UCUM: the canonicalisation the quantity annotations carry (decision 135). -->
+    <dependency>
+      <groupId>io.github.fhnaumann</groupId>
+      <artifactId>ucumate-core</artifactId>
+    </dependency>
+
     <!-- Lombok is provided scope in the parent, so it is not inherited transitively. -->
     <dependency>
       <groupId>org.projectlombok</groupId>

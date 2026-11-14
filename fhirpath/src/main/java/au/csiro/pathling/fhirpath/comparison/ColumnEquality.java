@@ -18,6 +18,8 @@
 package au.csiro.pathling.fhirpath.comparison;
 
 import jakarta.annotation.Nonnull;
+import java.util.Optional;
+import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 
@@ -65,9 +67,23 @@ public interface ColumnEquality {
   }
 
   /**
-   * Indicates whether this comparator uses default SQL equality semantics. When true, Spark's
-   * native array operations (array_union, array_distinct) can be used. When false, custom
-   * element-wise comparison is required.
+   * Returns the key by which this comparator's equality deduplicates, where there is one: a value
+   * computed from each element such that two elements are equal exactly where their keys are, and
+   * null where the element is (decision 151). Deduplication then computes the key once for each
+   * element rather than comparing every pair.
+   *
+   * @return the key of an element, or empty where equality is not decided by one
+   */
+  @Nonnull
+  default Optional<UnaryOperator<Column>> deduplicationKey() {
+    return Optional.empty();
+  }
+
+  /**
+   * Indicates whether this comparator uses default SQL equality semantics. When true, arrays are
+   * deduplicated by Spark's native {@code array_distinct}, on a key without another producer's
+   * annotation fields where there are any (decision 151). When false, a deduplication key or a
+   * custom element-wise comparison is required.
    *
    * @return true if this comparator uses default SQL equality, false otherwise
    */

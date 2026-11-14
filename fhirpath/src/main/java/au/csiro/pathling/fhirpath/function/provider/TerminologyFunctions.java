@@ -33,6 +33,7 @@ import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.column.SystemDateTime;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import au.csiro.pathling.sql.udf.PropertyUdf;
 import au.csiro.pathling.utilities.Functions;
@@ -144,9 +145,14 @@ public abstract class TerminologyFunctions {
                     .orElse(DefaultRepresentation.empty()))
             .flatten()
             .removeNulls();
+    // A dateTime property is looked up as its text, and is held as a System dateTime.
+    final ColumnRepresentation values =
+        propertyType == FHIRDefinedType.DATETIME
+            ? resultCtx.transform(SystemDateTime::fromText)
+            : resultCtx;
 
     return Collection.build(
-        resultCtx,
+        values,
         propertyType,
         input
             .getDefinition()
@@ -227,7 +233,9 @@ public abstract class TerminologyFunctions {
       return BooleanCollection.empty();
     }
     if (input instanceof StringCollection) {
-      return BooleanCollection.build(input.getColumn().singularOrNull().callUdf("member_of", url));
+      // A code or string is taken as its value, its System value.
+      return BooleanCollection.build(
+          input.toEngineForm().getColumn().singularOrNull().callUdf("member_of", url));
     }
     return input
         .toConcepts()

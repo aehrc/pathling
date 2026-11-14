@@ -4,16 +4,6 @@ excludeSet:
   - title: Global exclusions
     glob: "*.yaml"
     exclude:
-      - title: "Primitive .id extension not accessible after trace"
-        type: bug
-        id: "#2580"
-        outcome: failure
-        comment: |
-          Accessing the .id extension property on a FHIR primitive element
-          after trace() returns null because the TraceExpression wrapping
-          changes how the schema is resolved for extension fields.
-        any:
-          - "trace('coll')[0].id"
       - title: "Non-conformant input fixture: answer is not an array"
         type: feature
         comment: |
@@ -166,24 +156,11 @@ excludeSet:
           treats a null array element as absent rather than raising an error, consistent with how
           this same limitation is already handled for empty()/exists()/not() above.
         any:
-          - "** null is not empty"
-          - "** exists for null should return true"
           - "** error for collection that is not a singleton"
           - "** allTrue for null values in the collection raise an error"
           - "** anyTrue for null values in the collection raise an error"
           - "** allFalse for null values in the collection raise an error"
           - "** anyFalse for null values in the collection raise an error"
-      - title: "isDistinct() on primitive elements with extensions but no value"
-        type: feature
-        outcome: failure
-        id: "#437"
-        comment: |
-          Patient.name.given[3] is a primitive element with extensions but no value. isDistinct()
-          reports the combined collection as distinct (true) because Pathling does not recognise
-          given[3] as a distinct existing element, the same underlying #437 limitation already
-          excluded for combine()/union() with count() below.
-        any:
-          - "(Patient.name.given[0]).combine(Patient.name.given[3]).isDistinct()"
       - title: "Indefinite calendar duration equality in distinct() deduplication"
         type: wontfix
         outcome: failure
@@ -206,27 +183,6 @@ excludeSet:
           - "heteroattr.ofType(Integer)"
           - "heteroattr.ofType(Decimal)"
           - "heteroattr.ofType(Boolean)"
-      - title: "where() with count() filtering on id attribute of primitive elements not supported"
-        type: feature
-        outcome: failure
-        id: "#437"
-        comment: |
-          This test uses where() to filter on the 'id' attribute of primitive elements,
-          then applies count(). Since Pathling doesn't support accessing the id attribute
-          of primitive elements (which requires support for the primitive attribute/extension
-          structure), the where() clause returns an empty collection, causing count() to
-          return 0 instead of 1.
-        any:
-          - "Patient.name.given.where(id = 'Jacomus1Id').count()"
-      - title: "repeat() on id attribute of primitive elements not supported"
-        type: feature
-        outcome: failure
-        id: "#437"
-        comment: |
-          This test uses repeat() to traverse the id attribute of primitive elements.
-          Pathling does not support accessing the id attribute of primitive elements.
-        any:
-          - "Patient.name.given.repeat(id)"
       - title: "Indefinite calendar duration equality in repeat() deduplication"
         type: wontfix
         outcome: failure
@@ -316,18 +272,6 @@ excludeSet:
           recognize the element as existing.
         any:
           - "Patient.name.given[3].is(FHIR.string)"
-      - title: "as() operator with count() on primitive elements with extensions but no value"
-        type: feature
-        outcome: failure
-        id: "#437"
-        comment: |
-          These tests use count() to verify that as() successfully converts
-          Patient.name.given[3], which is a primitive element with extensions but
-          no value. Since Pathling doesn't support accessing such elements, count()
-          returns 0 instead of 1, causing the comparison to fail.
-        any:
-          - "(Patient.name.given[3] as FHIR.string).count() = 1"
-          - "Patient.name.given[3].as(FHIR.string).count() = 1"
       - title: "'is' operator precedence differs from fhirpath.js"
         type: wontfix
         comment: |
@@ -357,8 +301,6 @@ excludeSet:
           These tests involve the 'is' operator on extension values or primitive elements
           with extensions, which return null instead of the expected type check result.
         any:
-          - "Patient.contact.name.family.extension('http://hl7.org/fhir/StructureDefinition/humanname-own-prefix').value is string"
-          - "Patient.contact.name.family.extension('http://hl7.org/fhir/StructureDefinition/humanname-own-prefix').url is System.String"
           - "Patient.name.given[3] is FHIR.string"
       - title: "Type hierarchy checking not yet implemented"
         type: feature
@@ -432,7 +374,6 @@ excludeSet:
         any:
           - "** id for primitive type"
           - "Patient.address[1].id = 'someId'"
-          - "** count nodes without value, but with extensions"
       - title: "extensions on primitive types not supported"
         type: feature
         outcome: pass
@@ -446,14 +387,11 @@ excludeSet:
         any:
           - "** expression with extension for primitive type 3"
           - "Patient.communication.preferred.extension('test').value.id"
-          - "Patient.communication.preferred.extension('test').exists()"
           - "Patient.name.given[0].extension('http://hl7.org/fhir/StructureDefinition/display').value = 'Jacomus1'"
           - "Patient.name.given[3].extension('http://hl7.org/fhir/StructureDefinition/display').value = 'Jacomus2'"
           - "** value of extension of extension (using FHIR model data)"
           - "** id of extension of extension"
           - "** expression with extension() for primitive type (using FHIR model data)"
-          - "Patient.birthDate.extension .where(url = 'http://hl7.org/fhir/StructureDefinition/patient-birthTime') .valueDateTime.toDateTime() = @1974-12-25T14:35:45-05:00"
-          - "Patient.birthDate.extension('http://hl7.org/fhir/StructureDefinition/patient-birthTime') .valueDateTime.toDateTime() = @1974-12-25T14:35:45-05:00"
   - title: Factory exclusions
     glob: "fhirpath-js/cases/factory.yaml"
     exclude:
@@ -542,21 +480,6 @@ excludeSet:
           both values since the equality comparison returns NULL for incomparable quantities.
         any:
           - "(1 year | 12 months)"
-      - title: "Union/combine with count() on primitive elements with extensions but no value"
-        type: feature
-        outcome: failure
-        id: "#437"
-        comment: |
-          These tests use count() on a merge that includes Patient.name.given[3], which
-          is a primitive element with extensions but no value. Since Pathling doesn't
-          support accessing such elements, the merge returns fewer elements than the
-          reference implementation, causing count() to return the wrong result. The same
-          underlying #437 limitation applies equally to the `|` operator and to the
-          desugared `union()` / `combine()` function forms.
-        any:
-          - "(Patient.name.given[0] | Patient.name.given[3]).count()"
-          - "Patient.name.given[0].union(Patient.name.given[3]).count()"
-          - "(Patient.name.given[0]).combine(Patient.name.given[3]).count()"
   - title: FHIR R4 Exclusions
     glob: "fhirpath-js/cases/fhir-r4.yaml"
     exclude:
@@ -603,12 +526,6 @@ excludeSet:
           - "1.2 / 1.8 = 0.66666667"
           - "1.00000001.truncate() = 1"
           - "0.00000001.convertsToDecimal()"
-      - title: "Extensions on primitive types not supported"
-        type: feature
-        outcome: failure
-        id: "#437"
-        any:
-          - "Patient.birthDate.extension('http://hl7.org/fhir/StructureDefinition/patient-birthTime').exists()"
       - title: "Extensions on primitive types not supported"
         type: feature
         outcome: pass

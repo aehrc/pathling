@@ -17,20 +17,33 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static org.apache.spark.sql.functions.array_distinct;
-import static org.apache.spark.sql.functions.array_union;
 import static org.apache.spark.sql.functions.concat;
 
 import au.csiro.pathling.definition.ElementDefinition;
 import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.DateCollection;
+import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
+import au.csiro.pathling.fhirpath.collection.DateTimeComparable;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
+import au.csiro.pathling.fhirpath.column.FlatStructure;
+import au.csiro.pathling.fhirpath.column.StoredDecimal;
+import au.csiro.pathling.fhirpath.column.StoredPrimitive;
+import au.csiro.pathling.fhirpath.column.SystemDateTime;
 import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
+import au.csiro.pathling.fhirpath.comparison.DefaultComparator;
+import au.csiro.pathling.fhirpath.definition.MetadataElementDefinition;
+import au.csiro.pathling.fhirpath.definition.PrimitiveMetadata;
+import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
+import au.csiro.pathling.schema.LayoutFields;
 import au.csiro.pathling.schema.PrimitiveTypes;
 import au.csiro.pathling.sql.SqlFunctions;
 import au.csiro.pathling.utilities.CanonicalStructure;
 import jakarta.annotation.Nonnull;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -66,6 +79,20 @@ import org.apache.spark.sql.Column;
 public class CombiningLogic {
 
   /**
+   * The canonical order of the fields of a primitive held with its id and extensions: its value,
+   * its id and extensions, and the annotations of any type.
+   */
+  @Nonnull
+  private static final List<String> PRIMITIVE_FIELDS =
+      List.of(
+          StoredPrimitive.VALUE,
+          PrimitiveMetadata.ID,
+          PrimitiveMetadata.EXTENSION,
+          LayoutFields.START_ANNOTATION,
+          LayoutFields.END_ANNOTATION,
+          LayoutFields.NUMERIC_ANNOTATION);
+
+  /**
    * Unifies operands that must share a type: promotes their FHIR types to a common type where one
    * exists, then unifies their SQL shapes (FR-056).
    *
@@ -79,7 +106,9 @@ public class CombiningLogic {
    *   <li>Where only some operands hold stored FHIR structures, a System value takes part, such as
    *       a literal. The stored operands are then taken in the form the engine computes with (see
    *       {@link Collection#toEngineForm()}), which they share with the System value. Those
-   *       operands have no extensions, as a System value has none.
+   *       operands have no extensions, as a System value has none. A stored quantity is the
+   *       exception: its comparator reads either form, and reads a stored quantity's canonical form
+   *       from its stored text where its annotations are absent (decision 150).
    * </ul>
    *
    * <p>A primitive needs no shape unification here. Two decimals of different precision are given
@@ -168,14 +197,36 @@ public class CombiningLogic {
   }
 
   @Nonnull
-  private static List<Collection> unifyShapes(@Nonnull final List<Collection> operands) {
+  private static List<Collection> unifyShapes(@Nonnull final List<Collection> given) {
+    // A primitive held with its id and extensions is compared and computed with as the System value
+    // it converts to, which has neither (decisions 142 and 151). A date is the exception: its
+    // comparator reads its text and bounds alone, and converting it first would keep Spark from
+    // pushing a filter on a stored bound down to the scan.
+    final List<Collection> operands =
+        given.stream()
+            .map(operand -> keepsItsForm(operand) ? operand : operand.withoutPrimitiveMetadata())
+            .toList();
     if (operands.size() < 2 || !typeEquivalent(operands)) {
       return operands;
     }
-    final List<Collection> aligned = alignForm(operands);
-    return aligned.stream().allMatch(Collection::holdsStoredStructures)
-        ? reconcileStructures(aligned)
-        : aligned;
+    if (operands.stream().allMatch(Collection::holdsStoredStructures)) {
+      return reconcileStructures(operands);
+    }
+    // The operands are compared, so each is taken in the form the engine computes with, except a
+    // quantity: its comparison reads a stored quantity's canonical form from its stored annotation
+    // or else its stored text, which converting it first would lose (decision 150).
+    return operands.stream()
+        .map(
+            operand ->
+                operand instanceof QuantityCollection || keepsItsForm(operand)
+                    ? operand
+                    : operand.toEngineForm())
+        .toList();
+  }
+
+  /** Whether an operand is a date held with its id and extensions, which is compared as it is. */
+  private static boolean keepsItsForm(@Nonnull final Collection operand) {
+    return operand instanceof DateTimeComparable && operand.holdsPrimitiveMetadata();
   }
 
   /**
@@ -218,6 +269,67 @@ public class CombiningLogic {
     return IntStream.range(0, operands.size())
         .mapToObj(index -> rebuild.apply(index, unified.get(index)))
         .toList();
+  }
+
+  /**
+   * Returns the canonical structure under which operands are merged as they are combined into one
+   * array, where their shapes can differ: that of the stored structures, where every operand holds
+   * them, and that of a date, where every operand is a date, whose annotation fields depend on the
+   * schema and on how it was made, that of a System quantity, where every operand is one, and that
+   * of a stored decimal, where every operand is one, so that the merge keeps only the annotations
+   * every operand has (decision 142, D9).
+   */
+  @Nonnull
+  private static Optional<CanonicalStructure> mergeStructureOf(
+      @Nonnull final List<Collection> operands) {
+    if (operands.stream().allMatch(Collection::holdsPrimitiveMetadata)) {
+      // FHIR primitives held with their ids and extensions, which are combined as they are only
+      // where every operand is one, union their ids and extensions and keep the annotations every
+      // operand has (decision 142, D9).
+      return primitiveStructureOf(operands.get(0));
+    }
+    if (operands.stream()
+        .allMatch(
+            operand ->
+                operand instanceof DateCollection || operand instanceof DateTimeCollection)) {
+      return Optional.of(SystemDateTime.STRUCTURE);
+    }
+    if (operands.stream().allMatch(QuantityCollection.class::isInstance)
+        && operands.stream().noneMatch(Collection::holdsStoredStructures)) {
+      // System quantities carry their canonical annotations only where they were available.
+      return Optional.of(QuantityEncoding.STRUCTURE);
+    }
+    if (operands.stream()
+        .allMatch(
+            operand -> operand instanceof final DecimalCollection decimal && decimal.isStored())) {
+      // Stored decimals, which are combined as they are only where every operand is one, carry
+      // their numeric annotation where their schema has it.
+      return Optional.of(StoredDecimal.STRUCTURE);
+    }
+    return operands.stream().allMatch(Collection::holdsStoredStructures)
+        ? structureOfOperands(operands)
+        : Optional.empty();
+  }
+
+  /**
+   * Returns the canonical structure of a primitive held with its id and extensions: its value, its
+   * id and extensions, ordered as the Extension type orders them, then any of its annotations.
+   */
+  @Nonnull
+  private static Optional<CanonicalStructure> primitiveStructureOf(
+      @Nonnull final Collection primitive) {
+    return primitive
+        .getDefinition()
+        .filter(MetadataElementDefinition.class::isInstance)
+        .map(MetadataElementDefinition.class::cast)
+        .map(
+            definition ->
+                FlatStructure.of(
+                    PRIMITIVE_FIELDS,
+                    Map.of(
+                        PrimitiveMetadata.EXTENSION,
+                        DefinitionCanonicalStructure.of(
+                            definition.getExtensionDefinition(), false))));
   }
 
   /**
@@ -320,8 +432,8 @@ public class CombiningLogic {
     final Collection template = aligned.get(0);
     final boolean reconcilable = aligned.size() >= 2 && typeEquivalent(aligned);
     final Optional<CanonicalStructure> canonical =
-        reconcilable ? structureOfOperands(aligned) : Optional.empty();
-    if (canonical.isPresent() && aligned.stream().allMatch(Collection::holdsStoredStructures)) {
+        reconcilable ? mergeStructureOf(aligned) : Optional.empty();
+    if (canonical.isPresent()) {
       final List<Column> columns =
           aligned.stream().map(operand -> operand.getColumn().plural().getValue()).toList();
       return template.copyWithColumn(
@@ -354,10 +466,12 @@ public class CombiningLogic {
   }
 
   /**
-   * Deduplicates the values in an array using the appropriate equality strategy. Types that use
-   * default SQL equality leverage Spark's {@code array_distinct}, while types with custom equality
-   * (Quantity, Coding, temporal types) use element-wise comparison via {@link
-   * SqlFunctions#arrayDistinctWithEquality}.
+   * Deduplicates the values in an array using the appropriate equality strategy, keeping the first
+   * of each set of equal values. Types that use default SQL equality are compared by their value
+   * without another producer's annotation fields, with Spark's {@code array_distinct} where there
+   * are none (decision 151). Types whose equality a key decides, such as dates, are deduplicated by
+   * that key, computed once for each element; the other types with custom equality (Quantity,
+   * Coding, times) use element-wise comparison via {@link SqlFunctions#arrayDistinctWithEquality}.
    *
    * @param arrayColumn the array column to deduplicate
    * @param comparator the equality comparator that defines element equality
@@ -367,15 +481,17 @@ public class CombiningLogic {
   public static Column dedupeArray(
       @Nonnull final Column arrayColumn, @Nonnull final ColumnEquality comparator) {
     if (comparator.usesDefaultSqlEquality()) {
-      return array_distinct(arrayColumn);
+      return DefaultComparator.distinctByKey(arrayColumn);
     }
-    return SqlFunctions.arrayDistinctWithEquality(arrayColumn, comparator::equalsTo);
+    return comparator
+        .deduplicationKey()
+        .map(key -> SqlFunctions.arrayDistinctByKey(arrayColumn, key))
+        .orElseGet(() -> SqlFunctions.arrayDistinctWithEquality(arrayColumn, comparator::equalsTo));
   }
 
   /**
-   * Merges two arrays and deduplicates the result using the appropriate equality strategy. Types
-   * that use default SQL equality leverage Spark's {@code array_union}, while types with custom
-   * equality use element-wise comparison via {@link SqlFunctions#arrayUnionWithEquality}.
+   * Merges two arrays and deduplicates the result as {@link #dedupeArray} does: their
+   * concatenation, without duplicates.
    *
    * @param leftArray the left array column
    * @param rightArray the right array column
@@ -387,10 +503,7 @@ public class CombiningLogic {
       @Nonnull final Column leftArray,
       @Nonnull final Column rightArray,
       @Nonnull final ColumnEquality comparator) {
-    if (comparator.usesDefaultSqlEquality()) {
-      return array_union(leftArray, rightArray);
-    }
-    return SqlFunctions.arrayUnionWithEquality(leftArray, rightArray, comparator::equalsTo);
+    return dedupeArray(concat(leftArray, rightArray), comparator);
   }
 
   /**

@@ -18,6 +18,7 @@
 package au.csiro.pathling.io;
 
 import au.csiro.pathling.definition.DefinitionContext;
+import au.csiro.pathling.schema.SchemaConfiguration;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
 
@@ -49,7 +50,8 @@ public final class FhirReader {
   }
 
   /**
-   * Returns a reader that stores what it reads as the definitions describe.
+   * Returns a reader that stores what it reads as the definitions describe, leaving the ids and
+   * extensions of primitives out.
    *
    * @param spark the Spark session to read files with
    * @param definitions the definitions that types, cardinality and field order are taken from
@@ -58,7 +60,26 @@ public final class FhirReader {
   @Nonnull
   public static FhirReader of(
       @Nonnull final SparkSession spark, @Nonnull final DefinitionContext definitions) {
-    final ResourceTransformer transformer = ResourceTransformer.of(definitions);
+    return of(spark, definitions, SchemaConfiguration.builder().build());
+  }
+
+  /**
+   * Returns a reader that stores what it reads as the definitions describe, and stores the ids and
+   * extensions of primitives where a configuration asks for them (FR-003). Only that one option of
+   * the configuration concerns reading; its annotation options are the annotation step's.
+   *
+   * @param spark the Spark session to read files with
+   * @param definitions the definitions that types, cardinality and field order are taken from
+   * @param configuration the configuration of the stored schema
+   * @return the reader
+   */
+  @Nonnull
+  public static FhirReader of(
+      @Nonnull final SparkSession spark,
+      @Nonnull final DefinitionContext definitions,
+      @Nonnull final SchemaConfiguration configuration) {
+    final ResourceTransformer transformer =
+        ResourceTransformer.of(definitions, configuration.isStorePrimitiveMetadata());
     return new FhirReader(
         new FhirJsonReader(spark, transformer), new FhirXmlReader(spark, transformer, definitions));
   }

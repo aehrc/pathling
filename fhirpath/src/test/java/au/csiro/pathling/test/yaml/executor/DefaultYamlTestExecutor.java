@@ -211,7 +211,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
 
       // Extract the actual result for error reporting.
       final ColumnRepresentation actualRepresentation =
-          evalResult.toEngineForm().getColumn().asCanonical();
+          evalResult.toEngineForm().getOutputColumn().asCanonical();
       final Row resultRow =
           evaluator.getDataset().select(actualRepresentation.getValue().alias("actual")).first();
       final Object actual = getResult(resultRow, 0);
@@ -301,7 +301,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
     // Get column representations for both actual and expected results.
     final ColumnRepresentation expectedRepresentation = getResultRepresentation();
     final ColumnRepresentation actualRepresentation =
-        evalResult.toEngineForm().getColumn().asCanonical();
+        evalResult.toEngineForm().getOutputColumn().asCanonical();
 
     // Create a single row with both actual and expected values for comparison.
     final Row resultRow =
@@ -469,35 +469,27 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
   }
 
   /**
-   * Normalizes a Quantity Row for comparison. A System quantity holds its value as text (FR-059),
-   * so the value is compared as the engine compares it, as a decimal of six fractional digits,
-   * rather than as text, which would distinguish {@code 1.5} from {@code 1.50}.
-   *
-   * <p>Quantity Row structure: [id, value, comparator, unit, system, code].
+   * Normalizes a Quantity Row for comparison, to its content: its value, unit, code and system
+   * (decision 150), by name. The value is compared as the engine holds it, a decimal of six
+   * fractional digits. A canonical annotation a System quantity carries is left out: it is derived
+   * from the content, and is pinned where quantities are compared.
    *
    * @param quantityRow the Quantity Row to normalize
    * @return a List representing the normalized quantity
    */
   @Nonnull
   private static java.util.List<Object> normalizeQuantityRow(@Nonnull final Row quantityRow) {
-    final int expectedSize = QuantityEncoding.dataType().size();
-    if (quantityRow.size() != expectedSize) {
-      throw new IllegalArgumentException(
-          "Expected Quantity row to have "
-              + expectedSize
-              + " fields, but got "
-              + quantityRow.size());
-    }
     final java.util.List<Object> normalized = new java.util.ArrayList<>();
-    for (int i = 0; i < quantityRow.size(); i++) {
-      normalized.add(quantityRow.isNullAt(i) ? null : quantityRow.get(i));
+    for (final String field : QuantityEncoding.dataType().fieldNames()) {
+      final int index = quantityRow.fieldIndex(field);
+      normalized.add(quantityRow.isNullAt(index) ? null : quantityRow.get(index));
     }
-    final int valueIndex = quantityRow.fieldIndex(QuantityEncoding.VALUE_COLUMN);
+    final int valueIndex = 0;
     normalized.set(
         valueIndex,
-        quantityRow.isNullAt(valueIndex)
+        normalized.get(valueIndex) == null
             ? null
-            : new BigDecimal(quantityRow.getString(valueIndex))
+            : new BigDecimal(normalized.get(valueIndex).toString())
                 .setScale(DecimalCustomCoder.scale(), RoundingMode.HALF_UP));
     return normalized;
   }

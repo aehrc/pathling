@@ -28,11 +28,13 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 
 /**
- * Spark UDF to convert a Quantity represented as a Row to a valid Quantity literal string.
+ * Spark UDF to convert a Quantity represented as a Row to a valid Quantity literal string. The
+ * quantity is given as {@link QuantityEncoding#asText}, with its value as text, so that a stored
+ * quantity is formatted from its stored text.
  *
  * <p>UCUM units are quoted with single quotes, while time duration units are not quoted. For a
- * missing or other system, and for a quantity that lacks a value or code or carries a comparator,
- * the function returns null (see {@link QuantityEncoding#decode}).
+ * missing or other system, and for a quantity that lacks a value or code, the function returns null
+ * (see {@link QuantityEncoding#decode}).
  *
  * <p>If the quantity is null, the function returns null.
  */

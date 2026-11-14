@@ -100,8 +100,13 @@ element absent from the schema is no longer such a column.
 
 ## Decimals
 
-Stored as text and computed at the documented cap. Comparison, arithmetic,
-aggregation and ordering behave as they do today; only the storage changed.
+Stored as text and computed at the documented cap, the engine's System.Decimal,
+`DECIMAL(38,6)`: six fractional digits and 32 integer digits (FR-035). It was
+`DECIMAL(32,6)` before ticket 41. Comparison, arithmetic, aggregation and
+ordering behave as they did, except that a value with 27 to 32 integer digits,
+null at the earlier cap, now has a value, and a decimal leaves the engine as
+`DECIMAL(38,6)`. FHIRPath asks for eight fractional digits; the six kept here
+are a known deviation (FR-035).
 
 The stored text is not the source's lexical form (decision 68). Ingest reads a
 number with standard JSON inference, which yields a double, and stores its
@@ -115,32 +120,60 @@ storage, not how much survives a calculation.
 A quantity read from the data keeps the fitted shape of the data it came from,
 with its extensions. A `System.Quantity` — one the engine builds itself, such as
 a literal, a number promoted to a quantity, the result of `toQuantity()`, or a
-stored quantity combined with one of these — has one fixed, complete shape,
-whatever produced it (FR-059):
+stored quantity combined with one of these — has the fields its literal can set,
+whatever produced it (FR-059, decision 150):
 
 | Field | Type | Holds |
 | --- | --- | --- |
-| `id` | string | Null, except for a stored quantity taken as a System one, which keeps its id. |
-| `value` | string | The text of the decimal, as the layout stores a decimal, with the digits it was given. A number promoted to a quantity has the six fractional digits of the engine's decimal type. |
-| `comparator` | string | Null, except for a stored quantity taken as a System one. |
-| `unit` | string | The human-readable unit. |
-| `system` | string | The system of the unit's code. |
-| `code` | string | The unit's code. |
+| `value` | decimal(38,6) | The value as the engine's System.Decimal. A stored quantity's value is read from its `_value.__numeric`, or else decoded from its text. |
+| `unit` | string | The unit as written, such as `days` in `4 days`. The exact-unit match reads it. |
+| `code` | string | The unit's code, such as `day`. |
+| `system` | string | The system of the unit's code. A literal implies it: a quoted unit is UCUM, a calendar keyword is a calendar duration, and no unit is UCUM `'1'`. |
 
-These are the elements of a FHIR Quantity other than `extension`, in definition
-order, and every one is present. A System quantity has no extensions. Nothing
-derived is carried: no decimal value with a scale companion, no canonical form
-and no field identifier, so an engine-built quantity never looks like a
-previous-layout one. The decimal value and the canonical form are computed from
-the value and the code where a quantity is compared or converted, as they are
-for a stored quantity.
+There is no `id`, no `comparator` and no `_value` group. A stored quantity with a
+comparator has no System form, and converting it gives empty. A System quantity
+has no extensions, and no field identifier, so an engine-built quantity never
+looks like a previous-layout one.
 
-Comparison across units uses the `_canonical_exact` annotation when present and
-computes the canonicalisation when not. That annotation's precision preserves
-magnitude, so quantities differing by orders of magnitude do not compare equal.
-The specification's `_canonical` annotation sits beside it and is written for
-interchange; the engine does not read it, because its fixed scale loses the
-magnitude the comparison depends on.
+Inside the engine, a System quantity also carries its canonical form as two flat
+annotations beside these fields (decision 152), `__canonical_code` and
+`__canonical_value_exact`, where they are available without computing: copied
+from a stored quantity whose schema carries them, or constants for a literal.
+Otherwise they are computed where a comparison reads them, by the quantity kind
+that ingest stores them with (decision 135), from the most exact source: the
+stored text for a stored quantity, the literal's text for a literal, and the
+`DECIMAL(38,6)` value for arithmetic or a quantity converted before it is
+compared.
+
+**The canonical annotations do not leave the engine (owner, 2026-11-10).** A
+`System.Quantity` returned to a caller as a column has only the four fields
+above. This reverses the owner decision of 2026-10-26, which kept the annotation
+on a returned quantity, and is marked for review in ticket 40. A stored quantity
+returned in its fitted shape keeps the annotations it is stored with. JSON and
+XML egress leave out every `__` field, and so does the rendering of a
+single-resource evaluation. The annotation switches govern only what ingest
+stores (decision 135, part 1), so they do not change this shape. The shape of
+SQL output is specified by ticket 40.
+
+**Built by ticket 50 (2026-11-11).** The shape above, its lazy canonical
+annotations and the four-field return replace the interim shape of ticket 42,
+in which a `System.Quantity` carried `id`, `value` as text, `_value` and
+`comparator` beside its canonical annotations, always filled. Every computation
+on a quantity, comparison included, works on its System.Decimal value, its
+`value` rounded to `DECIMAL(38,6)` (decision 153, owner, 2026-11-12): it is
+compared by the canonical form of that value, stored by ingest or computed where
+it is read, and `toQuantity(unit)` converts that value. Only `toString()` gives
+the stored text. A stored value outside the System.Decimal's range is not
+available, so the quantity is not compared or converted, and its `toString()` is
+empty. A
+`System.Quantity` a function builds, such as the result of `toQuantity()`,
+carries no canonical annotations (rule A).
+
+Comparison across units uses the canonical annotations when present and
+computes the canonicalisation when not. Their precision preserves magnitude, so
+quantities differing by orders of magnitude do not compare equal. The
+specification's fixed-scale canonical value, whose fixed scale loses that
+magnitude, is neither stored nor carried (decision 137).
 
 ## Coding and terminology
 

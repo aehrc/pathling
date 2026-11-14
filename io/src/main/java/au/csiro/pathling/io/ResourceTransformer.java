@@ -27,6 +27,7 @@ import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import au.csiro.pathling.schema.LayoutEntry;
 import au.csiro.pathling.schema.LayoutFields;
 import jakarta.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -66,15 +67,24 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * any of these. Content the definitions do not describe has no column in the layout, and is left
  * out.
  *
+ * <p>A primitive's id and extensions are stored in the metadata group beside it only where the
+ * transformer is asked to store them (FR-003, ticket 17), and are otherwise left out, silently
+ * (FR-016's exception 3). A group is stored in its own shape: an {@code id} and an {@code
+ * extension} of the Extension type, either left out where the source carries none, and nothing else
+ * the source's group holds. Beside a repeating primitive the groups are aligned with the values by
+ * position, so a value that is null beside a group is kept as a null, and a primitive the source
+ * carried only as its groups is stored as a value array of nulls, one for each group (decision 72).
+ * Egress writes the group back out, as its id and extensions, wherever the stored data carries one,
+ * whatever stored it.
+ *
  * <p>Neither direction removes what is empty, and neither checks for it (decision 71). Conformant
- * input still leaves two kinds of emptiness, both kept on purpose until M5 stores primitive
- * metadata: a structure whose only content was a primitive's id and extensions, which is an element
- * that exists and is written as an empty object whatever other conformant documents the input holds
- * (decision 72), and a repeating primitive's positional null, which is written without the metadata
- * it aligns with (decision 71's addendum). Anything else that holds nothing is assumed absent, such
- * as a structure whose every field is null in layout data from another producer. Where that is
- * broken the document written from the result is not conformant FHIR, because such an element is
- * written as an empty object rather than left out.
+ * input still leaves two kinds of emptiness, both kept on purpose: a structure whose only content
+ * was a primitive's id and extensions, which is an element that exists and is written as an empty
+ * object where the metadata is not stored (decision 72), and a repeating primitive's positional
+ * null, which aligns with its metadata group (decision 71's addendum). Anything else that holds
+ * nothing is assumed absent, such as a structure whose every field is null in layout data from
+ * another producer. Where that is broken the document written from the result is not conformant
+ * FHIR, because such an element is written as an empty object rather than left out.
  *
  * <p>The whole transform is dataset operations over public Spark API. No FHIR object appears in a
  * per-row plan and no expression tree is authored by hand (FR-050, FR-051).
@@ -93,19 +103,39 @@ final class ResourceTransformer {
 
   @Nonnull private final DefinitionContext definitions;
 
-  private ResourceTransformer(@Nonnull final DefinitionContext definitions) {
+  /** Whether ingest stores the ids and extensions of primitives, in their metadata groups. */
+  private final boolean storePrimitiveMetadata;
+
+  private ResourceTransformer(
+      @Nonnull final DefinitionContext definitions, final boolean storePrimitiveMetadata) {
     this.definitions = definitions;
+    this.storePrimitiveMetadata = storePrimitiveMetadata;
   }
 
   /**
-   * Returns a transformer over a set of definitions.
+   * Returns a transformer over a set of definitions, which leaves the ids and extensions of
+   * primitives out of what it stores.
    *
    * @param definitions the definitions that types, cardinality and field order are taken from
    * @return the transformer
    */
   @Nonnull
   public static ResourceTransformer of(@Nonnull final DefinitionContext definitions) {
-    return new ResourceTransformer(definitions);
+    return of(definitions, false);
+  }
+
+  /**
+   * Returns a transformer over a set of definitions.
+   *
+   * @param definitions the definitions that types, cardinality and field order are taken from
+   * @param storePrimitiveMetadata whether the ids and extensions of primitives are stored, in their
+   *     metadata groups
+   * @return the transformer
+   */
+  @Nonnull
+  public static ResourceTransformer of(
+      @Nonnull final DefinitionContext definitions, final boolean storePrimitiveMetadata) {
+    return new ResourceTransformer(definitions, storePrimitiveMetadata);
   }
 
   /**
@@ -200,11 +230,12 @@ final class ResourceTransformer {
    * is what the JSON writer emits as a bare number (decision 68), so a copy written to Parquet
    * would hold it at a double's precision.
    *
-   * <p>Two kinds of field are left out. Annotations, which are this layout's own material and no
-   * part of FHIR. And the metadata groups carrying the ids and extensions of primitives, which
-   * nothing populates before M5 — they are null in every row until then, so leaving them out
-   * changes nothing that is written, and T078c is where they start being written and this exclusion
-   * comes out.
+   * <p>Annotations are left out, because they are this layout's own material and no part of FHIR. A
+   * metadata group is written as the id and extensions it holds, without its annotations, and is
+   * left out where it holds neither, as a group the annotation step added for its annotations alone
+   * does. A repeating primitive's value array beside such a group keeps its positional nulls, and
+   * is left out where it holds nothing but nulls, as the source of a primitive carried only as its
+   * groups had no value array (decision 72).
    *
    * @param resourceType the type of the resources the dataset carries
    * @param stored the resources, in this layout
@@ -292,10 +323,11 @@ final class ResourceTransformer {
    * column, so that the same plan serves a field of the resource, of a structure and of each value
    * of an array.
    *
-   * <p>The plan depends on the schema alone, so it is made once for every row. Annotations and
-   * metadata groups are not written before M5, so neither is ever stored here. An element the
-   * source did not carry does not appear. A primitive the source carried only as its metadata group
-   * is stored as a null of its declared type, so that the element holding it stays present.
+   * <p>The plan depends on the schema alone, so it is made once for every row. Annotations are
+   * never stored here, and a metadata group only where the transformer stores primitive metadata.
+   * An element the source did not carry does not appear. A primitive the source carried only as its
+   * metadata group is stored as a null of its declared type, so that the element holding it stays
+   * present.
    *
    * @param node the canonical structure of the node carrying the field
    * @param entry the field
@@ -308,6 +340,11 @@ final class ResourceTransformer {
       @Nonnull final StructType observed,
       @Nonnull final UnaryOperator<Column> references,
       final boolean inReference) {
+    if (entry.isMetadataGroup()) {
+      return storePrimitiveMetadata
+          ? metadataGroup(node, entry, observed, references)
+          : Optional.empty();
+    }
     if (!entry.isElement()) {
       return Optional.empty();
     }
@@ -315,27 +352,149 @@ final class ResourceTransformer {
     // The reference of a Reference is the one field a bundle's resolution applies to.
     final UnaryOperator<Column> resolution =
         inReference && REFERENCE.equals(name) ? references : UnaryOperator.identity();
+    final Optional<Function<Function<String, Column>, Column>> placeholders =
+        placeholders(entry, observed);
     return fieldOf(observed, name)
         .flatMap(
             from ->
                 value(node, entry, from.dataType(), references)
                     .<Function<Function<String, Column>, Column>>map(
                         stored -> fields -> resolution.apply(stored.apply(fields.apply(name)))))
-        .or(() -> metadataOnly(entry, observed))
+        .map(
+            stored ->
+                placeholders
+                    .<Function<Function<String, Column>, Column>>map(
+                        nulls ->
+                            fields -> functions.coalesce(stored.apply(fields), nulls.apply(fields)))
+                    .orElse(stored))
+        .or(() -> placeholders.or(() -> metadataOnly(entry, observed)))
         .map(stored -> fields -> stored.apply(fields).alias(name));
+  }
+
+  /**
+   * Plans the value array of positional nulls that a repeating primitive takes in a row whose
+   * source carried it only as its groups, or returns empty where the groups are not stored or the
+   * source carried none in the shape FHIR gives them (decision 72).
+   *
+   * <p>The array holds one null for each group, so that the values and the groups stay aligned by
+   * position. It stands in for the value array wherever the source carried none, row by row, which
+   * is why it is planned whether or not the source carried the value array in another row.
+   */
+  @Nonnull
+  private Optional<Function<Function<String, Column>, Column>> placeholders(
+      @Nonnull final LayoutEntry entry, @Nonnull final StructType observed) {
+    if (!storePrimitiveMetadata || !entry.isRepeating()) {
+      return Optional.empty();
+    }
+    final String group = LayoutFields.metadataGroupName(entry.getName());
+    return entry
+        .primitiveType()
+        .filter(
+            type ->
+                fieldOf(observed, group)
+                    .filter(field -> isGroupShape(true, field.dataType()))
+                    .isPresent())
+        .map(type -> functions.lit(null).cast(converter(type).getStored()))
+        .map(typedNull -> fields -> functions.transform(fields.apply(group), unused -> typedNull));
+  }
+
+  /**
+   * Plans the stored metadata group of a primitive, or returns empty where the source carried none
+   * in the shape FHIR gives it, or carried one holding neither an id nor extensions.
+   *
+   * <p>What the group holds is checked against its own shape, and nothing is reported (FR-063): an
+   * {@code id}, stored as text, and an {@code extension}, stored as the Extension type is wherever
+   * it occurs, references within it resolved as any other's are. Anything else the source's group
+   * holds is not stored. The annotations of the group are the annotation step's, which adds them
+   * after these fields (decision 135, part 4).
+   */
+  @Nonnull
+  private Optional<Function<Function<String, Column>, Column>> metadataGroup(
+      @Nonnull final DefinitionCanonicalStructure node,
+      @Nonnull final LayoutEntry entry,
+      @Nonnull final StructType observed,
+      @Nonnull final UnaryOperator<Column> references) {
+    final String name = entry.getName();
+    return fieldOf(observed, name)
+        .filter(field -> isGroupShape(entry.isRepeating(), field.dataType()))
+        .flatMap(
+            field ->
+                groupValue(node, (StructType) elementTypeOf(field.dataType()), references)
+                    .map(
+                        single ->
+                            entry.isRepeating()
+                                ? (Function<Column, Column>)
+                                    source -> functions.transform(source, single::apply)
+                                : single))
+        .map(stored -> fields -> stored.apply(fields.apply(name)).alias(name));
+  }
+
+  /** Plans the stored value of one metadata group, or returns empty where it holds nothing. */
+  @Nonnull
+  private Optional<Function<Column, Column>> groupValue(
+      @Nonnull final DefinitionCanonicalStructure node,
+      @Nonnull final StructType group,
+      @Nonnull final UnaryOperator<Column> references) {
+    final List<Function<Column, Column>> fields = new ArrayList<>();
+    if (fieldOf(group, LayoutFields.METADATA_GROUP_ID).isPresent()) {
+      fields.add(
+          value ->
+              value
+                  .getField(LayoutFields.METADATA_GROUP_ID)
+                  .cast(DataTypes.StringType)
+                  .alias(LayoutFields.METADATA_GROUP_ID));
+    }
+    fieldOf(group, LayoutFields.METADATA_GROUP_EXTENSION)
+        .flatMap(
+            field ->
+                node.extensionElement()
+                    .flatMap(
+                        element ->
+                            value(
+                                node,
+                                LayoutEntry.element(LayoutFields.METADATA_GROUP_EXTENSION, element),
+                                field.dataType(),
+                                references)))
+        .ifPresent(
+            stored ->
+                fields.add(
+                    value ->
+                        stored
+                            .apply(value.getField(LayoutFields.METADATA_GROUP_EXTENSION))
+                            .alias(LayoutFields.METADATA_GROUP_EXTENSION)));
+    if (fields.isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        value ->
+            functions.when(
+                value.isNotNull(),
+                functions.struct(
+                    fields.stream().map(stored -> stored.apply(value)).toArray(Column[]::new))));
+  }
+
+  /**
+   * Returns whether a metadata group has the outer shape FHIR gives it: an object beside a singular
+   * primitive, and an array of objects beside a repeating one.
+   */
+  private static boolean isGroupShape(final boolean repeating, @Nonnull final DataType type) {
+    return repeating
+        ? type instanceof final ArrayType array && array.elementType() instanceof StructType
+        : type instanceof StructType;
   }
 
   /**
    * Plans a null of the type the definitions give a primitive the source carried only as its id and
    * extensions, or returns empty where the source carried no metadata group for it.
    *
-   * <p>The metadata group is not stored before M5, but the element it belongs to exists, and a
+   * <p>Whether or not the metadata group is stored, the element it belongs to exists, and a
    * structure holding nothing else is an element that exists too. Storing the primitive as a null
    * keeps that structure present whatever other conformant documents the input holds (decision 72).
    * For a singular primitive this is what the released encoder stores. For a repeating one it is
    * not, because the parser the released encoder reads through discards an {@code _x} array with no
-   * {@code x} array beside it; the layout keeps the element, as FHIR does. The metadata itself is
-   * not stored.
+   * {@code x} array beside it; the layout keeps the element, as FHIR does. Where the groups are
+   * stored, a repeating primitive takes the positional nulls of {@link #placeholders} instead, and
+   * this null array is what it takes where they are not.
    */
   @Nonnull
   private static Optional<Function<Function<String, Column>, Column>> metadataOnly(
@@ -431,8 +590,10 @@ final class ResourceTransformer {
   }
 
   /**
-   * Returns the fields of one structure of the document, in the order the layout stores them. A
-   * field the definitions do not describe is refused, or, for an element, left out.
+   * Returns the fields of one structure of the document, in the order the layout stores them. An
+   * annotation is left out, one Pathling does not define included, because annotations belong to
+   * this layout and not to FHIR (decision 135). Any other field the definitions do not describe is
+   * refused, or, for an element, left out.
    */
   @Nonnull
   private static Column[] egressFields(
@@ -441,8 +602,11 @@ final class ResourceTransformer {
       @Nonnull final Function<String, Column> source,
       final boolean forElement) {
     return Stream.of(schema.fields())
+        .filter(field -> !LayoutFields.isAnnotation(field.name()))
         .filter(field -> !forElement || node.entry(field.name()).isPresent())
-        .flatMap(field -> egressField(node, field, source.apply(field.name()), forElement).stream())
+        .flatMap(
+            field ->
+                egressField(node, schema, field, source.apply(field.name()), forElement).stream())
         .toArray(Column[]::new);
   }
 
@@ -450,6 +614,7 @@ final class ResourceTransformer {
   @Nonnull
   private static Optional<Column> egressField(
       @Nonnull final DefinitionCanonicalStructure node,
+      @Nonnull final StructType schema,
       @Nonnull final StructField field,
       @Nonnull final Column stored,
       final boolean forElement) {
@@ -457,10 +622,89 @@ final class ResourceTransformer {
     if (entry.isResourceType()) {
       return Optional.of(stored.alias(field.name()));
     }
-    return entry.isElement()
-        ? Optional.of(
-            egressValue(node, entry, stored, field.dataType(), forElement).alias(field.name()))
-        : Optional.empty();
+    if (entry.isMetadataGroup()) {
+      return egressGroup(node, stored, field.dataType(), forElement)
+          .map(group -> group.alias(field.name()));
+    }
+    if (!entry.isElement()) {
+      return Optional.empty();
+    }
+    final Column value = egressValue(node, entry, stored, field.dataType(), forElement);
+    // A value array beside groups that hold metadata is left out where it holds only nulls, which
+    // is what a source carrying the primitive only as its groups had (decision 72).
+    final boolean besideGroups =
+        entry.primitiveType().isPresent()
+            && field.dataType() instanceof ArrayType
+            && fieldOf(schema, LayoutFields.metadataGroupName(field.name()))
+                .filter(group -> holdsMetadata(group.dataType()))
+                .isPresent();
+    return Optional.of(
+        (besideGroups ? functions.when(functions.exists(value, Column::isNotNull), value) : value)
+            .alias(field.name()));
+  }
+
+  /**
+   * Returns the value of a metadata group in the document, as the id and extensions it holds, or
+   * empty where the stored group holds neither. A group holding neither in a given row is a null,
+   * and so is an array of groups holding nothing but nulls, so that neither is written.
+   */
+  @Nonnull
+  private static Optional<Column> egressGroup(
+      @Nonnull final DefinitionCanonicalStructure node,
+      @Nonnull final Column stored,
+      @Nonnull final DataType type,
+      final boolean forElement) {
+    if (!(elementTypeOf(type) instanceof final StructType group) || !holdsMetadata(type)) {
+      return Optional.empty();
+    }
+    final List<Function<Column, Column>> fields = new ArrayList<>();
+    if (fieldOf(group, LayoutFields.METADATA_GROUP_ID).isPresent()) {
+      fields.add(
+          value ->
+              value.getField(LayoutFields.METADATA_GROUP_ID).alias(LayoutFields.METADATA_GROUP_ID));
+    }
+    fieldOf(group, LayoutFields.METADATA_GROUP_EXTENSION)
+        .flatMap(
+            extension ->
+                node.extensionElement()
+                    .map(
+                        element ->
+                            (Function<Column, Column>)
+                                value ->
+                                    egressValue(
+                                            node,
+                                            LayoutEntry.element(
+                                                LayoutFields.METADATA_GROUP_EXTENSION, element),
+                                            value.getField(LayoutFields.METADATA_GROUP_EXTENSION),
+                                            extension.dataType(),
+                                            forElement)
+                                        .alias(LayoutFields.METADATA_GROUP_EXTENSION)))
+        .ifPresent(fields::add);
+    final UnaryOperator<Column> single =
+        value ->
+            functions.when(
+                Stream.of(LayoutFields.METADATA_GROUP_ID, LayoutFields.METADATA_GROUP_EXTENSION)
+                    .filter(name -> fieldOf(group, name).isPresent())
+                    .map(name -> value.getField(name).isNotNull())
+                    .reduce(Column::or)
+                    .orElseThrow(),
+                functions.struct(
+                    fields.stream().map(build -> build.apply(value)).toArray(Column[]::new)));
+    if (type instanceof ArrayType) {
+      final Column groups = functions.transform(stored, single::apply);
+      return Optional.of(functions.when(functions.exists(groups, Column::isNotNull), groups));
+    }
+    return Optional.of(single.apply(stored));
+  }
+
+  /**
+   * Returns whether a stored metadata group, or an array of them, has a field for an id or for
+   * extensions, which a group the annotation step added for its annotations alone has not.
+   */
+  private static boolean holdsMetadata(@Nonnull final DataType type) {
+    return elementTypeOf(type) instanceof final StructType group
+        && (fieldOf(group, LayoutFields.METADATA_GROUP_ID).isPresent()
+            || fieldOf(group, LayoutFields.METADATA_GROUP_EXTENSION).isPresent());
   }
 
   /**
@@ -472,7 +716,8 @@ final class ResourceTransformer {
    * writer would render it as an empty object. Nothing beyond that is examined. A stored structure
    * whose every field is null, and a stored array holding a null or holding nothing, pass through
    * as they are (decision 71). A repeating primitive's positional nulls are among them on purpose,
-   * and so is a structure whose only content was primitive metadata (decision 71's addendum).
+   * because they align with its metadata group, and so is a structure whose only content was
+   * primitive metadata the transformer did not store (decision 71's addendum).
    */
   @Nonnull
   private static Column egressValue(

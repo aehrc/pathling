@@ -25,6 +25,7 @@ import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.test.helpers.PrimitiveValues;
 import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -165,8 +166,7 @@ class QuantityExtensionThroughProjectionTest {
         DatasetEvaluatorBuilder.create(ResourceType.OBSERVATION, fhirEncoders.getContext())
             .withDataset(dataset)
             .build();
-    return evaluator
-        .evaluate(PARSER.parse(expression))
+    return PrimitiveValues.of(evaluator.evaluate(PARSER.parse(expression)))
         .toCanonical()
         .toIdValueDataset()
         .collectAsList()
