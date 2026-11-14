@@ -156,6 +156,8 @@ jobs:
       # the Spark version, from Maven Central. Only PathlingBenchmark is built,
       # as the other benchmarks use APIs that older releases do not have, and
       # the JOL version is supplied because older parent POMs do not define it.
+      # The checkstyle and licence checks are skipped, as some parent POMs look
+      # for their configuration relative to the module rather than the root.
       - name: Build benchmark JAR
         env:
           RELEASE_VERSION: ${{ inputs.version }}
@@ -164,7 +166,8 @@ jobs:
             find benchmark/src/main/java -name '*.java' ! -name 'PathlingBenchmark*.java' -delete
             rm -rf benchmark/src/test
             sed -i "0,/<version>[^<]*<\/version>/s//<version>${RELEASE_VERSION}<\/version>/" benchmark/pom.xml
-            mvn --batch-mode package -f benchmark/pom.xml -DskipTests -Dpathling.jolVersion=0.17
+            mvn --batch-mode package -f benchmark/pom.xml -DskipTests -Dcheckstyle.skip \
+              -Dlicense.skip -Dpathling.jolVersion=0.17
           else
             mvn --batch-mode package -pl benchmark
           fi
