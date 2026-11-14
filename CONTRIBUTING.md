@@ -226,6 +226,39 @@ FHIR servers. It is built and rolled into the server Docker image. The module
 has its own [CONTRIBUTING.md](ui/CONTRIBUTING.md) with coding conventions,
 testing guidelines, and build instructions.
 
+## Benchmarks
+
+The `benchmark` module contains JMH benchmarks. The
+[Benchmark workflow](.github/workflows/benchmark.yml) is run manually with the
+ID of a successful build, and runs `PathlingBenchmark` against that build's
+JARs. It then publishes the results to the `gh-pages` branch, under
+`benchmarks/data`:
+
+- `runs/<workflow run ID>.json` - the JMH JSON output of the run.
+- `index.json` - every run, with a summary of its results.
+
+The [benchmarks page](https://pathling.csiro.au/benchmarks)
+(`site/src/pages/benchmarks.js`) reads this data in the browser, so new runs
+appear without rebuilding the site. The site deployment preserves
+`benchmarks/data` when it replaces the contents of `gh-pages`. The page shows
+each benchmark over time, the details of each run, and comparisons of two runs.
+Comparisons use a two-sided Welch's t-test on the per-iteration scores, with a
+significance level of 0.05.
+
+To publish a JMH result file by hand, for example to add a run whose artifact
+is still available:
+
+```bash
+cd site
+bun scripts/publishBenchmark.js --results benchmark-abc1234567.json \
+  --data-dir ../gh-pages/benchmarks/data --run-id <workflow run ID> \
+  --commit <full commit SHA> --date 2026-01-01T00:00:00Z
+```
+
+To preview the page locally, build the site, copy a `benchmarks/data` directory
+into `site/target/site`, and run `bun run serve`. The tests for the page's data
+handling and statistics run with `bun test` in the `site` directory.
+
 ## Coding conventions
 
 ### Comments
