@@ -18,21 +18,25 @@
 package au.csiro.pathling.benchmark;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toMap;
 
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DatasetSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
-import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
@@ -41,12 +45,11 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 
 /**
- * JMH (Java Microbenchmark Harness) state class for the view query benchmarks.
+ * JMH (Java Microbenchmark Harness) state class for Pathling benchmarking.
  *
- * <p>This class prepares a single view definition over a single resource type, and exposes the two
- * halves of running that view separately: building the query plan, and executing a plan that has
- * already been built. Encoding and decoding are measured by {@link EncodeBenchmarkState} and {@link
- * DecodeBenchmarkState} respectively, so that a query figure measures querying alone.
+ * <p>This class manages the setup and configuration of benchmark resources for testing Pathling's
+ * performance with different data sources and formats. It provides a standardized environment for
+ * running performance tests against FHIR data using both NDJSON and Delta Lake storage formats.
  *
  * <p>The class is annotated with @State(Scope.Benchmark) to ensure that the same instance is shared
  * across all benchmark iterations, providing consistent test conditions while amortising expensive
@@ -58,18 +61,18 @@ import org.openjdk.jmh.annotations.TearDown;
 public class PathlingBenchmarkState {
 
   /**
-   * The resource type that each benchmarked view definition selects over. None of these views
-   * follows a reference to another resource, so only the subject resource needs to be loaded.
+   * Pre-defined view definitions used in benchmarks to test query scenarios. These view definitions
+   * are taken from the SQL on FHIR implementation guide.
    */
-  private static final Map<String, String> VIEW_SUBJECTS =
-      Map.of(
-          "ConditionFlat", "Condition",
-          "EncounterFlat", "Encounter",
-          "PatientAddresses", "Patient",
-          "PatientAndContactAddressUnion", "Patient",
-          "PatientDemographics", "Patient",
-          "UsCoreBloodPressures", "Observation",
-          "QuestionnaireResponseFlat", "QuestionnaireResponse");
+  private static final List<String> VIEW_DEFINITIONS =
+      List.of(
+          "ConditionFlat",
+          "EncounterFlat",
+          "PatientAddresses",
+          "PatientAndContactAddressUnion",
+          "PatientDemographics",
+          "UsCoreBloodPressures",
+          "QuestionnaireResponseFlat");
 
   /** File extension for JSON view definition files stored as resources. */
   private static final String JSON_EXTENSION = ".json";
@@ -81,158 +84,140 @@ public class PathlingBenchmarkState {
   @Nonnull private final PathlingContext pathlingContext;
 
   /**
-   * The data source containing FHIR resources for benchmark testing, read from Delta tables written
-   * during setup. Initialized during setup phase.
+   * The data source containing FHIR resources for benchmark testing. This can be either an
+   * NDJSON-based source or a Delta Lake source, depending on the benchmark configuration.
+   * Initialized during setup phase.
    */
   @Nullable private QueryableDataSource dataSource;
 
   /**
-   * The JSON representation of the view definition selected by the {@link #view} parameter, loaded
-   * during setup so that the benchmarks do not pay for the I/O.
+   * Cached view definitions loaded from JSON resources. Maps view names to their JSON string
+   * representations for use in benchmark queries. Populated during the setup phase to avoid I/O
+   * overhead during actual benchmarks.
    */
-  @Nullable private String viewDefinition;
+  @Nullable private Map<String, String> viewDefinitions;
 
   /**
-   * A query plan built ahead of the operation that executes it, so that the execution benchmark
-   * measures execution alone. A fresh plan is built for every invocation, because re-executing one
-   * plan would reuse the query stages that the first execution materialised.
-   */
-  @Nullable private Dataset<Row> preparedQuery;
-
-  /**
-   * JMH parameter that selects the view definition to benchmark. The values are the keys of {@link
-   * #VIEW_SUBJECTS}, which they must be kept in step with, as an annotation cannot refer to the
-   * map.
+   * JMH parameter that controls which data source type to use for benchmarking. Supports two
+   * values: - "ndjson": Uses newline-delimited JSON files as the data source - "delta": Uses Delta
+   * Lake tables for optimized columnar storage and querying
+   *
+   * <p>This parameter allows benchmarks to compare performance between different storage formats
+   * under identical conditions.
    */
   @Nullable
-  @Param({
-    "ConditionFlat",
-    "EncounterFlat",
-    "PatientAddresses",
-    "PatientAndContactAddressUnion",
-    "PatientDemographics",
-    "UsCoreBloodPressures",
-    "QuestionnaireResponseFlat"
-  })
-  private String view;
+  @Param({"ndjson", "delta"})
+  private String sourceType;
 
   /**
-   * Setter for the view parameter. Used by JMH framework to inject parameter values during
+   * Setter for the source type parameter. Used by JMH framework to inject parameter values during
    * benchmark execution.
    *
-   * @param view the name of the view definition to benchmark
+   * @param sourceType The type of data source to use ("ndjson" or "delta")
    */
   @SuppressWarnings("unused")
-  public void setView(@Nullable final String view) {
-    this.view = view;
+  public void setSourceType(@Nullable final String sourceType) {
+    this.sourceType = sourceType;
   }
 
   /**
    * Constructor initializes the core Spark session and Pathling context.
    *
+   * <p>Sets up Apache Spark with the following configurations: - Local execution mode using all
+   * available CPU cores - Delta Lake SQL extensions for advanced data lake capabilities - Delta
+   * catalog integration for table management
+   *
    * <p>The Pathling context wraps this Spark session to provide FHIR-specific data processing
    * capabilities including resource encoding and FHIRPath queries.
    */
+  @SuppressWarnings("ConstantValue")
   public PathlingBenchmarkState() {
-    this.pathlingContext = BenchmarkResources.createPathlingContext("PathlingBenchmark");
+    // Configure Spark session with Delta Lake support for high-performance analytics
+    final SparkSession spark =
+        SparkSession.builder()
+            .appName("PathlingBenchmark")
+            .master("local[*]") // Use all available CPU cores for maximum performance
+            .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+            .config(
+                "spark.sql.catalog.spark_catalog",
+                "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+            .getOrCreate();
+
+    // Create Pathling context with the configured Spark session
+    this.pathlingContext = PathlingContext.create(spark);
   }
 
   /**
    * JMH setup method executed once per benchmark trial to prepare test data and resources.
    *
    * <p>This method performs expensive initialization that should be amortized across all benchmark
-   * iterations: it loads the subject resource of the selected view into Delta tables, and loads the
-   * view definition itself. Only the subject resource is loaded, because the cost of loading a
-   * resource type that the view does not read would fall entirely within setup and serve no
-   * purpose.
+   * iterations: 1. Loads FHIR test data in the specified format (NDJSON or Delta) 2. Pre-loads and
+   * caches view definitions from JSON resources 3. Validates that all required resources are
+   * available
    *
-   * <p>The query always reads stored Delta tables. Querying the encoded datasets directly would
-   * encode the data lazily as part of every query, so the figures would measure encoding as well as
-   * querying, which is the conflation these benchmarks exist to remove. Encoding has its own
-   * benchmark.
+   * <p>The setup is parameterized by sourceType to enable performance comparisons between different
+   * storage formats under identical conditions.
+   *
+   * @throws IllegalArgumentException if an unsupported source type is specified
+   * @throws RuntimeException if required resources cannot be loaded
    */
   @Setup(Level.Trial)
   public void setup() {
-    this.dataSource = initialiseDeltaSource(List.of(getSubjectResource()));
+    // Define the FHIR resource types that will be loaded for benchmarking
+    // These represent core clinical data types commonly used in healthcare analytics
+    final List<String> resourceTypes =
+        List.of("Patient", "Observation", "Condition", "Encounter", "QuestionnaireResponse");
 
-    // Pre-load the view definition to avoid I/O overhead during benchmark execution.
-    try (final InputStream in =
-        BenchmarkResources.getResourceAsStream(requireNonNull(view) + JSON_EXTENSION)) {
-      this.viewDefinition = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-    } catch (final IOException e) {
-      throw new UncheckedIOException("Failed to read view definition: " + view, e);
+    // Initialize the appropriate data source based on the benchmark parameter
+    if ("ndjson".equals(sourceType)) {
+      // Use NDJSON files for row-oriented processing and simple data access
+      this.dataSource = initialiseNdjsonSource(resourceTypes);
+    } else if ("delta".equals(sourceType)) {
+      // Use Delta Lake for columnar storage, ACID transactions, and optimized queries
+      this.dataSource = initialiseDeltaSource(resourceTypes);
+    } else {
+      throw new IllegalArgumentException("Unknown source type: " + sourceType);
     }
+
+    // Pre-load view definitions to avoid I/O overhead during benchmark execution
+    // Each view definition is loaded from a JSON resource file and cached in memory
+    this.viewDefinitions =
+        VIEW_DEFINITIONS.stream()
+            .collect(
+                toMap(
+                    viewDefaultName -> viewDefaultName,
+                    viewDefaultName -> {
+                      try (final InputStream in =
+                          getResourceAsStream(viewDefaultName + JSON_EXTENSION)) {
+                        return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+                      } catch (final IOException e) {
+                        throw new UncheckedIOException(
+                            "Failed to read view definition: " + viewDefaultName, e);
+                      }
+                    }));
   }
 
   /**
-   * Builds a query plan before each invocation, so that the execution benchmark can measure
-   * execution without the planning that precedes it.
-   *
-   * <p>This runs before every invocation of every benchmark that takes this state, including the
-   * planning benchmark, where its only effect is to reduce the number of samples taken within an
-   * iteration. JMH excludes the time it takes from the measurement.
-   */
-  @Setup(Level.Invocation)
-  public void prepareQuery() {
-    this.preparedQuery = planQuery();
-  }
-
-  /**
-   * Builds the query plan for the selected view, up to and including the physical plan.
-   *
-   * <p>Constructing the dataset runs the FHIRPath translation and the Catalyst analyzer. Forcing
-   * the physical plan additionally runs the optimiser and the planner, so that everything which
-   * precedes the submission of a Spark job falls on the planning side of the split. No job is
-   * submitted, because Spark plans lazily and no action is taken here.
-   *
-   * @return the planned dataset, ready to be executed
-   */
-  @Nonnull
-  public Dataset<Row> planQuery() {
-    final Dataset<Row> result =
-        getDataSource().view(getSubjectResource()).json(getViewDefinition()).execute();
-    // The physical plan is lazy, and this statement is what forces it to be built.
-    result.queryExecution().executedPlan();
-    return result;
-  }
-
-  /**
-   * Executes the plan built by {@link #prepareQuery()} and collects the result.
-   *
-   * <p>The plan is built fresh for each invocation and is never cached or persisted, so this runs
-   * the whole query rather than reusing a result or a materialised query stage.
-   *
-   * @return the collected rows
-   */
-  @Nonnull
-  public List<Row> executePreparedQuery() {
-    return requireNonNull(preparedQuery, "Query not prepared. Ensure prepareQuery() is called.")
-        .collectAsList();
-  }
-
-  /**
-   * Encodes the NDJSON test data for each resource type into a dataset source, ready to be written
-   * to storage.
+   * Initializes a dataset source from NDJSON files containing FHIR resources.
    *
    * <p>This method creates an in-memory dataset source by: 1. Extracting NDJSON files from JAR
    * resources to temporary files 2. Loading each file as a text dataset in Spark 3. Encoding the
    * JSON strings into Pathling's internal FHIR representation 4. Registering each encoded dataset
    * with the data source
    *
-   * <p>The encoding is lazy, so a query over the resulting source would encode the data as part of
-   * the query. It is therefore only written out, never queried.
-   *
    * @param resourceTypes The FHIR resource types to load (e.g., Patient, Observation)
    * @return A configured DatasetSource containing the encoded FHIR data
+   * @throws RuntimeException if resource files cannot be loaded or encoded
    */
-  @Nonnull
-  private DatasetSource encodeResources(@Nonnull final Iterable<String> resourceTypes) {
+  private @Nonnull DatasetSource initialiseNdjsonSource(
+      @Nonnull final Iterable<String> resourceTypes) {
     // Create a DatasetSource.
     final DatasetSource datasetSource = pathlingContext.read().datasets();
     for (final String resourceType : resourceTypes) {
       // Load the NDJSON file for the resource type and encode it.
+      final Path ndjsonPath = extractResourceToTempFile("bulk/fhir/" + resourceType + ".ndjson");
       final Dataset<Row> strings =
-          BenchmarkResources.readResourceStrings(pathlingContext, resourceType);
+          this.pathlingContext.getSpark().read().format("text").load(ndjsonPath.toString());
       final Dataset<Row> encoded = pathlingContext.encode(strings, resourceType);
       // Register the dataset with the DatasetSource.
       datasetSource.dataset(resourceType, encoded);
@@ -246,22 +231,90 @@ public class PathlingBenchmarkState {
    *
    * @param resourceTypes The FHIR resource types to load and convert to Delta format
    * @return A DeltaSource configured to read from temporary Delta tables
+   * @throws RuntimeException if temporary directory creation or Delta writing fails
    */
   @Nonnull
   private QueryableDataSource initialiseDeltaSource(@Nonnull final Iterable<String> resourceTypes) {
-    // First, encode the NDJSON test data into datasets.
-    final DatasetSource datasetSource = encodeResources(resourceTypes);
+    // First, create datasets from NDJSON files using the standard process
+    final DatasetSource datasetSource = initialiseNdjsonSource(resourceTypes);
 
     // Create a temporary directory for the Delta tables.
-    final Path tempDir = BenchmarkResources.createTempDirectory("pathling-benchmark-delta-");
+    final Path tempDir;
+    try {
+      tempDir = Files.createTempDirectory("pathling-benchmark-delta-");
+      // Ensure cleanup on JVM exit to prevent disk space issues
+      tempDir.toFile().deleteOnExit();
+    } catch (final IOException e) {
+      throw new UncheckedIOException("Failed to create temporary directory for Delta tables", e);
+    }
 
     // Write each dataset to a Delta table in the temporary directory.
-    // This converts the in-memory datasets to optimized Delta Lake format.
+    // This converts the in-memory datasets to optimized Delta Lake format
     datasetSource.write().delta(tempDir.toString());
 
     // Create a DeltaSource that reads from the temporary directory.
-    // This provides access to the Delta tables for benchmark queries.
+    // This provides access to the Delta tables for benchmark queries
     return pathlingContext.read().delta(tempDir.toString());
+  }
+
+  /**
+   * Utility method to get the current thread's context class loader. Used for loading resources
+   * from the application's classpath.
+   *
+   * @return The context class loader for resource loading
+   * @throws NullPointerException if no context class loader is available
+   */
+  @Nonnull
+  private static ClassLoader getClassLoader() {
+    final ClassLoader object = Thread.currentThread().getContextClassLoader();
+    return requireNonNull(object);
+  }
+
+  /**
+   * Loads a resource file as an InputStream from the application's classpath. Used to access test
+   * data and configuration files packaged within the JAR.
+   *
+   * @param name The name/path of the resource to load
+   * @return An InputStream for reading the resource content
+   * @throws NullPointerException if the resource cannot be found
+   */
+  @Nonnull
+  private static InputStream getResourceAsStream(@Nonnull final String name) {
+    final ClassLoader loader = getClassLoader();
+    final InputStream inputStream = loader.getResourceAsStream(name);
+    requireNonNull(inputStream, "Test resource not found: " + name);
+    return inputStream;
+  }
+
+  /**
+   * Extracts a resource from the JAR to a temporary file on disk.
+   *
+   * <p>This is necessary because some operations (like Spark file reading) require actual file
+   * paths rather than classpath resources. The method: 1. Creates a temporary file with a unique
+   * name 2. Copies the resource content to the temporary file 3. Marks the file for deletion on JVM
+   * exit
+   *
+   * @param resourceName The name/path of the resource to extract
+   * @return A Path pointing to the temporary file containing the resource content
+   * @throws RuntimeException if the extraction process fails
+   */
+  @Nonnull
+  private static Path extractResourceToTempFile(@Nonnull final String resourceName) {
+    try (final InputStream in = getResourceAsStream(resourceName)) {
+      // Create a temporary file with a descriptive name for debugging
+      final Path tempFile =
+          Files.createTempFile("pathling-benchmark-", "-" + resourceName.replace('/', '_'));
+      // Ensure cleanup on JVM exit to prevent disk space accumulation
+      tempFile.toFile().deleteOnExit();
+
+      // Copy resource content to the temporary file
+      try (final OutputStream out = Files.newOutputStream(tempFile)) {
+        in.transferTo(out);
+      }
+      return tempFile;
+    } catch (final IOException e) {
+      throw new UncheckedIOException("Failed to extract resource: " + resourceName, e);
+    }
   }
 
   /**
@@ -271,7 +324,7 @@ public class PathlingBenchmarkState {
    * @throws IllegalStateException if called before setup() has initialized the data source
    */
   @Nonnull
-  public QueryableDataSource getDataSource() {
+  public QueryableDataSource getNdjsonSource() {
     if (dataSource == null) {
       throw new IllegalStateException("Data source not initialized. Ensure setup() is called.");
     }
@@ -279,27 +332,18 @@ public class PathlingBenchmarkState {
   }
 
   /**
-   * Provides access to the pre-loaded definition of the selected view.
+   * Provides access to the pre-loaded view definitions for benchmark queries.
    *
-   * @return the JSON representation of the view definition
-   * @throws IllegalStateException if called before setup() has loaded the view definition
+   * @return A map of view names to their JSON definition strings
+   * @throws IllegalStateException if called before setup() has loaded the view definitions
    */
   @Nonnull
-  public String getViewDefinition() {
-    if (viewDefinition == null) {
-      throw new IllegalStateException("View definition not initialized. Ensure setup() is called.");
+  public Map<String, String> getViewDefinitions() {
+    if (viewDefinitions == null) {
+      throw new IllegalStateException(
+          "View definitions not initialized. Ensure setup() is called.");
     }
-    return viewDefinition;
-  }
-
-  /**
-   * Resolves the resource type that the selected view selects over.
-   *
-   * @return the subject resource type of the selected view
-   */
-  @Nonnull
-  private String getSubjectResource() {
-    return requireNonNull(VIEW_SUBJECTS.get(view), "Unknown view: " + view);
+    return viewDefinitions;
   }
 
   /**
@@ -314,7 +358,8 @@ public class PathlingBenchmarkState {
    */
   @TearDown(Level.Trial)
   public void teardown() {
-    // Stop the Spark session to release all associated resources.
+    // Stop the Spark session to release all associated resources
+    // This includes thread pools, memory caches, and network connections
     pathlingContext.getSpark().stop();
   }
 }
