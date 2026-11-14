@@ -39,6 +39,12 @@
     font-size: 12px;
 }
 
+.commitLabel {
+    fill: var(--ifm-link-color);
+    font-family: var(--ifm-font-family-monospace);
+    font-size: 13px;
+}
+
 .point {
     cursor: pointer;
 }

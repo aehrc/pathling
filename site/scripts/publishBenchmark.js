@@ -45,9 +45,14 @@ import { addRun } from "../src/benchmarks/runIndex.js";
  * @param {string} options.commit - The SHA of the benchmarked commit.
  * @param {string} options.date - The ISO 8601 time at which the benchmark ran.
  * @returns {void}
- * @throws {Error} If the results file is not a JMH result array.
+ * @throws {Error} If the results file is not a JMH result array, or the date
+ *   is not an ISO 8601 UTC time without fractional seconds.
  */
 export function publishRun({ resultsPath, dataDir, runId, commit, date }) {
+  // Runs are ordered by comparing dates as strings, so they must share a format.
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(date)) {
+    throw new Error(`The date ${date} is not in the form YYYY-MM-DDTHH:MM:SSZ`);
+  }
   const content = readFileSync(resultsPath, "utf8");
   const results = JSON.parse(content);
   if (

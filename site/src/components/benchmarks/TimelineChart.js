@@ -23,14 +23,16 @@
  */
 
 import React from "react";
-import { formatDate, formatNumber, formatScore } from "./format";
+import { commitUrl, formatDate, formatNumber, formatScore } from "./format";
 import styles from "./styles.module.css";
 
 const WIDTH = 800;
-const HEIGHT = 280;
-const MARGIN = { top: 12, right: 16, bottom: 32, left: 64 };
+const HEIGHT = 300;
+const MARGIN = { top: 12, right: 40, bottom: 48, left: 64 };
 const PLOT_WIDTH = WIDTH - MARGIN.left - MARGIN.right;
 const PLOT_HEIGHT = HEIGHT - MARGIN.top - MARGIN.bottom;
+// The minimum horizontal distance between commit labels.
+const LABEL_SPACING = 56;
 
 // A qualitative palette that remains distinguishable in light and dark modes.
 const COLOURS = [
@@ -52,12 +54,13 @@ const COLOURS = [
  * @returns {number[]} The tick values from zero to at least max.
  */
 function niceTicks(max, count) {
-  const raw = max / count;
+  // An axis needs a positive range, even if every score is zero.
+  const raw = max > 0 ? max / count : 1;
   const magnitude = 10 ** Math.floor(Math.log10(raw));
   const step =
     [1, 2, 5, 10].map((m) => m * magnitude).find((s) => s >= raw) ?? raw;
   const ticks = [];
-  for (let value = 0; value < max + step; value += step) {
+  for (let value = 0; value < Math.max(max, raw) + step; value += step) {
     ticks.push(value);
   }
   return ticks;
@@ -97,17 +100,31 @@ export default function TimelineChart({
       : ((Date.parse(date) - minTime) / (maxTime - minTime)) * PLOT_WIDTH);
   const y = (value) => MARGIN.top + PLOT_HEIGHT * (1 - value / yMax);
 
-  // Label the first and last run times and the midpoint. Times are shown
-  // when the runs span less than three days, otherwise dates.
+  // Label each run in this chart with its commit, skipping labels that would
+  // overlap, but always labelling the first and last runs with their date too.
+  // Times are shown when all runs span less than three days.
   const showTime = maxTime - minTime < 3 * 24 * 60 * 60 * 1000;
-  const tickLabel = (time) => {
-    const iso = new Date(time).toISOString();
+  const dateLabel = (date) => {
+    const iso = new Date(date).toISOString();
     return showTime ? iso.slice(5, 16).replace("T", " ") : iso.slice(0, 10);
   };
-  const xTicks = [minTime, (minTime + maxTime) / 2, maxTime].filter(
-    (time, index, all) =>
-      all.findIndex((other) => tickLabel(other) === tickLabel(time)) === index,
-  );
+  const runs = [
+    ...new Map(points.map((point) => [point.runId, point])).values(),
+  ].sort((a, b) => a.date.localeCompare(b.date));
+  const labelled = [];
+  for (const run of runs) {
+    if (
+      labelled.length > 0 &&
+      x(run.date) - x(labelled[labelled.length - 1].date) < LABEL_SPACING
+    ) {
+      // Make way for the last run, which is always labelled.
+      if (run !== runs[runs.length - 1] || labelled.length === 1) {
+        continue;
+      }
+      labelled.pop();
+    }
+    labelled.push(run);
+  }
 
   const handleClick = (event, runId) => {
     event.preventDefault();
@@ -148,22 +165,30 @@ export default function TimelineChart({
         >
           {timeline.unit}
         </text>
-        {xTicks.map((time) => (
-          <text
-            key={time}
-            className={styles.axisLabel}
-            x={x(new Date(time).toISOString())}
-            y={HEIGHT - 8}
-            textAnchor={
-              time === minTime && minTime !== maxTime
-                ? "start"
-                : time === maxTime && minTime !== maxTime
-                  ? "end"
-                  : "middle"
-            }
-          >
-            {tickLabel(time)}
-          </text>
+        {labelled.map((run, index) => (
+          <g key={run.runId}>
+            <a href={commitUrl(run.commit)}>
+              <title>{`Commit ${run.commit}`}</title>
+              <text
+                className={styles.commitLabel}
+                x={x(run.date)}
+                y={HEIGHT - 26}
+                textAnchor="middle"
+              >
+                {run.commit.slice(0, 7)}
+              </text>
+            </a>
+            {(index === 0 || index === labelled.length - 1) && (
+              <text
+                className={styles.axisLabel}
+                x={x(run.date)}
+                y={HEIGHT - 8}
+                textAnchor="middle"
+              >
+                {dateLabel(run.date)}
+              </text>
+            )}
+          </g>
         ))}
         {timeline.series.map((series, index) => {
           const colour = COLOURS[index % COLOURS.length];

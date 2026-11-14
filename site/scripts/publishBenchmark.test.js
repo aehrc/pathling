@@ -94,3 +94,16 @@ test("publishing rejects results that are not a JMH result array", () => {
     }),
   ).toThrow("JMH");
 });
+
+test("publishing rejects a date that is not an ISO 8601 UTC time", () => {
+  // The index is sorted by comparing dates as strings, which needs one format.
+  expect(() =>
+    publishRun({
+      resultsPath: join(dir, "results.json"),
+      dataDir: join(dir, "data"),
+      runId: "123",
+      commit: "abc",
+      date: "2026-01-01T10:00:00+10:00",
+    }),
+  ).toThrow("date");
+});

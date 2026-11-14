@@ -29,43 +29,43 @@ import { useEffect, useState } from "react";
  * @typedef {object} FetchState
  * @property {any} data - The parsed response, once loaded.
  * @property {string | null} error - A description of the failure, if any.
+ * @property {boolean} notFound - Whether the server responded with 404.
  * @property {boolean} loading - Whether the request is in progress.
  */
+
+const LOADING = { data: null, error: null, notFound: false, loading: true };
 
 /**
  * Fetches and parses a JSON document, refetching when the URL changes.
  *
- * @param {string | null} url - The URL, or null to fetch nothing.
+ * @param {string} url - The URL.
  * @returns {FetchState} The state of the request.
  */
 export default function useJson(url) {
-  const [state, setState] = useState({
-    data: null,
-    error: null,
-    loading: url !== null,
-  });
+  const [state, setState] = useState(LOADING);
 
   useEffect(() => {
-    if (url === null) {
-      setState({ data: null, error: null, loading: false });
-      return undefined;
-    }
     let cancelled = false;
-    setState({ data: null, error: null, loading: true });
+    setState(LOADING);
     fetch(url)
       .then((response) => {
         if (!response.ok) {
-          throw new Error(`${response.status} ${response.statusText}`);
+          const error = new Error(`${response.status} ${response.statusText}`);
+          error.notFound = response.status === 404;
+          throw error;
         }
         return response.json();
       })
       .then(
-        (data) => !cancelled && setState({ data, error: null, loading: false }),
+        (data) =>
+          !cancelled &&
+          setState({ data, error: null, notFound: false, loading: false }),
         (error) =>
           !cancelled &&
           setState({
             data: null,
             error: `Could not load ${url}: ${error.message}`,
+            notFound: error.notFound === true,
             loading: false,
           }),
       );

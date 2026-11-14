@@ -51,7 +51,12 @@ export default function Benchmarks() {
   const dataUrl = useBaseUrl("/benchmarks/data");
   const location = useLocation();
   const history = useHistory();
-  const { data: index, error, loading } = useJson(`${dataUrl}/index.json`);
+  const {
+    data: index,
+    error,
+    notFound,
+    loading,
+  } = useJson(`${dataUrl}/index.json`);
 
   const query = new URLSearchParams(location.search);
   const href = (params) =>
@@ -87,10 +92,11 @@ export default function Benchmarks() {
   let content;
   if (loading) {
     content = <p role="status">Loading benchmark runs…</p>;
+  } else if (runs.length === 0 && (notFound || !error)) {
+    // The index does not exist until the first run is published.
+    content = <p>No benchmark runs have been published yet.</p>;
   } else if (error) {
     content = <p className={styles.error}>{error}</p>;
-  } else if (runs.length === 0) {
-    content = <p>No benchmark runs have been published yet.</p>;
   } else if (query.has("base") || query.has("target")) {
     const base = findRun(query.get("base"));
     const target = findRun(query.get("target"));
