@@ -255,9 +255,9 @@ bun scripts/publishBenchmark.js --results benchmark-abc1234567.json \
   --commit <full commit SHA> --date 2026-01-01T00:00:00Z
 ```
 
-To preview the page locally, build the site, copy a `benchmarks/data` directory
-into `site/target/site`, and run `bun run serve`. The tests for the page's data
-handling and statistics run with `bun test` in the `site` directory.
+To preview the page locally, build the site, copy a data directory to
+`site/target/site/benchmarks/data`, and run `bun run serve`. The tests for the
+page's data handling and statistics run with `bun test` in the `site` directory.
 
 ## Coding conventions
 

@@ -18,6 +18,7 @@ jobs:
     outputs:
       commit_sha: ${{ steps.get_run_info.outputs.commit_sha }}
       short_sha: ${{ steps.get_short_sha.outputs.short_sha }}
+      date: ${{ steps.run_benchmark.outputs.date }}
     permissions:
       actions: read
       contents: read
@@ -114,6 +115,7 @@ jobs:
       # TerminologyBenchmark is excluded, as it needs a terminology source that
       # is not available here.
       - name: Run benchmark
+        id: run_benchmark
         run: |
           java -Xshare:off -Xmx8g -ea -Duser.timezone=UTC \
             --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
@@ -121,6 +123,7 @@ jobs:
             -jar benchmark/target/benchmark-${{ steps.get_version.outputs.version }}.jar \
             -rf json -rff benchmark-${{ steps.get_short_sha.outputs.short_sha }}.json \
             PathlingBenchmark
+          echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       - name: Save results
         uses: actions/upload-artifact@v4
@@ -165,13 +168,14 @@ jobs:
         env:
           SHORT_SHA: ${{ needs.benchmark.outputs.short_sha }}
           COMMIT_SHA: ${{ needs.benchmark.outputs.commit_sha }}
+          DATE: ${{ needs.benchmark.outputs.date }}
         run: |
           bun site/scripts/publishBenchmark.js \
             --results "benchmark-${SHORT_SHA}.json" \
             --data-dir gh-pages/benchmarks/data \
             --run-id "${{ github.run_id }}" \
             --commit "${COMMIT_SHA}" \
-            --date "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            --date "${DATE}"
 
       - name: Commit and push
         working-directory: gh-pages

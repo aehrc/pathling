@@ -13,13 +13,8 @@ on:
 
 jobs:
   site:
-    name: Build and deploy site
+    name: Build site
     runs-on: ubuntu-latest
-    # Shared with the benchmark workflow's publish job, which also writes to
-    # gh-pages.
-    concurrency:
-      group: gh-pages
-      cancel-in-progress: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -56,20 +51,42 @@ jobs:
           -pl site -am -DskipTests -Pdocs
         timeout-minutes: 60
 
-      - name: Save site
-        uses: actions/upload-artifact@v4
-        with:
-          name: site
-          path: site/target/site/
-
       - name: Copy R package into site
         run: |
           mkdir -p site/target/site/R
           cp lib/R/target/pathling_*.tar.gz site/target/site/R/
 
+      - name: Save site
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: site/target/site/
+          # Keeps .nojekyll, which stops GitHub Pages ignoring underscore paths.
+          include-hidden-files: true
+
+  # Deployment is a separate, short job so that the gh-pages concurrency group,
+  # which is shared with the benchmark workflow's publish job, is held only
+  # while gh-pages is being written.
+  deploy:
+    name: Deploy site
+    needs: site
+    runs-on: ubuntu-latest
+    concurrency:
+      group: gh-pages
+      cancel-in-progress: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download site
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: site/target/site/
+
       - name: Preserve helm and benchmark data directories from gh-pages
         run: |
-          git fetch origin gh-pages:gh-pages || true
+          git fetch --depth 1 origin gh-pages:gh-pages || true
           for DIR in helm benchmarks/data; do
             if git cat-file -e "gh-pages:${DIR}" 2>/dev/null; then
               git archive gh-pages "${DIR}" | tar -x -C site/target/site/
