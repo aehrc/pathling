@@ -27,7 +27,7 @@ import au.csiro.pathling.fhirpath.collection.DateTimeComparable;
 import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import jakarta.annotation.Nonnull;
-import org.apache.commons.lang3.tuple.Pair;
+import java.util.List;
 
 /**
  * Provides the functionality of the family of math operators within FHIRPath, i.e. +, -, *, / and
@@ -64,17 +64,12 @@ public class MathOperator implements FhirPathBinaryOperator {
         && rightValue instanceof QuantityCollection qty) {
       return invokeDateTime(leftValue, qty);
     }
-    final Pair<Collection, Collection> reconciledArguments =
-        FhirPathBinaryOperator.reconcileTypes(leftValue, rightValue);
+    final List<Collection> unified = CombiningLogic.unify(List.of(leftValue, rightValue));
 
     final Collection left =
-        reconciledArguments
-            .getLeft()
-            .asSingular(NON_SINGULAR_ERROR_FORMAT.formatted(type.toString(), "left"));
+        unified.get(0).asSingular(NON_SINGULAR_ERROR_FORMAT.formatted(type.toString(), "left"));
     final Collection right =
-        reconciledArguments
-            .getRight()
-            .asSingular(NON_SINGULAR_ERROR_FORMAT.formatted(type.toString(), "right"));
+        unified.get(1).asSingular(NON_SINGULAR_ERROR_FORMAT.formatted(type.toString(), "right"));
 
     if (left instanceof QuantityCollection || right instanceof QuantityCollection) {
       throw new UnsupportedFhirPathFeatureError(

@@ -17,13 +17,13 @@
 
 package au.csiro.pathling.fhirpath.comparison;
 
-import static au.csiro.pathling.encoders.ValueFunctions.nullSafeField;
 import static au.csiro.pathling.sql.SqlFunctions.let;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.encoders.ColumnFunctions;
+import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import jakarta.annotation.Nonnull;
-import java.util.Arrays;
 import java.util.List;
 import org.apache.spark.sql.Column;
 
@@ -47,7 +47,12 @@ public class CodingEquality implements ElementWiseEquality {
   }
 
   private static final List<String> EQUALITY_COLUMNS =
-      Arrays.asList("system", "code", "version", "display", "userSelected");
+      List.of(
+          CodingSchema.SYSTEM_FIELD,
+          CodingSchema.CODE_FIELD,
+          CodingSchema.VERSION_FIELD,
+          CodingSchema.DISPLAY_FIELD,
+          CodingSchema.USER_SELECTED_FIELD);
 
   @Nonnull
   @Override
@@ -61,8 +66,19 @@ public class CodingEquality implements ElementWiseEquality {
                     when(l.isNull().or(r.isNull()), lit(null))
                         .otherwise(
                             EQUALITY_COLUMNS.stream()
-                                .map(f -> nullSafeField(l, f).eqNullSafe(nullSafeField(r, f)))
+                                .map(f -> field(l, f).eqNullSafe(field(r, f)))
                                 .reduce(Column::and)
                                 .orElseThrow(() -> new AssertionError("No fields to compare")))));
+  }
+
+  /**
+   * Reads a field of a Coding by name through the tolerant traversal, so that a Coding whose
+   * structure does not carry the field, such as one pruned to the fields its data populates, reads
+   * it as null, which is what an unpopulated field holds (FR-031).
+   */
+  @Nonnull
+  private static Column field(@Nonnull final Column coding, @Nonnull final String name) {
+    return ColumnFunctions.resolveOrNull(
+        coding, name, CodingSchema.DATA_TYPE.apply(name).dataType());
   }
 }

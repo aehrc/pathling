@@ -1,0 +1,45 @@
+== baseline
+  lenient  ok   callbacks=[]
+           out=<Patient xmlns="http://hl7.org/fhir"><birthDate value="1980-01-01"/></Patient>
+  strict   ok   callbacks=[]
+           out=<Patient xmlns="http://hl7.org/fhir"><birthDate value="1980-01-01"/></Patient>
+== pof attr on a described primitive
+  lenient  ok   callbacks=[unknownAttribute(type)]
+           out=<Patient xmlns="http://hl7.org/fhir"><birthDate value="1980-01-01"/></Patient>
+  strict   FAIL callbacks=[unknownAttribute(type)]
+           HAPI-1851: DataFormatException at [[row,col {unknown-source}]: [1,120]]: HAPI-1824: Unknown attribute 'type' found during parse
+== pof attr on the root
+  lenient  ok   callbacks=[unknownAttribute(type)]
+           out=<Patient xmlns="http://hl7.org/fhir"><birthDate value="1980-01-01"/></Patient>
+  strict   FAIL callbacks=[unknownAttribute(type)]
+           HAPI-1851: DataFormatException at [[row,col {unknown-source}]: [1,1]]: HAPI-1824: Unknown attribute 'type' found during parse
+== pof attr on a complex element
+  lenient  ok   callbacks=[unknownAttribute(type)]
+           out=<Patient xmlns="http://hl7.org/fhir"><name><family value="Smith"/></name></Patient>
+  strict   FAIL callbacks=[unknownAttribute(type)]
+           HAPI-1851: DataFormatException at [[row,col {unknown-source}]: [1,120]]: HAPI-1824: Unknown attribute 'type' found during parse
+== unknown element, no attr
+  lenient  ok   callbacks=[unknownElement(foo)]
+           out=<Patient xmlns="http://hl7.org/fhir"/>
+  strict   FAIL callbacks=[unknownElement(foo)]
+           HAPI-1851: DataFormatException at [[row,col {unknown-source}]: [1,120]]: HAPI-1825: Unknown element 'foo' found during parse
+== unknown element with pof attr
+  lenient  ok   callbacks=[unknownElement(foo)]
+           out=<Patient xmlns="http://hl7.org/fhir"/>
+  strict   FAIL callbacks=[unknownElement(foo)]
+           HAPI-1851: DataFormatException at [[row,col {unknown-source}]: [1,120]]: HAPI-1825: Unknown element 'foo' found during parse
+== xsi:type on a described primitive
+  lenient  ok   callbacks=[unknownAttribute(type)]
+           out=<Patient xmlns="http://hl7.org/fhir"><birthDate value="1980-01-01"/></Patient>
+  strict   FAIL callbacks=[unknownAttribute(type)]
+           HAPI-1851: DataFormatException at [[row,col {unknown-source}]: [1,120]]: HAPI-1824: Unknown attribute 'type' found during parse
+== element in the pof namespace
+  lenient  ok   callbacks=[unknownElement(foo)]
+           out=<Patient xmlns="http://hl7.org/fhir"><birthDate value="1980-01-01"/></Patient>
+  strict   FAIL callbacks=[unknownElement(foo)]
+           HAPI-1851: DataFormatException at [[row,col {unknown-source}]: [1,120]]: HAPI-1825: Unknown element 'foo' found during parse
+== unprefixed unknown attr on a described primitive
+  lenient  ok   callbacks=[unknownAttribute(type)]
+           out=<Patient xmlns="http://hl7.org/fhir"><birthDate value="1980-01-01"/></Patient>
+  strict   FAIL callbacks=[unknownAttribute(type)]
+           HAPI-1851: DataFormatException at [[row,col {unknown-source}]: [1,120]]: HAPI-1824: Unknown attribute 'type' found during parse

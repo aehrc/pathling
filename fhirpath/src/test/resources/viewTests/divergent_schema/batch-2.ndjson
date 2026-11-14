@@ -1,0 +1,2 @@
+{"resourceType":"Patient","id":"b1","name":[{"given":["Dee"]}]}
+{"resourceType":"Patient","id":"b2","name":[{"given":["Eve"]},{"use":"nickname","given":["E"]}]}

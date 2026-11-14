@@ -20,9 +20,11 @@ package au.csiro.pathling.test.yaml.resolver;
 import au.csiro.pathling.fhirpath.evaluation.CrossResourceStrategy;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
+import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.function.Function;
+import lombok.AllArgsConstructor;
 import lombok.Value;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -32,9 +34,11 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 /**
  * Factory for creating DatasetEvaluator instances from HAPI FHIR resources. This implementation
  * handles the conversion of HAPI FHIR resource objects into a format suitable for FHIRPath
- * expression evaluation using flat schema.
+ * expression evaluation using flat schema. The resource is serialised to FHIR JSON and read in the
+ * Parquet on FHIR layout (T036).
  */
-@Value(staticConstructor = "of")
+@Value
+@AllArgsConstructor(staticName = "of")
 public class HapiResolverFactory implements Function<RuntimeContext, DatasetEvaluator> {
 
   @Nonnull IBaseResource resource;
@@ -44,11 +48,12 @@ public class HapiResolverFactory implements Function<RuntimeContext, DatasetEval
   public DatasetEvaluator apply(final RuntimeContext rt) {
     final ResourceType resourceType = ResourceType.fromCode(resource.fhirType());
 
-    // Create flat dataset using FHIR encoders
     final Dataset<Row> resourceDS =
-        rt.getSpark()
-            .createDataset(List.of(resource), rt.getFhirEncoders().of(resource.fhirType()))
-            .toDF();
+        PofDatasets.fromResources(
+            rt.getSpark(),
+            rt.getFhirEncoders().getContext(),
+            resource.fhirType(),
+            List.of(resource));
 
     // Build DatasetEvaluator using the builder
     // Use EMPTY strategy for cross-resource references to return empty collections

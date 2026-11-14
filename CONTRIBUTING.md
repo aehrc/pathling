@@ -11,8 +11,15 @@ The core of Pathling consists of the following modules, which inherit from the
 main `pom.xml` in the root of the repository:
 
 - `utilities` - Utility functions used by different components of Pathling.
+- `fhir-schema` - An abstraction over the FHIR definitions, and the derivation
+  of the Spark schemas of the stored layout from them. It may use only the Spark
+  SQL API, not internal Catalyst API.
 - `encoders` - Encoders for transforming [FHIR](https://hl7.org/fhir/) data into
   Spark Datasets.
+- `io` - Reading and writing FHIR JSON and XML, as resources or bundles, in the
+  [Parquet on FHIR](specs/001-parquet-on-fhir/spec.md) storage layout, as
+  dataset transformations. `FhirReader` and `FhirWriter` are its public
+  surface. Like `fhir-schema`, it may not use internal Catalyst API.
 - `terminology` - Terminology operations from Spark, either through
   a [FHIR terminology server](https://hl7.org/fhir/terminology-service.html)
   or a locally imported terminology store.
@@ -32,6 +39,10 @@ together with the core. They are also child modules of the main `pom.xml`.
 - `site` - A website that contains documentation for Pathling.
 - `benchmark` - A benchmark for evaluating the performance of Pathling query
   execution.
+- `legacy-export` - A component and command-line tool that converts tables in
+  the legacy layout, written by the `encoders` module, to FHIR NDJSON for
+  re-import into the Parquet on FHIR layout. It depends on `encoders` and on
+  nothing newer in the core chain, and is not part of `library-runtime`.
 
 The following modules are versioned independently and are **not** children of
 the main `pom.xml`:
@@ -48,7 +59,9 @@ the main `pom.xml`:
 ```mermaid
 graph TD
     utilities[utilities<br/>Utility functions]
+    fhir-schema[fhir-schema<br/>FHIR definitions and schemas]
     encoders[encoders<br/>FHIR data encoders]
+    io[io<br/>Parquet on FHIR layout]
     terminology[terminology<br/>FHIR terminology server]
     fhirpath[fhirpath<br/>FHIRPath engine]
     library-api[library-api<br/>Language library API]
@@ -57,19 +70,26 @@ graph TD
     r[lib/R<br/>R bindings]
     site[site<br/>Documentation website]
     benchmark[benchmark<br/>Performance benchmarks]
+    legacy-export[legacy-export<br/>Legacy layout export]
     server[server<br/>FHIR server]
     ui[ui<br/>Admin UI]
     test-data[test-data<br/>Test data generation]
 
+    fhir-schema --> utilities
     encoders --> utilities
+    io --> fhir-schema
     terminology --> utilities
     terminology --> encoders
     fhirpath --> terminology
+    fhirpath --> fhir-schema
     library-api --> utilities
     library-api --> encoders
     library-api --> terminology
     library-api --> fhirpath
+    library-api --> io
     library-runtime --> library-api
+    library-runtime --> fhir-schema
+    library-runtime --> io
     python --> library-runtime
     r --> library-runtime
     server --> library-runtime
@@ -79,6 +99,7 @@ graph TD
     site --> python
     site --> r
     benchmark --> test-data
+    legacy-export --> encoders
 ```
 
 The "public API" of Pathling is defined as the public API of the library API
@@ -90,7 +111,9 @@ The core libraries are defined as the modules that contribute to building the
 library runtime artifact. These are:
 
 - `utilities`
+- `fhir-schema`
 - `encoders`
+- `io`
 - `terminology`
 - `fhirpath`
 - `library-api`
@@ -104,7 +127,7 @@ You will need the following software to build the core libraries:
 
 - Java 21
 - Maven 3.9+
-- Python 3.9+
+- Python 3.10+
 - uv (Python package manager)
 - R 3.5+
 
@@ -149,7 +172,7 @@ data.
 
 You will need the following software to build the Python library:
 
-- Python 3.9+
+- Python 3.10+
 - uv (Python package manager)
 
 To build and install the Python library locally, run:

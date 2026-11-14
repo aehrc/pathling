@@ -1,0 +1,57 @@
+######## CONDITIONS ########
+Spark version: 4.0.2
+Spark master: local[*]
+defaultParallelism: 11
+availableProcessors: 11
+java.version: 21.0.3
+os: Mac OS X 26.6.2
+warmup iterations: 3, measured iterations: 7 (median reported)
+corpus root: /private/tmp/claude-502/-Users-szu004-dev-pathling/56ddb6c2-6227-4f0d-84c6-f47b2019b3a1/scratchpad/merge-cost
+
+######## SCHEMAS ########
+narrow = SchemaBuilder.pruned("Patient", observed): 12 top-level fields, 24 leaf columns
+wide   = SchemaBuilder.dense("Observation"): 55 top-level fields, 1371 leaf columns
+narrow top-level: [resourceType, id, meta, identifier, active, name, telecom, gender, birthDate, address, maritalStatus, managingOrganization]
+
+######## CORPUS: narrow / divergent ########
+| files | mergeSchema=true (ms) | mergeSchema=false (ms) | supplied schema (ms) | delta (ms) | merged width | unmerged width |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 16 | 37.3 | 46.5 | 2.9 | 4.1 | 24 | 10 |
+  (row wall clock 1.2 s)
+| 64 | 38.5 | 54.3 | 3.8 | 3.0 | 24 | 6 |
+  (row wall clock 1.4 s)
+| 256 | 67.7 | 51.8 | 10.8 | 2.7 | 24 | 6 |
+  (row wall clock 1.8 s)
+| 1024 | 187.6 | 86.8 | 39.6 | 2.8 | 24 | 15 |
+  (row wall clock 3.8 s)
+| 4096 | 483.1 | 177.8 | 151.0 | 2.6 | 24 | 20 |
+  (row wall clock 9.2 s)
+
+######## CORPUS: narrow / uniform ########
+| files | mergeSchema=true (ms) | mergeSchema=false (ms) | supplied schema (ms) | delta (ms) | merged width | unmerged width |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 16 | 83.4 | 18.2 | 1.6 | 2.1 | 24 | 24 |
+  (row wall clock 1.8 s)
+| 64 | 31.6 | 19.0 | 3.5 | 1.8 | 24 | 24 |
+  (row wall clock 0.6 s)
+| 256 | 49.3 | 27.5 | 10.2 | 1.8 | 24 | 24 |
+  (row wall clock 1.7 s)
+| 1024 | 169.8 | 116.8 | 37.7 | 2.0 | 24 | 24 |
+  (row wall clock 3.9 s)
+| 4096 | 562.6 | 200.9 | 148.7 | 2.4 | 24 | 24 |
+  (row wall clock 10.5 s)
+
+######## CORPUS: wide / divergent ########
+| files | mergeSchema=true (ms) | mergeSchema=false (ms) | supplied schema (ms) | delta (ms) | merged width | unmerged width |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 16 | 34.3 | 186.3 | 2.1 | 5.7 | 1371 | 39 |
+  (row wall clock 2.1 s)
+| 64 | 60.5 | 23.0 | 3.7 | 4.9 | 1371 | 415 |
+  (row wall clock 1.9 s)
+| 256 | 136.9 | 28.8 | 11.4 | 4.6 | 1371 | 162 |
+  (row wall clock 2.3 s)
+| 1024 | 388.1 | 88.6 | 37.9 | 4.4 | 1371 | 859 |
+  (row wall clock 5.9 s)
+| 4096 | 1658.9 | 173.0 | 151.0 | 4.5 | 1371 | 162 |
+  (row wall clock 22.0 s)
+

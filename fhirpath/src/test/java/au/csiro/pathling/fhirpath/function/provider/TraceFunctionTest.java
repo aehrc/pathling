@@ -27,6 +27,7 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ListTraceCollector;
 import au.csiro.pathling.fhirpath.ListTraceCollector.TraceEntry;
+import au.csiro.pathling.fhirpath.TraceCollectorProxy;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.evaluation.CollectionDataset;
@@ -40,6 +41,7 @@ import au.csiro.pathling.sql.TraceExpression;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.assertions.Assertions;
 import au.csiro.pathling.test.datasource.ObjectDataSource;
+import au.csiro.pathling.test.helpers.JsonElementRenderer;
 import ca.uhn.fhir.context.FhirContext;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -319,11 +321,15 @@ class TraceFunctionTest {
   class CollectorTests {
 
     private ListTraceCollector collector;
+    private TraceCollectorProxy proxy;
     private DatasetEvaluator collectorEvaluator;
 
     @BeforeEach
     void setUpCollector() {
       collector = new ListTraceCollector();
+      // The collector is reached through a serialisable proxy, as in production, because a query
+      // over stored data serialises the trace expression that holds it.
+      proxy = TraceCollectorProxy.create(collector);
       final ObjectDataSource dataSource =
           new ObjectDataSource(
               spark, encoders, List.of(createPatient1(), createPatient2(), createPatient3()));
@@ -332,8 +338,13 @@ class TraceFunctionTest {
           DatasetEvaluatorBuilder.create(ResourceType.PATIENT, encoders.getContext())
               .withDataset(dataset)
               .withCrossResourceStrategy(CrossResourceStrategy.EMPTY)
-              .withTraceCollector(collector)
+              .withTraceCollector(proxy)
               .build();
+    }
+
+    @AfterEach
+    void closeProxy() {
+      proxy.close();
     }
 
     private void materialize(@Nonnull final String expression) {
@@ -445,7 +456,13 @@ class TraceFunctionTest {
     private long countTraceValues(@Nonnull final String expression, @Nonnull final String label) {
       final SingleInstanceEvaluationResult result =
           SingleInstanceEvaluator.evaluate(
-              patientDf, "Patient", fhirContext, expression, null, null);
+              patientDf,
+              "Patient",
+              fhirContext,
+              expression,
+              null,
+              null,
+              JsonElementRenderer.of(fhirContext));
       return result.getTraces().stream()
           .filter(t -> label.equals(t.getLabel()))
           .mapToLong(t -> t.getValues().size())
@@ -592,7 +609,8 @@ class TraceFunctionTest {
               fhirContext,
               "Patient.maritalStatus.coding.trace('t') | {}",
               null,
-              null);
+              null,
+              JsonElementRenderer.of(fhirContext));
       final long emptyUnionCount =
           emptyUnion.getTraces().stream()
               .filter(t -> "t".equals(t.getLabel()))
@@ -612,7 +630,8 @@ class TraceFunctionTest {
               fhirContext,
               "Patient.maritalStatus.coding.trace('t') | Patient.maritalStatus.coding",
               null,
-              null);
+              null,
+              JsonElementRenderer.of(fhirContext));
       final long twoSideCount =
           twoSideUnion.getTraces().stream()
               .filter(t -> "t".equals(t.getLabel()))
@@ -643,7 +662,8 @@ class TraceFunctionTest {
               "Patient.maritalStatus.coding.first().trace('t')"
                   + " = Patient.maritalStatus.coding.first()",
               null,
-              null);
+              null,
+              JsonElementRenderer.of(fhirContext));
 
       final long count =
           result.getTraces().stream()

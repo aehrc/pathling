@@ -1,0 +1,263 @@
+##### WRITTEN DIRECTLY, AS A FOREIGN WRITER COULD
+=== baseline
+  name.exists()                          True
+  name.count()                           1
+  name.family.count()                    1
+  name.given.exists()                    True
+  name.given.count()                     1
+  name.given.first()                     'Ann'
+  name.where(family.empty()).count()     0
+  maritalStatus.exists()                 True
+  maritalStatus.empty()                  False
+  rows forEach / forEachOrNull           1 / 1
+  export                                 {"resourceType":"Patient","id":"p1","name":[{"family":"Smith","given":["Ann"]}],"maritalStatus":{"text":"M"}}
+=== name = null
+  name.exists()                          False
+  name.count()                           0
+  name.family.count()                    0
+  name.given.exists()                    False
+  name.given.count()                     0
+  name.given.first()                     None
+  name.where(family.empty()).count()     0
+  maritalStatus.exists()                 True
+  maritalStatus.empty()                  False
+  rows forEach / forEachOrNull           0 / 1
+  export                                 {"resourceType":"Patient","id":"p1","maritalStatus":{"text":"M"}}
+=== name = []
+  name.exists()                          False
+  name.count()                           0
+  name.family.count()                    0
+  name.given.exists()                    False
+  name.given.count()                     0
+  name.given.first()                     None
+  name.where(family.empty()).count()     0
+  maritalStatus.exists()                 True
+  maritalStatus.empty()                  False
+  rows forEach / forEachOrNull           0 / 1
+  export                                 {"resourceType":"Patient","id":"p1","name":[],"maritalStatus":{"text":"M"}}
+=== name = [null]
+  name.exists()                          False
+  name.count()                           0
+  name.family.count()                    0
+  name.given.exists()                    False
+  name.given.count()                     0
+  name.given.first()                     None
+  name.where(family.empty()).count()     0
+  maritalStatus.exists()                 True
+  maritalStatus.empty()                  False
+  rows forEach / forEachOrNull           0 / 1
+  export                                 {"resourceType":"Patient","id":"p1","name":[null],"maritalStatus":{"text":"M"}}
+=== name = [{}]
+  name.exists()                          True
+  name.count()                           1
+  name.family.count()                    0
+  name.given.exists()                    False
+  name.given.count()                     0
+  name.given.first()                     None
+  name.where(family.empty()).count()     1
+  maritalStatus.exists()                 True
+  maritalStatus.empty()                  False
+  rows forEach / forEachOrNull           1 / 1
+  export                                 {"resourceType":"Patient","id":"p1","name":[{}],"maritalStatus":{"text":"M"}}
+=== name = [Smith, {}]
+  name.exists()                          True
+  name.count()                           2
+  name.family.count()                    1
+  name.given.exists()                    True
+  name.given.count()                     1
+  name.given.first()                     'Ann'
+  name.where(family.empty()).count()     1
+  maritalStatus.exists()                 True
+  maritalStatus.empty()                  False
+  rows forEach / forEachOrNull           2 / 2
+  export                                 {"resourceType":"Patient","id":"p1","name":[{"family":"Smith","given":["Ann"]},{}],"maritalStatus":{"text":"M"}}
+=== name = [null, Smith]
+  name.exists()                          True
+  name.count()                           1
+  name.family.count()                    1
+  name.given.exists()                    True
+  name.given.count()                     1
+  name.given.first()                     'Ann'
+  name.where(family.empty()).count()     0
+  maritalStatus.exists()                 True
+  maritalStatus.empty()                  False
+  rows forEach / forEachOrNull           1 / 1
+  export                                 {"resourceType":"Patient","id":"p1","name":[null,{"family":"Smith","given":["Ann"]}],"maritalStatus":{"text":"M"}}
+=== given = []
+  name.exists()                          True
+  name.count()                           1
+  name.family.count()                    1
+  name.given.exists()                    False
+  name.given.count()                     0
+  name.given.first()                     None
+  name.where(family.empty()).count()     0
+  maritalStatus.exists()                 True
+  maritalStatus.empty()                  False
+  rows forEach / forEachOrNull           1 / 1
+  export                                 {"resourceType":"Patient","id":"p1","name":[{"family":"Smith","given":[]}],"maritalStatus":{"text":"M"}}
+=== given = [null]
+  name.exists()                          True
+  name.count()                           1
+  name.family.count()                    1
+  name.given.exists()                    True
+  name.given.count()                     1
+  name.given.first()                     None
+  name.where(family.empty()).count()     0
+  maritalStatus.exists()                 True
+  maritalStatus.empty()                  False
+  rows forEach / forEachOrNull           1 / 1
+  export                                 {"resourceType":"Patient","id":"p1","name":[{"family":"Smith","given":[null]}],"maritalStatus":{"text":"M"}}
+=== given = [null, Ann]
+  name.exists()                          True
+  name.count()                           1
+  name.family.count()                    1
+  name.given.exists()                    True
+  name.given.count()                     2
+  name.given.first()                     None
+  name.where(family.empty()).count()     0
+  maritalStatus.exists()                 True
+  maritalStatus.empty()                  False
+  rows forEach / forEachOrNull           1 / 1
+  export                                 {"resourceType":"Patient","id":"p1","name":[{"family":"Smith","given":[null,"Ann"]}],"maritalStatus":{"text":"M"}}
+=== given = ['']
+  name.exists()                          True
+  name.count()                           1
+  name.family.count()                    1
+  name.given.exists()                    True
+  name.given.count()                     1
+  name.given.first()                     ''
+  name.where(family.empty()).count()     0
+  maritalStatus.exists()                 True
+  maritalStatus.empty()                  False
+  rows forEach / forEachOrNull           1 / 1
+  export                                 {"resourceType":"Patient","id":"p1","name":[{"family":"Smith","given":[""]}],"maritalStatus":{"text":"M"}}
+=== maritalStatus = {}
+  name.exists()                          True
+  name.count()                           1
+  name.family.count()                    1
+  name.given.exists()                    True
+  name.given.count()                     1
+  name.given.first()                     'Ann'
+  name.where(family.empty()).count()     0
+  maritalStatus.exists()                 True
+  maritalStatus.empty()                  False
+  rows forEach / forEachOrNull           1 / 1
+  export                                 {"resourceType":"Patient","id":"p1","name":[{"family":"Smith","given":["Ann"]}],"maritalStatus":{}}
+##### THROUGH JSON INGEST
+--- json name: []: stored "{\"resourceType\":\"Patient\",\"id\":\"p1\"}"  schema=
+=== json name: []
+  name.exists()                          False
+  name.count()                           0
+  name.family.count()                    0
+  name.given.exists()                    False
+  name.given.count()                     0
+  name.given.first()                     None
+  name.where(family.empty()).count()     0
+  maritalStatus.exists()                 False
+  maritalStatus.empty()                  True
+  rows forEach / forEachOrNull           0 / 1
+  export                                 {"resourceType":"Patient","id":"p1"}
+--- json name: [{}]: stored "{\"resourceType\":\"Patient\",\"id\":\"p1\"}"  schema=
+=== json name: [{}]
+  name.exists()                          False
+  name.count()                           0
+  name.family.count()                    0
+  name.given.exists()                    False
+  name.given.count()                     0
+  name.given.first()                     None
+  name.where(family.empty()).count()     0
+  maritalStatus.exists()                 False
+  maritalStatus.empty()                  True
+  rows forEach / forEachOrNull           0 / 1
+  export                                 {"resourceType":"Patient","id":"p1"}
+--- json name: [null]: stored "{\"resourceType\":\"Patient\",\"id\":\"p1\"}"  schema=
+=== json name: [null]
+  name.exists()                          False
+  name.count()                           0
+  name.family.count()                    0
+  name.given.exists()                    False
+  name.given.count()                     0
+  name.given.first()                     None
+  name.where(family.empty()).count()     0
+  maritalStatus.exists()                 False
+  maritalStatus.empty()                  True
+  rows forEach / forEachOrNull           0 / 1
+  export                                 {"resourceType":"Patient","id":"p1"}
+--- json maritalStatus: {}: stored "{\"resourceType\":\"Patient\",\"id\":\"p1\"}"  schema=
+=== json maritalStatus: {}
+  name.exists()                          False
+  name.count()                           0
+  name.family.count()                    0
+  name.given.exists()                    False
+  name.given.count()                     0
+  name.given.first()                     None
+  name.where(family.empty()).count()     0
+  maritalStatus.exists()                 False
+  maritalStatus.empty()                  True
+  rows forEach / forEachOrNull           0 / 1
+  export                                 {"resourceType":"Patient","id":"p1"}
+--- json maritalStatus: null: stored "{\"resourceType\":\"Patient\",\"id\":\"p1\"}"  schema=
+=== json maritalStatus: null
+  name.exists()                          False
+  name.count()                           0
+  name.family.count()                    0
+  name.given.exists()                    False
+  name.given.count()                     0
+  name.given.first()                     None
+  name.where(family.empty()).count()     0
+  maritalStatus.exists()                 False
+  maritalStatus.empty()                  True
+  rows forEach / forEachOrNull           0 / 1
+  export                                 {"resourceType":"Patient","id":"p1"}
+--- json given: [null]: stored "{\"resourceType\":\"Patient\",\"id\":\"p1\",\"name\":[{\"family\":\"Smith\",\"given\":[null]}]}"  schema=name:array<struct<family:string,given:array<string>>>
+=== json given: [null]
+  name.exists()                          True
+  name.count()                           1
+  name.family.count()                    1
+  name.given.exists()                    True
+  name.given.count()                     1
+  name.given.first()                     None
+  name.where(family.empty()).count()     0
+  maritalStatus.exists()                 False
+  maritalStatus.empty()                  True
+  rows forEach / forEachOrNull           1 / 1
+  export                                 {"resourceType":"Patient","id":"p1","name":[{"family":"Smith","given":[null]}]}
+--- json given: []: stored "{\"resourceType\":\"Patient\",\"id\":\"p1\",\"name\":[{\"family\":\"Smith\",\"given\":[]}]}"  schema=name:array<struct<family:string,given:array<string>>>
+=== json given: []
+  name.exists()                          True
+  name.count()                           1
+  name.family.count()                    1
+  name.given.exists()                    False
+  name.given.count()                     0
+  name.given.first()                     None
+  name.where(family.empty()).count()     0
+  maritalStatus.exists()                 False
+  maritalStatus.empty()                  True
+  rows forEach / forEachOrNull           1 / 1
+  export                                 {"resourceType":"Patient","id":"p1","name":[{"family":"Smith","given":[]}]}
+--- json birthDate: '': stored "{\"resourceType\":\"Patient\",\"id\":\"p1\",\"birthDate\":\"\"}"  schema=birthDate:string
+=== json birthDate: ''
+  name.exists()                          False
+  name.count()                           0
+  name.family.count()                    0
+  name.given.exists()                    False
+  name.given.count()                     0
+  name.given.first()                     None
+  name.where(family.empty()).count()     0
+  maritalStatus.exists()                 False
+  maritalStatus.empty()                  True
+  rows forEach / forEachOrNull           0 / 1
+  export                                 {"resourceType":"Patient","id":"p1","birthDate":""}
+--- json _given only: stored "{\"resourceType\":\"Patient\",\"id\":\"p1\",\"name\":[{\"family\":\"Smith\"}]}"  schema=name:array<struct<family:string,given:array<string>>>
+=== json _given only
+  name.exists()                          True
+  name.count()                           1
+  name.family.count()                    1
+  name.given.exists()                    False
+  name.given.count()                     0
+  name.given.first()                     None
+  name.where(family.empty()).count()     0
+  maritalStatus.exists()                 False
+  maritalStatus.empty()                  True
+  rows forEach / forEachOrNull           1 / 1
+  export                                 {"resourceType":"Patient","id":"p1","name":[{"family":"Smith"}]}

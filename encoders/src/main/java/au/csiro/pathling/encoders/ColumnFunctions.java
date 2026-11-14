@@ -22,13 +22,23 @@
  */
 package au.csiro.pathling.encoders;
 
+import au.csiro.pathling.sql.ExtensionTraversal;
+import au.csiro.pathling.sql.MergeCast;
+import au.csiro.pathling.sql.ResolveOrNull;
+import au.csiro.pathling.sql.UnresolvedMergeCombination;
+import au.csiro.pathling.sql.UnresolvedTraverseExtension;
+import au.csiro.pathling.utilities.CanonicalStructure;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.catalyst.expressions.Expression;
+import org.apache.spark.sql.classic.ColumnConversions$;
 import org.apache.spark.sql.classic.ExpressionUtils;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
 import scala.collection.immutable.Seq;
 
 /**
@@ -86,5 +96,132 @@ public class ColumnFunctions {
 
     // Convert back to Column
     return ExpressionUtils.column(structProductExpr);
+  }
+
+  /**
+   * Creates the tolerant traversal expression: a reference to a field of a structure, or of every
+   * element of an array of structures, that resolves to a null of the fallback type where the
+   * resolved input does not carry the field (FR-054).
+   *
+   * @param child the structure, or array of structures, to take the field from
+   * @param fieldName the name of the field
+   * @param fallback the type of the null returned when the field is absent, per FR-055
+   * @return a Column that tolerates the absence of the field
+   */
+  @Nonnull
+  public static Column resolveOrNull(
+      @Nonnull final Column child,
+      @Nonnull final String fieldName,
+      @Nonnull final DataType fallback) {
+    return ExpressionUtils.column(
+        new ResolveOrNull(ExpressionUtils.expression(child), fieldName, fallback));
+  }
+
+  /**
+   * Resolves a text field of a structure, or of every structure in an array, to a null string where
+   * the structure does not carry the field, rather than failing (FR-054). The field is read as the
+   * text it is stored as.
+   *
+   * @param child the structure, or array of structures
+   * @param fieldName the name of the field
+   * @return the field, or a null string where the structure does not carry it
+   */
+  @Nonnull
+  public static Column resolveStringOrNull(
+      @Nonnull final Column child, @Nonnull final String fieldName) {
+    return resolveOrNull(child, fieldName, DataTypes.StringType);
+  }
+
+  /**
+   * Creates a reference to a table-level column that resolves to a null of the fallback type where
+   * the input does not have the column, rather than failing (decision 75).
+   *
+   * @param columnName the name of the table-level column
+   * @param fallback the type of the null returned when the column is absent
+   * @return a Column that tolerates the absence of the table-level column
+   */
+  @Nonnull
+  public static Column columnOrNull(
+      @Nonnull final String columnName, @Nonnull final DataType fallback) {
+    return ExpressionUtils.column(new UnresolvedColumnOrNull(columnName, fallback));
+  }
+
+  /**
+   * Creates the traversal to the extensions of an element, which reads its inline {@code extension}
+   * field, and finds no extensions where the element has none.
+   *
+   * @param parent the structure, or array of structures, whose extensions are wanted
+   * @return a Column holding the extensions of the parent
+   */
+  @Nonnull
+  public static Column traverseExtension(@Nonnull final Column parent) {
+    return ExpressionUtils.column(
+        new UnresolvedTraverseExtension(ExpressionUtils.expression(parent)));
+  }
+
+  /**
+   * Creates the traversal to the extensions of the resource itself, which reads the {@code
+   * extension} column, and finds no extensions where the table has no such column.
+   *
+   * @return a Column holding the extensions of the resource
+   */
+  @Nonnull
+  public static Column traverseRootExtension() {
+    return columnOrNull(
+        ExtensionSupport.EXTENSION_ELEMENT_NAME(), ExtensionTraversal.ABSENT_TYPE());
+  }
+
+  /**
+   * Creates the reconciliation expression, which projects one of several operands of the same FHIR
+   * type by name into the recursive field-wise merge of all of their types (FR-056). Every operand
+   * given the same list and canonical structure is projected into the same type.
+   *
+   * @param operands the full, ordered list of operands being reconciled
+   * @param index the position in the list of the operand to project
+   * @param canonical the canonical structure of the operands' element type
+   * @return a Column holding the operand, projected into the merged type
+   */
+  @Nonnull
+  public static Column mergeCast(
+      @Nonnull final List<Column> operands,
+      final int index,
+      @Nonnull final CanonicalStructure canonical) {
+    final Seq<Expression> expressions =
+        scala.jdk.javaapi.CollectionConverters.asScala(
+                operands.stream().map(ExpressionUtils::expression).toList())
+            .toSeq();
+    return ExpressionUtils.column(new MergeCast(expressions, index, canonical));
+  }
+
+  /**
+   * Combines several operands of the same FHIR type, each projected by name into the recursive
+   * field-wise merge of all of their types (FR-056). Unlike {@link #mergeCast(List, int,
+   * CanonicalStructure)}, each operand is held once in the combination, and an operand whose type
+   * is already the merged type is left as it is.
+   *
+   * @param operands the full, ordered list of operands being combined
+   * @param canonical the canonical structure of the operands' element type
+   * @param combination the combination of the projected operands, given in the same order
+   * @return a Column holding the combination of the projected operands
+   */
+  @Nonnull
+  public static Column mergeCombination(
+      @Nonnull final List<Column> operands,
+      @Nonnull final CanonicalStructure canonical,
+      @Nonnull final Function<List<Column>, Column> combination) {
+    final Seq<Expression> expressions =
+        scala.jdk.javaapi.CollectionConverters.asScala(
+                operands.stream().map(ExpressionUtils::expression).toList())
+            .toSeq();
+    final scala.Function1<Seq<Expression>, Expression> combine =
+        projected ->
+            ColumnConversions$.MODULE$
+                .toRichColumn(
+                    combination.apply(
+                        scala.jdk.javaapi.CollectionConverters.asJava(projected).stream()
+                            .map(ExpressionUtils::column)
+                            .toList()))
+                .expr();
+    return ExpressionUtils.column(new UnresolvedMergeCombination(expressions, canonical, combine));
   }
 }

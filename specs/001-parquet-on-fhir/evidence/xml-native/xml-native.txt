@@ -1,0 +1,218 @@
+$ python -I rowtag.py
+== 1. spark.read.xml with rowTag=Patient, one file per case
+   01_plain                     -> ['01']
+   02_attrs_newline             -> ['02']
+   03_self_closing              -> no row
+   04_longer_name               -> no row
+   05_lower_case                -> no row
+   06_in_comment                -> no row
+   07_in_cdata                  -> no row
+   08_nested_same_type          -> ['08-outer']
+   09_contained_in_other_type   -> ['09-contained']
+   10_in_parameters             -> ['10-param']
+   11_bundle_entry              -> ['11-entry']
+   12_namespace_prefix          -> no row
+   13_two_roots                 -> ['13a', '13b']
+   14_escaped_text              -> no row
+== 2. The same, with ignoreNamespace=true, for the prefixed document
+   rows: []
+== 3. from_xml over one document per string, with the root element filtered
+   01_plain                     root=Patient      prefix=-   id=01           kept
+   02_attrs_newline             root=Patient      prefix=-   id=02           kept
+   03_self_closing              root=Bundle       prefix=-   id=None         skipped: other type
+   04_longer_name               root=Patients     prefix=-   id=04-Patients  skipped: other type
+   05_lower_case                root=patient      prefix=-   id=05           skipped: other type
+   06_in_comment                root=Observation  prefix=-   id=None         skipped: other type
+   07_in_cdata                  root=Observation  prefix=-   id=None         skipped: other type
+   08_nested_same_type          root=Patient      prefix=-   id=08-outer     kept
+   09_contained_in_other_type   root=Observation  prefix=-   id=None         skipped: other type
+   10_in_parameters             root=Parameters   prefix=-   id=None         skipped: other type
+   11_bundle_entry              root=Bundle       prefix=-   id=None         skipped: other type
+   12_namespace_prefix          root=Patient      prefix=f   id=None         refused: prefixed
+   13_two_roots                 root=Patient      prefix=-   id=13a          kept
+   14_escaped_text              root=Observation  prefix=-   id=None         skipped: other type
+
+$ python -I inference.py
+== a Patient with one name
+   default                  struct<_xmlns:string,birthDate:struct<_value:date>,gender:struct<_value:string>,name:struct<family:struct<_value:string>,given:struct<_value:string>>,text:struct<div:struct<_xmlns:string,p:string>,status:struct<_value:string>>>
+   {'inferSchema': 'false'} struct<_xmlns:string,birthDate:struct<_value:string>,gender:struct<_value:string>,name:struct<family:struct<_value:string>,given:struct<_value:string>>,text:struct<div:struct<_xmlns:string,p:string>,status:struct<_value:string>>>
+== one name in every row
+   default                  struct<_xmlns:string,name:struct<family:struct<_value:string>>>
+   {'inferSchema': 'false'} struct<_xmlns:string,name:struct<family:struct<_value:string>>>
+== one row with two names
+   default                  struct<_xmlns:string,name:array<struct<family:struct<_value:string>>>>
+   {'inferSchema': 'false'} struct<_xmlns:string,name:array<struct<family:struct<_value:string>>>>
+== typed values
+   default                  struct<_xmlns:string,active:struct<_value:boolean>,birthDate:struct<_value:date>,gender:struct<_value:string>,multipleBirthInteger:struct<_value:bigint>>
+   {'inferSchema': 'false'} struct<_xmlns:string,active:struct<_value:string>,birthDate:struct<_value:string>,gender:struct<_value:string>,multipleBirthInteger:struct<_value:string>>
+== full and partial dates in one column
+   default                  struct<_xmlns:string,birthDate:struct<_value:string>>
+   {'inferSchema': 'false'} struct<_xmlns:string,birthDate:struct<_value:string>>
+== a string that looks like a date
+   default                  struct<_xmlns:string,identifier:struct<value:struct<_value:timestamp>>>
+   {'inferSchema': 'false'} struct<_xmlns:string,identifier:struct<value:struct<_value:string>>>
+== a primitive carrying only an extension
+   default                  struct<_xmlns:string,birthDate:struct<extension:struct<_url:string,valueString:struct<_value:string>>>>
+   {'inferSchema': 'false'} struct<_xmlns:string,birthDate:struct<extension:struct<_url:string,valueString:struct<_value:string>>>>
+== a contained resource
+   default                  struct<_xmlns:string,contained:struct<Observation:struct<id:struct<_value:string>>>>
+   {'inferSchema': 'false'} struct<_xmlns:string,contained:struct<Observation:struct<id:struct<_value:string>>>>
+== samplingRatio=0.1 over 200 rows with an id and one row with a gender
+   struct<_xmlns:string,id:struct<_value:string>>
+== mixed content: text interleaved with child elements
+   text, element, text: <R><div> ASS <p> dsds</p> dddd</div></R>
+      inferred:      struct<_VALUE:array<string>,p:string> -> Row(_VALUE=['ASS', 'dddd'], p='dsds')
+      as STRING:     'ASS <p> dsds</p> dddd'
+   two elements of one name: <R><div>A <p>one</p> B <p>two</p> C</div></R>
+      inferred:      struct<_VALUE:array<string>,p:array<string>> -> Row(_VALUE=['A', 'B', 'C'], p=['one', 'two'])
+      as STRING:     'A <p>one</p> B <p>two</p> C'
+   element before text: <R><div><b>bold</b> x <p>para</p></div></R>
+      inferred:      struct<_VALUE:string,b:string,p:string> -> Row(_VALUE='x', b='bold', p='para')
+      as STRING:     '<b>bold</b> x <p>para</p>'
+
+$ python -I narrative.py
+== 1. The div read as STRING, by from_xml and by the xs_any wildcard column
+   plain text
+      as STRING: '<p>Jane Smith, female</p>'
+      xs_any:    '<p>Jane Smith, female</p>'
+   escaped text, a comment and an attribute
+      as STRING: '<p>Jane <Smith> & co</p>'
+      xs_any:    '<p>Jane <Smith> & co</p>'
+== 2. Extracting the narrative from the raw document
+   nested divs                          own div=True  -> <div xmlns="http://www.w3.org/1999/xhtml"><div><p>a</p></div><div>b</div></div>
+   whitespace before </text>            own div=True  -> <div xmlns="http://www.w3.org/1999/xhtml">a</div>
+   comment before </text>               own div=True  -> None
+   attributes on the div                own div=True  -> <div lang="en" xmlns="http://www.w3.org/1999/xhtml">a</div>
+   prefixed XHTML                       own div=False -> None
+   only a contained resource has one    own div=False -> <div xmlns="http://www.w3.org/1999/xhtml">contained</div>
+   CDATA holding </div></text>          own div=True  -> <div xmlns="http://www.w3.org/1999/xhtml"><pre><![CDATA[</div>
+== 3. Rewriting the narrative as a value attribute before parsing
+   div read back: '<div xmlns="http://www.w3.org/1999/xhtml">\n  <p class="x">Jane &lt;Smith&gt; &amp; co "q"</p><!-- c -->\n\t<td><![CDATA[1 < 2]]></td>\n</div>'
+   identical to the source span: True; gender: female
+   inferred: struct<_xmlns:string,gender:struct<_value:string>,text:struct<div:struct<_value:string>,status:struct<_value:string>>>
+
+$ python -I transform.py
+== Part 1: infer presence, correct the schema, parse with from_xml, reshape with generated SQL
+   paths the definitions do not describe, to be reported: ['Patient.contained']
+   generated SQL: 3080 characters
+   {"resourceType": "Patient", "id": "p1", "meta": {"lastUpdated": "2020-01-01T10:00:00.120+10:00"}, "text": {"status": "generated", "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Hello <b>bold</b> &amp; world</p></div>"}, "extension": [{"url": "http://ex/race", "valueCoding": {"system": "urn:r", "code": "2106-3"}}], "identifier": [{"system": "urn:mrn", "value": "  12 34  "}], "active": true, "name": [{"family": "Smith", "given": ["John", "Q"], "_given": [null, {"id": "g2", "extension": [{"url": "http://ex/q", "valueString": "x"}]}]}], "gender": "male", "birthDate": "1970-01-01", "_birthDate": {"extension": [{"url": "http://ex/t", "valueDateTime": "1970-01-01T05:00:00Z"}]}, "multipleBirthInteger": 2}
+   {"resourceType": "Patient", "id": "p2", "name": [{"family": "Doe"}], "deceasedBoolean": false, "photo": [{"data": "aGVsbG8gd29ybGQ="}]}
+   {"resourceType": "Patient", "id": "pd", "text": {"status": "generated", "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">a &lt;b&gt; not a tag <i>tag</i> &amp; <!-- c --> x</div>"}, "name": [{"family": "  Sp  ace "}]}
+== Part 2: read with the inferred all-string schema and fix cardinality and types in SQL
+   inferred: struct<_xmlns:string,active:struct<_value:string>,id:struct<_value:string>,multipleBirthInteger:struct<_value:string>,name:struct<family:struct<_value:string>,given:struct<_value:string>>>
+   Spark's own cast of 'yes' to BOOLEAN: True
+   result: struct<id:string,name:array<struct<family:string,given:array<string>>>,active:boolean,finding:string,multipleBirthInteger:int>
+   Row(id='p1', name=[Row(family='A', given=['X'])], active=True, finding=None, multipleBirthInteger=2)
+   Row(id='p2', name=[Row(family='B', given=None)], active=None, finding='Patient.active: yes', multipleBirthInteger=None)
+== Part 3a: a bundle, its entries exploded and a URN reference resolved, in SQL
++---+-----------+--------------+------------------+
+|id |subject    |decimal_source|decimal_via_double|
++---+-----------+--------------+------------------+
+|bo1|Patient/bp1|1e2           |100.0             |
++---+-----------+--------------+------------------+
+
+== Part 3b: decimal text through a double, as the JSON route stores it (decision 68)
++----------------------+---------------------+
+|source                |via_double           |
++----------------------+---------------------+
+|1.50                  |1.5                  |
+|0.0001                |1.0E-4               |
+|12345678901234567890.5|1.2345678901234567E19|
+|3                     |3.0                  |
+|1e2                   |100.0                |
++----------------------+---------------------+
+
+== Part 3c: an invalid boolean under each parse mode
+   FAILFAST: fails the job (Py4JJavaError)
+   PERMISSIVE: Row(id=Row(_value='b1'), active=None)
+== Part 3d: surrounding whitespace in an attribute value
+   ignoreSurroundingSpaces=true: 'Sp  ace'
+   ignoreSurroundingSpaces=false: '  Sp  ace '
+== Part 3e: a singular element given twice
+   gender: 'female'
+
+$ python -I hapi.py <library-runtime-9.6.0.jar>
+== 1. A string with markup characters, written by HAPI and read by Spark
+   HAPI: <Patient xmlns="http://hl7.org/fhir"><name><given value="Piotr&lt;x> &amp; &quot;y&quot;"/></name></Patient>
+   Spark: Piotr<x> & "y"
+== 2. How HAPI reads a narrative
+   type: org.hl7.fhir.utilities.xhtml.XhtmlNode
+   children: ["Text:'\\n  '", 'Element:p', "Comment:' note '", "Text:'\\n  '", 'Element:table', "Text:'\\n'"]
+   JSON: {"resourceType":"Patient","text":{"status":"generated","div":"<div xmlns=\"http://www.w3.org/1999/xhtml\">\n  <p class=\"x\">a &lt;b&gt; &amp; c ©</p>  <!-- note -->\n  <table><tr><td>  <![CDATA[1 < 2]]></td></tr></table>\n</div>"}}
+   XML: <Patient xmlns="http://hl7.org/fhir"><text><status value="generated"/><div xmlns="http://www.w3.org/1999/xhtml"> <p class="x">a &lt;b&gt; &amp; c ©</p> <!-- note --> <table><tr><td> <![CDATA[1 < 2]]></td></tr></table> </div></text></Patient>
+== 3. Files written as Pathling writes XML: HAPI, pretty printing off, one document per line
+   line 1: <Patient xmlns="http://hl7.org/fhir"><id value="p1"/><text><status value="generated"/><div xmlns="http://www.w3.org/1999/xhtml"> <p>line one</p> <p>a &lt;b&gt; &amp; c</p> </div></...
+   line 2: <Patient xmlns="http://hl7.org/fhir"><id value="p2"/><name><family value="Doe"/></name></Patient>
+   spark.read.xml, rowTag=Patient, the Patient directory:
+      Row(id=Row(_value='p1'), text=Row(div=' <p>line one</p> <p>a <b> & c</p> '), address=[Row(text=Row(_value='1 Main St\nSpringfield'))], birthDate=Row(_value='1970-01-01', extension=[Row(_url='http://ex/t')]))
+      Row(id=Row(_value='p2'), text=None, address=None, birthDate=None)
+   spark.read.xml, rowTag=Patient, both directories: ids ['p1', 'p2', 'c-pat-in-obs']
+   spark.read.text + from_xml: 2 lines, 2 resources with an id
+== 4. The narrative example from the JSON form, as HAPI writes it in XML
+   <Patient xmlns="http://hl7.org/fhir">
+      <text>
+         <status value="generated"/>
+         <div xmlns="http://www.w3.org/1999/xhtml">
+            <p>Jane Smith, female, born 1980-03-15</p>
+         </div>
+      </text>
+      <name>
+         <family value="Smith"/>
+         <given value="Jane"/>
+      </name>
+      <gender value="female"/>
+      <birthDate value="1980-03-15"/>
+   </Patient>
+
+$ python -I write.py <tmp>
+== 1. to_xml, with the narrative substituted
+<Patient xmlns="http://hl7.org/fhir">
+    <id value="p1"/>
+    <text>
+        <status value="generated"/>
+        <div xmlns="http://www.w3.org/1999/xhtml"><p>Jane &lt;Smith&gt; &amp; co</p></div>
+    </text>
+    <extension url="http://ex/race">
+        <valueCoding>
+            <system value="urn:r"/>
+            <code value="2106-3"/>
+        </valueCoding>
+    </extension>
+    <active value="true"/>
+    <name>
+        <family value="Smith"/>
+        <given value="Jane"/>
+        <given id="g2" value="Q">
+            <extension url="http://ex/q">
+                <valueString value="x"/>
+            </extension>
+        </given>
+    </name>
+    <address>
+        <text value="1 Main St&#xa;Springfield &lt;b> &amp; &quot;q&quot;"/>
+    </address>
+    <birthDate value="1970-01-01">
+        <extension url="http://ex/t">
+            <valueDateTime value="1970-01-01T05:00:00Z"/>
+        </extension>
+    </birthDate>
+    <photo>
+        <data value="aGVsbG8gd29ybGQ="/>
+    </photo>
+</Patient>
+== 2. to_xml with indent set to the empty string
+'<Patient xmlns="http://hl7.org/fhir"><id value="p1"/><text><status value="generated"/><div xmlns="http://www.w3.org/1999/xhtml"><p>Jane &lt;Smith&gt; &amp; co</' ...
+== 3. df.write.xml
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ROWS>
+    <Patient xmlns="http://hl7.org/fhir">
+        <id value="p1"/>
+        <text>
+            <status value="generated"/>
+            <div>__DIV__</div>
+        </text>
+...
+
+$ python -I write_check.py <library-runtime-9.6.0.jar> <tmp>
+== HAPI parses Spark's XML; equal to the source: True
+

@@ -1,0 +1,449 @@
+Spark 4.0.2, ansi=true
+==== V1 colRegex | present | Project
+  OK rows=[1,ArraySeq(ArraySeq(urn:x), null)] [2,ArraySeq(null)]
+  schema=struct<id:int,v:array<array<string>>>
+  analyzed:
+    Project [id#9, transform(arr#10, lambdafunction(spikebinary(lambda x_1#13, spikeresolveornull(struct(_extension, _extension#11), _extension, MapType(IntegerType,ArrayType(StringType,true),true))), lambda x_1#13, false)) AS v#12]
+    +- Relation [id#9,arr#10,_extension#11] parquet
+  optimized:
+    Project [id#9, transform(arr#10, lambdafunction(_extension#11[lambda x_1#13._fid], lambda x_1#13, false)) AS v#12]
+    +- Relation [id#9,arr#10,_extension#11] parquet
+  [force-unary] child=CreateNamedStruct resolved=true
+  [force] left=NamedLambdaVariable resolved=true right=SpikeResolveOrNull resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V1 colRegex | present | Filter
+  OK rows=[1,ArraySeq([10,a], [11,b]),Map(10 -> ArraySeq(urn:x))]
+  schema=struct<id:int,arr:array<struct<_fid:int,v:string>>,_extension:map<int,array<string>>>
+  analyzed:
+    Filter exists(arr#10, lambdafunction(isnotnull(spikebinary(lambda x_2#20, spikeresolveornull(struct(_extension, _extension#11), _extension, MapType(IntegerType,ArrayType(StringType,true),true)))), lambda x_2#20, false))
+    +- Relation [id#9,arr#10,_extension#11] parquet
+  optimized:
+    Filter exists(arr#10, lambdafunction(isnotnull(_extension#11[lambda x_2#20._fid]), lambda x_2#20, false))
+    +- Relation [id#9,arr#10,_extension#11] parquet
+  [force-unary] child=CreateNamedStruct resolved=true
+  [force] left=NamedLambdaVariable resolved=true right=SpikeResolveOrNull resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V1 colRegex | present | Aggregate key
+  FAIL ExtendedAnalysisException: [INVALID_USAGE_OF_STAR_OR_REGEX] Invalid usage of regular expression '^_extension$' in Aggregate. SQLSTATE: 42000;
+  [force-unary] child=CreateNamedStruct resolved=true
+  [force] left=NamedLambdaVariable resolved=true right=SpikeResolveOrNull resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V1 colRegex | present | Aggregate value
+  OK rows=[1,ArraySeq(ArraySeq(urn:x), null)] [2,ArraySeq(null)]
+  schema=struct<id:int,f:array<array<string>>>
+  analyzed:
+    Aggregate [id#9], [id#9, first(transform(arr#10, lambdafunction(spikebinary(lambda x_4#40, spikeresolveornull(struct(_extension, _extension#11), _extension, MapType(IntegerType,ArrayType(StringType,true),true))), lambda x_4#40, false)), false) AS f#36]
+    +- Relation [id#9,arr#10,_extension#11] parquet
+  optimized:
+    Aggregate [id#9], [id#9, first(transform(arr#10, lambdafunction(_extension#11[lambda x_4#40._fid], lambda x_4#40, false)), false) AS f#36]
+    +- Relation [id#9,arr#10,_extension#11] parquet
+  [force-unary] child=CreateNamedStruct resolved=true
+  [force] left=NamedLambdaVariable resolved=true right=SpikeResolveOrNull resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V1 colRegex | present | Sort
+  FAIL ExtendedAnalysisException: [INVALID_USAGE_OF_STAR_OR_REGEX] Invalid usage of regular expression '^_extension$' in Sort. SQLSTATE: 42000;
+
+==== V1 colRegex | present | Generate (explode in select)
+  OK rows=[1,ArraySeq(urn:x)] [1,null] [2,null]
+  schema=struct<id:int,e:array<string>>
+  analyzed:
+    Project [id#9, e#58]
+    +- Generate explode(transform(arr#10, lambdafunction(spikebinary(lambda x_6#57, spikeresolveornull(struct(_extension, _extension#11), _extension, MapType(IntegerType,ArrayType(StringType,true),true))), lambda x_6#57, false))), true, [e#58]
+       +- Relation [id#9,arr#10,_extension#11] parquet
+  optimized:
+    Generate explode(transform(arr#10, lambdafunction(_extension#11[lambda x_6#57._fid], lambda x_6#57, false))), [1, 2], true, [e#58]
+    +- Relation [id#9,arr#10,_extension#11] parquet
+  [force-unary] child=CreateNamedStruct resolved=true
+  [force] left=NamedLambdaVariable resolved=true right=SpikeResolveOrNull resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V1 colRegex | present | Join condition
+  FAIL ExtendedAnalysisException: [INVALID_USAGE_OF_STAR_OR_REGEX] Invalid usage of regular expression '^_extension$' in Join. SQLSTATE: 42000;
+
+==== V1 colRegex | absent | Project
+  OK rows=[1,ArraySeq(null, null)] [2,ArraySeq(null)]
+  schema=struct<id:int,v:array<array<string>>>
+  analyzed:
+    Project [id#65, transform(arr#66, lambdafunction(spikebinary(lambda x_8#68, spikeresolveornull(struct(), _extension, MapType(IntegerType,ArrayType(StringType,true),true))), lambda x_8#68, false)) AS v#67]
+    +- Relation [id#65,arr#66] parquet
+  optimized:
+    Project [id#65, transform(arr#66, lambdafunction(null, lambda x_8#68, false)) AS v#67]
+    +- Relation [id#65,arr#66] parquet
+  [force-unary] child=CreateNamedStruct resolved=true
+  [force] left=NamedLambdaVariable resolved=true right=SpikeResolveOrNull resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V1 colRegex | absent | Filter
+  OK rows=
+  schema=struct<id:int,arr:array<struct<_fid:int,v:string>>>
+  analyzed:
+    Filter exists(arr#66, lambdafunction(isnotnull(spikebinary(lambda x_9#75, spikeresolveornull(struct(), _extension, MapType(IntegerType,ArrayType(StringType,true),true)))), lambda x_9#75, false))
+    +- Relation [id#65,arr#66] parquet
+  optimized:
+    Filter exists(arr#66, lambdafunction(false, lambda x_9#75, false))
+    +- Relation [id#65,arr#66] parquet
+  [force-unary] child=CreateNamedStruct resolved=true
+  [force] left=NamedLambdaVariable resolved=true right=SpikeResolveOrNull resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V1 colRegex | absent | Aggregate key
+  FAIL ExtendedAnalysisException: [INVALID_USAGE_OF_STAR_OR_REGEX] Invalid usage of regular expression '^_extension$' in Aggregate. SQLSTATE: 42000;
+  [force-unary] child=CreateNamedStruct resolved=true
+  [force] left=NamedLambdaVariable resolved=true right=SpikeResolveOrNull resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V1 colRegex | absent | Aggregate value
+  OK rows=[1,ArraySeq(null, null)] [2,ArraySeq(null)]
+  schema=struct<id:int,f:array<array<string>>>
+  analyzed:
+    Aggregate [id#65], [id#65, first(transform(arr#66, lambdafunction(spikebinary(lambda x_11#91, spikeresolveornull(struct(), _extension, MapType(IntegerType,ArrayType(StringType,true),true))), lambda x_11#91, false)), false) AS f#88]
+    +- Relation [id#65,arr#66] parquet
+  optimized:
+    Aggregate [id#65], [id#65, first(transform(arr#66, lambdafunction(null, lambda x_11#91, false)), false) AS f#88]
+    +- Relation [id#65,arr#66] parquet
+  [force-unary] child=CreateNamedStruct resolved=true
+  [force] left=NamedLambdaVariable resolved=true right=SpikeResolveOrNull resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V1 colRegex | absent | Sort
+  FAIL ExtendedAnalysisException: [INVALID_USAGE_OF_STAR_OR_REGEX] Invalid usage of regular expression '^_extension$' in Sort. SQLSTATE: 42000;
+
+==== V1 colRegex | absent | Generate (explode in select)
+  OK rows=[1,null] [1,null] [2,null]
+  schema=struct<id:int,e:array<string>>
+  analyzed:
+    Project [id#65, e#109]
+    +- Generate explode(transform(arr#66, lambdafunction(spikebinary(lambda x_13#108, spikeresolveornull(struct(), _extension, MapType(IntegerType,ArrayType(StringType,true),true))), lambda x_13#108, false))), true, [e#109]
+       +- Relation [id#65,arr#66] parquet
+  optimized:
+    Generate explode(transform(arr#66, lambdafunction(null, lambda x_13#108, false))), [1], true, [e#109]
+    +- Relation [id#65,arr#66] parquet
+  [force-unary] child=CreateNamedStruct resolved=true
+  [force] left=NamedLambdaVariable resolved=true right=SpikeResolveOrNull resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V1 colRegex | absent | Join condition
+  FAIL ExtendedAnalysisException: [INVALID_USAGE_OF_STAR_OR_REGEX] Invalid usage of regular expression '^_extension$' in Join. SQLSTATE: 42000;
+
+==== V2 customStar | present | Project
+  OK rows=[1,ArraySeq(ArraySeq(urn:x), null)] [2,ArraySeq(null)]
+  schema=struct<id:int,v:array<array<string>>>
+  analyzed:
+    Project [id#116, transform(arr#117, lambdafunction(spikebinary(lambda x_15#120, named_struct(_extension, _extension#118)._extension), lambda x_15#120, false)) AS v#119]
+    +- Relation [id#116,arr#117,_extension#118] parquet
+  optimized:
+    Project [id#116, transform(arr#117, lambdafunction(_extension#118[lambda x_15#120._fid], lambda x_15#120, false)) AS v#119]
+    +- Relation [id#116,arr#117,_extension#118] parquet
+  [force] left=NamedLambdaVariable resolved=true right=GetStructField resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V2 customStar | present | Filter
+  OK rows=[1,ArraySeq([10,a], [11,b]),Map(10 -> ArraySeq(urn:x))]
+  schema=struct<id:int,arr:array<struct<_fid:int,v:string>>,_extension:map<int,array<string>>>
+  analyzed:
+    Filter exists(arr#117, lambdafunction(isnotnull(spikebinary(lambda x_16#127, named_struct(_extension, _extension#118)._extension)), lambda x_16#127, false))
+    +- Relation [id#116,arr#117,_extension#118] parquet
+  optimized:
+    Filter exists(arr#117, lambdafunction(isnotnull(_extension#118[lambda x_16#127._fid]), lambda x_16#127, false))
+    +- Relation [id#116,arr#117,_extension#118] parquet
+  [force] left=NamedLambdaVariable resolved=true right=GetStructField resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V2 customStar | present | Aggregate key
+  FAIL ExtendedAnalysisException: [INVALID_USAGE_OF_STAR_OR_REGEX] Invalid usage of '*' in Aggregate. SQLSTATE: 42000;
+  [force] left=NamedLambdaVariable resolved=true right=GetStructField resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V2 customStar | present | Aggregate value
+  OK rows=[1,ArraySeq(ArraySeq(urn:x), null)] [2,ArraySeq(null)]
+  schema=struct<id:int,f:array<array<string>>>
+  analyzed:
+    Aggregate [id#116], [id#116, first(transform(arr#117, lambdafunction(spikebinary(lambda x_18#147, named_struct(_extension, _extension#118)._extension), lambda x_18#147, false)), false) AS f#143]
+    +- Relation [id#116,arr#117,_extension#118] parquet
+  optimized:
+    Aggregate [id#116], [id#116, first(transform(arr#117, lambdafunction(_extension#118[lambda x_18#147._fid], lambda x_18#147, false)), false) AS f#143]
+    +- Relation [id#116,arr#117,_extension#118] parquet
+  [force] left=NamedLambdaVariable resolved=true right=GetStructField resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V2 customStar | present | Sort
+  FAIL ExtendedAnalysisException: [INVALID_USAGE_OF_STAR_OR_REGEX] Invalid usage of '*' in Sort. SQLSTATE: 42000;
+
+==== V2 customStar | present | Generate (explode in select)
+  OK rows=[1,ArraySeq(urn:x)] [1,null] [2,null]
+  schema=struct<id:int,e:array<string>>
+  analyzed:
+    Project [id#116, e#165]
+    +- Generate explode(transform(arr#117, lambdafunction(spikebinary(lambda x_20#164, named_struct(_extension, _extension#118)._extension), lambda x_20#164, false))), true, [e#165]
+       +- Relation [id#116,arr#117,_extension#118] parquet
+  optimized:
+    Generate explode(transform(arr#117, lambdafunction(_extension#118[lambda x_20#164._fid], lambda x_20#164, false))), [1, 2], true, [e#165]
+    +- Relation [id#116,arr#117,_extension#118] parquet
+  [force] left=NamedLambdaVariable resolved=true right=GetStructField resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V2 customStar | present | Join condition
+  FAIL ExtendedAnalysisException: [INVALID_USAGE_OF_STAR_OR_REGEX] Invalid usage of '*' in Join. SQLSTATE: 42000;
+
+==== V2 customStar | absent | Project
+  OK rows=[1,ArraySeq(null, null)] [2,ArraySeq(null)]
+  schema=struct<id:int,v:array<array<string>>>
+  analyzed:
+    Project [id#172, transform(arr#173, lambdafunction(spikebinary(lambda x_22#176, named_struct(_extension, null)._extension), lambda x_22#176, false)) AS v#174]
+    +- Relation [id#172,arr#173] parquet
+  optimized:
+    Project [id#172, transform(arr#173, lambdafunction(null, lambda x_22#176, false)) AS v#174]
+    +- Relation [id#172,arr#173] parquet
+  [force] left=NamedLambdaVariable resolved=true right=GetStructField resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V2 customStar | absent | Filter
+  OK rows=
+  schema=struct<id:int,arr:array<struct<_fid:int,v:string>>>
+  analyzed:
+    Filter exists(arr#173, lambdafunction(isnotnull(spikebinary(lambda x_23#184, named_struct(_extension, null)._extension)), lambda x_23#184, false))
+    +- Relation [id#172,arr#173] parquet
+  optimized:
+    Filter exists(arr#173, lambdafunction(false, lambda x_23#184, false))
+    +- Relation [id#172,arr#173] parquet
+  [force] left=NamedLambdaVariable resolved=true right=GetStructField resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V2 customStar | absent | Aggregate key
+  FAIL ExtendedAnalysisException: [INVALID_USAGE_OF_STAR_OR_REGEX] Invalid usage of '*' in Aggregate. SQLSTATE: 42000;
+  [force] left=NamedLambdaVariable resolved=true right=GetStructField resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V2 customStar | absent | Aggregate value
+  OK rows=[1,ArraySeq(null, null)] [2,ArraySeq(null)]
+  schema=struct<id:int,f:array<array<string>>>
+  analyzed:
+    Aggregate [id#172], [id#172, first(transform(arr#173, lambdafunction(spikebinary(lambda x_25#202, named_struct(_extension, null)._extension), lambda x_25#202, false)), false) AS f#198]
+    +- Relation [id#172,arr#173] parquet
+  optimized:
+    Aggregate [id#172], [id#172, first(transform(arr#173, lambdafunction(null, lambda x_25#202, false)), false) AS f#198]
+    +- Relation [id#172,arr#173] parquet
+  [force] left=NamedLambdaVariable resolved=true right=GetStructField resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V2 customStar | absent | Sort
+  FAIL ExtendedAnalysisException: [INVALID_USAGE_OF_STAR_OR_REGEX] Invalid usage of '*' in Sort. SQLSTATE: 42000;
+
+==== V2 customStar | absent | Generate (explode in select)
+  OK rows=[1,null] [1,null] [2,null]
+  schema=struct<id:int,e:array<string>>
+  analyzed:
+    Project [id#172, e#221]
+    +- Generate explode(transform(arr#173, lambdafunction(spikebinary(lambda x_27#220, named_struct(_extension, null)._extension), lambda x_27#220, false))), true, [e#221]
+       +- Relation [id#172,arr#173] parquet
+  optimized:
+    Generate explode(transform(arr#173, lambdafunction(null, lambda x_27#220, false))), [1], true, [e#221]
+    +- Relation [id#172,arr#173] parquet
+  [force] left=NamedLambdaVariable resolved=true right=GetStructField resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V2 customStar | absent | Join condition
+  FAIL ExtendedAnalysisException: [INVALID_USAGE_OF_STAR_OR_REGEX] Invalid usage of '*' in Join. SQLSTATE: 42000;
+
+==== V3 viewColumnCatch | present | Project
+  OK rows=[1,ArraySeq(ArraySeq(urn:x), null)] [2,ArraySeq(null)]
+  schema=struct<id:int,v:array<array<string>>>
+  analyzed:
+    Project [id#228, transform(arr#229, lambdafunction(spikebinary(lambda x_29#232, _extension#230), lambda x_29#232, false)) AS v#231]
+    +- Relation [id#228,arr#229,_extension#230] parquet
+  optimized:
+    Project [id#228, transform(arr#229, lambdafunction(_extension#230[lambda x_29#232._fid], lambda x_29#232, false)) AS v#231]
+    +- Relation [id#228,arr#229,_extension#230] parquet
+  [force] left=NamedLambdaVariable resolved=true right=AttributeReference resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V3 viewColumnCatch | present | Filter
+  OK rows=[1,ArraySeq([10,a], [11,b]),Map(10 -> ArraySeq(urn:x))]
+  schema=struct<id:int,arr:array<struct<_fid:int,v:string>>,_extension:map<int,array<string>>>
+  analyzed:
+    Filter exists(arr#229, lambdafunction(isnotnull(spikebinary(lambda x_30#239, _extension#230)), lambda x_30#239, false))
+    +- Relation [id#228,arr#229,_extension#230] parquet
+  optimized:
+    Filter exists(arr#229, lambdafunction(isnotnull(_extension#230[lambda x_30#239._fid]), lambda x_30#239, false))
+    +- Relation [id#228,arr#229,_extension#230] parquet
+  [force] left=NamedLambdaVariable resolved=true right=AttributeReference resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V3 viewColumnCatch | present | Aggregate key
+  OK rows=[ArraySeq(ArraySeq(urn:x), null),1] [ArraySeq(null),1]
+  schema=struct<g:array<array<string>>,count:bigint>
+  analyzed:
+    Aggregate [transform(arr#229, lambdafunction(spikebinary(lambda x_31#253, _extension#230), lambda x_31#253, false))], [transform(arr#229, lambdafunction(spikebinary(lambda x_31#254, _extension#230), lambda x_31#254, false)) AS g#247, count(1) AS count#248L]
+    +- Relation [id#228,arr#229,_extension#230] parquet
+  optimized:
+    Aggregate [_groupingexpression#255], [_groupingexpression#255 AS g#247, count(1) AS count#248L]
+    +- Project [transform(arr#229, lambdafunction(_extension#230[lambda x_31#253._fid], lambda x_31#253, false)) AS _groupingexpression#255]
+       +- Relation [id#228,arr#229,_extension#230] parquet
+  [force] left=NamedLambdaVariable resolved=true right=AttributeReference resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V3 viewColumnCatch | present | Aggregate value
+  OK rows=[1,ArraySeq(ArraySeq(urn:x), null)] [2,ArraySeq(null)]
+  schema=struct<id:int,f:array<array<string>>>
+  analyzed:
+    Aggregate [id#228], [id#228, first(transform(arr#229, lambdafunction(spikebinary(lambda x_32#267, _extension#230), lambda x_32#267, false)), false) AS f#263]
+    +- Relation [id#228,arr#229,_extension#230] parquet
+  optimized:
+    Aggregate [id#228], [id#228, first(transform(arr#229, lambdafunction(_extension#230[lambda x_32#267._fid], lambda x_32#267, false)), false) AS f#263]
+    +- Relation [id#228,arr#229,_extension#230] parquet
+  [force] left=NamedLambdaVariable resolved=true right=AttributeReference resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V3 viewColumnCatch | present | Sort
+  OK rows=[1,ArraySeq([10,a], [11,b]),Map(10 -> ArraySeq(urn:x))] [2,ArraySeq([20,c]),null]
+  schema=struct<id:int,arr:array<struct<_fid:int,v:string>>,_extension:map<int,array<string>>>
+  analyzed:
+    Sort [size(transform(arr#229, lambdafunction(spikebinary(lambda x_33#282, _extension#230), lambda x_33#282, false)), false) ASC NULLS FIRST], true
+    +- Relation [id#228,arr#229,_extension#230] parquet
+  optimized:
+    Sort [size(transform(arr#229, lambdafunction(_extension#230[lambda x_33#282._fid], lambda x_33#282, false)), false) ASC NULLS FIRST], true
+    +- Relation [id#228,arr#229,_extension#230] parquet
+  [force] left=NamedLambdaVariable resolved=true right=AttributeReference resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V3 viewColumnCatch | present | Generate (explode in select)
+  OK rows=[1,ArraySeq(urn:x)] [1,null] [2,null]
+  schema=struct<id:int,e:array<string>>
+  analyzed:
+    Project [id#228, e#292]
+    +- Generate explode(transform(arr#229, lambdafunction(spikebinary(lambda x_34#291, _extension#230), lambda x_34#291, false))), true, [e#292]
+       +- Relation [id#228,arr#229,_extension#230] parquet
+  optimized:
+    Generate explode(transform(arr#229, lambdafunction(_extension#230[lambda x_34#291._fid], lambda x_34#291, false))), [1, 2], true, [e#292]
+    +- Relation [id#228,arr#229,_extension#230] parquet
+  [force] left=NamedLambdaVariable resolved=true right=AttributeReference resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V3 viewColumnCatch | present | Join condition
+  FAIL SparkException: [INTERNAL_ERROR] The Spark SQL phase analysis failed with an internal error. You hit a bug in Spark or the Spark plugins you use. Please, report this bug to the corresponding communities or vendors, and provide the full 
+
+==== V3 viewColumnCatch | absent | Project
+  OK rows=[1,ArraySeq(null, null)] [2,ArraySeq(null)]
+  schema=struct<id:int,v:array<array<string>>>
+  analyzed:
+    Project [id#299, transform(arr#300, lambdafunction(spikebinary(lambda x_36#302, null), lambda x_36#302, false)) AS v#301]
+    +- Relation [id#299,arr#300] parquet
+  optimized:
+    Project [id#299, transform(arr#300, lambdafunction(null, lambda x_36#302, false)) AS v#301]
+    +- Relation [id#299,arr#300] parquet
+  [catch] fell back: [INCOMPATIBLE_VIEW_SCHEMA_CHANGE] The SQL query of view spike has an incompatible schema change and column _extension ca
+  [force] left=NamedLambdaVariable resolved=true right=Literal resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V3 viewColumnCatch | absent | Filter
+  OK rows=
+  schema=struct<id:int,arr:array<struct<_fid:int,v:string>>>
+  analyzed:
+    Filter exists(arr#300, lambdafunction(isnotnull(spikebinary(lambda x_37#309, null)), lambda x_37#309, false))
+    +- Relation [id#299,arr#300] parquet
+  optimized:
+    Filter exists(arr#300, lambdafunction(false, lambda x_37#309, false))
+    +- Relation [id#299,arr#300] parquet
+  [catch] fell back: [INCOMPATIBLE_VIEW_SCHEMA_CHANGE] The SQL query of view spike has an incompatible schema change and column _extension ca
+  [force] left=NamedLambdaVariable resolved=true right=Literal resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V3 viewColumnCatch | absent | Aggregate key
+  OK rows=[ArraySeq(null),1] [ArraySeq(null, null),1]
+  schema=struct<g:array<array<string>>,count:bigint>
+  analyzed:
+    Aggregate [transform(arr#300, lambdafunction(spikebinary(lambda x_38#320, null), lambda x_38#320, false))], [transform(arr#300, lambdafunction(spikebinary(lambda x_38#321, null), lambda x_38#321, false)) AS g#315, count(1) AS count#316L]
+    +- Relation [id#299,arr#300] parquet
+  optimized:
+    Aggregate [_groupingexpression#322], [_groupingexpression#322 AS g#315, count(1) AS count#316L]
+    +- Project [transform(arr#300, lambdafunction(null, lambda x_38#320, false)) AS _groupingexpression#322]
+       +- Relation [id#299,arr#300] parquet
+  [catch] fell back: [INCOMPATIBLE_VIEW_SCHEMA_CHANGE] The SQL query of view spike has an incompatible schema change and column _extension ca
+  [force] left=NamedLambdaVariable resolved=true right=Literal resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V3 viewColumnCatch | absent | Aggregate value
+  OK rows=[1,ArraySeq(null, null)] [2,ArraySeq(null)]
+  schema=struct<id:int,f:array<array<string>>>
+  analyzed:
+    Aggregate [id#299], [id#299, first(transform(arr#300, lambdafunction(spikebinary(lambda x_39#333, null), lambda x_39#333, false)), false) AS f#330]
+    +- Relation [id#299,arr#300] parquet
+  optimized:
+    Aggregate [id#299], [id#299, first(transform(arr#300, lambdafunction(null, lambda x_39#333, false)), false) AS f#330]
+    +- Relation [id#299,arr#300] parquet
+  [catch] fell back: [INCOMPATIBLE_VIEW_SCHEMA_CHANGE] The SQL query of view spike has an incompatible schema change and column _extension ca
+  [force] left=NamedLambdaVariable resolved=true right=Literal resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V3 viewColumnCatch | absent | Sort
+  OK rows=[1,ArraySeq([10,a], [11,b])] [2,ArraySeq([20,c])]
+  schema=struct<id:int,arr:array<struct<_fid:int,v:string>>>
+  analyzed:
+    Sort [size(transform(arr#300, lambdafunction(spikebinary(lambda x_40#348, null), lambda x_40#348, false)), false) ASC NULLS FIRST], true
+    +- Relation [id#299,arr#300] parquet
+  optimized:
+    Sort [size(transform(arr#300, lambdafunction(null, lambda x_40#348, false)), false) ASC NULLS FIRST], true
+    +- Relation [id#299,arr#300] parquet
+  [catch] fell back: [INCOMPATIBLE_VIEW_SCHEMA_CHANGE] The SQL query of view spike has an incompatible schema change and column _extension ca
+  [force] left=NamedLambdaVariable resolved=true right=Literal resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V3 viewColumnCatch | absent | Generate (explode in select)
+  OK rows=[1,null] [1,null] [2,null]
+  schema=struct<id:int,e:array<string>>
+  analyzed:
+    Project [id#299, e#356]
+    +- Generate explode(transform(arr#300, lambdafunction(spikebinary(lambda x_41#355, null), lambda x_41#355, false))), true, [e#356]
+       +- Relation [id#299,arr#300] parquet
+  optimized:
+    Generate explode(transform(arr#300, lambdafunction(null, lambda x_41#355, false))), [1], true, [e#356]
+    +- Relation [id#299,arr#300] parquet
+  [catch] fell back: [INCOMPATIBLE_VIEW_SCHEMA_CHANGE] The SQL query of view spike has an incompatible schema change and column _extension ca
+  [force] left=NamedLambdaVariable resolved=true right=Literal resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V3 viewColumnCatch | absent | Join condition
+  FAIL SparkException: [INTERNAL_ERROR] The Spark SQL phase analysis failed with an internal error. You hit a bug in Spark or the Spark plugins you use. Please, report this bug to the corresponding communities or vendors, and provide the full 
+
+==== V0 plain col (control) | present | Project
+  OK rows=[1,ArraySeq(ArraySeq(urn:x), null)] [2,ArraySeq(null)]
+  schema=struct<id:int,v:array<array<string>>>
+  analyzed:
+    Project [id#363, transform(arr#364, lambdafunction(spikebinary(lambda x_43#367, _extension#365), lambda x_43#367, false)) AS v#366]
+    +- Relation [id#363,arr#364,_extension#365] parquet
+  optimized:
+    Project [id#363, transform(arr#364, lambdafunction(_extension#365[lambda x_43#367._fid], lambda x_43#367, false)) AS v#366]
+    +- Relation [id#363,arr#364,_extension#365] parquet
+  [force] left=NamedLambdaVariable resolved=true right=AttributeReference resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V0 plain col (control) | present | Filter
+  OK rows=[1,ArraySeq([10,a], [11,b]),Map(10 -> ArraySeq(urn:x))]
+  schema=struct<id:int,arr:array<struct<_fid:int,v:string>>,_extension:map<int,array<string>>>
+  analyzed:
+    Filter exists(arr#364, lambdafunction(isnotnull(spikebinary(lambda x_44#374, _extension#365)), lambda x_44#374, false))
+    +- Relation [id#363,arr#364,_extension#365] parquet
+  optimized:
+    Filter exists(arr#364, lambdafunction(isnotnull(_extension#365[lambda x_44#374._fid]), lambda x_44#374, false))
+    +- Relation [id#363,arr#364,_extension#365] parquet
+  [force] left=NamedLambdaVariable resolved=true right=AttributeReference resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V0 plain col (control) | present | Aggregate key
+  OK rows=[ArraySeq(ArraySeq(urn:x), null),1] [ArraySeq(null),1]
+  schema=struct<g:array<array<string>>,count:bigint>
+  analyzed:
+    Aggregate [transform(arr#364, lambdafunction(spikebinary(lambda x_45#388, _extension#365), lambda x_45#388, false))], [transform(arr#364, lambdafunction(spikebinary(lambda x_45#389, _extension#365), lambda x_45#389, false)) AS g#382, count(1) AS count#383L]
+    +- Relation [id#363,arr#364,_extension#365] parquet
+  optimized:
+    Aggregate [_groupingexpression#390], [_groupingexpression#390 AS g#382, count(1) AS count#383L]
+    +- Project [transform(arr#364, lambdafunction(_extension#365[lambda x_45#388._fid], lambda x_45#388, false)) AS _groupingexpression#390]
+       +- Relation [id#363,arr#364,_extension#365] parquet
+  [force] left=NamedLambdaVariable resolved=true right=AttributeReference resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V0 plain col (control) | present | Aggregate value
+  OK rows=[1,ArraySeq(ArraySeq(urn:x), null)] [2,ArraySeq(null)]
+  schema=struct<id:int,f:array<array<string>>>
+  analyzed:
+    Aggregate [id#363], [id#363, first(transform(arr#364, lambdafunction(spikebinary(lambda x_46#402, _extension#365), lambda x_46#402, false)), false) AS f#398]
+    +- Relation [id#363,arr#364,_extension#365] parquet
+  optimized:
+    Aggregate [id#363], [id#363, first(transform(arr#364, lambdafunction(_extension#365[lambda x_46#402._fid], lambda x_46#402, false)), false) AS f#398]
+    +- Relation [id#363,arr#364,_extension#365] parquet
+  [force] left=NamedLambdaVariable resolved=true right=AttributeReference resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V0 plain col (control) | present | Sort
+  OK rows=[1,ArraySeq([10,a], [11,b]),Map(10 -> ArraySeq(urn:x))] [2,ArraySeq([20,c]),null]
+  schema=struct<id:int,arr:array<struct<_fid:int,v:string>>,_extension:map<int,array<string>>>
+  analyzed:
+    Sort [size(transform(arr#364, lambdafunction(spikebinary(lambda x_47#417, _extension#365), lambda x_47#417, false)), false) ASC NULLS FIRST], true
+    +- Relation [id#363,arr#364,_extension#365] parquet
+  optimized:
+    Sort [size(transform(arr#364, lambdafunction(_extension#365[lambda x_47#417._fid], lambda x_47#417, false)), false) ASC NULLS FIRST], true
+    +- Relation [id#363,arr#364,_extension#365] parquet
+  [force] left=NamedLambdaVariable resolved=true right=AttributeReference resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V0 plain col (control) | present | Generate (explode in select)
+  OK rows=[1,ArraySeq(urn:x)] [1,null] [2,null]
+  schema=struct<id:int,e:array<string>>
+  analyzed:
+    Project [id#363, e#427]
+    +- Generate explode(transform(arr#364, lambdafunction(spikebinary(lambda x_48#426, _extension#365), lambda x_48#426, false))), true, [e#427]
+       +- Relation [id#363,arr#364,_extension#365] parquet
+  optimized:
+    Generate explode(transform(arr#364, lambdafunction(_extension#365[lambda x_48#426._fid], lambda x_48#426, false))), [1, 2], true, [e#427]
+    +- Relation [id#363,arr#364,_extension#365] parquet
+  [force] left=NamedLambdaVariable resolved=true right=AttributeReference resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V0 plain col (control) | present | Join condition
+  OK rows=
+  schema=struct<id:int,arr:array<struct<_fid:int,v:string>>,_extension:map<int,array<string>>,k:int>
+  analyzed:
+    Join Inner, (coalesce(size(flatten(transform(arr#364, lambdafunction(spikebinary(lambda x_49#433, _extension#365), lambda x_49#433, false))), false), -1) >= k#8)
+    :- Relation [id#363,arr#364,_extension#365] parquet
+    +- Relation [k#8] parquet
+  optimized:
+    Join Inner, (coalesce(size(flatten(transform(arr#364, lambdafunction(_extension#365[lambda x_49#433._fid], lambda x_49#433, false))), false), -1) >= k#8)
+    :- Relation [id#363,arr#364,_extension#365] parquet
+    +- Filter isnotnull(k#8)
+       +- Relation [k#8] parquet
+  [force] left=NamedLambdaVariable resolved=true right=AttributeReference resolved=true rightType=Some(MapType(IntegerType,ArrayType(StringType,true),true))
+==== V0 plain col (control) | absent | Project
+  FAIL ExtendedAnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `_extension` cannot be resolved. Did you mean one of the following? [`id`, `arr`]. SQLSTATE: 42703;
+
+==== V0 plain col (control) | absent | Filter
+  FAIL ExtendedAnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `_extension` cannot be resolved. Did you mean one of the following? [`id`, `arr`]. SQLSTATE: 42703;
+
+==== V0 plain col (control) | absent | Aggregate key
+  FAIL ExtendedAnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `_extension` cannot be resolved. Did you mean one of the following? [`id`, `arr`]. SQLSTATE: 42703;
+
+==== V0 plain col (control) | absent | Aggregate value
+  FAIL ExtendedAnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `_extension` cannot be resolved. Did you mean one of the following? [`id`, `arr`]. SQLSTATE: 42703;
+
+==== V0 plain col (control) | absent | Sort
+  FAIL ExtendedAnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `_extension` cannot be resolved. Did you mean one of the following? [`id`, `arr`]. SQLSTATE: 42703;
+
+==== V0 plain col (control) | absent | Generate (explode in select)
+  FAIL ExtendedAnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `_extension` cannot be resolved. Did you mean one of the following? [`id`, `arr`]. SQLSTATE: 42703;
+
+==== V0 plain col (control) | absent | Join condition
+  FAIL ExtendedAnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `_extension` cannot be resolved. Did you mean one of the following? [`id`, `arr`, `k`]. SQLSTATE: 42703;
+
+==== V3 join cause
+  org.apache.spark.SparkException: [INTERNAL_ERROR] The Spark SQL phase analysis failed with an internal error. You hit a bug in Spark or the Spark plugins you use. Please, report this bug to the <- java.lang.AssertionError: assertion failed
+==== V3 ambiguous (self-join, two _extension columns)
+  OK rows=[null] [null]
+==== V0 ambiguous (self-join, two _extension columns)
+  FAIL [AMBIGUOUS_REFERENCE] Reference `_extension` is ambiguous, could be: [`l`.`_extension`, `r`.`_extension`]. SQLSTATE: 42704

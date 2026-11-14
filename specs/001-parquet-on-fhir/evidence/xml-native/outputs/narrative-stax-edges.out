@@ -1,0 +1,29 @@
+StAX input:  com.ctc.wstx.stax.WstxInputFactory
+StAX output: com.ctc.wstx.stax.WstxOutputFactory
+plain                                      narratives=1  L2 equal
+      captured: <div xmlns="http://www.w3.org/1999/xhtml"><p>Jane Smith</p></div>
+escaped text, comment, attribute           narratives=1  L2 equal
+      captured: <div xmlns="http://www.w3.org/1999/xhtml" lang="en"><p>Jane &lt;Smith> &amp; co</p><!-- c --></div>
+nested divs                                narratives=1  L2 equal
+      captured: <div xmlns="http://www.w3.org/1999/xhtml"><div><p>a</p></div><div>b</div></div>
+whitespace before </text>                  narratives=1  L2 equal
+      captured: <div xmlns="http://www.w3.org/1999/xhtml">a</div>
+comment before </text>                     narratives=1  L2 equal
+      captured: <div xmlns="http://www.w3.org/1999/xhtml">a</div>
+prefixed XHTML                             narratives=1  L2 equal
+      captured: <h:div xmlns:h="http://www.w3.org/1999/xhtml"><h:p>a &amp; b</h:p></h:div>
+prefix declared on the root                narratives=1  L2 equal
+      captured: <h:div xmlns:h="http://www.w3.org/1999/xhtml"><h:p>a</h:p></h:div>
+CDATA holding </div></text>                narratives=1  L2 equal
+      captured: <div xmlns="http://www.w3.org/1999/xhtml"><pre><![CDATA[</div></text>]]></pre></div>
+char refs, newline, tab, quote             narratives=1  L2 equal
+      captured: <div xmlns="http://www.w3.org/1999/xhtml">\n\t<p class="x">© "q" 1 &lt; 2 😀</p>\n</div>
+narrative contains value="@@"              narratives=1  L2 equal
+      captured: <div xmlns="http://www.w3.org/1999/xhtml"><p title="@@NARRATIVE0@@">a</p></div>
+contained resource with a narrative        narratives=0  L2 equal  [narrative of a contained resource left as it was]
+Bundle with two narratives                 narratives=2  L2 equal
+      captured: <div xmlns="http://www.w3.org/1999/xhtml"><p>one</p></div>
+      captured: <div xmlns="http://www.w3.org/1999/xhtml"><p>two &amp; 2</p></div>
+text of an Annotation is not a narrative   narratives=0  L2 equal
+no narrative                               narratives=0  L2 equal
+ALL EDGE CASES L2 EQUAL

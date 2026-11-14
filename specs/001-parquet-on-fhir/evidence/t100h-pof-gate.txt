@@ -1,0 +1,81 @@
+# T100h probe transcripts, at d3b7cb4ff1. See t100h-pof-gate.md.
+
+## TraceProbe
+== plan roots
+previous-local: LocalRelation
+pof: Project [resourceType#116, id#114, active#113, transform(name#115, lambdafunction(CASE WHEN isnotnull(lambda x_1#124) THEN struct(use, lambda x_1#124.use, family, lambda x_1#124.family, given, transform(lambda x_1#124.given, lambdafunction(lambda x_2#125, lambda x_2#125, false))) END, lambda x_1#124, false)) AS name#123]
++- LogicalRDD [active#113, id#114, name#115, resourceType#116], false
+
+== Java serialisation of ListTraceCollector
+failed: java.io.NotSerializableException: au.csiro.pathling.fhirpath.ListTraceCollector
+== SingleInstanceEvaluator trace counts (label t)
+previous-local | 'a'.trace('t') | entries=1
+previous-local | 'a'.trace('t') = 1 | entries=1
+previous-local | 'a' = 1.trace('t') | entries=1
+previous-local | 'a'.trace('t') = 'a' | entries=1
+previous-local | Patient.name.family.first().trace('t') = 'Smith' | entries=1
+previous-parquet | 'a'.trace('t') | entries=1
+previous-parquet | 'a'.trace('t') = 1 | entries=0
+previous-parquet | 'a' = 1.trace('t') | entries=0
+previous-parquet | 'a'.trace('t') = 'a' | entries=1
+previous-parquet | Patient.name.family.first().trace('t') = 'Smith' | entries=1
+pof | 'a'.trace('t') | entries=1
+pof | 'a'.trace('t') = 1 | entries=0
+pof | 'a' = 1.trace('t') | entries=0
+pof | 'a'.trace('t') = 'a' | entries=1
+pof | Patient.name.family.first().trace('t') = 'Smith' | entries=1
+== DatasetEvaluator with a raw and a proxied ListTraceCollector
+previous-local | proxied=false | ok, entries=1 types=[HumanName]
+previous-local | proxied=true | ok, entries=1 types=[HumanName]
+previous-parquet | proxied=false | FAILED org.apache.spark.SparkException: Task not serializable / root java.io.NotSerializableException: au.csiro.pathling.fhirpath.ListTraceCollector
+previous-parquet | proxied=true | ok, entries=1 types=[HumanName]
+pof | proxied=false | FAILED org.apache.spark.SparkException: Task not serializable / root java.io.NotSerializableException: au.csiro.pathling.fhirpath.ListTraceCollector
+pof | proxied=true | ok, entries=1 types=[HumanName]
+
+## PlanProbe (plans truncated at 400 characters per line)
+---- analysed
+Project [id#26 AS id#105, CASE WHEN (isnull(trace(a, t, string, null)) OR isnull(1)) THEN cast(null as boolean) ELSE false END AS value#106]
++- LocalRelation [id#26, id_versioned#27, meta#28, implicitRules#29, language#30, text#31, identifier#32, active#33, name#34, telecom#35, gender#36, birthDate#37, deceasedBoolean#38, deceasedDateTime#39, address#40, maritalStatus#41, multipleBirthBoolean#42, multipleBirthInteger#43, photo#44, contact#45, communication#46, generalPractitioner#47, managingOrganization#48, link#49, _fid#50, ... 1 mor
+---- optimised
+[TRACE] a.csiro.pathling.sql.TraceExpression - [trace:t] "a"
+LocalRelation [id#105, value#106]
+---- analysed
+Project [id#79 AS id#107, CASE WHEN (isnull(trace(a, t, string, null)) OR isnull(1)) THEN cast(null as boolean) ELSE false END AS value#108]
++- Relation [id#79,id_versioned#80,meta#81,implicitRules#82,language#83,text#84,identifier#85,active#86,name#87,telecom#88,gender#89,birthDate#90,deceasedBoolean#91,deceasedDateTime#92,address#93,maritalStatus#94,multipleBirthBoolean#95,multipleBirthInteger#96,photo#97,contact#98,communication#99,generalPractitioner#100,managingOrganization#101,link#102,_fid#103,... 1 more fields] parquet
+---- optimised
+Project [id#79, false AS value#108]
++- Relation [id#79,id_versioned#80,meta#81,implicitRules#82,language#83,text#84,identifier#85,active#86,name#87,telecom#88,gender#89,birthDate#90,deceasedBoolean#91,deceasedDateTime#92,address#93,maritalStatus#94,multipleBirthBoolean#95,multipleBirthInteger#96,photo#97,contact#98,communication#99,generalPractitioner#100,managingOrganization#101,link#102,_fid#103,... 1 more fields] parquet
+
+## InstantProbe
+== previous stored issued type: TimestampType
+previous | issued | TimestampType | 2023-01-01 02:00:00.0
+previous | issued.toString() | StringType | 2023-01-01 02:00:00
+previous | issued = @2023-01-01T02:00:00Z | BooleanType | true
+previous | issued = @2023-01-01T12:00:00+10:00 | BooleanType | true
+previous | issued > @2023-01-01T01:30:00Z | BooleanType | true
+previous | issued < @2023-01-01T02:30:00Z | BooleanType | true
+previous | issued ~ @2023-01-01T02:00:00Z | ERROR au.csiro.pathling.errors.UnsupportedFhirPathFeatureError: Unsupported operator: ~
+previous | view untyped | TimestampType | 2023-01-01 02:00:00.0
+previous | view declared-instant | StringType | 2023-01-01 02:00:00
+previous | view ansi-ts | TimestampType | 2023-01-01 02:00:00.0
+previous | view ansi-ntz | TimestampNTZType | 2023-01-01T02:00
+== pof stored issued type: StringType
+pof | issued | StringType | 2023-01-01T12:00:00+10:00
+pof | issued.toString() | StringType | 2023-01-01T12:00:00+10:00
+pof | issued = @2023-01-01T02:00:00Z | BooleanType | true
+pof | issued = @2023-01-01T12:00:00+10:00 | BooleanType | true
+pof | issued > @2023-01-01T01:30:00Z | BooleanType | true
+pof | issued < @2023-01-01T02:30:00Z | BooleanType | true
+pof | issued ~ @2023-01-01T02:00:00Z | ERROR au.csiro.pathling.errors.UnsupportedFhirPathFeatureError: Unsupported operator: ~
+pof | view untyped | StringType | 2023-01-01T12:00:00+10:00
+pof | view declared-instant | StringType | 2023-01-01T12:00:00+10:00
+pof | view ansi-ts | TimestampType | 2023-01-01 02:00:00.0
+pof | view ansi-ntz | TimestampNTZType | 2023-01-01T12:00
+
+## SdProbe
+previous | ERROR au.csiro.pathling.encoders.UnsupportedResourceError: Encoding is not supported for resource: StructureDefinition
+pof | read 1 row(s)
+
+## SpelProbe
+previous -> true
+pof -> false

@@ -1,0 +1,162 @@
+file	resourceType	id	bytes	assignedId	corners	reasons
+account-example.json	Account	example	1160	False	array.complex;choice.period;date.day;meta;nesting.shallow;xhtml	type coverage: smallest example of Account
+activitydefinition-example.json	ActivityDefinition	referralPrimaryCareMentalHealth	9669	False	array.complex;base64;choice.codeableconcep;choice.date;choice.expression;choice.period;choice.reviewdate;choice.timing;date.day;datetime.full;extension;language;nesting.mid;primitive-metadata;unicode.non-ascii;xhtml	corner coverage: choice.expression, choice.reviewdate, choice.timing
+activitydefinition-supplyrequest-example.json	ActivityDefinition	blood-tubes-supply	1068	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of ActivityDefinition
+adverseevent-example.json	AdverseEvent	example	3578	False	array.complex;datetime.full;meta;nesting.mid;xhtml	type coverage: smallest example of AdverseEvent
+allergyintolerance-nka.json	AllergyIntolerance	nka	1223	False	array.complex;choice.date;datetime.full;meta;nesting.shallow;xhtml	type coverage: smallest example of AllergyIntolerance
+appointment-example2doctors.json	Appointment	2docs	2116	False	array.complex;base64;datetime.full;meta;nesting.mid;xhtml	type coverage: smallest example of Appointment
+appointmentresponse-example.json	AppointmentResponse	example	629	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of AppointmentResponse
+audit-event-example-pixQuery.json	AuditEvent	example-pixQuery	11162	False	array.complex;base64;choice.base64binary;choice.id;date.year;datetime.full;meta;nesting.mid;xhtml	corner coverage: choice.base64binary
+auditevent-example.json	AuditEvent	example	2951	False	array.complex;choice.id;date.year;datetime.full;meta;nesting.deep;xhtml	type coverage: smallest example of AuditEvent
+basic-example2.json	Basic	classModel	1660	False	array.complex;choice.integer;choice.string;extension;meta;nesting.mid;xhtml	type coverage: smallest example of Basic
+binary-f006.json	Binary	f006	35778	False	array.complex;base64;meta;nesting.shallow	type coverage: smallest example of Binary
+biologicallyderivedproduct-example.json	BiologicallyDerivedProduct	example	393	False	array.complex;base64;meta;nesting.shallow;xhtml	type coverage: smallest example of BiologicallyDerivedProduct
+bodystructure-example-fetus.json	BodyStructure	fetus	1427	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of BodyStructure
+bundle-example.json	Bundle	bundle-example	2300	False	array.complex;choice.reference;choice.url;date.year;datetime.full;meta;nesting.mid;xhtml	exclusion witness: a Bundle the round trip must refuse (FR-007)
+bundle-request-medsallergies.json	Bundle	bundle-request-medsallergies	966	False	array.complex;meta;nesting.shallow	exclusion witness: a Bundle the round trip must refuse (FR-007)
+bundle-transaction.json	Bundle	bundle-transaction	4911	False	array.complex;array.primitive;choice.coding;choice.date;choice.url;date.day;datetime.full;meta;nesting.mid;xhtml	exclusion witness: a Bundle the round trip must refuse (FR-007)
+capabilitystatement-messagedefinition.json	CapabilityStatement	messagedefinition	1642	False	array.complex;array.primitive;base64;date.day;meta;nesting.mid;xhtml	type coverage: smallest example of CapabilityStatement
+careplan-example-obesity-narrative.json	CarePlan	obesity-narrative	650	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of CarePlan
+careteam-example.json	CareTeam	example	1674	False	array.complex;array.primitive;contained;date.day;meta;nesting.mid;xhtml	type coverage: smallest example of CareTeam
+catalogentry-example.json	CatalogEntry	example	595	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of CatalogEntry
+chargeitem-example.json	ChargeItem	example	2732	False	array.complex;array.primitive;choice.date;choice.period;choice.reference;choice.uri;datetime.full;meta;nesting.mid;unicode.non-ascii;xhtml	type coverage: smallest example of ChargeItem
+chargeitemdefinition-ebm-example.json	ChargeItemDefinition	ebm	4660	False	array.complex;choice.period;date.day;language;nesting.deep;unicode.non-ascii;xhtml	type coverage: smallest example of ChargeItemDefinition
+claim-example-institutional-rich.json	Claim	960151	4275	False	array.complex;array.primitive;choice.address;choice.codeableconcep;choice.date;choice.period;date.day;decimal.trailing-zero;meta;nesting.mid;xhtml	corner coverage: choice.address
+claim-example-professional.json	Claim	860150	1897	False	array.complex;array.primitive;choice.codeableconcep;choice.date;date.day;decimal.trailing-zero;meta;nesting.mid;xhtml	type coverage: smallest example of Claim
+claimresponse-example-2.json	ClaimResponse	R3501	1832	False	array.complex;date.day;language;meta;nesting.mid;xhtml	type coverage: smallest example of ClaimResponse
+clinicalimpression-example.json	ClinicalImpression	example	3698	False	array.complex;choice.codeableconcep;choice.period;datetime.full;meta;nesting.mid;xhtml	type coverage: smallest example of ClinicalImpression
+codesystem-example-summary.json	CodeSystem	summary	1604	False	array.complex;choice.codeableconcep;nesting.mid;xhtml	type coverage: smallest example of CodeSystem
+communication-example.json	Communication	example	1646	False	array.complex;array.primitive;choice.reference;choice.string;choice.uri;datetime.full;meta;nesting.mid;xhtml	type coverage: smallest example of Communication
+communicationrequest-example.json	CommunicationRequest	example	528	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of CommunicationRequest
+compartmentdefinition-example.json	CompartmentDefinition	example	3612	False	array.complex;array.primitive;choice.codeableconcep;date.day;nesting.mid;xhtml	type coverage: smallest example of CompartmentDefinition
+composition-example-mixed.json	Composition	example-mixed	3964	False	array.complex;datetime.full;meta;nesting.mid;xhtml	type coverage: smallest example of Composition
+cm-address-type-v3.json	ConceptMap	cm-address-type-v3	2532	False	array.complex;choice.canonical;datetime.full;nesting.mid;xhtml	type coverage: smallest example of ConceptMap
+condition-example-family-history.json	Condition	family-history	1010	False	array.complex;meta;nesting.mid;xhtml	type coverage: smallest example of Condition
+consent-example.json	Consent	consent-example-basic	1490	False	array.complex;choice.attachment;choice.time;date.day;meta;nesting.mid;xhtml	type coverage: smallest example of Consent
+contract-example.json	Contract	C-123	1995	False	array.complex;choice.attachment;choice.bindingattachm;choice.codeableconcep;choice.time;date.day;date.year;decimal.trailing-zero;meta;nesting.deep;xhtml	type coverage: smallest example of Contract
+coverage-example-selfpay.json	Coverage	SP1234	984	False	array.complex;date.day;meta;nesting.shallow;xhtml	type coverage: smallest example of Coverage
+coverageeligibilityrequest-example.json	CoverageEligibilityRequest	52345	976	False	array.complex;array.primitive;base64;date.day;meta;nesting.shallow;xhtml	type coverage: smallest example of CoverageEligibilityRequest
+coverageeligibilityresponse-example-benefits-2.json	CoverageEligibilityResponse	E2502	7810	False	array.complex;array.primitive;base64;choice.money;choice.unsignedint;contained;date.day;decimal.trailing-zero;meta;nesting.deep;xhtml	corner coverage: choice.money, choice.unsignedint
+coverageeligibilityresponse-example.json	CoverageEligibilityResponse	E2500	1044	False	array.complex;array.primitive;base64;date.day;meta;nesting.shallow;xhtml	type coverage: smallest example of CoverageEligibilityResponse
+detectedissue-example-lab.json	DetectedIssue	lab	396	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of DetectedIssue
+device-example.json	Device	example	679	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of Device
+devicedefinition-example.json	DeviceDefinition	example	630	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of DeviceDefinition
+devicemetric-example.json	DeviceMetric	example	2935	False	array.complex;choice.period;datetime.full;meta;nesting.shallow;xhtml	type coverage: smallest example of DeviceMetric
+devicerequest-example.json	DeviceRequest	example	1026	False	array.complex;choice.reference;meta;nesting.shallow;xhtml	type coverage: smallest example of DeviceRequest
+deviceusestatement-example.json	DeviceUseStatement	example	1387	False	array.complex;choice.reference;meta;nesting.shallow;xhtml	type coverage: smallest example of DeviceUseStatement
+diagnosticreport-example-pgx.json	DiagnosticReport	example-pgx	2425	False	array.complex;base64;choice.datetime;datetime.full;language;meta;nesting.shallow;xhtml	type coverage: smallest example of DiagnosticReport
+documentmanifest-example.json	DocumentManifest	example	1558	False	array.complex;array.primitive;base64;choice.identifier;contained;datetime.full;meta;nesting.mid;xhtml	type coverage: smallest example of DocumentManifest
+documentreference-example.json	DocumentReference	example	8263	False	array.complex;array.primitive;base64;choice.identifier;contained;datetime.full;language;meta;nesting.mid;xhtml	type coverage: smallest example of DocumentReference
+effectevidencesynthesis-example.json	EffectEvidenceSynthesis	example	670	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of EffectEvidenceSynthesis
+encounter-example-f002-lung.json	Encounter	f002	4995	False	array.complex;choice.admissionident;meta;nesting.mid;xhtml	corner coverage: choice.admissionident
+encounter-example.json	Encounter	example	600	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of Encounter
+endpoint-example-iid.json	Endpoint	example-iid	734	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of Endpoint
+enrollmentrequest-example.json	EnrollmentRequest	22345	779	False	array.complex;date.day;meta;nesting.shallow;xhtml	type coverage: smallest example of EnrollmentRequest
+enrollmentresponse-example.json	EnrollmentResponse	ER2500	864	False	array.complex;date.day;meta;nesting.shallow;xhtml	type coverage: smallest example of EnrollmentResponse
+episodeofcare-example.json	EpisodeOfCare	example	2222	False	array.complex;date.day;meta;nesting.mid;xhtml	type coverage: smallest example of EpisodeOfCare
+eventdefinition-example.json	EventDefinition	example	957	False	array.complex;language;meta;nesting.mid;xhtml	type coverage: smallest example of EventDefinition
+evidence-example.json	Evidence	example	467	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of Evidence
+evidencevariable-example.json	EvidenceVariable	example	524	False	array.complex;choice.codeableconcep;meta;nesting.shallow;xhtml	type coverage: smallest example of EvidenceVariable
+examplescenario-example.json	ExampleScenario	example	29081	False	array.complex;choice.id;meta;nesting.deep;xhtml	type coverage: smallest example of ExampleScenario
+explanationofbenefit-example-2.json	ExplanationOfBenefit	EB3501	3995	False	array.complex;base64;choice.codeableconcep;choice.period;choice.reference;date.day;decimal.trailing-zero;decimal.zero;language;meta;nesting.mid;xhtml	type coverage: smallest example of ExplanationOfBenefit
+familymemberhistory-example-mother.json	FamilyMemberHistory	mother	1053	False	array.complex;choice.age;meta;nesting.mid;xhtml	type coverage: smallest example of FamilyMemberHistory
+flag-example-encounter.json	Flag	example-encounter	919	False	array.complex;meta;nesting.mid;xhtml	type coverage: smallest example of Flag
+goal-example-stop-smoking.json	Goal	stop-smoking	1133	False	array.complex;choice.date;date.day;meta;nesting.mid;xhtml	type coverage: smallest example of Goal
+graphdefinition-example.json	GraphDefinition	example	3425	False	array.complex;date.day;nesting.deep;xhtml	type coverage: smallest example of GraphDefinition
+group-example-patientlist.json	Group	example-patientlist	826	False	array.complex;choice.reference;meta;nesting.mid;xhtml	type coverage: smallest example of Group
+guidanceresponse-example.json	GuidanceResponse	example	3102	False	array.complex;choice.codeableconcep;choice.datetime;choice.decimal;choice.identifier;choice.reference;choice.uri;contained;datetime.full;meta;nesting.deep;xhtml	type coverage: smallest example of GuidanceResponse
+healthcareservice-example.json	HealthcareService	example	4515	False	array.complex;array.primitive;choice.endtime;choice.starttime;choice.time;contained;date.day;meta;nesting.mid;time;xhtml	type coverage: smallest example of HealthcareService
+imagingstudy-example.json	ImagingStudy	example	1467	False	array.complex;datetime.full;meta;nesting.mid;xhtml	type coverage: smallest example of ImagingStudy
+immunization-example-refused.json	Immunization	notGiven	1816	False	array.complex;choice.datetime;date.day;meta;nesting.shallow;xhtml	type coverage: smallest example of Immunization
+immunizationevaluation-example.json	ImmunizationEvaluation	example	2567	False	array.complex;choice.dosespositivei;choice.numberpositive;date.day;meta;nesting.shallow;xhtml	type coverage: smallest example of ImmunizationEvaluation
+immunizationrecommendation-example-target-disease.json	ImmunizationRecommendation	example	2308	False	array.complex;base64;choice.dosespositivei;choice.numberpositive;datetime.full;meta;nesting.deep;xhtml	type coverage: smallest example of ImmunizationRecommendation
+implementationguide-example.json	ImplementationGuide	example	8993	False	array.complex;array.primitive;choice.canonical;choice.id;choice.url;date.day;nesting.mid;xhtml	type coverage: smallest example of ImplementationGuide
+insuranceplan-example.json	InsurancePlan	example	590	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of InsurancePlan
+invoice-example.json	Invoice	example	1179	False	array.complex;datetime.full;meta;nesting.mid;xhtml	type coverage: smallest example of Invoice
+library-composition-example.json	Library	composition-example	1668	False	array.complex;date.day;meta;nesting.shallow;xhtml	type coverage: smallest example of Library
+linkage-example.json	Linkage	example	1103	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of Linkage
+list-example-simple-empty.json	List	example-simple-empty	681	False	array.complex;datetime.full;meta;nesting.shallow;xhtml	type coverage: smallest example of List
+location-example-ukpharmacy.json	Location	ukp	918	False	array.complex;meta;nesting.mid;xhtml	type coverage: smallest example of Location
+measure-composite-example.json	Measure	composite-example	1075	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of Measure
+measurereport-hiv-indicators.json	MeasureReport	hiv-indicators	20192	False	array.complex;date.day;meta;nesting.deep;xhtml	type coverage: smallest example of MeasureReport
+media-example-sound.json	Media	sound	765	False	array.complex;base64;meta;nesting.shallow;xhtml	type coverage: smallest example of Media
+medicationexample1.json	Medication	medicationexample1	461	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of Medication
+medicationadministration0303.json	MedicationAdministration	medadmin0303	4429	False	array.complex;base64;choice.period;choice.ratio;choice.reference;contained;datetime.full;meta;nesting.mid;xhtml	corner coverage: choice.ratio
+medicationadministration0312.json	MedicationAdministration	medadmin0312	3170	False	array.complex;base64;choice.codeableconcep;choice.period;datetime.full;meta;nesting.shallow;xhtml	type coverage: smallest example of MedicationAdministration
+medicationdispense0303.json	MedicationDispense	meddisp0303	5925	False	array.complex;base64;choice.neededcodeable;choice.reasonreferenc;choice.reference;contained;datetime.full;meta;nesting.mid;xhtml	corner coverage: choice.reasonreferenc
+medicationdispenseexample8.json	MedicationDispense	meddisp008	3129	False	array.complex;base64;choice.quantity;choice.reference;contained;meta;nesting.deep;xhtml	type coverage: smallest example of MedicationDispense
+medicationknowledge-example.json	MedicationKnowledge	example	2258	False	array.complex;array.primitive;contained;meta;nesting.shallow;xhtml	type coverage: smallest example of MedicationKnowledge
+medicationrequest0324.json	MedicationRequest	medrx0324	6119	False	array.complex;choice.boolean;choice.codeableconcep;choice.doseperperiod;choice.neededcodeable;choice.period;choice.quantity;choice.supplyduration;date.day;meta;nesting.deep;xhtml	corner coverage: choice.doseperperiod, choice.neededcodeable, choice.supplyduration
+medicationrequestexample2.json	MedicationRequest	medrx002	2511	False	array.complex;choice.reference;date.day;meta;nesting.mid;xhtml	type coverage: smallest example of MedicationRequest
+medicationstatementexample5.json	MedicationStatement	example005	2296	False	array.complex;choice.codeableconcep;choice.datetime;date.day;meta;nesting.shallow;xhtml	type coverage: smallest example of MedicationStatement
+medicationstatementexample6.json	MedicationStatement	example006	2876	False	array.complex;choice.codeableconcep;choice.datetime;choice.doseperperiod;choice.neededboolean;choice.quantity;date.day;meta;nesting.deep;xhtml	corner coverage: choice.neededboolean
+medicinalproduct-example.json	MedicinalProduct	example	6526	False	array.complex;base64;choice.date;date.day;language;meta;nesting.deep;xhtml	type coverage: smallest example of MedicinalProduct
+medicinalproductauthorization-example.json	MedicinalProductAuthorization	example	5627	False	array.complex;base64;choice.birthdate;choice.date;choice.datetime;choice.exclusivityper;choice.period;date.day;meta;nesting.mid;xhtml	type coverage: smallest example of MedicinalProductAuthorization
+medicinalproductcontraindication-example.json	MedicinalProductContraindication	example	1655	False	array.complex;base64;meta;nesting.mid;xhtml	type coverage: smallest example of MedicinalProductContraindication
+medicinalproductindication-example.json	MedicinalProductIndication	example	3175	False	array.complex;base64;choice.range;meta;nesting.mid;unicode.non-ascii;xhtml	type coverage: smallest example of MedicinalProductIndication
+medicinalproductingredient-example.json	MedicinalProductIngredient	example	3108	False	array.complex;base64;meta;nesting.mid;xhtml	type coverage: smallest example of MedicinalProductIngredient
+medicinalproductinteraction-example.json	MedicinalProductInteraction	example	5420	False	array.complex;base64;choice.codeableconcep;meta;nesting.mid;xhtml	type coverage: smallest example of MedicinalProductInteraction
+medicinalproductmanufactured-example.json	MedicinalProductManufactured	example	2041	False	array.complex;array.primitive;base64;meta;nesting.shallow;xhtml	type coverage: smallest example of MedicinalProductManufactured
+medicinalproductpackaged-example.json	MedicinalProductPackaged	example	5799	False	array.complex;base64;choice.identifier;date.day;meta;nesting.deep;xhtml	type coverage: smallest example of MedicinalProductPackaged
+medicinalproductpharmaceutical-example.json	MedicinalProductPharmaceutical	example	2399	False	array.complex;base64;meta;nesting.mid;xhtml	type coverage: smallest example of MedicinalProductPharmaceutical
+medicinalproductundesirableeffect-example.json	MedicinalProductUndesirableEffect	example	2096	False	array.complex;base64;meta;nesting.shallow;xhtml	type coverage: smallest example of MedicinalProductUndesirableEffect
+messagedefinition-example.json	MessageDefinition	example	794	False	array.complex;choice.coding;date.day;nesting.mid;xhtml	type coverage: smallest example of MessageDefinition
+messageheader-example.json	MessageHeader	1cbdfb97-5859-48a4-8301-d54eab818d68	1686	False	array.complex;choice.coding;meta;nesting.shallow;xhtml	type coverage: smallest example of MessageHeader
+sequence-graphic-example-2.json	MolecularSequence	graphic-example-2	1637	False	array.complex;choice.seqstring;meta;nesting.shallow;xhtml	type coverage: smallest example of MolecularSequence
+sequence-graphic-example-5.json	MolecularSequence	graphic-example-5	1722	False	array.complex;choice.seqid;meta;nesting.mid;xhtml	corner coverage: choice.seqid
+namingsystem-example.json	NamingSystem	example	1849	False	array.complex;choice.id;date.day;meta;nesting.mid;xhtml	type coverage: smallest example of NamingSystem
+nutritionorder-example-proteinsupplement.json	NutritionOrder	proteinsupplement	3688	False	array.complex;array.primitive;choice.period;choice.time;date.day;date.year;meta;nesting.mid;xhtml	type coverage: smallest example of NutritionOrder
+observation-decimal.json	Observation	decimal	3863	False	array.complex;choice.quantity;decimal.exponent;decimal.long;decimal.trailing-zero;meta;nesting.shallow;xhtml	corner coverage: decimal.exponent
+observation-example-eye-color.json	Observation	eye-color	1108	False	array.complex;choice.datetime;choice.string;date.day;meta;nesting.shallow;xhtml	type coverage: smallest example of Observation
+observation-example-sample-data.json	Observation	ekg	8706	False	array.complex;choice.datetime;choice.sampleddata;datetime.full;decimal.negative;meta;nesting.mid;xhtml	corner coverage: choice.sampleddata
+observationdefinition-example.json	ObservationDefinition	example	957	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of ObservationDefinition
+operation-resource-graphql.json	OperationDefinition	Resource-graphql	3840	False	array.complex;array.primitive;choice.integer;datetime.full;extension;nesting.mid;xhtml	type coverage: smallest example of OperationDefinition
+operationoutcome-example-allok.json	OperationOutcome	allok	545	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of OperationOutcome
+organization-example-hl7pay.json	Organization	hl7pay	460	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of Organization
+organizationaffiliation-example.json	OrganizationAffiliation	example	1665	False	array.complex;base64;date.day;meta;nesting.mid;xhtml	type coverage: smallest example of OrganizationAffiliation
+parameters-example.json	Parameters	parameters-example	826	True	array.complex;array.primitive;choice.boolean;meta;nesting.mid	hand-picked: the richest edge-case examples the corpus ships
+json-edge-cases.json	Patient	json-edge-cases	6960	True	array.complex;array.primitive;base64;choice.birthinteger;choice.boolean;choice.coding;choice.date;choice.decimal;choice.integer;choice.reference;choice.string;contained;date.day;date.month;date.year;decimal.long;extension;meta;modifier-extension;nesting.deep;primitive-metadata;unicode.non-ascii;xhtml	hand-picked: the richest edge-case examples the corpus ships
+patient-example-f001-pieter.json	Patient	f001	4742	False	array.complex;array.primitive;choice.birthboolean;choice.boolean;choice.date;date.day;language;meta;nesting.mid;xhtml	corner coverage: choice.birthboolean
+patient-example-ihe-pcd.json	Patient	ihe-pcd	601	False	array.complex;array.primitive;meta;nesting.shallow;xhtml	type coverage: smallest example of Patient
+paymentnotice-example.json	PaymentNotice	77654	1238	False	array.complex;base64;choice.date;date.day;decimal.trailing-zero;meta;nesting.shallow;xhtml	type coverage: smallest example of PaymentNotice
+paymentreconciliation-example.json	PaymentReconciliation	ER2500	3239	False	array.complex;choice.date;choice.identifier;date.day;decimal.negative;decimal.trailing-zero;meta;nesting.mid;xhtml	type coverage: smallest example of PaymentReconciliation
+person-provider-directory.json	Person	pd	2109	False	array.complex;array.primitive;choice.date;date.day;meta;nesting.mid;xhtml	type coverage: smallest example of Person
+plandefinition-options-example.json	PlanDefinition	options-example	1702	False	array.complex;choice.canonical;choice.codeableconcep;choice.duration;choice.id;contained;meta;nesting.deep;xhtml	type coverage: smallest example of PlanDefinition
+practitioner-example-xcda-author.json	Practitioner	xcda-author	557	False	array.complex;array.primitive;meta;nesting.shallow;xhtml	type coverage: smallest example of Practitioner
+practitionerrole-example.json	PractitionerRole	example	2291	False	array.complex;array.primitive;base64;choice.endtime;choice.starttime;choice.time;date.day;meta;nesting.mid;time;xhtml	type coverage: smallest example of PractitionerRole
+procedure-example-appendectomy-narrative.json	Procedure	appendectomy-narrative	512	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of Procedure
+provenance-example.json	Provenance	example	1710	False	array.complex;array.primitive;base64;choice.period;date.day;datetime.full;meta;nesting.mid;xhtml	type coverage: smallest example of Provenance
+questionnaire-example-f201-lifelines.json	Questionnaire	f201	1850	False	array.complex;array.primitive;choice.id;date.year;nesting.mid;xhtml	type coverage: smallest example of Questionnaire
+questionnaireresponse-example.json	QuestionnaireResponse	3141	3837	False	array.complex;choice.coding;choice.date;choice.id;contained;date.day;date.year;datetime.full;meta;nesting.deep;xhtml	type coverage: smallest example of QuestionnaireResponse
+relatedperson-example-f001-sarah.json	RelatedPerson	f001	1070	False	array.complex;array.primitive;meta;nesting.mid;xhtml	type coverage: smallest example of RelatedPerson
+requestgroup-example.json	RequestGroup	example	3068	False	array.complex;choice.codeableconcep;choice.datetime;choice.duration;choice.id;choice.identifier;contained;datetime.full;meta;nesting.deep;xhtml	type coverage: smallest example of RequestGroup
+researchdefinition-example.json	ResearchDefinition	example	478	False	array.complex;base64;meta;nesting.shallow;xhtml	type coverage: smallest example of ResearchDefinition
+researchelementdefinition-example.json	ResearchElementDefinition	example	556	False	array.complex;base64;choice.codeableconcep;meta;nesting.shallow;xhtml	type coverage: smallest example of ResearchElementDefinition
+researchstudy-example.json	ResearchStudy	example	404	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of ResearchStudy
+researchsubject-example.json	ResearchSubject	example	672	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of ResearchSubject
+riskassessment-example-population.json	RiskAssessment	population	737	False	array.complex;contained;meta;nesting.shallow;xhtml	type coverage: smallest example of RiskAssessment
+riskevidencesynthesis-example.json	RiskEvidenceSynthesis	example	533	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of RiskEvidenceSynthesis
+schedule-example.json	Schedule	example	1304	False	array.complex;datetime.full;meta;nesting.mid;xhtml	type coverage: smallest example of Schedule
+valueset-extensions-ValueSet-author.json	SearchParameter	valueset-extensions-ValueSet-author	487	False	nesting.shallow	type coverage: smallest example of SearchParameter
+servicerequest-example-appendectomy.json	ServiceRequest	appendectomy-narrative	813	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of ServiceRequest
+slot-example-tentative.json	Slot	2	775	False	array.complex;datetime.full;meta;nesting.mid;xhtml	type coverage: smallest example of Slot
+specimen-example-serum.json	Specimen	sst	2654	False	array.complex;choice.datetime;choice.identifier;datetime.full;meta;nesting.mid;xhtml	type coverage: smallest example of Specimen
+specimendefinition-example-serum-plasma.json	SpecimenDefinition	2364	12848	False	array.complex;choice.duration;choice.range;choice.volumequantity;date.year;meta;nesting.mid;unicode.non-ascii;xhtml	type coverage: smallest example of SpecimenDefinition
+integer.profile.json	StructureDefinition	integer	6747	False	array.complex;array.primitive;choice.string;choice.url;choice.valueinteger;datetime.full;decimal.negative;extension;nesting.deep;xhtml	corner coverage: choice.valueinteger
+structuredefinition-example-composition.json	StructureDefinition	example-composition	4577	False	array.complex;array.primitive;choice.string;datetime.full;extension;nesting.deep;primitive-metadata;xhtml	type coverage: smallest example of StructureDefinition
+structuremap-example.json	StructureMap	example	4826	False	array.complex;date.day;nesting.mid;xhtml	type coverage: smallest example of StructureMap
+subscription-example.json	Subscription	example	846	False	array.complex;array.primitive;datetime.full;meta;nesting.shallow;xhtml	type coverage: smallest example of Subscription
+substance-example-f201-dust.json	Substance	f201	905	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of Substance
+substancenucleicacid-example.json	SubstanceSpecification	example	520	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of SubstanceSpecification
+supplydelivery-example-pumpdelivery.json	SupplyDelivery	pumpdelivery	747	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of SupplyDelivery
+supplyrequest-example-simpleorder.json	SupplyRequest	simpleorder	2842	False	array.complex;choice.codeableconcep;choice.datetime;date.day;meta;nesting.mid;xhtml	type coverage: smallest example of SupplyRequest
+task-example-fm-cancel.json	Task	fm-example1	1231	False	array.complex;date.year;datetime.full;meta;nesting.shallow;xhtml	type coverage: smallest example of Task
+task-example-fm-reprocess.json	Task	fm-example4	2292	False	array.complex;choice.positiveint;choice.reference;choice.string;date.year;datetime.full;meta;nesting.mid;xhtml	corner coverage: choice.positiveint
+terminologycapabilities-example.json	TerminologyCapabilities	example	1535	False	array.complex;date.day;nesting.mid;xhtml	type coverage: smallest example of TerminologyCapabilities
+testreport-example.json	TestReport	testreport-example	11996	False	array.complex;datetime.full;decimal.trailing-zero;meta;nesting.mid;xhtml	type coverage: smallest example of TestReport
+testscript-example-readtest.json	TestScript	testscript-example-readtest	15665	False	array.complex;array.primitive;base64;choice.profileid;choice.requesturl;date.day;nesting.mid;unicode.non-ascii;xhtml	type coverage: smallest example of TestScript
+testscript-example.json	TestScript	testscript-example	25984	False	array.complex;array.primitive;base64;choice.codeableconcep;choice.id;choice.profileid;choice.requesturl;choice.tosourceexpres;choice.tosourceid;date.day;nesting.mid;unicode.non-ascii;xhtml	corner coverage: choice.tosourceexpres, choice.tosourceid
+valueset-designation-use.json	ValueSet	designation-use	4227	False	array.complex;array.primitive;choice.integer;choice.markdown;datetime.full;extension;meta;nesting.mid;unicode.non-ascii;xhtml	corner coverage: choice.markdown
+valueset-iso3166-1-N.json	ValueSet	iso3166-1-N	1434	False	array.complex;array.primitive;datetime.full;meta;nesting.mid;xhtml	type coverage: smallest example of ValueSet
+verificationresult-example.json	VerificationResult	example	609	False	array.complex;meta;nesting.shallow;xhtml	type coverage: smallest example of VerificationResult
+visionprescription-example.json	VisionPrescription	33123	1602	False	array.complex;date.day;decimal.negative;decimal.trailing-zero;meta;nesting.mid;xhtml	type coverage: smallest example of VisionPrescription

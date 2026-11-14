@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.function.provider;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.config.TerminologyConfiguration;
+import au.csiro.pathling.definition.ElementDefinition;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.TerminologyConcepts;
 import au.csiro.pathling.fhirpath.TerminologyConcepts.Set;
@@ -32,7 +33,6 @@ import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import au.csiro.pathling.sql.udf.PropertyUdf;
 import au.csiro.pathling.utilities.Functions;

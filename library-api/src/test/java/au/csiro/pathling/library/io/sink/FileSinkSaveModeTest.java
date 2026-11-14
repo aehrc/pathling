@@ -16,6 +16,8 @@
  */
 package au.csiro.pathling.library.io.sink;
 
+import static au.csiro.pathling.library.io.LayoutFixtures.newConditions;
+import static au.csiro.pathling.library.io.LayoutFixtures.newPatients;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -32,6 +34,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -46,6 +49,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import scala.Option;
 
 /**
  * Tests that the sinks writing a directory of files, Parquet and NDJSON, honour each save mode when
@@ -61,6 +65,19 @@ class FileSinkSaveModeTest {
   private static final Pattern WRITTEN_FILE =
       Pattern.compile(
           "^Patient\\.(\\d{5})-([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})\\.(\\w+)$");
+
+  /**
+   * The name a write gives each of its files where Spark splits a partition into several: the type,
+   * the partition and the write's id, then the file counter for every file but the first.
+   */
+  @Nonnull
+  private static final Pattern SPLIT_FILE =
+      Pattern.compile(
+          "^Patient\\.(\\d{5})-([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})"
+              + "(?:-c(\\d+))?\\.(\\w+)$");
+
+  /** The Spark setting that splits a partition into files holding at most so many rows. */
+  @Nonnull private static final String MAX_RECORDS_PER_FILE = "spark.sql.files.maxRecordsPerFile";
 
   /** A file name for the type that is not only letters, which the file source does not read. */
   private static final String MAPPED_NAME = "Patient_v2";
@@ -120,8 +137,8 @@ class FileSinkSaveModeTest {
         context
             .read()
             .datasets()
-            .dataset("Condition", newConditions("c1"))
-            .dataset("Patient", newPatients("b1"));
+            .dataset("Condition", newConditions(context, "c1"))
+            .dataset("Patient", newPatients(context, "b1"));
 
     final PersistenceError error =
         assertThrows(PersistenceError.class, () -> write(format, "error", both));
@@ -178,8 +195,8 @@ class FileSinkSaveModeTest {
    */
   @Test
   void parquetFilesNamedByEarlierReleasesAreReadBesideNewOnes() {
-    newPatients("o1").coalesce(1).write().parquet(directory.resolve("o").toString());
-    newPatients("q1").coalesce(1).write().parquet(directory.resolve("q").toString());
+    newPatients(context, "o1").coalesce(1).write().parquet(directory.resolve("o").toString());
+    newPatients(context, "q1").coalesce(1).write().parquet(directory.resolve("q").toString());
     moveOnlyPartFile(directory.resolve("o"), directory.resolve("Patient.00000.parquet"));
     moveOnlyPartFile(directory.resolve("q"), directory.resolve("Patient.ICU.parquet"));
 
@@ -210,7 +227,7 @@ class FileSinkSaveModeTest {
    */
   @Test
   void appendBesideAHandAssembledTableKeepsEveryRow() throws IOException {
-    newPatients("h1").coalesce(1).write().parquet(directory.resolve("h").toString());
+    newPatients(context, "h1").coalesce(1).write().parquet(directory.resolve("h").toString());
     Files.createDirectories(directory.resolve("Patient.parquet"));
     moveOnlyPartFile(
         directory.resolve("h"), directory.resolve("Patient.parquet/part-00000.snappy.parquet"));
@@ -241,8 +258,8 @@ class FileSinkSaveModeTest {
   }
 
   /**
-   * An append under a file name that is not only letters finds the earlier files and adds its files
-   * beside them.
+   * An append under a file name that is not only letters checks the layout of the earlier files,
+   * which it now finds, and adds its files beside them.
    */
   @ParameterizedTest
   @ValueSource(strings = {"parquet", "ndjson"})
@@ -284,39 +301,80 @@ class FileSinkSaveModeTest {
     assertEquals(before, fileNames(directory));
   }
 
+  /**
+   * A write that Spark splits into several files for one partition, as {@code
+   * spark.sql.files.maxRecordsPerFile} makes it, gives each file a name of its own that keeps the
+   * file counter, and every row is read back as the type.
+   */
+  @ParameterizedTest
+  @ValueSource(strings = {"parquet", "ndjson"})
+  void aPartitionSplitIntoSeveralFilesKeepsEveryRow(@Nonnull final String format)
+      throws IOException {
+    final List<String> written =
+        withOneRowPerFile(() -> write(format, "error", patientsInOnePartition("a1", "a2", "a3")))
+            .fileInfos()
+            .stream()
+            .map(info -> new org.apache.hadoop.fs.Path(info.absoluteUrl()).getName())
+            .sorted()
+            .toList();
+
+    assertEquals(List.of("a1", "a2", "a3"), readIds(format));
+    final List<String> names = fileNames(directory);
+    assertEquals(names, written);
+    assertEquals(3, names.size(), names::toString);
+    final List<Matcher> matchers = names.stream().map(SPLIT_FILE::matcher).toList();
+    assertTrue(matchers.stream().allMatch(Matcher::matches), names::toString);
+    assertEquals(
+        1, matchers.stream().map(matcher -> matcher.group(2)).distinct().count(), names::toString);
+    assertEquals(
+        2, matchers.stream().filter(matcher -> matcher.group(3) != null).count(), names::toString);
+  }
+
+  /**
+   * An overwrite under a file name that is not only letters replaces every file of an earlier write
+   * that Spark split into several files for one partition.
+   */
+  @ParameterizedTest
+  @ValueSource(strings = {"parquet", "ndjson"})
+  void overwriteUnderANameNotOnlyLettersReplacesEveryFileOfASplitWrite(@Nonnull final String format)
+      throws IOException {
+    withOneRowPerFile(() -> writeMapped(format, "error", patientsInOnePartition("a1", "a2", "a3")));
+    final List<String> before = fileNames(directory);
+    writeMapped(format, "overwrite", patients("b1"));
+
+    final List<String> after = fileNames(directory);
+    assertEquals(3, before.size(), before::toString);
+    assertFalse(after.isEmpty());
+    assertTrue(before.stream().noneMatch(after::contains), after::toString);
+  }
+
+  @Nonnull
+  private static DatasetSource patientsInOnePartition(@Nonnull final String... ids) {
+    return context.read().datasets().dataset("Patient", newPatients(context, ids).coalesce(1));
+  }
+
+  /**
+   * Runs a write with Spark limited to one row per file, restoring the setting afterwards so that
+   * it does not reach other tests sharing the session.
+   */
+  @Nonnull
+  private static <T> T withOneRowPerFile(@Nonnull final Supplier<T> write) {
+    final Option<String> previous = spark.conf().getOption(MAX_RECORDS_PER_FILE);
+    spark.conf().set(MAX_RECORDS_PER_FILE, 1L);
+    try {
+      return write.get();
+    } finally {
+      if (previous.isDefined()) {
+        spark.conf().set(MAX_RECORDS_PER_FILE, previous.get());
+      } else {
+        spark.conf().unset(MAX_RECORDS_PER_FILE);
+      }
+    }
+  }
+
   @Nonnull
   private static DatasetSource patients(@Nonnull final String... ids) {
-    return context.read().datasets().dataset("Patient", newPatients(ids));
-  }
-
-  /** Returns Patients with the given ids, encoded from FHIR JSON. */
-  @Nonnull
-  private static Dataset<Row> newPatients(@Nonnull final String... ids) {
-    return encode(
-        "Patient",
-        Stream.of(ids)
-            .map(id -> "{\"resourceType\":\"Patient\",\"id\":\"" + id + "\",\"gender\":\"male\"}")
-            .toList());
-  }
-
-  /** Returns Conditions with the given ids, encoded from FHIR JSON. */
-  @Nonnull
-  private static Dataset<Row> newConditions(@Nonnull final String... ids) {
-    return encode(
-        "Condition",
-        Stream.of(ids)
-            .map(
-                id ->
-                    "{\"resourceType\":\"Condition\",\"id\":\""
-                        + id
-                        + "\",\"subject\":{\"reference\":\"Patient/1\"}}")
-            .toList());
-  }
-
-  @Nonnull
-  private static Dataset<Row> encode(
-      @Nonnull final String resourceType, @Nonnull final List<String> json) {
-    return context.encode(spark.createDataset(json, Encoders.STRING()).toDF(), resourceType);
+    return context.read().datasets().dataset("Patient", newPatients(context, ids));
   }
 
   @Nonnull

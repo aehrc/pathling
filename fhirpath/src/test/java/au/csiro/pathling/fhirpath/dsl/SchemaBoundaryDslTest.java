@@ -17,17 +17,14 @@
 
 package au.csiro.pathling.fhirpath.dsl;
 
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import jakarta.annotation.Nonnull;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Extension;
-import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Questionnaire;
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemComponent;
@@ -37,25 +34,18 @@ import org.hl7.fhir.r4.model.QuestionnaireResponse.QuestionnaireResponseItemComp
 import org.hl7.fhir.r4.model.QuestionnaireResponse.QuestionnaireResponseStatus;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.DynamicTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 
 /**
- * Tests FHIRPath navigation beyond the parts of a resource that the encoder includes in its schema.
+ * Tests FHIRPath navigation beyond the parts of a resource that the schema of its data includes.
  *
- * <p>The encoder only encodes recursive elements, such as {@code Questionnaire.item}, to the
- * configured maximum nesting level. With a maximum nesting level of 3, four levels of {@code item}
- * are encoded, and a fifth level of {@code item} is absent from the schema even when the resource
- * contains it. Navigating to an element beyond that level must behave as if the element were empty,
- * so that every function sees an empty collection.
- *
- * <p>Choice types that are excluded from the encoded open types are a configuration matter rather
- * than a depth limit, and selecting them must still fail.
+ * <p>The schema is fitted to the data, so a recursive element, such as {@code Questionnaire.item},
+ * is present only to the depth that the data reaches. The fixtures here nest four levels of {@code
+ * item}, so a fifth level of {@code item} is absent from the schema. Navigating to an element
+ * beyond that level must behave as if the element were empty, so that every function sees an empty
+ * collection.
  *
  * @author John Grimes
  */
-@Import(SchemaBoundaryDslTest.Config.class)
 public class SchemaBoundaryDslTest extends FhirPathDslTestBase {
 
   private static final String EXTENSION_URL = "http://example.com/ext";
@@ -63,27 +53,8 @@ public class SchemaBoundaryDslTest extends FhirPathDslTestBase {
   private static final String UCUM = "http://unitsofmeasure.org";
 
   /**
-   * Provides a FhirEncoders bean with a maximum nesting level of 3 and a restricted set of open
-   * types, which excludes {@code integer}.
-   */
-  @TestConfiguration
-  static class Config {
-
-    @Bean
-    @Nonnull
-    FhirEncoders fhirEncoders() {
-      return FhirEncoders.forR4()
-          .withExtensionsEnabled(true)
-          .withOpenTypes(Set.of("string"))
-          .withMaxNestingLevel(3)
-          .getOrCreate();
-    }
-  }
-
-  /**
-   * Creates a Questionnaire with items nested five levels deep, one level deeper than the encoder
-   * includes, and an extension with a string value. Every item has a LOINC code and an initial
-   * Quantity value.
+   * Creates a Questionnaire with items nested four levels deep, and an extension with a string
+   * value. Every item has a LOINC code and an initial Quantity value.
    *
    * @return the Questionnaire
    */
@@ -95,7 +66,7 @@ public class SchemaBoundaryDslTest extends FhirPathDslTestBase {
     questionnaire.addExtension(new Extension(EXTENSION_URL, new StringType("ext-value")));
 
     QuestionnaireItemComponent parent = addItem(questionnaire.addItem(), "1");
-    for (final String linkId : List.of("1.1", "1.1.1", "1.1.1.1", "1.1.1.1.1")) {
+    for (final String linkId : List.of("1.1", "1.1.1", "1.1.1.1")) {
       parent = addItem(parent.addItem(), linkId);
     }
     return questionnaire;
@@ -222,13 +193,13 @@ public class SchemaBoundaryDslTest extends FhirPathDslTestBase {
 
   @FhirPathTest
   public Stream<DynamicTest> testRecursionThroughAnotherElement() {
-    // QuestionnaireResponse items recurse through answers as well as directly. Five levels of
-    // item are nested through answers, one level deeper than the encoder includes.
+    // QuestionnaireResponse items recurse through answers as well as directly. Four levels of item
+    // are nested through answers.
     final QuestionnaireResponse response = new QuestionnaireResponse();
     response.setId("deep-response");
     response.setStatus(QuestionnaireResponseStatus.COMPLETED);
     QuestionnaireResponseItemComponent item = response.addItem().setLinkId("1");
-    for (final String linkId : List.of("1.1", "1.1.1", "1.1.1.1", "1.1.1.1.1")) {
+    for (final String linkId : List.of("1.1", "1.1.1", "1.1.1.1")) {
       final QuestionnaireResponseItemAnswerComponent answer = item.addAnswer();
       answer.setValue(new Coding("http://example.org", linkId, null));
       item = answer.addItem().setLinkId(linkId);
@@ -256,23 +227,6 @@ public class SchemaBoundaryDslTest extends FhirPathDslTestBase {
             List.of("1", "1.1", "1.1.1", "1.1.1.1"),
             "repeat(item | answer.item).linkId",
             "repeat() through answers stops at the deepest encoded level")
-        .build();
-  }
-
-  @FhirPathTest
-  public Stream<DynamicTest> testChoiceTypesExcludedFromOpenTypes() {
-    final Questionnaire questionnaire = createQuestionnaire();
-    questionnaire.addExtension(new Extension(EXTENSION_URL + "/int", new IntegerType(42)));
-    return builder()
-        .withResource(questionnaire)
-        .group("Open types")
-        .testEquals(
-            "ext-value",
-            "extension('" + EXTENSION_URL + "').value.ofType(string)",
-            "An extension value of an encoded open type is returned")
-        .testError(
-            "extension('" + EXTENSION_URL + "/int').value.ofType(integer)",
-            "Selecting an open type that is not encoded fails")
         .build();
   }
 }

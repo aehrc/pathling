@@ -237,16 +237,16 @@ flattened_items %>% head(10) %>% collect()
 
 The result will contain one row per item at any nesting level:
 
-| id                  | questionnaire                        | patient_id  | authored                  | item_link_id | item_text            | answer_value_string | answer_value_integer | answer_value_boolean | answer_value_date |
-|---------------------|--------------------------------------|-------------|---------------------------|--------------|----------------------|---------------------|----------------------|----------------------|-------------------|
-| QuestionnaireRes... | http://example.org/q/phq9            | Patient/123 | 2024-03-15T10:30:00+10:00 | 1            | Little interest...   | NULL                | 2                    | NULL                 | NULL              |
-| QuestionnaireRes... | http://example.org/q/phq9            | Patient/123 | 2024-03-15T10:30:00+10:00 | 2            | Feeling down...      | NULL                | 1                    | NULL                 | NULL              |
-| QuestionnaireRes... | http://example.org/q/health-history  | Patient/456 | 2024-03-16T14:20:00+10:00 | demographics | Demographics         | NULL                | NULL                 | NULL                 | NULL              |
-| QuestionnaireRes... | http://example.org/q/health-history  | Patient/456 | 2024-03-16T14:20:00+10:00 | name         | Full name            | John Smith          | NULL                 | NULL                 | NULL              |
-| QuestionnaireRes... | http://example.org/q/health-history  | Patient/456 | 2024-03-16T14:20:00+10:00 | dob          | Date of birth        | NULL                | NULL                 | NULL                 | 1980-05-22        |
-| QuestionnaireRes... | http://example.org/q/health-history  | Patient/456 | 2024-03-16T14:20:00+10:00 | conditions   | Medical conditions   | NULL                | NULL                 | NULL                 | NULL              |
-| QuestionnaireRes... | http://example.org/q/health-history  | Patient/456 | 2024-03-16T14:20:00+10:00 | diabetes     | Diabetes             | NULL                | NULL                 | TRUE                 | NULL              |
-| QuestionnaireRes... | http://example.org/q/health-history  | Patient/456 | 2024-03-16T14:20:00+10:00 | hypertension | Hypertension         | NULL                | NULL                 | FALSE                | NULL              |
+| id                  | questionnaire                       | patient_id  | authored                  | item_link_id | item_text          | answer_value_string | answer_value_integer | answer_value_boolean | answer_value_date |
+| ------------------- | ----------------------------------- | ----------- | ------------------------- | ------------ | ------------------ | ------------------- | -------------------- | -------------------- | ----------------- |
+| QuestionnaireRes... | http://example.org/q/phq9           | Patient/123 | 2024-03-15T10:30:00+10:00 | 1            | Little interest... | NULL                | 2                    | NULL                 | NULL              |
+| QuestionnaireRes... | http://example.org/q/phq9           | Patient/123 | 2024-03-15T10:30:00+10:00 | 2            | Feeling down...    | NULL                | 1                    | NULL                 | NULL              |
+| QuestionnaireRes... | http://example.org/q/health-history | Patient/456 | 2024-03-16T14:20:00+10:00 | demographics | Demographics       | NULL                | NULL                 | NULL                 | NULL              |
+| QuestionnaireRes... | http://example.org/q/health-history | Patient/456 | 2024-03-16T14:20:00+10:00 | name         | Full name          | John Smith          | NULL                 | NULL                 | NULL              |
+| QuestionnaireRes... | http://example.org/q/health-history | Patient/456 | 2024-03-16T14:20:00+10:00 | dob          | Date of birth      | NULL                | NULL                 | NULL                 | 1980-05-22        |
+| QuestionnaireRes... | http://example.org/q/health-history | Patient/456 | 2024-03-16T14:20:00+10:00 | conditions   | Medical conditions | NULL                | NULL                 | NULL                 | NULL              |
+| QuestionnaireRes... | http://example.org/q/health-history | Patient/456 | 2024-03-16T14:20:00+10:00 | diabetes     | Diabetes           | NULL                | NULL                 | TRUE                 | NULL              |
+| QuestionnaireRes... | http://example.org/q/health-history | Patient/456 | 2024-03-16T14:20:00+10:00 | hypertension | Hypertension       | NULL                | NULL                 | FALSE                | NULL              |
 
 Note how all items are flattened into a single table, regardless of their nesting depth. Items that are group items (with no answer) and items with answers are all represented as separate rows.
 
@@ -395,34 +395,20 @@ The `repeat` directive includes a configurable depth limit to prevent infinite r
 
 ### When the depth limit applies
 
-Pathling uses a **type-aware depth limiting mechanism**. The depth counter only decrements when traversing to a node of the **same type** as its parent. This means the limit only applies to structures where the schema is genuinely identical at each level.
-
-The primary use case where this applies is **extension hierarchies**, where `extension.extension` has exactly the same schema as its parent:
-
-```python
-{
-    "repeat": ["extension"],
-    "column": [
-        {"name": "url", "path": "url"},
-        {"name": "value", "path": "value.ofType(string)"}
-    ]
-}
-```
-
-In this case, because each `extension.extension` has the same schema, the depth limit prevents infinite recursion if there were circular references or excessively deep nesting.
+Pathling uses a **type-aware depth limiting mechanism**. The depth counter only decrements when a level of the traversal produces a value of the **same type** as the level it was applied to. This guards against projections that would otherwise never end, such as a FHIRPath expression like `name.repeatAll(first())`, which yields a value of the same type at every level.
 
 ### When the depth limit does NOT apply
 
-For **QuestionnaireResponse items** (the focus of this example), the depth limit does **not** apply during traversal. Although `item.item.item...` appears recursive, each level of nesting actually has a different schema in Pathling's internal representation. The type-aware mechanism recognises this and allows traversal to any depth without consuming the depth budget.
+Nested structures in the data, such as **QuestionnaireResponse items** (the focus of this example) or extensions nested within extensions, do not consume the depth budget. Although `item.item.item...` and `extension.extension...` appear recursive, Pathling stores each level of nesting with a different type, because each level contains the type of the level beneath it. Their traversal stops where the data does, and every level the data carries is returned.
 
 This means:
 
-- You can flatten QuestionnaireResponse items to any depth without worrying about the `max_unbound_traversal_depth` limit
-- The limit is only relevant when working with genuinely self-referential structures like extensions
+- You can flatten QuestionnaireResponse items and nested extensions to any depth without worrying about the `max_unbound_traversal_depth` limit
+- The limit is only relevant to projections that yield a value of the same type at each level
 
 ### Configuring the depth limit
 
-If you're working with deeply nested extensions or other truly self-referential structures, you can configure the depth limit using the `max_unbound_traversal_depth` parameter:
+If a projection legitimately yields a value of the same type at more levels than the default allows, you can configure the depth limit using the `max_unbound_traversal_depth` parameter:
 
 <Tabs>
 <TabItem value="python" label="Python">

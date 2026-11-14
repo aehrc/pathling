@@ -120,109 +120,6 @@ public class ValueFunctions {
   }
 
   /**
-   * Returns SQL NULL when a struct field doesn't exist in the schema, instead of throwing an error.
-   *
-   * <p>This function is essential for handling optional fields in nested structures where a field
-   * may not be present in all instances of a struct type. When the specified field is missing from
-   * the struct schema, this returns null rather than causing a FIELD_NOT_FOUND analysis error.
-   *
-   * <p><strong>Important:</strong> This only handles fields that don't exist in the schema. If a
-   * field exists but has a null value, that null value is returned normally.
-   *
-   * <p><strong>Typical usage:</strong>
-   *
-   * <pre>{@code
-   * // Safe access to optional field that may not exist in all structs
-   * dataset.withColumn("email", nullIfMissingField(col("person").getField("email")))
-   * }</pre>
-   *
-   * @param value The column expression that may reference a non-existent field
-   * @return A column that resolves to null if the field is not found in the schema, or the field's
-   *     value (including null) if the field exists
-   * @see org.apache.spark.sql.Column#getField(String)
-   */
-  @Nonnull
-  public static Column nullIfMissingField(@Nonnull final Column value) {
-    final Expression valueExpr = expression(value);
-    final Expression nullOrExpr = new UnresolvedNullIfMissingField(valueExpr);
-    return column(nullOrExpr);
-  }
-
-  /**
-   * Returns an empty array when a struct field doesn't exist in the schema, instead of throwing an
-   * error. This is similar to {@link #nullIfMissingField} but returns an empty array instead of
-   * null, making it suitable for use in array concatenation contexts where type compatibility is
-   * required.
-   *
-   * @param value The column expression that may reference a non-existent field
-   * @return A column that resolves to an empty array if the field is not found in the schema, or
-   *     the field's value if the field exists
-   */
-  @Nonnull
-  public static Column emptyArrayIfMissingField(@Nonnull final Column value) {
-    final Expression valueExpr = expression(value);
-    final Expression emptyOrExpr = new UnresolvedEmptyArrayIfMissingField(valueExpr);
-    return column(emptyOrExpr);
-  }
-
-  /**
-   * Extracts a field from a struct, or from each struct in an array of structs, returning null if
-   * the field is not in the schema.
-   *
-   * <p>This is used to navigate to elements that the encoder may have left out of the schema, such
-   * as recursive elements beyond the maximum nesting level. The result for a missing field is
-   * null-typed, and navigating further from a null-typed value also returns null, so a chain of
-   * navigation beyond the schema is empty rather than failing with a FIELD_NOT_FOUND analysis
-   * error.
-   *
-   * <pre>{@code
-   * // Returns null if the encoded item struct has no nested item field.
-   * fieldOrNull(fieldOrNull(col("item"), "item"), "linkId")
-   * }</pre>
-   *
-   * @param value The struct or array of structs to extract the field from
-   * @param fieldName The name of the field to extract
-   * @return A column that resolves to the field, or to null if the field is not in the schema or
-   *     the value is null-typed
-   */
-  @Nonnull
-  public static Column fieldOrNull(@Nonnull final Column value, @Nonnull final String fieldName) {
-    return column(new UnresolvedFieldOrNull(expression(value), fieldName, true));
-  }
-
-  /**
-   * Extracts a field from a struct, or from each struct in an array of structs, returning null if
-   * the value is null-typed.
-   *
-   * <p>Unlike {@link #fieldOrNull}, a field that is not in the schema still causes a
-   * FIELD_NOT_FOUND analysis error. Only a value that is known to be empty, such as the result of
-   * {@link #fieldOrNull} for a missing field, is tolerated.
-   *
-   * @param value The struct or array of structs to extract the field from
-   * @param fieldName The name of the field to extract
-   * @return A column that resolves to the field, or to null if the value is null-typed
-   */
-  @Nonnull
-  public static Column nullSafeField(@Nonnull final Column value, @Nonnull final String fieldName) {
-    return column(new UnresolvedFieldOrNull(expression(value), fieldName, false));
-  }
-
-  /**
-   * Casts a null-typed value to the specified type, leaving values that already have a type
-   * unchanged.
-   *
-   * <p>A null-typed array is cast only if the specified type is an array type.
-   *
-   * @param value The value to type
-   * @param type The type to cast a null-typed value to
-   * @return A column that resolves to the value, cast to the type if it was null-typed
-   */
-  @Nonnull
-  public static Column castIfNullType(@Nonnull final Column value, @Nonnull final DataType type) {
-    return column(new UnresolvedCastIfNullType(expression(value), type));
-  }
-
-  /**
    * Performs a recursive tree traversal with value extraction at each level.
    *
    * <p>This method implements a depth-first traversal of nested structures, applying a sequence of
@@ -240,8 +137,9 @@ public class ValueFunctions {
    *
    * <p>This is particularly useful for traversing self-referential FHIR structures like
    * QuestionnaireResponse.item, where items can contain nested items through multiple paths (e.g.,
-   * item.item and item.answer.item). The method handles missing fields gracefully by returning
-   * empty arrays when fields are not found.
+   * item.item and item.answer.item). The recursion stops where a traversal resolves to the bottom
+   * type, which is what the tolerant traversal expression gives an element absent from the input
+   * schema.
    *
    * <p><strong>Depth Limiting:</strong> The {@code maxDepth} parameter controls recursion depth to
    * prevent infinite loops in self-referential structures. Critically, the depth counter only
@@ -304,11 +202,11 @@ public class ValueFunctions {
    * Performs a recursive tree traversal with a typed empty fallback for traversals that walk past
    * the encoded schema.
    *
-   * <p>When the recursive descent encounters a {@code FIELD_NOT_FOUND} resolution failure at the
-   * traversal root, the fallback emits {@code Cast(empty, ArrayType(expectedElementType))} instead
-   * of an untyped empty array. This keeps the element type consistent with sibling array
-   * combinations downstream (e.g. {@code StructProduct}) and prevents {@code ClassCastException}
-   * during type coercion.
+   * <p>When the traversal root resolves to the bottom type, because the element it reaches is
+   * absent from the input schema, the fallback emits {@code Cast(empty,
+   * ArrayType(expectedElementType))} instead of an untyped empty array. This keeps the element type
+   * consistent with sibling array combinations downstream (e.g. {@code StructProduct}) and prevents
+   * {@code ClassCastException} during type coercion.
    *
    * @param value The starting value column to traverse
    * @param extractor An extraction operation to apply at each node that must return an array type

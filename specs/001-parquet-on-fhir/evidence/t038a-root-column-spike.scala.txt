@@ -1,0 +1,161 @@
+package org.apache.spark.sql.pathlingspike
+
+import java.nio.file.Files
+
+import scala.collection.mutable.ArrayBuffer
+import scala.util.Try
+
+import org.apache.spark.sql.{AnalysisException, Column, DataFrame, SparkSession, functions => F}
+import org.apache.spark.sql.catalyst.analysis.{GetViewColumnByNameAndOrdinal, Resolver, Star, UnresolvedException}
+import org.apache.spark.sql.catalyst.expressions._
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.catalyst.trees.{BinaryLike, UnaryLike}
+import org.apache.spark.sql.classic.ExpressionUtils
+import org.apache.spark.sql.types._
+import org.junit.jupiter.api.Test
+
+// Throwaway spike for decision 74's tolerant top-level reference. Not to be committed.
+object SpikeLog {
+  val entries: ArrayBuffer[String] = ArrayBuffer.empty
+}
+
+// The binary extension-lookup shape: left is an element with _fid, right is the map.
+case class SpikeBinary(left: Expression, right: Expression)
+  extends RuntimeReplaceable with BinaryLike[Expression] {
+  override lazy val replacement: Expression = {
+    SpikeLog.entries += s"[force] left=${left.getClass.getSimpleName} resolved=${left.resolved} " +
+      s"right=${right.getClass.getSimpleName} resolved=${right.resolved} rightType=${Try(right.dataType).toOption}"
+    val fid = left.dataType match {
+      case s: StructType => GetStructField(left, s.fieldIndex("_fid"), Some("_fid"))
+    }
+    GetMapValue(right, fid)
+  }
+  override protected def withNewChildrenInternal(l: Expression, r: Expression): Expression =
+    copy(left = l, right = r)
+}
+
+// V1 and V2: the unary tolerant step over a struct that always resolves.
+case class SpikeResolveOrNull(child: Expression, fieldName: String, fallback: DataType)
+  extends RuntimeReplaceable with UnaryLike[Expression] {
+  override lazy val replacement: Expression = {
+    SpikeLog.entries += s"[force-unary] child=${child.getClass.getSimpleName} resolved=${child.resolved}"
+    child.dataType match {
+      case s: StructType if s.fieldNames.contains(fieldName) =>
+        GetStructField(child, s.fieldIndex(fieldName), Some(fieldName))
+      case _ => Literal(null, fallback)
+    }
+  }
+  override protected def withNewChildInternal(newChild: Expression): Expression =
+    copy(child = newChild)
+}
+
+// V2: a custom star that expands to the attribute or a typed-null alias.
+case class TolerantStar(colName: String, fallback: DataType) extends Star with Unevaluable {
+  override def expand(input: LogicalPlan, resolver: Resolver): Seq[NamedExpression] =
+    input.output.find(a => resolver(a.name, colName))
+      .map(a => a: NamedExpression)
+      .getOrElse(Alias(Literal(null, fallback), colName)()) :: Nil
+  override def children: Seq[Expression] = Nil
+  override protected def withNewChildrenInternal(nc: IndexedSeq[Expression]): Expression = this
+}
+
+// V3: catch the exception the resolver throws when a view column is missing.
+case class TolerantCatch(child: Expression, fallback: DataType)
+  extends Expression with Unevaluable with NonSQLExpression {
+  override def mapChildren(f: Expression => Expression): Expression = {
+    try {
+      val n = f(child)
+      if (n.resolved) n else copy(child = n)
+    } catch {
+      case e: AnalysisException if e.getCondition == "INCOMPATIBLE_VIEW_SCHEMA_CHANGE" =>
+        SpikeLog.entries += s"[catch] fell back: ${e.getMessage.take(120)}"
+        Literal(null, fallback)
+    }
+  }
+  override def dataType: DataType = throw new UnresolvedException("dataType")
+  override def nullable: Boolean = throw new UnresolvedException("nullable")
+  override lazy val resolved = false
+  override def children: Seq[Expression] = child :: Nil
+  override protected def withNewChildrenInternal(nc: IndexedSeq[Expression]): Expression =
+    copy(child = nc.head)
+}
+
+class TolerantRefSpikeTest {
+
+  private val mapType = MapType(IntegerType, ArrayType(StringType))
+
+  private def col(e: Expression): Column = ExpressionUtils.column(e)
+
+  private def expr(c: Column): Expression = ExpressionUtils.expression(c)
+
+  private val variants: Seq[(String, DataFrame => Column)] = Seq(
+    "V1 colRegex" -> { d =>
+      col(SpikeResolveOrNull(expr(F.struct(d.colRegex("`^_extension$`"))), "_extension", mapType))
+    },
+    "V2 customStar" -> { _ =>
+      col(GetStructField(CreateNamedStruct(Seq(Literal("_extension"), TolerantStar("_extension", mapType))), 0))
+    },
+    "V3 viewColumnCatch" -> { _ =>
+      col(TolerantCatch(GetViewColumnByNameAndOrdinal("spike", "_extension", 0, 1, None), mapType))
+    },
+    "V0 plain col (control)" -> { _ => F.col("_extension") }
+  )
+
+  private def lookup(tol: Column): Column =
+    F.transform(F.col("arr"), x => col(SpikeBinary(expr(x), expr(tol))))
+
+  private def scenarios(d: DataFrame, other: DataFrame, tol: Column): Seq[(String, () => DataFrame)] = Seq(
+    "Project" -> (() => d.select(F.col("id"), lookup(tol).alias("v"))),
+    "Filter" -> (() => d.filter(F.exists(F.col("arr"), x => col(SpikeBinary(expr(x), expr(tol))).isNotNull))),
+    "Aggregate key" -> (() => d.groupBy(lookup(tol).alias("g")).count()),
+    "Aggregate value" -> (() => d.groupBy(F.col("id")).agg(F.first(lookup(tol)).alias("f"))),
+    "Sort" -> (() => d.orderBy(F.size(lookup(tol)))),
+    "Generate (explode in select)" -> (() => d.select(F.col("id"), F.explode_outer(lookup(tol)).alias("e"))),
+    "Join condition" -> (() => d.join(other, F.coalesce(F.size(F.flatten(lookup(tol))), F.lit(-1)) >= other("k")))
+  )
+
+  @Test
+  def spike(): Unit = {
+    val spark = SparkSession.builder().master("local[2]").appName("spike")
+      .config("spark.ui.enabled", "false").config("spark.driver.host", "localhost").getOrCreate()
+    val dir = Files.createTempDirectory("spike")
+    val present = spark.sql(
+      "select 1 as id, array(named_struct('_fid', 10, 'v', 'a'), named_struct('_fid', 11, 'v', 'b')) as arr, " +
+        "map(10, array('urn:x')) as _extension union all " +
+        "select 2, array(named_struct('_fid', 20, 'v', 'c')), cast(null as map<int,array<string>>)")
+    present.write.parquet(dir.resolve("p").toString)
+    present.drop("_extension").write.parquet(dir.resolve("a").toString)
+    spark.range(1).selectExpr("0 as k").write.parquet(dir.resolve("o").toString)
+    val other = spark.read.parquet(dir.resolve("o").toString)
+    val out = new StringBuilder
+    out ++= s"Spark ${spark.version}, ansi=${spark.conf.get("spark.sql.ansi.enabled")}\n"
+    for ((vname, mk) <- variants; (dname, dpath) <- Seq("present" -> "p", "absent" -> "a")) {
+      val d = spark.read.parquet(dir.resolve(dpath).toString)
+      for ((sname, run) <- scenarios(d, other, mk(d))) {
+        SpikeLog.entries.clear()
+        val header = s"==== $vname | $dname | $sname"
+        val r = Try {
+          val df = run()
+          val rows = df.collect().map(_.toString).sorted.mkString(" ")
+          val qe = df.queryExecution
+          s"OK rows=$rows\n  schema=${df.schema.simpleString}\n  analyzed:\n${qe.analyzed.toString.linesIterator.map("    " + _).mkString("\n")}\n  optimized:\n${qe.optimizedPlan.toString.linesIterator.map("    " + _).mkString("\n")}"
+        }.recover { case t: Throwable => s"FAIL ${t.getClass.getSimpleName}: ${Option(t.getMessage).getOrElse("").linesIterator.take(1).mkString.take(220)}" }.get
+        out ++= s"$header\n  $r\n${SpikeLog.entries.distinct.map("  " + _).mkString("\n")}\n"
+      }
+    }
+    // Extra probes on V3: the join failure's cause, and an ambiguous name.
+    val p = spark.read.parquet(dir.resolve("p").toString)
+    val v3 = variants(2)._2(p)
+    out ++= "==== V3 join cause\n  " + Try(p.join(other, F.coalesce(F.size(F.flatten(lookup(v3))), F.lit(-1)) >= other("k")).collect())
+      .failed.map(t => Iterator.iterate(t)(_.getCause).takeWhile(_ != null).map(c => s"${c.getClass.getName}: ${Option(c.getMessage).getOrElse("").take(160)}").mkString(" <- ")).getOrElse("no failure") + "\n"
+    val selfJoin = p.as("l").join(p.as("r"), F.col("l.id") === F.col("r.id"))
+    for ((n, c) <- Seq("V3" -> variants(2)._2(selfJoin), "V0" -> F.col("_extension"))) {
+      out ++= s"==== $n ambiguous (self-join, two _extension columns)\n  " +
+        Try(selfJoin.select(c.alias("m")).collect().map(_.toString).mkString(" ")).map("OK rows=" + _)
+          .recover { case t => s"FAIL ${t.getMessage.linesIterator.next().take(160)}" }.get + "\n"
+    }
+    val target = java.nio.file.Paths.get(sys.props("spike.out"))
+    Files.createDirectories(target.getParent)
+    Files.writeString(target, out.toString)
+  }
+}

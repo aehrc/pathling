@@ -4,7 +4,8 @@ Two independently versioned projects in one repository:
 
 - **The library** — root `pom.xml`. FHIR analytics on Apache Spark. Build order matters:
   `utilities → encoders → terminology → fhirpath → library-api → library-runtime`, with
-  `lib/python` and `lib/R` wrapping `library-runtime`.
+  `fhir-schema` between `utilities` and `fhirpath`, `io` built on `fhir-schema` and bundled
+  directly by `library-runtime`, and `lib/python` and `lib/R` wrapping `library-runtime`.
 - **The server** — `server/pom.xml`. A FHIR server, **not** a child of the root POM. It depends on
   `library-runtime` as a published artifact, so library changes reach it only after
   `mvn install -pl library-runtime -am`.
@@ -40,6 +41,20 @@ Tooling:
   `.claude/worktrees/issue/<N>`), matching the `EnterWorktree` tool's own hardcoded root — that root
   is not configurable via settings.json, so this is the only sane convention to standardise on. The
   `implement-pathling` skill's `--worktree` flag uses this path, and it is gitignored.
+
+- **Specifications live under `specs/`**, tracked, one `NNN-short-name` directory per spec with
+  `archive/` holding the implemented ones. This overrides the `ssh:spec` and `ssh:build` skills,
+  which default to a gitignored `.local/specs/` — read and write `specs/` here instead. Each spec
+  carries an `evidence/` subdirectory with the measurements its decisions rest on and runnable
+  reproductions, because requirements that exist only because a measurement ruled out the obvious
+  alternative cannot be revisited once the evidence is lost. `specs/README.md` documents the
+  layout. This supersedes `openspec/` for work of this kind.
+
+- **Per-branch scratch work lives under `.local/work/<branch-name>/`**, relative to the checkout
+  root — working notes, throwaway scripts, captured output and anything else that belongs to the
+  branch but not to the repository. `/.local/` is gitignored, so nothing under it can be committed
+  by accident. Keeping it keyed by branch means a worktree and the main checkout never mix one
+  issue's working files into another's.
 
 Tests:
 

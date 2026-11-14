@@ -1,0 +1,205 @@
+# Contract: Library API
+
+What changes, and does not change, in the public API of the library in Java,
+Python and R.
+
+## Preserved unchanged
+
+| Surface | Note |
+| --- | --- |
+| Encoding resources from strings | Signature and semantics preserved in all three languages. |
+| Encoding bundles | Preserved. Bundles remain transport carriers, exploded to per-type tables. |
+| Decoding resources to strings | Preserved. |
+| XML input | Preserved, by converting to JSON before ingest. |
+| Reading and writing Parquet, Delta, catalog tables and NDJSON | Preserved. |
+| Terminology operations on Coding columns | Signatures and behaviour unchanged for correctly shaped input. |
+| Evaluating FHIRPath to a column, and against a single resource | Signatures preserved. |
+| Running ViewDefinitions | Preserved. |
+
+No public signature is removed or narrowed, with one exception (decision 87): the
+Java `encode` and `encodeBundle` overloads that return a dataset typed by a HAPI
+class are removed, since only the previous encoder can produce one. Encoding a
+streaming dataset fails until the dense schema arrives in M6.
+
+## Options added
+
+| Option | Meaning | Default |
+| --- | --- | --- |
+| Schema mode | Whether the stored schema is fitted to the data or comprises every defined element. Dense arrives in M6; until then fitted is the only value and the option is not offered. | Fitted |
+| Annotation toggles | Enable or disable each annotation individually. | All enabled |
+| Layout detection opt-out | Per source, for conforming data the detector misclassifies; the data is then read as it is. | Detection enabled |
+| Read schema supply | Per source. Supplies the schema a read uses instead of merging every file's. | Unset, so schemas are merged |
+
+All are surfaced in Java, Python and R.
+
+## Options whose meaning is unchanged but whose reach narrows
+
+The nesting-depth, extension and open-type options keep their current semantics
+for the dense schema. They do not apply to the fitted schema, where depth comes
+from the data, extensions appear because they are present, and open types
+resolve as observed.
+
+This is neither a deprecation nor a reinterpretation. Set them and switch to the
+fitted mode, and they simply have nothing to bound.
+
+Until the dense mode lands, that is the only case. From the release that switches
+the public API to this layout until the release that adds the mode, these three
+options are accepted and bound nothing at all, because the schema they bound does
+not yet exist here. They are kept rather than deprecated, since the mode is
+deferred rather than abandoned, and setting them remains harmless. Decision 69
+records the window.
+
+## Behaviour changes
+
+### Reading data written by an earlier release now fails
+
+Previously an old file flowed into the engine and produced a confusing failure,
+or silently wrong answers where column shapes happened to overlap. It is now
+rejected at read time with a message naming the resource type, the detected
+layout, the expected layout and the remedy.
+
+This is the intended improvement, but it is a behaviour change and belongs in
+the release notes. The per-source opt-out exists for conforming data the
+detector misclassifies; the data is then read as it is.
+
+### Writing into a dataset written by an earlier release now fails
+
+Sinks classify the target's layout before merging into it. Previously an append
+into such a table either failed with a storage-layer schema error or, where no
+column types conflicted, succeeded and left one table carrying two layouts. It
+is now rejected with the same message a read gives.
+
+### Writing Parquet or NDJSON where a type already has files honours the save mode
+
+Writing Parquet or NDJSON to a directory in which a resource type already has
+files now applies the save mode to those files (decision 112). Previously each
+write's files were renamed out of the directory Spark wrote them to, so a later
+write found that directory empty: it ignored the save mode, and its files took
+the names of the earlier write's and were lost while the write reported
+success. This loss is in every release since 9.3.0 and is tracked for the 9.x
+line as [#2823](https://github.com/aehrc/pathling/issues/2823).
+
+- With the default save mode (`error` in Python and R, `ERROR_IF_EXISTS` in
+  Java), such a write now raises a `PersistenceError` before writing any type,
+  where it used to discard the write silently.
+- `overwrite` replaces the type's earlier files.
+- `append` keeps the earlier files and adds the new ones beside them.
+- `ignore` skips the type and leaves its files as they are.
+
+Output file names now carry the id of the write that produced them,
+`<Type>.<partId>-<writeId>.<ext>` (for example
+`Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.parquet`), where they were
+`<Type>.<partId>.<ext>`. Where Spark splits a partition into several files, as
+`spark.sql.files.maxRecordsPerFile` makes it, every file after the first also
+keeps its file counter, `<Type>.<partId>-<writeId>-c<n>.<ext>` (for example
+`Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677-c001.parquet`). Files named
+by earlier releases are still read as the type.
+
+### A column expression stays valid over any conformant schema
+
+The expression-to-column API keeps its current contract: an expression becomes a
+column without reference to any dataset, and that column can be applied to any
+dataset conforming to the definitions. This survives the move to schemas fitted
+to the data. One column applied to two datasets holding the same resources under
+different schemas gives equal results — two fitted schemas of differing width,
+and a dense one once that mode arrives.
+
+Where the element is absent from a dataset's schema, the column is a null of the
+type the definitions give that element — not an untyped column. So it can be
+written to Parquet, and its reported type is the element's FHIR type rather than
+the null type. Absent *complex* elements are represented internally by the bottom
+type. That can reach a caller through the expression-to-column API — an
+expression whose result is a complex element the dataset does not carry — and a
+bottom-typed column **cannot be written to Parquet or ORC**, and is **omitted**
+rather than null when written to JSON. It cannot reach a ViewDefinition column,
+because view columns are primitive. This is the one residual of the untyped-column
+problem, narrowed from every absent element to absent complex ones.
+
+This is a change from an earlier draft of this design, which returned an untyped
+column and required a ViewDefinition to declare a type to recover one.
+
+### A view column over an absent element no longer needs a declared type
+
+A ViewDefinition column that declares a FHIR type produces an output column of
+that type whether or not the element is present in the data — unchanged.
+
+A column that declares *no* type, over an absent element, now also succeeds: the
+definitions supply the type. Declaring column types remains good practice and is
+what shareable views do, but it is no longer the difference between a view that
+runs and one that fails on fitted data.
+
+### Decimals
+
+Stored exactly as supplied. Computed at the same precision as today, which is
+documented as a cap permitted by the FHIR specification's deference to XML
+Schema.
+
+**Behaviour change.** The lexical form of a decimal is not preserved, on any
+JSON path (decision 68); XML ingest keeps it during the interim (decision 134's
+note of 2026-10-22). Trailing zeros are dropped, exponent notation is
+normalised, and a value beyond the precision of a double loses significant
+digits, because ingest reads a number through a double and stores its text. A
+stored decimal is numerically equal to the source, not textually identical to
+it. This was previously a limitation of the path taking resources as a dataset
+of strings alone; it now applies to the file path too, so the two JSON paths
+agree and there is no per-path caveat between them.
+
+**Behaviour change.** Content outside the definition set cannot be made to
+fail, and the strictness option is withdrawn (decision 68). Ingest checks and
+reports nothing: what it stores for content outside the definition set, or for
+an element whose JSON encoding type contradicts the definitions, is undefined
+(FR-063). `contained` resources are dropped silently (FR-006). Malformed JSON
+or XML still fails the read.
+
+### A quantity the engine builds has a fixed shape
+
+**Behaviour change.** A `System.Quantity` that reaches a caller as a column —
+from the expression-to-column API, or a view column declared `Quantity` — has
+the fixed shape the [engine semantics](engine-semantics.md#quantities) give it:
+`id`, `value`, `comparator`, `unit`, `system` and `code`, each a string, with
+the value as the text of the decimal. It previously had the previous layout's
+shape, with a fixed-scale decimal value, its `value_scale`, the
+`_value_canonicalized` and `_code_canonicalized` fields and `_fid` (FR-059).
+A quantity read from the data keeps the fitted shape of the data it came from.
+
+### A Coding the engine builds has six fields
+
+**Behaviour change.** A `System.Coding` that reaches a caller — from a
+terminology function such as `translate()`, through the expression-to-column
+API, a view column or a dataset written from either — has the six fields the
+[engine semantics](engine-semantics.md#coding-and-terminology) give it: `id`,
+`system`, `version`, `code`, `display` and `userSelected`. It previously had
+seven, the seventh being the previous layout's always-null `_fid` integer
+(FR-059). Code that selects the Coding's fields by name is unaffected; code that
+reads the structure by position, or compares its schema with a seven-field one,
+must drop `_fid`. A Coding read from the data keeps the fitted shape of the data
+it came from.
+
+### Schema merging on by default
+
+Reading a dataset of raw files merges their schemas by default, because
+otherwise the first file's schema wins and the rest are silently null-filled.
+Merging reads every file's metadata, which costs time on large datasets.
+
+**The way to avoid that cost is to supply a schema, not to switch merging off.**
+There is deliberately no boolean for it. Switching merging off was measured
+returning as few as 6 of 24 leaf columns on a divergent corpus, silently, so it
+is a trap rather than a choice. A supplied schema is safe only while it covers
+the union of every file's columns; supply one narrower and columns are dropped
+just as silently, merely deterministically. Whole rows can go with them: a view
+that unnests a repeating element returns none of a file's rows for that element
+when the supplied schema omits every field the file carries inside it, because
+the reader then has nothing from which to reconstruct the array. The workable
+pattern is to merge once and persist the result, or to take the writer's
+schema, and supply that.
+
+Appending to a transactional table merges the schema, so a batch carrying new
+elements widens the table rather than failing.
+
+Upserting into a transactional table also widens it. This is a **behaviour
+change**: the upsert path previously refused a source carrying elements the target
+lacked, failing on the structure mismatch, so that tolerance could not become
+schema evolution the caller had not asked for. That refusal assumed a schema
+derived from encoding configuration and therefore stable between batches. Under a
+schema fitted to the data it would fire on ordinary use, and append and upsert
+would answer the same question two ways.

@@ -24,7 +24,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-    <version>10.0.0</version>
+    <version>11.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -74,12 +74,15 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <pathling.sparkVersion>4.0.2</pathling.sparkVersion>
+    <pathling.sparkVersion>4.1.0</pathling.sparkVersion>
     <pathling.scalaVersion>2.13</pathling.scalaVersion>
-    <pathling.scalaFullVersion>2.13.16</pathling.scalaFullVersion>
-    <pathling.deltaVersion>4.0.1</pathling.deltaVersion>
+    <!-- Spark 4.1 is built with Scala 2.13.17 and calls library methods added in that release (for
+         example, TreeNode.hashCode calls MurmurHash3.caseClassHash), so it fails at runtime on an
+         older Scala library. -->
+    <pathling.scalaFullVersion>2.13.17</pathling.scalaFullVersion>
+    <pathling.deltaVersion>4.2.0</pathling.deltaVersion>
     <pathling.roaringBitmapVersion>1.3.0</pathling.roaringBitmapVersion>
-    <pathling.hadoopVersion>3.4.1</pathling.hadoopVersion>
+    <pathling.hadoopVersion>3.4.2</pathling.hadoopVersion>
     <pathling.hadoopMajorVersion>3</pathling.hadoopMajorVersion>
     <pathling.hapiFhirVersion>8.10.0</pathling.hapiFhirVersion>
     <pathling.antlrVersion>4.13.1</pathling.antlrVersion>
@@ -99,13 +102,21 @@
     <pathling.bulkExportVersion>1.1.0</pathling.bulkExportVersion>
     <pathling.fhirAuthVersion>1.0.0</pathling.fhirAuthVersion>
     <!-- Spark brings in a Netty version with published vulnerabilities, so the whole family is
-         pinned to a patched release. -->
-    <pathling.nettyVersion>4.1.137.Final</pathling.nettyVersion>
+         pinned to a patched release. Spark 4.1 is built against Netty 4.2, so the pin stays on the
+         4.2 line. -->
+    <pathling.nettyVersion>4.2.20.Final</pathling.nettyVersion>
     <!-- HAPI FHIR manages httpclient5 5.4.3 and httpcore5 5.3.1, both of which have published
          vulnerabilities (CVE-2026-64607, CVE-2026-54399, CVE-2026-54428). No HAPI FHIR release
          yet ships patched versions, so the transitives are pinned here instead. -->
     <pathling.httpClient5Version>5.6.4</pathling.httpClient5Version>
     <pathling.httpCore5Version>5.4.3</pathling.httpCore5Version>
+    <!-- Published vulnerabilities in transitive dependencies are fixed by pinning patched releases:
+         Guava from HAPI FHIR and bulk-export (CVE-2026-102554), OpenTelemetry from HAPI FHIR
+         (CVE-2026-118259), and snappy-java from Spark (CVE-2026-108106, CVE-2026-93451,
+         CVE-2026-116590). -->
+    <pathling.guavaVersion>33.8.0-jre</pathling.guavaVersion>
+    <pathling.openTelemetryVersion>1.68.0</pathling.openTelemetryVersion>
+    <pathling.snappyJavaVersion>1.1.10.12</pathling.snappyJavaVersion>
 
     <!-- The number of concurrent Surefire forks, expressed as a multiple of the available
          processors. One fork per processor is the fastest setting measured for a build that has the
@@ -116,7 +127,10 @@
 
   <modules>
     <module>utilities</module>
+    <module>fhir-schema</module>
     <module>encoders</module>
+    <module>io</module>
+    <module>legacy-export</module>
     <module>terminology</module>
     <module>fhirpath</module>
     <module>library-api</module>
@@ -152,6 +166,15 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <!-- Imported as a BOM so that the OpenTelemetry API and the context and common artifacts it
+           depends on stay on the same version. -->
+      <dependency>
+        <groupId>io.opentelemetry</groupId>
+        <artifactId>opentelemetry-bom</artifactId>
+        <version>${pathling.openTelemetryVersion}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
       <!-- Declared ahead of the HAPI FHIR BOM import so that these pinned versions win over the
            ones HAPI FHIR manages. -->
       <dependency>
@@ -168,6 +191,50 @@
         <groupId>org.apache.httpcomponents.core5</groupId>
         <artifactId>httpcore5-h2</artifactId>
         <version>${pathling.httpCore5Version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>${pathling.guavaVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.xerial.snappy</groupId>
+        <artifactId>snappy-java</artifactId>
+        <version>${pathling.snappyJavaVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>fhir-schema</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>fhir-schema</artifactId>
+        <version>${project.version}</version>
+        <classifier>sources</classifier>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>fhir-schema</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>io</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>io</artifactId>
+        <version>${project.version}</version>
+        <classifier>sources</classifier>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>io</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
       </dependency>
       <dependency>
         <groupId>au.csiro.pathling</groupId>
@@ -344,6 +411,13 @@
           </exclusion>
         </exclusions>
       </dependency>
+      <!-- The Spark SQL API surface without the Catalyst implementation behind it. Modules that
+           must not reach internal Catalyst API depend on this rather than on spark-sql. -->
+      <dependency>
+        <groupId>org.apache.spark</groupId>
+        <artifactId>spark-sql-api_${pathling.scalaVersion}</artifactId>
+        <version>${pathling.sparkVersion}</version>
+      </dependency>
       <dependency>
         <groupId>org.apache.spark</groupId>
         <artifactId>spark-catalyst_${pathling.scalaVersion}</artifactId>
@@ -364,10 +438,18 @@
         <artifactId>spark-kubernetes_${pathling.scalaVersion}</artifactId>
         <version>${pathling.sparkVersion}</version>
       </dependency>
+      <!-- Delta 4.2 brings in log4j-slf4j2-impl through unitycatalog-client. It is excluded, as it is
+           from Spark above, so that it does not compete with logback as the SLF4J provider. -->
       <dependency>
         <groupId>io.delta</groupId>
         <artifactId>delta-spark_${pathling.scalaVersion}</artifactId>
         <version>${pathling.deltaVersion}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j2-impl</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>io.delta</groupId>
@@ -558,7 +640,8 @@
       <dependency>
         <groupId>org.json</groupId>
         <artifactId>json</artifactId>
-        <version>20240303</version>
+        <!-- Pinned at or above 20260719, which fixes CVE-2026-59171. -->
+        <version>20260814</version>
       </dependency>
       <dependency>
         <groupId>commons-beanutils</groupId>
@@ -1067,6 +1150,7 @@
                   <exclude>.github/**</exclude>
                   <exclude>.mvn/**</exclude>
                   <exclude>.claude/**</exclude>
+                  <exclude>specs/**</exclude>
                   <exclude>.opencode/**</exclude>
                   <exclude>mvnw</exclude>
                   <exclude>mvnw.cmd</exclude>
@@ -1168,6 +1252,11 @@
               <version>7.4.0.202509020913-r</version>
             </dependency>
           </dependencies>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>3.5.0</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>

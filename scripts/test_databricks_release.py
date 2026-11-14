@@ -43,8 +43,8 @@ PATHLING_PYPI_PACKAGE = "pathling"
 # The Maven Central snapshots repository URL.
 MAVEN_SNAPSHOTS_REPO = "https://central.sonatype.com/repository/maven-snapshots/"
 
-# The default Databricks runtime version.
-DEFAULT_DATABRICKS_RUNTIME = "17.3.x-scala2.13"
+# The default Databricks runtime version: the Databricks Runtime 18 LTS channel.
+DEFAULT_DATABRICKS_RUNTIME = "18.x-scala2.13"
 
 # The default timeout in minutes for cluster startup and notebook runs.
 DEFAULT_TIMEOUT_MINUTES = 30
@@ -56,7 +56,8 @@ DEFAULT_GITHUB_REPO = "aehrc/pathling"
 DBFS_R_PACKAGE_DIR = "dbfs:/FileStore/R"
 R_PACKAGE_UPLOAD_NAME = "pathling_latest_tar.gz"
 
-# The environment variable required for Java 21 on Databricks.
+# The environment variable that selects Java 21 on Databricks. Databricks Runtime 18 uses Java 21 by
+# default; setting it explicitly keeps an older runtime passed with --databricks-runtime on Java 21.
 JAVA_ENV_VAR = {"JNAME": "zulu21-ca-amd64"}
 
 # The interval in seconds between polling attempts.

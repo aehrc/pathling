@@ -270,14 +270,20 @@ The following FHIRPath features are **not currently supported**:
 
 #### Recursive traversal depth
 
-Both `repeat` and `repeatAll` use static type analysis to determine how to
-handle the recursion. When the projection expression produces the same FHIR
-type at each level (e.g. navigating `item` within a Questionnaire), the
-traversal is bounded by a configurable maximum depth. The default maximum depth
-is 10.
+Both `repeat` and `repeatAll` stop when a level of the traversal produces no
+new items. The maximum depth guards against recursion that would never end on
+its own: a projection that yields a value of the same SQL type as the level it
+was applied to, such as `name.repeatAll(first())`. Each such same-type level
+counts towards a configurable maximum depth, which defaults to 10. When the
+maximum is reached, `repeatAll` and `repeat` raise an error, except when
+traversing extensions, where they stop and return the results collected up to
+that point.
 
-For Extension traversal, depth exhaustion silently stops and returns results
-collected up to that point. For other types, depth exhaustion raises an error.
+Nested structures in the data, such as the `item` elements of a Questionnaire
+or extensions nested within extensions, are stored with a different type at
+each level, because each level contains the type of the level beneath it. Their
+traversal therefore does not count towards the maximum depth, and stops where
+the data does: every level the data carries is returned.
 
 The maximum depth can be configured:
 

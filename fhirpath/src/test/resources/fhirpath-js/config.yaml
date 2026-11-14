@@ -4,11 +4,6 @@ excludeSet:
   - title: Global exclusions
     glob: "*.yaml"
     exclude:
-      - title: Unsupported resources
-        type: feature
-        id: "#2418"
-        expression:
-          - "^StructureDefinition"
       - title: "Primitive .id extension not accessible after trace"
         type: bug
         id: "#2580"
@@ -19,6 +14,21 @@ excludeSet:
           changes how the schema is resolved for extension fields.
         any:
           - "trace('coll')[0].id"
+      - title: "Non-conformant input fixture: answer is not an array"
+        type: feature
+        comment: |
+          In quantity-example.json, QuestionnaireResponse.item.answer is an object
+          where FHIR JSON requires an array. Ingest under trust (FR-063) does not
+          read such input and fails with Spark's own error. Re-enable these cases
+          when ingest gains the tolerate mode, raised as a follow-up by ticket 26
+          of specs/001-parquet-on-fhir. The other cases over this fixture are
+          excluded under #2163.
+        any:
+          - "QuestionnaireResponse.item[0].answer.value ~ 2 'a'"
+          - "QuestionnaireResponse.item[2].answer.value.toQuantity()"
+          - "QuestionnaireResponse.item[3].answer.value.toQuantity()"
+          - "QuestionnaireResponse.item.select(answer.value as FHIR.Quantity).count()"
+          - "QuestionnaireResponse.item.select(answer.value.as(FHIR.Quantity)).count()"
       - title: Parse error
         type: wontfix
         comment: |
@@ -364,6 +374,7 @@ excludeSet:
           - "Observation is Resource"
           - "Observation.value is Element"
           - "Patient.contact is Element"
+          - "StructureDefinition.snapshot.element.type is Element"
   - title: Collections exclusions
     glob: "fhirpath-js/cases/6.4_collections.yaml"
     exclude:
@@ -682,13 +693,3 @@ excludeSet:
           This is correct behavior per spec operator precedence rules.
         any:
           - "1 | 1 is Integer"
-      - title: "Recursive ValueSet.expansion.contains not encoded"
-        type: feature
-        outcome: failure
-        comment: |
-          The encoder explicitly skips the recursive 'contains' field within
-          ValueSetExpansionContainsComponent (see R4DataTypeMappings.skipField).
-          This means nested contains entries are not available in the Spark schema,
-          so repeat(contains) only finds top-level entries.
-        any:
-          - "** testRepeat1"

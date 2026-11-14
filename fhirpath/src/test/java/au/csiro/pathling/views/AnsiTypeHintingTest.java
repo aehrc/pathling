@@ -254,8 +254,8 @@ class AnsiTypeHintingTest {
         Arguments.of(
             "instant",
             new InstantType("2023-01-01T12:00:00Z"),
-            DataTypes.TimestampType,
-            "2023-01-01 12:00:00.0"),
+            DataTypes.StringType,
+            "2023-01-01T12:00:00Z"),
         Arguments.of("integer", new IntegerType(42), DataTypes.IntegerType, "42"),
         Arguments.of(
             "markdown", new MarkdownType("**bold text**"), DataTypes.StringType, "**bold text**"),
@@ -351,7 +351,7 @@ class AnsiTypeHintingTest {
             false,
             DataTypes.StringType,
             "24.4"),
-        Arguments.of("instant", "issued", false, DataTypes.TimestampType, "2023-01-01 02:00:00.0"),
+        Arguments.of("instant", "issued", false, DataTypes.StringType, "2023-01-01T12:00:00+10:00"),
         // there is no way atm to get the original timezone so try UTC
         Arguments.of(
             "dateTime",
