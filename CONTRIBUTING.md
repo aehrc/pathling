@@ -231,8 +231,10 @@ testing guidelines, and build instructions.
 The `benchmark` module contains JMH benchmarks. The
 [Benchmark workflow](.github/workflows/benchmark.yml) is run manually with the
 ID of a successful build, and runs `PathlingBenchmark` against that build's
-JARs. It then publishes the results to the `gh-pages` branch, under
-`benchmarks/data`:
+JARs. It can instead be given the version of a release on Maven Central, in
+which case the current `PathlingBenchmark` is built against that release, so
+that releases are compared on the same workload. Unless `publish` is unset, it
+then publishes the results to the `gh-pages` branch, under `benchmarks/data`:
 
 - `runs/<workflow run ID>.json` - the JMH JSON output of the run.
 - `index.json` - every run, with a summary of its results.
