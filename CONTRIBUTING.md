@@ -233,10 +233,24 @@ The `benchmark` module contains JMH benchmarks. The
 ID of a successful build, and runs `PathlingBenchmark` against that build's
 JARs. It can instead be given the version of a release on Maven Central, in
 which case the current `PathlingBenchmark` is built against that release, so
-that releases are compared on the same workload. Unless `publish` is unset, it
-then publishes the results to the `gh-pages` branch, under `benchmarks/data`:
+that releases are compared on the same workload.
+
+GitHub-hosted runners differ in speed by more than a factor of two, which is
+larger than most changes in performance. Every run therefore also benchmarks a
+fixed reference release, set by `REFERENCE_VERSION` in the workflow, on the
+same runner, and scores are reported as a multiple of the reference score. The
+reference is 9.1.0, the earliest release in which every view in
+`PathlingBenchmark` gives the same results as today. Changing it makes earlier
+runs incomparable with later ones, so they would need to be run again. Any
+change to `PathlingBenchmark` must also still compile against the reference
+release.
+
+Unless `publish` is unset, the workflow then publishes the results to the
+`gh-pages` branch, under `benchmarks/data`:
 
 - `runs/<workflow run ID>.json` - the JMH JSON output of the run.
+- `runs/<workflow run ID>-reference.json` - the JMH JSON output of the
+  reference release from the same run.
 - `index.json` - every run, with a summary of its results.
 
 The [benchmarks page](https://pathling.csiro.au/benchmarks)
@@ -244,15 +258,16 @@ The [benchmarks page](https://pathling.csiro.au/benchmarks)
 appear without rebuilding the site. The site deployment preserves
 `benchmarks/data` when it replaces the contents of `gh-pages`. The page shows
 each benchmark over time, the details of each run, and comparisons of two runs.
-Comparisons use a two-sided Welch's t-test on the per-iteration scores, with a
-significance level of 0.05.
+Comparisons use a two-sided Welch's t-test on the per-iteration scores divided
+by the reference score, with a significance level of 0.05.
 
-To publish a JMH result file by hand, for example to add a run whose artifact
-is still available:
+To publish a run by hand, for example to add a run whose artifact is still
+available:
 
 ```bash
 cd site
 bun scripts/publishBenchmark.js --results benchmark-abc1234567.json \
+  --reference-results benchmark-abc1234567-reference.json --reference 9.1.0 \
   --data-dir ../gh-pages/benchmarks/data --run-id <workflow run ID> \
   --commit <full commit SHA> --date 2026-01-01T00:00:00Z
 ```

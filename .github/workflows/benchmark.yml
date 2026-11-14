@@ -3,7 +3,9 @@
 #
 # It is triggered manually, and benchmarks either the JARs of a previously
 # successful build, given by its workflow run ID, or a release published to
-# Maven Central, given by its version.
+# Maven Central, given by its version. Every run also benchmarks a fixed
+# reference release on the same runner, and the site shows scores relative to
+# it, which cancels out most of the difference in speed between runners.
 
 name: Benchmark
 
@@ -20,6 +22,13 @@ on:
         description: "Publish the results to the site"
         type: boolean
         default: true
+
+env:
+  # The earliest release in which every view in PathlingBenchmark gives the
+  # same results as today: earlier releases ignore the repeat clause used by
+  # QuestionnaireResponseFlat. Changing it makes earlier runs incomparable with
+  # later ones.
+  REFERENCE_VERSION: "9.1.0"
 
 jobs:
   benchmark:
@@ -152,31 +161,50 @@ jobs:
               -Dclassifier=sources
           done
 
-      # For a release, the benchmark module takes its parent POM, and with it
-      # the Spark version, from Maven Central. Only PathlingBenchmark is built,
-      # as the other benchmarks use APIs that older releases do not have, and
-      # the JOL version is supplied because older parent POMs do not define it.
-      # The checkstyle and licence checks are skipped, as some parent POMs look
-      # for their configuration relative to the module rather than the root.
-      - name: Build benchmark JAR
+      # A release, and the reference release, are built by giving a copy of the
+      # benchmark module the release's parent POM, and with it the Spark
+      # version, from Maven Central. Only PathlingBenchmark is built, as the
+      # other benchmarks use APIs that older releases do not have, and the JOL
+      # version is supplied because older parent POMs do not define it. The
+      # checkstyle and licence checks are skipped, as some parent POMs look for
+      # their configuration relative to the module rather than the root.
+      - name: Build benchmark JARs
+        id: build
         env:
           RELEASE_VERSION: ${{ inputs.version }}
+          VERSION: ${{ steps.get_version.outputs.version }}
         run: |
-          if [[ -n "$RELEASE_VERSION" ]]; then
-            find benchmark/src/main/java -name '*.java' ! -name 'PathlingBenchmark*.java' -delete
-            rm -rf benchmark/src/test
-            sed -i "0,/<version>[^<]*<\/version>/s//<version>${RELEASE_VERSION}<\/version>/" benchmark/pom.xml
-            mvn --batch-mode package -f benchmark/pom.xml -DskipTests -Dcheckstyle.skip \
+          build_release() {
+            local version=$1 dir=$2
+            cp -R benchmark "$dir"
+            find "$dir/src/main/java" -name '*.java' ! -name 'PathlingBenchmark*.java' -delete
+            rm -rf "$dir/src/test"
+            sed -i "0,/<version>[^<]*<\/version>/s//<version>${version}<\/version>/" "$dir/pom.xml"
+            mvn --batch-mode package -f "$dir/pom.xml" -DskipTests -Dcheckstyle.skip \
               -Dlicense.skip -Dpathling.jolVersion=0.17
+          }
+          build_release "$REFERENCE_VERSION" benchmark-reference
+          echo "reference_jar=benchmark-reference/target/benchmark-${REFERENCE_VERSION}.jar" >> "$GITHUB_OUTPUT"
+          if [[ -n "$RELEASE_VERSION" ]]; then
+            build_release "$RELEASE_VERSION" benchmark-release
+            echo "jar=benchmark-release/target/benchmark-${VERSION}.jar" >> "$GITHUB_OUTPUT"
           else
             mvn --batch-mode package -pl benchmark
+            echo "jar=benchmark/target/benchmark-${VERSION}.jar" >> "$GITHUB_OUTPUT"
           fi
 
-      # TerminologyBenchmark is excluded, as it needs a terminology source that
-      # is not available here. The module options are those that the Spark
-      # launcher adds, which releases built on Spark 3.5 need on Java 21.
+      # The reference release is benchmarked on the same runner, immediately
+      # before the code under test, so that its scores can be used to cancel
+      # out the speed of the runner. TerminologyBenchmark is excluded, as it
+      # needs a terminology source that is not available here. The module
+      # options are those that the Spark launcher adds, which releases built on
+      # Spark 3.5 need on Java 21.
       - name: Run benchmark
         id: run_benchmark
+        env:
+          JAR: ${{ steps.build.outputs.jar }}
+          REFERENCE_JAR: ${{ steps.build.outputs.reference_jar }}
+          SHORT_SHA: ${{ steps.get_commit.outputs.short_sha }}
         run: |
           OPENS=()
           for PACKAGE in java.lang java.lang.invoke java.lang.reflect java.io java.net \
@@ -184,11 +212,13 @@ jobs:
             sun.nio.cs sun.security.action sun.util.calendar; do
             OPENS+=("--add-opens=java.base/$PACKAGE=ALL-UNNAMED")
           done
-          java -Xshare:off -Xmx8g -ea -Duser.timezone=UTC \
-            --add-exports=java.base/sun.nio.ch=ALL-UNNAMED "${OPENS[@]}" \
-            -jar benchmark/target/benchmark-${{ steps.get_version.outputs.version }}.jar \
-            -rf json -rff benchmark-${{ steps.get_commit.outputs.short_sha }}.json \
-            PathlingBenchmark
+          run_benchmark() {
+            java -Xshare:off -Xmx8g -ea -Duser.timezone=UTC \
+              --add-exports=java.base/sun.nio.ch=ALL-UNNAMED "${OPENS[@]}" \
+              -jar "$1" -rf json -rff "$2" PathlingBenchmark
+          }
+          run_benchmark "$REFERENCE_JAR" "benchmark-${SHORT_SHA}-reference.json"
+          run_benchmark "$JAR" "benchmark-${SHORT_SHA}.json"
           echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       - name: Save results
@@ -239,6 +269,8 @@ jobs:
         run: |
           bun site/scripts/publishBenchmark.js \
             --results "benchmark-${SHORT_SHA}.json" \
+            --reference-results "benchmark-${SHORT_SHA}-reference.json" \
+            --reference "${REFERENCE_VERSION}" \
             --data-dir gh-pages/benchmarks/data \
             --run-id "${{ github.run_id }}" \
             --commit "${COMMIT_SHA}" \

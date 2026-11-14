@@ -18,11 +18,31 @@
 /**
  * Comparison of the results of two benchmark runs.
  *
+ * Each run benchmarks both the code under test and a fixed reference release
+ * on the same runner. The comparison uses scores relative to the reference, so
+ * that a difference in the speed of the two runners is not mistaken for a
+ * change in performance.
+ *
  * @author John Grimes
  */
 
-import { iterationScores, resultKey, summariseResults } from "./jmh.js";
+import {
+  iterationScores,
+  paramsLabel,
+  relativeScore,
+  resultKey,
+  shortBenchmarkName,
+} from "./jmh.js";
 import { welchTTest } from "./stats.js";
+
+/**
+ * The results of one run.
+ *
+ * @typedef {object} RunResults
+ * @property {object[]} results - The JMH results of the code under test.
+ * @property {object[]} referenceResults - The JMH results of the reference
+ *   release from the same run.
+ */
 
 /**
  * The comparison of one benchmark between two runs.
@@ -32,38 +52,37 @@ import { welchTTest } from "./stats.js";
  * @property {string} benchmark - The class and method name.
  * @property {string} mode - The JMH mode.
  * @property {string} params - The parameter label.
- * @property {{score: number, scoreError: number | null, scoreUnit: string} | null} base
- *   - The result in the base run.
- * @property {{score: number, scoreError: number | null, scoreUnit: string} | null} target
- *   - The result in the target run.
- * @property {number | null} changePercent - The change in score from base to
- *   target, as a percentage of the base score.
+ * @property {import("./jmh.js").RelativeScore | null} base - The relative
+ *   score in the base run.
+ * @property {import("./jmh.js").RelativeScore | null} target - The relative
+ *   score in the target run.
+ * @property {number | null} changePercent - The change in relative score from
+ *   base to target, as a percentage of the base relative score.
  * @property {number | null} p - The two-sided p-value of Welch's t-test on the
- *   iteration scores.
- * @property {"improvement" | "regression" | "no-change" | "untestable" | "base-only" | "target-only"} verdict
+ *   relative iteration scores.
+ * @property {"improvement" | "regression" | "no-change" | "untestable" | "no-reference" | "base-only" | "target-only"} verdict
  *   - The outcome of the comparison.
  */
 
 /**
  * Compares the results of two runs. Each benchmark present in both runs is
  * tested for a significant difference using Welch's t-test on its iteration
- * scores.
+ * scores, each divided by the reference score from the same run.
  *
- * @param {object[]} baseResults - The JMH results of the base run.
- * @param {object[]} targetResults - The JMH results of the target run.
+ * The test does not account for the error in the reference scores, so it
+ * slightly overstates the significance of a difference.
+ *
+ * @param {RunResults} baseRun - The results of the base run.
+ * @param {RunResults} targetRun - The results of the target run.
  * @param {number} [alpha=0.05] - The significance level.
  * @returns {ComparisonRow[]} One row per benchmark, ordered by benchmark name,
  *   parameters and mode.
  * @example
  * compareRuns(older, newer).filter((row) => row.verdict === "regression");
  */
-export function compareRuns(baseResults, targetResults, alpha = 0.05) {
-  const base = new Map(
-    baseResults.map((result) => [resultKey(result), result]),
-  );
-  const target = new Map(
-    targetResults.map((result) => [resultKey(result), result]),
-  );
+export function compareRuns(baseRun, targetRun, alpha = 0.05) {
+  const base = pairWithReferences(baseRun);
+  const target = pairWithReferences(targetRun);
   const keys = new Set([...base.keys(), ...target.keys()]);
   return [...keys]
     .map((key) => compareResult(key, base.get(key), target.get(key), alpha))
@@ -76,41 +95,62 @@ export function compareRuns(baseResults, targetResults, alpha = 0.05) {
 }
 
 /**
+ * Pairs each result of a run with its reference result.
+ *
+ * @param {RunResults} run - The results of a run.
+ * @returns {Map<string, {result: object, reference: object | undefined}>} The
+ *   pairs, keyed by result key.
+ */
+function pairWithReferences({ results, referenceResults }) {
+  const references = new Map(
+    referenceResults.map((result) => [resultKey(result), result]),
+  );
+  return new Map(
+    results.map((result) => [
+      resultKey(result),
+      { result, reference: references.get(resultKey(result)) },
+    ]),
+  );
+}
+
+/**
  * Compares one benchmark between two runs.
  *
  * @param {string} key - The result key.
- * @param {object | undefined} baseResult - The JMH result in the base run.
- * @param {object | undefined} targetResult - The JMH result in the target run.
+ * @param {{result: object, reference: object | undefined} | undefined} base -
+ *   The result in the base run, with its reference result.
+ * @param {{result: object, reference: object | undefined} | undefined} target -
+ *   The result in the target run, with its reference result.
  * @param {number} alpha - The significance level.
  * @returns {ComparisonRow} The comparison.
  */
-function compareResult(key, baseResult, targetResult, alpha) {
-  const [summary] = summariseResults([baseResult ?? targetResult]);
+function compareResult(key, base, target, alpha) {
+  const { result } = base ?? target;
   const row = {
     key,
-    benchmark: summary.benchmark,
-    mode: summary.mode,
-    params: summary.params,
-    base: baseResult ? scoreOf(baseResult) : null,
-    target: targetResult ? scoreOf(targetResult) : null,
+    benchmark: shortBenchmarkName(result.benchmark),
+    mode: result.mode,
+    params: paramsLabel(result.params),
+    base: base ? relativeScore(base.result, base.reference) : null,
+    target: target ? relativeScore(target.result, target.reference) : null,
     changePercent: null,
     p: null,
   };
-  if (!baseResult || !targetResult) {
-    return { ...row, verdict: baseResult ? "base-only" : "target-only" };
+  if (!base || !target) {
+    return { ...row, verdict: base ? "base-only" : "target-only" };
+  }
+  if (!row.base || !row.target) {
+    return { ...row, verdict: "no-reference" };
   }
 
   const changePercent =
     ((row.target.score - row.base.score) / row.base.score) * 100;
-  const test = welchTTest(
-    iterationScores(baseResult),
-    iterationScores(targetResult),
-  );
+  const test = welchTTest(relativeIterations(base), relativeIterations(target));
   if (!test) {
     return { ...row, changePercent, verdict: "untestable" };
   }
   // Throughput is the only JMH mode in which a higher score is better.
-  const higherIsBetter = summary.mode === "thrpt";
+  const higherIsBetter = row.mode === "thrpt";
   const improved = higherIsBetter ? changePercent > 0 : changePercent < 0;
   const verdict =
     test.p >= alpha ? "no-change" : improved ? "improvement" : "regression";
@@ -118,13 +158,14 @@ function compareResult(key, baseResult, targetResult, alpha) {
 }
 
 /**
- * Extracts the score fields of a JMH result.
+ * Divides each iteration score of a result by its reference score.
  *
- * @param {object} result - A JMH result.
- * @returns {{score: number, scoreError: number | null, scoreUnit: string}} The
- *   score, its error and unit.
+ * @param {{result: object, reference: object}} pair - A result with its
+ *   reference result.
+ * @returns {number[]} The relative iteration scores.
  */
-function scoreOf(result) {
-  const [{ score, scoreError, scoreUnit }] = summariseResults([result]);
-  return { score, scoreError, scoreUnit };
+function relativeIterations({ result, reference }) {
+  return iterationScores(result).map(
+    (score) => score / reference.primaryMetric.score,
+  );
 }

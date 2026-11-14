@@ -32,9 +32,12 @@
  *
  * @typedef {object} RunEntry
  * @property {string} id - The GitHub Actions run ID of the benchmark workflow.
- *   The full JMH output is published at `runs/<id>.json`.
+ *   The full JMH output is published at `runs/<id>.json`, and that of the
+ *   reference release at `runs/<id>-reference.json`.
  * @property {string} date - The ISO 8601 time at which the benchmark ran.
  * @property {string} commit - The SHA of the commit that was benchmarked.
+ * @property {string} reference - The version of the reference release that
+ *   was benchmarked on the same runner.
  * @property {ResultSummary[]} results - The summarised results.
  */
 
@@ -66,8 +69,8 @@ export function addRun(index, entry) {
  * @property {string} runId - The run ID.
  * @property {string} date - The time at which the benchmark ran.
  * @property {string} commit - The commit SHA.
- * @property {number} score - The score.
- * @property {number | null} scoreError - The 99.9% error.
+ * @property {number} score - The score relative to the reference release.
+ * @property {number | null} scoreError - The error of the relative score.
  */
 
 /**
@@ -75,7 +78,8 @@ export function addRun(index, entry) {
  *
  * @typedef {object} Timeline
  * @property {string} benchmark - The class and method name.
- * @property {string} unit - The unit of the scores.
+ * @property {string} unit - The unit of the scores, naming the reference
+ *   release.
  * @property {{label: string, points: TimelinePoint[]}[]} series - One series
  *   per combination of mode and parameters.
  */
@@ -86,6 +90,10 @@ export function addRun(index, entry) {
  * Each series is labelled by its parameters. The mode is added to the label
  * only when the benchmark has been run in more than one mode.
  *
+ * Scores are plotted relative to the reference release, as the raw scores
+ * depend on the speed of the runner. Results without a reference result are
+ * left out.
+ *
  * @param {RunIndex} index - The run index.
  * @returns {Timeline[]} The timelines, ordered by benchmark name.
  */
@@ -95,9 +103,12 @@ export function buildTimelines(index) {
   const units = new Map();
   for (const run of index.runs) {
     for (const result of run.results) {
+      if (!result.relative) {
+        continue;
+      }
       if (!benchmarks.has(result.benchmark)) {
         benchmarks.set(result.benchmark, new Map());
-        units.set(result.benchmark, result.scoreUnit);
+        units.set(result.benchmark, `relative to ${run.reference}`);
       }
       const series = benchmarks.get(result.benchmark);
       const key = `${result.mode}|${result.params}`;
@@ -112,8 +123,8 @@ export function buildTimelines(index) {
         runId: run.id,
         date: run.date,
         commit: run.commit,
-        score: result.score,
-        scoreError: result.scoreError,
+        score: result.relative.score,
+        scoreError: result.relative.scoreError,
       });
     }
   }

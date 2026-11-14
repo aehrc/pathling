@@ -35,6 +35,7 @@ const VERDICTS = {
   regression: { label: "Regression", className: styles.regression },
   "no-change": { label: "No significant change", className: "" },
   untestable: { label: "Too few iterations to test", className: "" },
+  "no-reference": { label: "No reference result", className: "" },
   "base-only": { label: "Only in base run", className: "" },
   "target-only": { label: "Only in target run", className: "" },
 };
@@ -49,6 +50,8 @@ const VERDICTS = {
  *   target run.
  * @param {(runId: string) => string} props.resultsUrl - Builds the URL of a
  *   run's JMH results.
+ * @param {(runId: string) => string} props.referenceResultsUrl - Builds the
+ *   URL of the JMH results of the reference release from a run.
  * @param {(runId: string) => React.ReactNode} props.runLink - Renders a link to
  *   a run's details.
  * @param {React.ReactNode} props.navigation - Links to related views.
@@ -58,17 +61,35 @@ export default function RunComparison({
   base,
   target,
   resultsUrl,
+  referenceResultsUrl,
   runLink,
   navigation,
 }) {
-  const baseResults = useJson(resultsUrl(base.id));
-  const targetResults = useJson(resultsUrl(target.id));
-  const error = baseResults.error ?? targetResults.error;
+  const fetches = [
+    useJson(resultsUrl(base.id)),
+    useJson(referenceResultsUrl(base.id)),
+    useJson(resultsUrl(target.id)),
+    useJson(referenceResultsUrl(target.id)),
+  ];
+  const [baseResults, baseReference, targetResults, targetReference] = fetches;
+  const error = fetches.find((fetched) => fetched.error)?.error;
+  const loaded = fetches.every((fetched) => fetched.data);
+  // Relative scores are only comparable if they share a reference release.
+  const sameReference = base.reference === target.reference;
   const rows =
-    baseResults.data && targetResults.data
-      ? compareRuns(baseResults.data, targetResults.data, ALPHA)
+    loaded && sameReference
+      ? compareRuns(
+          {
+            results: baseResults.data,
+            referenceResults: baseReference.data,
+          },
+          {
+            results: targetResults.data,
+            referenceResults: targetReference.data,
+          },
+          ALPHA,
+        )
       : null;
-
   return (
     <section>
       <h2>Comparison</h2>
@@ -86,17 +107,26 @@ export default function RunComparison({
         </dd>
       </dl>
       <p>
-        Each difference is tested with a two-sided Welch&apos;s t-test on the
-        per-iteration scores of the two runs (one score per measurement
-        iteration in each fork). A difference is significant when p &lt; {ALPHA}
-        . The change is the difference in JMH score as a percentage of the base
-        score.
+        Each run also benchmarks the reference release {base.reference} on the
+        same runner, and each score is divided by the reference score, so that a
+        difference in the speed of the runners is not mistaken for a change in
+        performance. Each difference is tested with a two-sided Welch&apos;s
+        t-test on the relative per-iteration scores of the two runs (one score
+        per measurement iteration in each fork). A difference is significant
+        when p &lt; {ALPHA}. The change is the difference in relative score as a
+        percentage of the base relative score.
       </p>
-      {(baseResults.loading || targetResults.loading) && (
+      {!sameReference && (
+        <p className={styles.error}>
+          These runs cannot be compared, as they were measured against different
+          reference releases ({base.reference} and {target.reference}).
+        </p>
+      )}
+      {fetches.some((fetched) => fetched.loading) && (
         <p role="status">Loading results…</p>
       )}
       {error && <p className={styles.error}>{error}</p>}
-      {rows && <ComparisonTable rows={rows} />}
+      {rows && <ComparisonTable rows={rows} reference={base.reference} />}
     </section>
   );
 }
@@ -107,9 +137,10 @@ export default function RunComparison({
  * @param {object} props - The component props.
  * @param {import("../../benchmarks/compare.js").ComparisonRow[]} props.rows -
  *   The comparison rows.
+ * @param {string} props.reference - The version of the reference release.
  * @returns {React.ReactElement} The summary and table.
  */
-function ComparisonTable({ rows }) {
+function ComparisonTable({ rows, reference }) {
   const count = (verdict) =>
     rows.filter((row) => row.verdict === verdict).length;
   return (
@@ -118,8 +149,9 @@ function ComparisonTable({ rows }) {
         Of {rows.length} benchmark(s): {count("improvement")} significant
         improvement(s), {count("regression")} significant regression(s),{" "}
         {count("no-change")} without a significant change, {count("untestable")}{" "}
-        with too few iterations to test, and{" "}
-        {count("base-only") + count("target-only")} present in only one run.
+        with too few iterations to test, {count("no-reference")} without a
+        reference result, and {count("base-only") + count("target-only")}{" "}
+        present in only one run.
       </p>
       <div className={styles.tableWrapper}>
         <table>
@@ -128,9 +160,8 @@ function ComparisonTable({ rows }) {
               <th>Benchmark</th>
               <th>Parameters</th>
               <th>Mode</th>
-              <th>Base</th>
-              <th>Target</th>
-              <th>Unit</th>
+              <th>Base, relative to {reference}</th>
+              <th>Target, relative to {reference}</th>
               <th>Change</th>
               <th>p</th>
               <th>Verdict</th>
@@ -139,7 +170,6 @@ function ComparisonTable({ rows }) {
           <tbody>
             {rows.map((row) => {
               const verdict = VERDICTS[row.verdict];
-              const unit = (row.base ?? row.target).scoreUnit;
               return (
                 <tr key={row.key}>
                   <td>{row.benchmark}</td>
@@ -151,7 +181,6 @@ function ComparisonTable({ rows }) {
                   <td className={styles.number}>
                     {row.target ? formatScore(row.target) : "-"}
                   </td>
-                  <td>{unit}</td>
                   <td className={`${styles.number} ${verdict.className}`}>
                     {row.changePercent === null
                       ? "-"

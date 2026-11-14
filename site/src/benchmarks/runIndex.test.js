@@ -16,15 +16,16 @@ import { addRun, buildTimelines } from "./runIndex.js";
  * @returns {object} An index entry.
  */
 function run(id, date, results = []) {
-  return { id, date, commit: `sha-${id}`, results };
+  return { id, date, commit: `sha-${id}`, reference: "9.1.0", results };
 }
 
 /**
- * Builds a summarised result.
+ * Builds a summarised result. The raw score is 100 times the relative score,
+ * so that a test can tell which of the two a timeline uses.
  *
  * @param {string} benchmark - The short benchmark name.
  * @param {string} params - The parameter label.
- * @param {number} score - The score.
+ * @param {number} score - The score relative to the reference.
  * @returns {object} A summarised result.
  */
 function summary(benchmark, params, score) {
@@ -32,9 +33,10 @@ function summary(benchmark, params, score) {
     benchmark,
     mode: "avgt",
     params,
-    score,
+    score: score * 100,
     scoreError: 1,
     scoreUnit: "ms/op",
+    relative: { score, scoreError: 0.1 },
   };
 }
 
@@ -90,7 +92,9 @@ describe("buildTimelines", () => {
       "A.b",
     ]);
     const [a, b] = timelines;
-    expect(a.unit).toBe("ms/op");
+    // Scores are plotted relative to the reference, as the raw scores depend
+    // on the speed of the runner.
+    expect(a.unit).toBe("relative to 9.1.0");
     expect(a.series.map((series) => series.label)).toEqual(["x=1", "x=2"]);
     expect(
       a.series[0].points.map((point) => [point.runId, point.score]),
@@ -103,10 +107,25 @@ describe("buildTimelines", () => {
       date: "2026-01-01T00:00:00Z",
       commit: "sha-1",
       score: 1,
-      scoreError: 1,
+      scoreError: 0.1,
     });
     // A benchmark missing from a later run simply has fewer points.
     expect(b.series[0].points).toHaveLength(1);
+  });
+
+  test("a result without a reference result is not plotted", () => {
+    const index = {
+      runs: [
+        run("1", "2026-01-01T00:00:00Z", [
+          summary("A.a", "x=1", 1),
+          { ...summary("A.a", "x=2", 2), relative: null },
+          { ...summary("A.b", "", 3), relative: null },
+        ]),
+      ],
+    };
+    const timelines = buildTimelines(index);
+    expect(timelines.map((timeline) => timeline.benchmark)).toEqual(["A.a"]);
+    expect(timelines[0].series.map((series) => series.label)).toEqual(["x=1"]);
   });
 
   test("labels series by mode when a benchmark runs in several modes", () => {

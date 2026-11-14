@@ -31,6 +31,20 @@
  * @property {number} score - The primary metric score.
  * @property {number | null} scoreError - The 99.9% error, if JMH reported one.
  * @property {string} scoreUnit - The unit of the score, e.g. "ms/op".
+ * @property {RelativeScore | null} relative - The score relative to the same
+ *   benchmark run against the reference release, or null if the reference
+ *   release has no result for it.
+ */
+
+/**
+ * A score expressed as a multiple of the reference release's score, measured
+ * on the same runner. Dividing by the reference cancels out most of the
+ * difference in speed between runners.
+ *
+ * @typedef {object} RelativeScore
+ * @property {number} score - The ratio of the score to the reference score.
+ * @property {number | null} scoreError - The error of the ratio, combining the
+ *   relative errors of the two scores in quadrature, if both have one.
  */
 
 /**
@@ -108,12 +122,52 @@ export function iterationScores(result) {
 }
 
 /**
+ * Divides a result's score by the score of the same benchmark run against the
+ * reference release.
+ *
+ * The error treats the two errors as independent, and combines their relative
+ * sizes in quadrature. This is the usual first-order approximation, which is
+ * close for errors that are small compared to the scores.
+ *
+ * @param {object} result - A JMH result.
+ * @param {object | undefined} referenceResult - The JMH result of the same
+ *   benchmark against the reference release.
+ * @returns {RelativeScore | null} The relative score, or null without a
+ *   reference result.
+ * @example
+ * relativeScore(result, referenceResult);
+ * // { score: 1.25, scoreError: 0.07 }
+ */
+export function relativeScore(result, referenceResult) {
+  if (!referenceResult) {
+    return null;
+  }
+  const { score, scoreError } = result.primaryMetric;
+  const reference = referenceResult.primaryMetric;
+  const ratio = score / reference.score;
+  const hasErrors =
+    Number.isFinite(scoreError) && Number.isFinite(reference.scoreError);
+  return {
+    score: ratio,
+    scoreError: hasErrors
+      ? ratio *
+        Math.hypot(scoreError / score, reference.scoreError / reference.score)
+      : null,
+  };
+}
+
+/**
  * Reduces JMH results to the fields needed to plot them over time.
  *
  * @param {object[]} results - The JMH results of one run.
+ * @param {object[]} referenceResults - The JMH results of the reference
+ *   release from the same run.
  * @returns {ResultSummary[]} The summaries.
  */
-export function summariseResults(results) {
+export function summariseResults(results, referenceResults) {
+  const references = new Map(
+    referenceResults.map((result) => [resultKey(result), result]),
+  );
   return results.map((result) => {
     const { score, scoreError, scoreUnit } = result.primaryMetric;
     return {
@@ -123,6 +177,7 @@ export function summariseResults(results) {
       score,
       scoreError: Number.isFinite(scoreError) ? scoreError : null,
       scoreUnit,
+      relative: relativeScore(result, references.get(resultKey(result))),
     };
   });
 }

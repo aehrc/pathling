@@ -63,6 +63,8 @@ export default function Benchmarks() {
     `${location.pathname}?${new URLSearchParams(params)}`;
   const navigate = (params) => history.push(href(params));
   const resultsUrl = (runId) => `${dataUrl}/runs/${runId}.json`;
+  const referenceResultsUrl = (runId) =>
+    `${dataUrl}/runs/${runId}-reference.json`;
   const runs = index?.runs ?? [];
   const findRun = (id) => runs.find((run) => run.id === id);
 
@@ -106,6 +108,7 @@ export default function Benchmarks() {
           base={base}
           target={target}
           resultsUrl={resultsUrl}
+          referenceResultsUrl={referenceResultsUrl}
           runLink={runLink}
           navigation={<p>{overviewLink}</p>}
         />
@@ -121,6 +124,7 @@ export default function Benchmarks() {
         key={run.id}
         run={run}
         resultsUrl={resultsUrl(run.id)}
+        referenceResultsUrl={referenceResultsUrl(run.id)}
         navigation={
           <p className={styles.navigation}>
             {overviewLink}
@@ -217,8 +221,10 @@ function Overview({ runs, index, runHref, runLink, onSelectRun, onCompare }) {
         </a>{" "}
         run by the benchmark workflow on GitHub-hosted runners. Each point is
         one run; select a point to see the full results of that run. Shared
-        runners vary in performance, so compare runs using the significance test
-        rather than by eye.
+        runners vary in speed, so each run also benchmarks a fixed reference
+        release on the same runner, and scores are shown as a multiple of the
+        reference score. Compare runs using the significance test rather than by
+        eye.
       </p>
       <form
         className={styles.compareForm}

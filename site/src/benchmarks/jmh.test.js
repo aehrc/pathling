@@ -8,6 +8,7 @@ import { describe, expect, test } from "bun:test";
 import {
   iterationScores,
   paramsLabel,
+  relativeScore,
   resultKey,
   shortBenchmarkName,
   summariseResults,
@@ -109,23 +110,74 @@ describe("iterationScores", () => {
   });
 });
 
+describe("relativeScore", () => {
+  test("divides the score by the reference score", () => {
+    // The relative errors of the two scores are combined in quadrature: both
+    // are 4%, so the ratio's relative error is 4% × √2.
+    const relative = relativeScore(
+      jmhResult(),
+      jmhResult({}, { score: 10, scoreError: 0.4 }),
+    );
+    expect(relative.score).toBeCloseTo(1.25, 10);
+    expect(relative.scoreError).toBeCloseTo(1.25 * 0.04 * Math.SQRT2, 10);
+  });
+
+  test("has no error when either score has no error", () => {
+    const relative = relativeScore(
+      jmhResult({}, { scoreError: "NaN" }),
+      jmhResult({}, { score: 10 }),
+    );
+    expect(relative.score).toBeCloseTo(1.25, 10);
+    expect(relative.scoreError).toBeNull();
+  });
+
+  test("is null without a reference result", () => {
+    expect(relativeScore(jmhResult(), undefined)).toBeNull();
+  });
+});
+
 describe("summariseResults", () => {
   test("keeps only the fields needed for the timeline", () => {
-    expect(summariseResults([jmhResult()])).toEqual([
-      {
-        benchmark: "PathlingBenchmark.conditionFlat",
-        mode: "avgt",
-        params: "sourceType=delta",
-        score: 12.5,
-        scoreError: 0.5,
-        scoreUnit: "ms/op",
+    const reference = [jmhResult({}, { score: 10, scoreError: 0.4 })];
+    const [summary] = summariseResults([jmhResult()], reference);
+    expect(summary).toEqual({
+      benchmark: "PathlingBenchmark.conditionFlat",
+      mode: "avgt",
+      params: "sourceType=delta",
+      score: 12.5,
+      scoreError: 0.5,
+      scoreUnit: "ms/op",
+      relative: {
+        score: expect.closeTo(1.25, 10),
+        scoreError: expect.closeTo(1.25 * 0.04 * Math.SQRT2, 10),
       },
-    ]);
+    });
+  });
+
+  test("matches reference results on benchmark, mode and parameters", () => {
+    // The reference results are in a different order, and lack the ndjson
+    // result.
+    const results = [
+      jmhResult({ params: { sourceType: "ndjson" } }),
+      jmhResult(),
+      jmhResult({ mode: "thrpt" }),
+    ];
+    const reference = [
+      jmhResult({ mode: "thrpt" }, { score: 25 }),
+      jmhResult({}, { score: 10 }),
+    ];
+    const summaries = summariseResults(results, reference);
+    expect(summaries.map((summary) => summary.relative?.score ?? null)).toEqual(
+      [null, 1.25, 0.5],
+    );
   });
 
   test("records a missing error as null", () => {
     // JMH writes "NaN" as the error when there are too few iterations.
-    const [summary] = summariseResults([jmhResult({}, { scoreError: "NaN" })]);
+    const [summary] = summariseResults(
+      [jmhResult({}, { scoreError: "NaN" })],
+      [jmhResult()],
+    );
     expect(summary.scoreError).toBeNull();
   });
 });

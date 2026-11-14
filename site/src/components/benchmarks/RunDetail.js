@@ -26,6 +26,7 @@ import React from "react";
 import {
   iterationScores,
   paramsLabel,
+  resultKey,
   shortBenchmarkName,
   summariseResults,
 } from "../../benchmarks/jmh.js";
@@ -47,11 +48,20 @@ const PERCENTILES = ["50.0", "90.0", "99.0"];
  * @param {object} props - The component props.
  * @param {import("../../benchmarks/runIndex.js").RunEntry} props.run - The run.
  * @param {string} props.resultsUrl - The URL of the run's JMH results.
+ * @param {string} props.referenceResultsUrl - The URL of the JMH results of
+ *   the reference release from the same run.
  * @param {React.ReactNode} props.navigation - Links to related views.
  * @returns {React.ReactElement} The run details.
  */
-export default function RunDetail({ run, resultsUrl, navigation }) {
-  const { data: results, error, loading } = useJson(resultsUrl);
+export default function RunDetail({
+  run,
+  resultsUrl,
+  referenceResultsUrl,
+  navigation,
+}) {
+  const results = useJson(resultsUrl);
+  const referenceResults = useJson(referenceResultsUrl);
+  const error = results.error ?? referenceResults.error;
 
   return (
     <section>
@@ -62,6 +72,8 @@ export default function RunDetail({ run, resultsUrl, navigation }) {
         <dd>
           <a href={commitUrl(run.commit)}>{run.commit}</a>
         </dd>
+        <dt>Reference release</dt>
+        <dd>{run.reference}</dd>
         <dt>Workflow run</dt>
         <dd>
           <a href={workflowRunUrl(run.id)}>{run.id}</a>
@@ -71,12 +83,24 @@ export default function RunDetail({ run, resultsUrl, navigation }) {
           <a href={resultsUrl} download>
             JMH JSON
           </a>
+          ,{" "}
+          <a href={referenceResultsUrl} download>
+            JMH JSON for {run.reference}
+          </a>
         </dd>
-        {results?.length > 0 && <Environment result={results[0]} />}
+        {results.data?.length > 0 && <Environment result={results.data[0]} />}
       </dl>
-      {loading && <p role="status">Loading results…</p>}
+      {(results.loading || referenceResults.loading) && (
+        <p role="status">Loading results…</p>
+      )}
       {error && <p className={styles.error}>{error}</p>}
-      {results && <ResultsTable results={results} />}
+      {results.data && referenceResults.data && (
+        <ResultsTable
+          results={results.data}
+          referenceResults={referenceResults.data}
+          reference={run.reference}
+        />
+      )}
     </section>
   );
 }
@@ -116,9 +140,19 @@ function Environment({ result }) {
  *
  * @param {object} props - The component props.
  * @param {object[]} props.results - The JMH results.
+ * @param {object[]} props.referenceResults - The JMH results of the reference
+ *   release from the same run.
+ * @param {string} props.reference - The version of the reference release.
  * @returns {React.ReactElement} The table.
  */
-function ResultsTable({ results }) {
+function ResultsTable({ results, referenceResults, reference }) {
+  const summaries = summariseResults(results, referenceResults);
+  const referenceSummaries = new Map(
+    referenceResults.map((result) => [
+      resultKey(result),
+      summariseResults([result], [])[0],
+    ]),
+  );
   return (
     <div className={styles.tableWrapper}>
       <table>
@@ -128,7 +162,9 @@ function ResultsTable({ results }) {
             <th>Parameters</th>
             <th>Mode</th>
             <th>Score (99.9% CI)</th>
+            <th>{reference} score</th>
             <th>Unit</th>
+            <th>Relative to {reference}</th>
             {PERCENTILES.map((percentile) => (
               <th key={percentile}>p{parseFloat(percentile)}</th>
             ))}
@@ -136,19 +172,23 @@ function ResultsTable({ results }) {
           </tr>
         </thead>
         <tbody>
-          {results.map((result) => {
+          {results.map((result, i) => {
             const metric = result.primaryMetric;
+            const summary = summaries[i];
+            const referenceSummary = referenceSummaries.get(resultKey(result));
             return (
-              <tr
-                key={`${result.benchmark} ${result.mode} ${paramsLabel(result.params)}`}
-              >
+              <tr key={resultKey(result)}>
                 <td>{shortBenchmarkName(result.benchmark)}</td>
                 <td>{paramsLabel(result.params)}</td>
                 <td>{result.mode}</td>
+                <td className={styles.number}>{formatScore(summary)}</td>
                 <td className={styles.number}>
-                  {formatScore(summariseResults([result])[0])}
+                  {referenceSummary ? formatScore(referenceSummary) : "-"}
                 </td>
                 <td>{metric.scoreUnit}</td>
+                <td className={styles.number}>
+                  {summary.relative ? formatScore(summary.relative) : "-"}
+                </td>
                 {PERCENTILES.map((percentile) => (
                   <td key={percentile} className={styles.number}>
                     {formatNumber(

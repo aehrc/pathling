@@ -25,11 +25,39 @@ const RESULTS = [
   },
 ];
 
+// The same benchmark run against the reference release.
+const REFERENCE_RESULTS = [
+  {
+    ...RESULTS[0],
+    primaryMetric: { ...RESULTS[0].primaryMetric, score: 10, scoreError: 0.4 },
+  },
+];
+
+/**
+ * Builds the options for publishing the test run.
+ *
+ * @param {object} overrides - Options to replace.
+ * @returns {object} The options for {@link publishRun}.
+ */
+function options(overrides = {}) {
+  return {
+    resultsPath: join(dir, "results.json"),
+    referenceResultsPath: join(dir, "reference.json"),
+    reference: "9.1.0",
+    dataDir: join(dir, "data"),
+    runId: "123",
+    commit: "abc",
+    date: "2026-01-01T00:00:00Z",
+    ...overrides,
+  };
+}
+
 let dir;
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "benchmarks-"));
   writeFileSync(join(dir, "results.json"), JSON.stringify(RESULTS));
+  writeFileSync(join(dir, "reference.json"), JSON.stringify(REFERENCE_RESULTS));
 });
 
 afterEach(() => {
@@ -51,22 +79,20 @@ test("publishing copies the results and records the run in the index", () => {
 
   // Publish twice to check that a run is recorded only once.
   for (let i = 0; i < 2; i++) {
-    publishRun({
-      resultsPath: join(dir, "results.json"),
-      dataDir,
-      runId: "123",
-      commit: "abc",
-      date: "2026-01-01T00:00:00Z",
-    });
+    publishRun(options());
   }
 
   expect(readJson(join(dataDir, "runs", "123.json"))).toEqual(RESULTS);
+  expect(readJson(join(dataDir, "runs", "123-reference.json"))).toEqual(
+    REFERENCE_RESULTS,
+  );
   expect(readJson(join(dataDir, "index.json"))).toEqual({
     runs: [
       {
         id: "123",
         date: "2026-01-01T00:00:00Z",
         commit: "abc",
+        reference: "9.1.0",
         results: [
           {
             benchmark: "PathlingBenchmark.conditionFlat",
@@ -75,6 +101,10 @@ test("publishing copies the results and records the run in the index", () => {
             score: 12.5,
             scoreError: 0.5,
             scoreUnit: "ms/op",
+            relative: {
+              score: expect.closeTo(1.25, 10),
+              scoreError: expect.closeTo(1.25 * 0.04 * Math.SQRT2, 10),
+            },
           },
         ],
       },
@@ -84,26 +114,17 @@ test("publishing copies the results and records the run in the index", () => {
 
 test("publishing rejects results that are not a JMH result array", () => {
   writeFileSync(join(dir, "results.json"), JSON.stringify({ not: "jmh" }));
-  expect(() =>
-    publishRun({
-      resultsPath: join(dir, "results.json"),
-      dataDir: join(dir, "data"),
-      runId: "123",
-      commit: "abc",
-      date: "2026-01-01T00:00:00Z",
-    }),
-  ).toThrow("JMH");
+  expect(() => publishRun(options())).toThrow("JMH");
+});
+
+test("publishing rejects reference results that are not a JMH result array", () => {
+  writeFileSync(join(dir, "reference.json"), JSON.stringify([{ not: "jmh" }]));
+  expect(() => publishRun(options())).toThrow("JMH");
 });
 
 test("publishing rejects a date that is not an ISO 8601 UTC time", () => {
   // The index is sorted by comparing dates as strings, which needs one format.
   expect(() =>
-    publishRun({
-      resultsPath: join(dir, "results.json"),
-      dataDir: join(dir, "data"),
-      runId: "123",
-      commit: "abc",
-      date: "2026-01-01T10:00:00+10:00",
-    }),
+    publishRun(options({ date: "2026-01-01T10:00:00+10:00" })),
   ).toThrow("date");
 });

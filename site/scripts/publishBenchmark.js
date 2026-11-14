@@ -16,15 +16,18 @@
  */
 
 /**
- * Adds a JMH result file to the benchmark data directory served with the site
- * at /benchmarks/data. The full results are copied to `runs/<run-id>.json`
- * and a summary is added to `index.json`.
+ * Adds the JMH result files of a benchmark run to the benchmark data directory
+ * served with the site at /benchmarks/data. A run contains the results of the
+ * code under test and of the reference release, measured on the same runner.
+ * The full results are copied to `runs/<run-id>.json` and
+ * `runs/<run-id>-reference.json`, and a summary is added to `index.json`.
  *
  * Usage:
  *
  *   bun scripts/publishBenchmark.js --results benchmark-abc1234.json \
- *     --data-dir gh-pages/benchmarks/data --run-id 123456789 \
- *     --commit <sha> --date 2026-01-01T00:00:00Z
+ *     --reference-results benchmark-abc1234-reference.json \
+ *     --reference 9.1.0 --data-dir gh-pages/benchmarks/data \
+ *     --run-id 123456789 --commit <sha> --date 2026-01-01T00:00:00Z
  *
  * @author John Grimes
  */
@@ -40,27 +43,34 @@ import { addRun } from "../src/benchmarks/runIndex.js";
  *
  * @param {object} options - The run to publish.
  * @param {string} options.resultsPath - The JMH JSON results file.
+ * @param {string} options.referenceResultsPath - The JMH JSON results file of
+ *   the reference release.
+ * @param {string} options.reference - The version of the reference release.
  * @param {string} options.dataDir - The benchmark data directory.
  * @param {string} options.runId - The GitHub Actions run ID of the benchmark.
  * @param {string} options.commit - The SHA of the benchmarked commit.
  * @param {string} options.date - The ISO 8601 time at which the benchmark ran.
  * @returns {void}
- * @throws {Error} If the results file is not a JMH result array, or the date
- *   is not an ISO 8601 UTC time without fractional seconds.
+ * @throws {Error} If either results file is not a JMH result array, or the
+ *   date is not an ISO 8601 UTC time without fractional seconds.
  */
-export function publishRun({ resultsPath, dataDir, runId, commit, date }) {
+export function publishRun({
+  resultsPath,
+  referenceResultsPath,
+  reference,
+  dataDir,
+  runId,
+  commit,
+  date,
+}) {
   // Runs are ordered by comparing dates as strings, so they must share a format.
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(date)) {
     throw new Error(`The date ${date} is not in the form YYYY-MM-DDTHH:MM:SSZ`);
   }
   const content = readFileSync(resultsPath, "utf8");
-  const results = JSON.parse(content);
-  if (
-    !Array.isArray(results) ||
-    !results.every((result) => result.benchmark && result.primaryMetric)
-  ) {
-    throw new Error(`${resultsPath} is not a JMH JSON result file`);
-  }
+  const results = parseResults(content, resultsPath);
+  const referenceContent = readFileSync(referenceResultsPath, "utf8");
+  const referenceResults = parseResults(referenceContent, referenceResultsPath);
 
   const indexPath = join(dataDir, "index.json");
   let index = {};
@@ -74,28 +84,60 @@ export function publishRun({ resultsPath, dataDir, runId, commit, date }) {
 
   mkdirSync(join(dataDir, "runs"), { recursive: true });
   writeFileSync(join(dataDir, "runs", `${runId}.json`), content);
+  writeFileSync(
+    join(dataDir, "runs", `${runId}-reference.json`),
+    referenceContent,
+  );
   const updated = addRun(index, {
     id: runId,
     date,
     commit,
-    results: summariseResults(results),
+    reference,
+    results: summariseResults(results, referenceResults),
   });
   writeFileSync(indexPath, `${JSON.stringify(updated, null, 2)}\n`);
+}
+
+/**
+ * Parses a JMH JSON result file.
+ *
+ * @param {string} content - The content of the file.
+ * @param {string} path - The path of the file, for the error message.
+ * @returns {object[]} The JMH results.
+ * @throws {Error} If the content is not a JMH result array.
+ */
+function parseResults(content, path) {
+  const results = JSON.parse(content);
+  if (
+    !Array.isArray(results) ||
+    !results.every((result) => result.benchmark && result.primaryMetric)
+  ) {
+    throw new Error(`${path} is not a JMH JSON result file`);
+  }
+  return results;
 }
 
 if (import.meta.main) {
   const { values } = parseArgs({
     options: {
       results: { type: "string" },
+      "reference-results": { type: "string" },
+      reference: { type: "string" },
       "data-dir": { type: "string" },
       "run-id": { type: "string" },
       commit: { type: "string" },
       date: { type: "string" },
     },
   });
-  const missing = ["results", "data-dir", "run-id", "commit", "date"].filter(
-    (name) => !values[name],
-  );
+  const missing = [
+    "results",
+    "reference-results",
+    "reference",
+    "data-dir",
+    "run-id",
+    "commit",
+    "date",
+  ].filter((name) => !values[name]);
   if (missing.length > 0) {
     console.error(
       `Missing options: ${missing.map((m) => `--${m}`).join(", ")}`,
@@ -104,6 +146,8 @@ if (import.meta.main) {
   }
   publishRun({
     resultsPath: values.results,
+    referenceResultsPath: values["reference-results"],
+    reference: values.reference,
     dataDir: values["data-dir"],
     runId: values["run-id"],
     commit: values.commit,
