@@ -1,240 +1,4931 @@
 {
   "runs": [
     {
-      "id": "43504665813",
-      "date": "2026-11-13T21:13:09Z",
-      "commit": "3bdc1aa0abc6153b901b3f1e7a9479fdcd801aef",
+      "id": "43680591625",
+      "date": "2025-08-29T09:54:04Z",
+      "commit": "1d571ab094647b3b8822a17fdb5b2c8f2f8a17bc",
+      "version": "8.0.0",
+      "reference": "9.1.0",
       "results": [
         {
-          "benchmark": "PathlingBenchmark.conditionFlat",
+          "benchmark": "PathlingBenchmark.decodeCondition",
           "mode": "sample",
-          "params": "sourceType=ndjson",
-          "score": 514.8592722580646,
-          "scoreError": 51.234013967911075,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 1366.294528,
+          "scoreError": 257.8650665416266,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1100908746686862,
+            "scoreError": 0.30817649726320684
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.conditionFlat",
+          "benchmark": "PathlingBenchmark.decodeEncounter",
           "mode": "sample",
-          "params": "sourceType=delta",
-          "score": 481.71581440000006,
-          "scoreError": 34.97855879629959,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 2221.9325439999993,
+          "scoreError": 418.4959341500942,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9676977409730254,
+            "scoreError": 0.2842084389954346
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.encounterFlat",
+          "benchmark": "PathlingBenchmark.decodeObservation",
           "mode": "sample",
-          "params": "sourceType=ndjson",
-          "score": 859.2938620540541,
-          "scoreError": 209.62713962479486,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 6217.356629333332,
+          "scoreError": 1074.2071613955907,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9146441793500615,
+            "scoreError": 0.3295264409784322
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.encounterFlat",
+          "benchmark": "PathlingBenchmark.decodePatient",
           "mode": "sample",
-          "params": "sourceType=delta",
-          "score": 606.4470136470588,
-          "scoreError": 83.74103012137901,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 727.4204728888888,
+          "scoreError": 95.18506606839696,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.15215609650194,
+            "scoreError": 0.22071803127887663
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.patientAddresses",
+          "benchmark": "PathlingBenchmark.decodeQuestionnaireResponse",
           "mode": "sample",
-          "params": "sourceType=ndjson",
-          "score": 118.10816,
-          "scoreError": 7.283801664399514,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 3635.4129919999996,
+          "scoreError": 659.1241665359848,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0126569954240092,
+            "scoreError": 0.2762673696406956
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.patientAddresses",
+          "benchmark": "PathlingBenchmark.encodeCondition",
           "mode": "sample",
-          "params": "sourceType=delta",
-          "score": 282.32432174545454,
-          "scoreError": 13.789835466685183,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 735.4541365581398,
+          "scoreError": 159.91854992406834,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.126868610770412,
+            "scoreError": 0.33279380800402913
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.patientAndContactAddressUnion",
+          "benchmark": "PathlingBenchmark.encodeEncounter",
           "mode": "sample",
-          "params": "sourceType=ndjson",
-          "score": 221.85992969343062,
-          "scoreError": 16.32017431461477,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 1535.734877090909,
+          "scoreError": 394.63993408430105,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1664539260037918,
+            "scoreError": 0.45616227479099236
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.patientAndContactAddressUnion",
+          "benchmark": "PathlingBenchmark.encodeObservation",
           "mode": "sample",
-          "params": "sourceType=delta",
-          "score": 308.55376815686276,
-          "scoreError": 14.787482908356253,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 34896.609280000004,
+          "scoreError": 1160.0550926945077,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 6.894551481251295,
+            "scoreError": 1.2898263029258255
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.patientDemographics",
+          "benchmark": "PathlingBenchmark.encodePatient",
           "mode": "sample",
-          "params": "sourceType=ndjson",
-          "score": 175.75775926436776,
-          "scoreError": 12.239755595533847,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 322.94229333333334,
+          "scoreError": 41.589713709244855,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1841081446009232,
+            "scoreError": 0.19211920593469348
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.patientDemographics",
+          "benchmark": "PathlingBenchmark.encodeQuestionnaireResponse",
           "mode": "sample",
-          "params": "sourceType=delta",
-          "score": 287.22162601869167,
-          "scoreError": 16.46501549930355,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 1484.0845653333333,
+          "scoreError": 359.1354273352933,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1520824854158187,
+            "scoreError": 0.3872491163518017
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.questionnaireResponseFlat",
+          "benchmark": "PathlingBenchmark.executeConditionFlat",
           "mode": "sample",
-          "params": "sourceType=ndjson",
-          "score": 1997.0712462222223,
-          "scoreError": 521.9642222159952,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 194.07950196363635,
+          "scoreError": 37.38853968793238,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1464092156816743,
+            "scoreError": 0.2937283542714671
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.questionnaireResponseFlat",
+          "benchmark": "PathlingBenchmark.executeEncounterFlat",
           "mode": "sample",
-          "params": "sourceType=delta",
-          "score": 2259.156992,
-          "scoreError": 409.2191599548831,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 309.3532216888889,
+          "scoreError": 51.17633171709721,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9998117257220319,
+            "scoreError": 0.22245963701658822
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.usCoreBloodPressures",
+          "benchmark": "PathlingBenchmark.executePatientAddresses",
           "mode": "sample",
-          "params": "sourceType=ndjson",
-          "score": 5761.575594666666,
-          "scoreError": 1094.415695431244,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 53.81585863736264,
+          "scoreError": 6.770051746695486,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.7815314228819352,
+            "scoreError": 0.1483146314224483
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.usCoreBloodPressures",
+          "benchmark": "PathlingBenchmark.executePatientAndContactAddressUnion",
           "mode": "sample",
-          "params": "sourceType=delta",
-          "score": 1623.3953767619048,
-          "scoreError": 231.51077740265268,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 97.09965727536232,
+          "scoreError": 15.897931663466347,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1981720755055125,
+            "scoreError": 0.2672967410125625
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 54.92636975824175,
+          "scoreError": 6.472179139825607,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9278197509150303,
+            "scoreError": 0.1858321356725114
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 784.1902168275861,
+          "scoreError": 94.07587700984203,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.7750961283856117,
+            "scoreError": 0.1465047634985719
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 333.7148895319148,
+          "scoreError": 44.097393531564656,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.2178545998113093,
+            "scoreError": 0.21205270139916169
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 349.0162420869565,
+          "scoreError": 44.6352347330371,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1770005240660133,
+            "scoreError": 0.2144530680721095
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 259.82402559999997,
+          "scoreError": 31.586622722702387,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9515302491103199,
+            "scoreError": 0.165874354178852
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 283.2091428571429,
+          "scoreError": 37.425333292925366,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9850083359383143,
+            "scoreError": 0.17096678235218493
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 263.9247713103448,
+          "scoreError": 33.16806326523246,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8450977365262528,
+            "scoreError": 0.14595562843206267
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 319.5325644799999,
+          "scoreError": 38.65467741190499,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.5787465208422016,
+            "scoreError": 0.10628010242483012
+          }
         }
       ]
     },
     {
-      "id": "43563110276",
-      "date": "2026-11-14T06:05:03Z",
-      "commit": "68f7b239b74b26480550e409dbaa511bb367532c",
+      "id": "43680596166",
+      "date": "2025-08-31T06:30:14Z",
+      "commit": "cee0def0f9012c8a064609764331c461e80334e8",
+      "version": "8.0.1",
+      "reference": "9.1.0",
       "results": [
         {
-          "benchmark": "PathlingBenchmark.conditionFlat",
+          "benchmark": "PathlingBenchmark.decodeCondition",
           "mode": "sample",
-          "params": "sourceType=ndjson",
-          "score": 200.44530526315788,
-          "scoreError": 7.088631072023452,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 1136.7961941333335,
+          "scoreError": 143.51467677975828,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1512920353982306,
+            "scoreError": 0.2527943906983466
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.conditionFlat",
+          "benchmark": "PathlingBenchmark.decodeEncounter",
           "mode": "sample",
-          "params": "sourceType=delta",
-          "score": 310.6589900799999,
-          "scoreError": 20.601328677900042,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 1903.5149653333335,
+          "scoreError": 412.67557462580044,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0405441552982537,
+            "scoreError": 0.2993144100173277
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.encounterFlat",
+          "benchmark": "PathlingBenchmark.decodeObservation",
           "mode": "sample",
-          "params": "sourceType=ndjson",
-          "score": 363.8250315294117,
-          "scoreError": 17.612484675646325,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 5134.876672,
+          "scoreError": 845.4158345331327,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9879813234955039,
+            "scoreError": 0.2771768766749506
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.encounterFlat",
+          "benchmark": "PathlingBenchmark.decodePatient",
           "mode": "sample",
-          "params": "sourceType=delta",
-          "score": 327.73461333333336,
-          "scoreError": 21.737321414883066,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 612.2298928301886,
+          "scoreError": 64.71839217786999,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1092242688735257,
+            "scoreError": 0.16876388106211793
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.patientAddresses",
+          "benchmark": "PathlingBenchmark.decodeQuestionnaireResponse",
           "mode": "sample",
-          "params": "sourceType=ndjson",
-          "score": 51.87349237865749,
-          "scoreError": 1.4011989445275628,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 3480.5732693333334,
+          "scoreError": 658.2108049625925,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0738703763614796,
+            "scoreError": 0.2957067575465249
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.patientAddresses",
+          "benchmark": "PathlingBenchmark.encodeCondition",
           "mode": "sample",
-          "params": "sourceType=delta",
-          "score": 176.42443609302325,
-          "scoreError": 7.291060651889245,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 583.6878885925926,
+          "scoreError": 91.70172484381338,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1823213422788625,
+            "scoreError": 0.2553149392070153
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.patientAndContactAddressUnion",
+          "benchmark": "PathlingBenchmark.encodeEncounter",
           "mode": "sample",
-          "params": "sourceType=ndjson",
-          "score": 64.67714087553651,
-          "scoreError": 2.0433689685503875,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 1115.2654336,
+          "scoreError": 197.9626286890013,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0669007241152315,
+            "scoreError": 0.2906132436920809
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.patientAndContactAddressUnion",
+          "benchmark": "PathlingBenchmark.encodeObservation",
           "mode": "sample",
-          "params": "sourceType=delta",
-          "score": 201.96198739072852,
-          "scoreError": 9.273079661063898,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 27167.90510933333,
+          "scoreError": 834.5496803723888,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 7.724905585370701,
+            "scoreError": 0.7536256714815891
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.patientDemographics",
+          "benchmark": "PathlingBenchmark.encodePatient",
           "mode": "sample",
-          "params": "sourceType=ndjson",
-          "score": 61.41190360896128,
-          "scoreError": 1.6890584395671917,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 279.41928959999996,
+          "scoreError": 27.507816134446195,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.2102393834349754,
+            "scoreError": 0.1584361294901989
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.patientDemographics",
+          "benchmark": "PathlingBenchmark.encodeQuestionnaireResponse",
           "mode": "sample",
-          "params": "sourceType=delta",
-          "score": 189.52202113580242,
-          "scoreError": 7.719073125298906,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 1155.7928959999997,
+          "scoreError": 247.08534962169745,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1616657884132542,
+            "scoreError": 0.32826137276362377
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.questionnaireResponseFlat",
+          "benchmark": "PathlingBenchmark.executeConditionFlat",
           "mode": "sample",
-          "params": "sourceType=ndjson",
-          "score": 505.18893714285707,
-          "scoreError": 18.016456622011756,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 159.98217934328358,
+          "scoreError": 23.17745373700714,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1572532308392416,
+            "scoreError": 0.22286528980356102
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.questionnaireResponseFlat",
+          "benchmark": "PathlingBenchmark.executeEncounterFlat",
           "mode": "sample",
-          "params": "sourceType=delta",
-          "score": 534.0006573559322,
-          "scoreError": 33.75195613973965,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 225.61558951724138,
+          "scoreError": 23.866077576354076,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8007584410251144,
+            "scoreError": 0.12746337170285102
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.usCoreBloodPressures",
+          "benchmark": "PathlingBenchmark.executePatientAddresses",
           "mode": "sample",
-          "params": "sourceType=ndjson",
-          "score": 1402.0334933333331,
-          "scoreError": 92.8385633830091,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 47.50729846153846,
+          "scoreError": 5.577538313613565,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9197508802522337,
+            "scoreError": 0.1535186513522634
+          }
         },
         {
-          "benchmark": "PathlingBenchmark.usCoreBloodPressures",
+          "benchmark": "PathlingBenchmark.executePatientAndContactAddressUnion",
           "mode": "sample",
-          "params": "sourceType=delta",
-          "score": 996.5789665882352,
-          "scoreError": 77.39807676663875,
-          "scoreUnit": "ms/op"
+          "params": "",
+          "score": 62.83975628282825,
+          "scoreError": 7.714242093559446,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8224662637814886,
+            "scoreError": 0.13424272609657578
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 44.49865142857141,
+          "scoreError": 4.260845330493774,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9322792547341018,
+            "scoreError": 0.1295738248908472
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 652.468472242424,
+          "scoreError": 68.51554673748909,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.6692656078177961,
+            "scoreError": 0.11186760983409817
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 252.3093718709677,
+          "scoreError": 25.12465531705067,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1468869004637319,
+            "scoreError": 0.15630779970546424
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 287.0185528888889,
+          "scoreError": 23.517896926740125,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.2540225305977912,
+            "scoreError": 0.15974005614009956
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 228.5249817971015,
+          "scoreError": 20.356688979666533,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.017861679919154,
+            "scoreError": 0.13364533251748917
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 235.69093158208952,
+          "scoreError": 21.143199694936605,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9740111048430853,
+            "scoreError": 0.13377169422829235
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 224.17742602816904,
+          "scoreError": 17.70083848585053,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9213045035219438,
+            "scoreError": 0.11087446273546459
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 272.63444114285716,
+          "scoreError": 23.843538366003774,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.6418364198266291,
+            "scoreError": 0.07844695695149842
+          }
+        }
+      ]
+    },
+    {
+      "id": "43680601404",
+      "date": "2025-09-12T05:52:46Z",
+      "commit": "3325274e75626001461798002c25f337f38502e5",
+      "version": "8.0.2",
+      "reference": "9.1.0",
+      "results": [
+        {
+          "benchmark": "PathlingBenchmark.decodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 691.3016156595745,
+          "scoreError": 75.35686973654816,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.999052013778568,
+            "scoreError": 0.18851720266009875
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 1398.800384,
+          "scoreError": 270.78506414181146,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9553877831159919,
+            "scoreError": 0.2390838938295592
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 3944.393386666667,
+          "scoreError": 422.12680571120853,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9942731277533041,
+            "scoreError": 0.16144821990713737
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 471.3734625882352,
+          "scoreError": 43.27802623202909,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1379540391582137,
+            "scoreError": 0.14599155765495492
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 2800.181878153846,
+          "scoreError": 533.4297995938526,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.20862708235417,
+            "scoreError": 0.28494258112040555
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 419.0974062702702,
+          "scoreError": 48.14065372636204,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.2115714062154794,
+            "scoreError": 0.1794353235748039
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 768.362353116279,
+          "scoreError": 134.6922309714698,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0775991792065664,
+            "scoreError": 0.26413432807553394
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 22017.29979733333,
+          "scoreError": 840.3642000619777,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 8.707287404622358,
+            "scoreError": 1.3472788740853563
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 203.32131687417223,
+          "scoreError": 14.389206618903312,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1516148476463115,
+            "scoreError": 0.10292239824599698
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 873.2154610526316,
+          "scoreError": 129.1049884249893,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.216304514938759,
+            "scoreError": 0.25046750763773573
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 106.07500243478262,
+          "scoreError": 10.457316577694813,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9126067814361735,
+            "scoreError": 0.13662998568862306
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 161.7596521025641,
+          "scoreError": 13.552773072395555,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.023434681871099,
+            "scoreError": 0.1287173758911781
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 31.84301873825503,
+          "scoreError": 2.5490111426979163,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9671897506368946,
+            "scoreError": 0.09724726800821662
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 41.57469897810219,
+          "scoreError": 2.631818924587649,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.953112062773138,
+            "scoreError": 0.09911962736552626
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 35.32129205797099,
+          "scoreError": 3.24068834208287,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8866034480938694,
+            "scoreError": 0.1090446114912107
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 479.30647272727276,
+          "scoreError": 42.38821072281126,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.747987662155032,
+            "scoreError": 0.10705710805680903
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 199.55626888311681,
+          "scoreError": 16.63530429155663,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0651564102173943,
+            "scoreError": 0.11343735544110811
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 198.58901225316447,
+          "scoreError": 13.13676923420448,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.139865139065193,
+            "scoreError": 0.10804233226863448
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 161.65546666666663,
+          "scoreError": 9.859403944364425,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9389512506661474,
+            "scoreError": 0.09536847166463229
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 172.8781425777777,
+          "scoreError": 13.027752523777103,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0069831302655368,
+            "scoreError": 0.10762884225538853
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 159.86730226804121,
+          "scoreError": 9.788660630923221,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9572256296489625,
+            "scoreError": 0.08467718439034594
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 194.20556637974684,
+          "scoreError": 10.843856830095689,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.6304877281136184,
+            "scoreError": 0.060894046572237785
+          }
+        }
+      ]
+    },
+    {
+      "id": "43680605966",
+      "date": "2025-09-22T07:39:19Z",
+      "commit": "b10684854863813e7105fd617ecf843a03235bf1",
+      "version": "8.1.0",
+      "reference": "9.1.0",
+      "results": [
+        {
+          "benchmark": "PathlingBenchmark.decodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 1409.0581926956522,
+          "scoreError": 263.6786096501757,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.111058571076988,
+            "scoreError": 0.2895949146947132
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 2524.4117674666672,
+          "scoreError": 588.4074108643783,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0686553030303034,
+            "scoreError": 0.34209658228007084
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 6550.104746666667,
+          "scoreError": 1013.2385496945125,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0000000000000002,
+            "scoreError": 0.277462454943263
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 765.6851748571429,
+          "scoreError": 90.50049083591503,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0086172460427085,
+            "scoreError": 0.17502607088512664
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 4301.6781824,
+          "scoreError": 977.4495074212903,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1267234276297722,
+            "scoreError": 0.32072358329969153
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 725.7487121860464,
+          "scoreError": 119.2023464840414,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1489316362224133,
+            "scoreError": 0.2842193287024084
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 1415.621290666667,
+          "scoreError": 277.87520495933666,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0515025637697155,
+            "scoreError": 0.32565938758939833
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 36104.568832,
+          "scoreError": 683.7129129505245,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 7.484494251763114,
+            "scoreError": 1.91892040045475
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 342.2668572444445,
+          "scoreError": 41.50538516916071,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.180283081249843,
+            "scoreError": 0.17218197463613472
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 1435.2384,
+          "scoreError": 327.55234271544145,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0764519056261344,
+            "scoreError": 0.3533661064766079
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 188.77478183050846,
+          "scoreError": 26.086353533393442,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9732559071802445,
+            "scoreError": 0.1901323829687981
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 294.72394017391304,
+          "scoreError": 51.7221468253486,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.031925294810144,
+            "scoreError": 0.23333055106002698
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 57.19035448888888,
+          "scoreError": 6.505354318522284,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9758145623995405,
+            "scoreError": 0.16276896848659303
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 77.68847802469134,
+          "scoreError": 8.131022273595457,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9894601021125059,
+            "scoreError": 0.15091043219668523
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 60.81819759036148,
+          "scoreError": 8.392588046011298,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9727352478436287,
+            "scoreError": 0.17303014628595467
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 913.0713832727271,
+          "scoreError": 138.02117855486827,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8083292896474606,
+            "scoreError": 0.16048958606436903
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 307.67135507692313,
+          "scoreError": 37.85759837271172,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0841874566578193,
+            "scoreError": 0.17748514573145563
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 329.0999466666666,
+          "scoreError": 31.61656996388618,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.052866256282952,
+            "scoreError": 0.1413365597280706
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 266.33830399999994,
+          "scoreError": 31.01979766701658,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8993213782250926,
+            "scoreError": 0.1555542410266149
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 298.1938412307692,
+          "scoreError": 34.84839582565555,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0798333941851301,
+            "scoreError": 0.18777041209756246
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 333.2705057391305,
+          "scoreError": 32.355690060948795,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0967735429103227,
+            "scoreError": 0.15547180517092812
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 479.52878445714276,
+          "scoreError": 62.21564066909889,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8317412534157596,
+            "scoreError": 0.15285392305898027
+          }
+        }
+      ]
+    },
+    {
+      "id": "43680611336",
+      "date": "2025-10-28T00:17:42Z",
+      "commit": "08b5526e45e01b6f6e92255fe8ae4c732f5c2c01",
+      "version": "9.0.0",
+      "reference": "9.1.0",
+      "results": [
+        {
+          "benchmark": "PathlingBenchmark.decodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 716.363821511111,
+          "scoreError": 126.36932189185342,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8949688917290163,
+            "scoreError": 0.22307811848766998
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 1515.830583652174,
+          "scoreError": 303.8129251134652,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0087069959347126,
+            "scoreError": 0.28458064164856595
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 4235.408179200001,
+          "scoreError": 872.0604317647372,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.002147239263804,
+            "scoreError": 0.25476433410053456
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 420.34969950684945,
+          "scoreError": 40.54754650647544,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9974096796182692,
+            "scoreError": 0.1414623341636616
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 2588.1477120000004,
+          "scoreError": 365.45480772103923,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0332810047095764,
+            "scoreError": 0.23489553652822534
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 411.00040084210525,
+          "scoreError": 53.91260250292295,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.014912501935798,
+            "scoreError": 0.1780243553835741
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 886.7748977777776,
+          "scoreError": 172.990253418832,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0303159184868107,
+            "scoreError": 0.2979694472375963
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 2959.081472,
+          "scoreError": 408.8854312178802,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.97895467160037,
+            "scoreError": 0.1832206356875177
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 181.8389942857143,
+          "scoreError": 10.657061258997707,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9849150038908403,
+            "scoreError": 0.08278346934540465
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 874.1919857777779,
+          "scoreError": 150.6986683378058,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9737209226876036,
+            "scoreError": 0.2297800962128353
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 121.44428865979387,
+          "scoreError": 11.096262306465116,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9897837866490334,
+            "scoreError": 0.1402876400640222
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 184.09658181818176,
+          "scoreError": 18.540399313486578,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.010177482213064,
+            "scoreError": 0.1513526953040947
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 40.257334084507036,
+          "scoreError": 4.181086059563557,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9406034256697305,
+            "scoreError": 0.12901850661788758
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 56.797866666666664,
+          "scoreError": 6.103165518071454,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0264167968762956,
+            "scoreError": 0.1557945823009642
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 41.366585344000015,
+          "scoreError": 3.9389396921226303,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9785386091835233,
+            "scoreError": 0.134170104173075
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 738.3059773793103,
+          "scoreError": 90.83560408821175,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9877202681224518,
+            "scoreError": 0.17006303443686277
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 192.0925696,
+          "scoreError": 15.562023760089119,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9893564567951874,
+            "scoreError": 0.10791516652503563
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 214.43024951351344,
+          "scoreError": 15.60201939929239,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0900218860641617,
+            "scoreError": 0.12348466015540481
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 148.9389126274509,
+          "scoreError": 9.014293250215562,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8207807795344976,
+            "scoreError": 0.08926182008706926
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 170.90150400000005,
+          "scoreError": 13.159582356431393,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9277862317287499,
+            "scoreError": 0.11065675387523662
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 188.71247238095236,
+          "scoreError": 17.893067222012146,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1322893530721656,
+            "scoreError": 0.13688460733070182
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 284.59782516363634,
+          "scoreError": 17.281802621939995,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.7997723010983123,
+            "scoreError": 0.10198564829585788
+          }
+        }
+      ]
+    },
+    {
+      "id": "43680616271",
+      "date": "2025-11-24T19:10:55Z",
+      "commit": "3f389cb2ed440f7c784895ba8aece44911ca0aab",
+      "version": "9.1.0",
+      "reference": "9.1.0",
+      "results": [
+        {
+          "benchmark": "PathlingBenchmark.decodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 826.2375581538461,
+          "scoreError": 143.23329980412686,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9658310780851029,
+            "scoreError": 0.24379586490530278
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 1519.5233947826089,
+          "scoreError": 317.7436441931806,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9821586434139676,
+            "scoreError": 0.2744517867548455
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 4430.443315199999,
+          "scoreError": 1015.3828230058406,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9879517047870077,
+            "scoreError": 0.27860685157471504
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 467.7602210909091,
+          "scoreError": 50.73276799524121,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9930753047394518,
+            "scoreError": 0.15115508029697097
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 2596.124379428572,
+          "scoreError": 515.536014439615,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0069917880384263,
+            "scoreError": 0.278443301177656
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 411.64196378947366,
+          "scoreError": 45.03321249710246,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9795446357742822,
+            "scoreError": 0.16782512216920636
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 861.9294719999998,
+          "scoreError": 200.0344300740961,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9773110076290498,
+            "scoreError": 0.30375798389149367
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 3165.301418666666,
+          "scoreError": 563.2482315385796,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9986766651962945,
+            "scoreError": 0.2525321885195922
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 188.66389704347827,
+          "scoreError": 11.139814745507545,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0147102963103338,
+            "scoreError": 0.08273939646870052
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 871.8326897777778,
+          "scoreError": 152.99721444029927,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9554008849783501,
+            "scoreError": 0.23630541875119532
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 113.32289906382978,
+          "scoreError": 13.080884129816072,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9345996872550886,
+            "scoreError": 0.15449332137453314
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 198.83996891428566,
+          "scoreError": 22.219859367296284,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.030294317799818,
+            "scoreError": 0.15408954158640883
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 47.22005333333334,
+          "scoreError": 4.314735802547689,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.21927801675256,
+            "scoreError": 0.16640270598981977
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 53.268549423728814,
+          "scoreError": 5.764850202954679,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8567868862796204,
+            "scoreError": 0.11514358743951647
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 48.59127172413792,
+          "scoreError": 4.856493005937738,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1519795403831592,
+            "scoreError": 0.15476508830630742
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 1377.663299368421,
+          "scoreError": 203.85343002244826,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0679472507727354,
+            "scoreError": 0.23012357981773227
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 766.6214034285715,
+          "scoreError": 106.40416945354805,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9281307353591925,
+            "scoreError": 0.1665094613805791
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 189.83813119999996,
+          "scoreError": 13.254945718031934,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9821153096339996,
+            "scoreError": 0.10226672691521116
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 198.39931733333339,
+          "scoreError": 16.287620160461802,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1298961317015315,
+            "scoreError": 0.12509928728285008
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 178.8101896629213,
+          "scoreError": 15.767159323382913,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8652998223927653,
+            "scoreError": 0.10248790158452217
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 225.9344237714286,
+          "scoreError": 18.250906771211206,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0775907235497812,
+            "scoreError": 0.1359301905688045
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 186.27089482926834,
+          "scoreError": 15.072271113089913,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9312805677204875,
+            "scoreError": 0.10373576325328371
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 300.32799396226415,
+          "scoreError": 25.088852994326846,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8930148330648757,
+            "scoreError": 0.10276996131924546
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 368.19083863414636,
+          "scoreError": 27.640140652888796,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0160064734833387,
+            "scoreError": 0.12009522017755908
+          }
+        }
+      ]
+    },
+    {
+      "id": "43680622609",
+      "date": "2026-01-20T02:07:31Z",
+      "commit": "1eff2a07e672c1fd8c46c772eace66e61d9b5ac0",
+      "version": "9.2.0",
+      "reference": "9.1.0",
+      "results": [
+        {
+          "benchmark": "PathlingBenchmark.decodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 991.3977675294116,
+          "scoreError": 202.44894550561264,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9756568189050537,
+            "scoreError": 0.281209555823325
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 2080.3747839999996,
+          "scoreError": 461.44150184494976,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.939672014682375,
+            "scoreError": 0.296164097968824
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 5870.627498666666,
+          "scoreError": 956.0292470341768,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9877675840978593,
+            "scoreError": 0.37699536680505946
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 620.0271008627451,
+          "scoreError": 85.12108406301694,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9866905646252631,
+            "scoreError": 0.18734321719840782
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 3237.653162666667,
+          "scoreError": 692.3655692053931,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0006481581505888,
+            "scoreError": 0.32197730974398536
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 573.3994868363637,
+          "scoreError": 100.40068696577906,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0156659545823905,
+            "scoreError": 0.2585308682406711
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 1222.0404297142857,
+          "scoreError": 300.93872341779957,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9512806598167473,
+            "scoreError": 0.3546970004010472
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 4650.33923490909,
+          "scoreError": 388.094846792391,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0240392285280064,
+            "scoreError": 0.15453355180635997
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 243.4651997460317,
+          "scoreError": 21.34910217883456,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9862231148813146,
+            "scoreError": 0.12591029662089057
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 1194.8898011428573,
+          "scoreError": 270.77952190039224,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.016534981521601,
+            "scoreError": 0.3351320377413737
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 175.19526580281686,
+          "scoreError": 26.057311798764026,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9529091852724866,
+            "scoreError": 0.1966085673437355
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 255.77628392727274,
+          "scoreError": 38.87429058319215,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.975657740501696,
+            "scoreError": 0.20511551252125243
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 52.69865411764706,
+          "scoreError": 6.729889085331006,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9550483881176307,
+            "scoreError": 0.18283189196090865
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 76.93392967441864,
+          "scoreError": 12.23023921062829,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0993628871334165,
+            "scoreError": 0.25805168603828693
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 54.205781333333356,
+          "scoreError": 6.14707332064504,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9576644027893734,
+            "scoreError": 0.17706714049882272
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 1802.0128085333336,
+          "scoreError": 277.9392921880126,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.089921251519476,
+            "scoreError": 0.2771764687020339
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 1018.4532712727273,
+          "scoreError": 117.64149680375014,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9472750916183947,
+            "scoreError": 0.19237422676129678
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 250.11497290322583,
+          "scoreError": 26.308758195759484,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.951114474543348,
+            "scoreError": 0.14016567300497668
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 266.0281002666667,
+          "scoreError": 29.78145027006553,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.040240858496357,
+            "scoreError": 0.16024353123928978
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 209.4351009315068,
+          "scoreError": 16.02893730342888,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8764582203393302,
+            "scoreError": 0.11285399824262221
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 274.00244130909084,
+          "scoreError": 29.03987420310082,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9564098031672088,
+            "scoreError": 0.13094474758298047
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 273.0528696140351,
+          "scoreError": 22.223562853698986,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0175490012091235,
+            "scoreError": 0.14112687563181184
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 433.8979148108108,
+          "scoreError": 54.656724006415836,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.989386823146329,
+            "scoreError": 0.1728507973816693
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 482.1444969411764,
+          "scoreError": 64.65897594515178,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9209069167422627,
+            "scoreError": 0.1719807062905906
+          }
+        }
+      ]
+    },
+    {
+      "id": "43680628924",
+      "date": "2026-02-15T21:00:20Z",
+      "commit": "4a296bf95ea90b61cf129d3a9096d4aad8274a0f",
+      "version": "9.3.0",
+      "reference": "9.1.0",
+      "results": [
+        {
+          "benchmark": "PathlingBenchmark.decodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 1005.780992,
+          "scoreError": 175.5650411642657,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0058330056363876,
+            "scoreError": 0.24654238181766763
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 1882.1387317894735,
+          "scoreError": 344.28991164427117,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0004041562911488,
+            "scoreError": 0.2747298738553751
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 5342.344923428571,
+          "scoreError": 1203.5016694334413,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0520043656529305,
+            "scoreError": 0.31053777838504026
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 584.2315946666668,
+          "scoreError": 73.68727544257818,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0217957908893376,
+            "scoreError": 0.16910436745467755
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 3398.0852906666664,
+          "scoreError": 457.80282396133686,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0255274261603375,
+            "scoreError": 0.25875752109978656
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 489.70137599999987,
+          "scoreError": 71.09316042972856,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9126383874600464,
+            "scoreError": 0.18746512843694846
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 1000.65925430303,
+          "scoreError": 175.45910285091009,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9023112346773131,
+            "scoreError": 0.2657819397615923
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 3512.0305493333326,
+          "scoreError": 737.9778644732397,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9405597678554711,
+            "scoreError": 0.24682287787184026
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 238.70259199999995,
+          "scoreError": 19.339384032607466,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0149022715776297,
+            "scoreError": 0.12187289585095631
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 1030.6846719999999,
+          "scoreError": 212.25000122878157,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9856719447499512,
+            "scoreError": 0.2797883422876732
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 163.87574690909085,
+          "scoreError": 17.909275794821152,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0255141987199403,
+            "scoreError": 0.17149665392303257
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 261.8151284363636,
+          "scoreError": 41.25392422961641,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0663162304092848,
+            "scoreError": 0.24138726556981538
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 53.24989046153845,
+          "scoreError": 6.597029657531949,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1692644273344488,
+            "scoreError": 0.1687763283488735
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 62.84767274226802,
+          "scoreError": 8.863989264597102,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8181432413549902,
+            "scoreError": 0.15006992638580358
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 55.002453333333314,
+          "scoreError": 5.839479582936406,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8730884596712667,
+            "scoreError": 0.13596148669124836
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 1719.140352,
+          "scoreError": 299.6526834742009,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0195102992615626,
+            "scoreError": 0.21757436311926595
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 1049.2750506666666,
+          "scoreError": 145.9946985627652,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0494168493977818,
+            "scoreError": 0.19921288047844238
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 251.14240825806453,
+          "scoreError": 27.504516442622563,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9978182822719301,
+            "scoreError": 0.14205952924556217
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 286.4165925925926,
+          "scoreError": 25.779474115363623,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1598836910372292,
+            "scoreError": 0.14401153963306026
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 249.11845140983607,
+          "scoreError": 26.04147791080395,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0895894284360037,
+            "scoreError": 0.15007868338301944
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 288.0824589473685,
+          "scoreError": 28.786217952176248,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.272699318690656,
+            "scoreError": 0.17351629451444167
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 268.9235862068966,
+          "scoreError": 25.467888834753918,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.104585717737611,
+            "scoreError": 0.15219098619907384
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 371.8631796363637,
+          "scoreError": 32.4226455964504,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9719312105007296,
+            "scoreError": 0.1336638811113167
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 419.6992656410256,
+          "scoreError": 44.86361065512377,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9624118868040854,
+            "scoreError": 0.1369527981423544
+          }
+        }
+      ]
+    },
+    {
+      "id": "43680634488",
+      "date": "2026-02-16T07:10:46Z",
+      "commit": "8a87af5eea79250f59d2dfd504e5a32ef56404f5",
+      "version": "9.3.1",
+      "reference": "9.1.0",
+      "results": [
+        {
+          "benchmark": "PathlingBenchmark.decodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 1086.7441664,
+          "scoreError": 224.92186813553258,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.983559133451142,
+            "scoreError": 0.2976992007089421
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 2251.2926719999996,
+          "scoreError": 489.5870605354402,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0679599577193308,
+            "scoreError": 0.3309347336259333
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 6271.882581333332,
+          "scoreError": 1147.9397200261515,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0218678815489748,
+            "scoreError": 0.31605465880492317
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 664.328671319149,
+          "scoreError": 91.24543177184086,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.005758870518298,
+            "scoreError": 0.19002542001691744
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 3385.152853333333,
+          "scoreError": 783.1122196235067,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.993231463439647,
+            "scoreError": 0.305284164790237
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 569.2644205714286,
+          "scoreError": 105.0799489351778,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9351703532427009,
+            "scoreError": 0.24296027463470238
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 1225.5231999999999,
+          "scoreError": 355.48823469781166,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9491348075962018,
+            "scoreError": 0.3585832698436497
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 4731.174912,
+          "scoreError": 676.669270091548,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9817232375979115,
+            "scoreError": 0.16321881220639156
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 251.4567574214876,
+          "scoreError": 23.408010949423453,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9785912008828093,
+            "scoreError": 0.1371828414367548
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 1145.4788855172415,
+          "scoreError": 254.92395702138685,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9197188854572131,
+            "scoreError": 0.2945709154091444
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 185.98707199999993,
+          "scoreError": 29.46916625656454,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1199309543146043,
+            "scoreError": 0.25580359147318743
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 287.637504,
+          "scoreError": 46.31237777583974,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9704743596685981,
+            "scoreError": 0.21326318374963568
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 51.70083639215689,
+          "scoreError": 6.125625645289217,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0126310843181543,
+            "scoreError": 0.18105184249344594
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 70.93758766265063,
+          "scoreError": 11.599115251577743,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9960935767610322,
+            "scoreError": 0.22774247149504442
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 51.53757866666666,
+          "scoreError": 7.246227256594266,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8901087072870364,
+            "scoreError": 0.17576600790957797
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 1657.667584,
+          "scoreError": 221.45454763211643,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9153217051458349,
+            "scoreError": 0.19546122837352337
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 1079.4613294545454,
+          "scoreError": 144.97003536908917,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.071993184077247,
+            "scoreError": 0.22313845402270333
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 286.130176,
+          "scoreError": 31.525816654026116,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.150197158202461,
+            "scoreError": 0.17457798511103856
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 273.35743558620686,
+          "scoreError": 33.831317879549935,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.019314355380711,
+            "scoreError": 0.18182331142588787
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 253.4721073548387,
+          "scoreError": 26.78943104455384,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1381643041418863,
+            "scoreError": 0.16897266009009157
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 299.4037366153846,
+          "scoreError": 31.387173962071977,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1960534778117757,
+            "scoreError": 0.17254716579331222
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 291.41338584615386,
+          "scoreError": 27.459522903638053,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1078527651149175,
+            "scoreError": 0.15367050311662328
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 456.5314861176471,
+          "scoreError": 62.3961549103747,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9690363969625556,
+            "scoreError": 0.1775268388193375
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 515.6547242666668,
+          "scoreError": 62.05416368746573,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.001975953222332,
+            "scoreError": 0.17536207653682126
+          }
+        }
+      ]
+    },
+    {
+      "id": "43680640082",
+      "date": "2026-02-17T22:47:03Z",
+      "commit": "1bfd049ea40a08a20b90a4a220d1b3103fa14df0",
+      "version": "9.4.0",
+      "reference": "9.1.0",
+      "results": [
+        {
+          "benchmark": "PathlingBenchmark.decodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 499.98766730158724,
+          "scoreError": 57.52093752811994,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9865737132093442,
+            "scoreError": 0.1568993098286913
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 1157.4109572413793,
+          "scoreError": 168.1067586427622,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1848508403498572,
+            "scoreError": 0.25557160620867975
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 3172.9909759999996,
+          "scoreError": 612.1864966457805,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9961593328212444,
+            "scoreError": 0.2072180337391242
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 296.6071978666667,
+          "scoreError": 23.768909950379953,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0378025607836079,
+            "scoreError": 0.10832799002701177
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 1971.672405333333,
+          "scoreError": 348.8887838550997,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0261192432802602,
+            "scoreError": 0.2751655148841354
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 268.62693509565213,
+          "scoreError": 19.28448191805151,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.045266854152427,
+            "scoreError": 0.10306618839152096
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 479.61866239999995,
+          "scoreError": 57.301282691982586,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9370163555261853,
+            "scoreError": 0.15220274697028524
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 1977.9638613333332,
+          "scoreError": 385.64482332284,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.008854290468267,
+            "scoreError": 0.2776077112250197
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 122.59724387096773,
+          "scoreError": 4.296917574514463,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9676918749036163,
+            "scoreError": 0.0521431585217931
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 571.7694277818181,
+          "scoreError": 72.44952682662397,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9691825019113004,
+            "scoreError": 0.1781230407981722
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 86.89697573770493,
+          "scoreError": 9.284163969435056,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9623172036570767,
+            "scoreError": 0.12890153053257025
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 128.87475665454542,
+          "scoreError": 9.926210733430784,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.082135850863495,
+            "scoreError": 0.1184701648042308
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 30.00771826804125,
+          "scoreError": 2.685837414231059,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.949178982459363,
+            "scoreError": 0.1211308517618782
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 40.63960177777778,
+          "scoreError": 4.354614710667724,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9425650219554652,
+            "scoreError": 0.12860741507997636
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 33.25759247058822,
+          "scoreError": 2.880712347307549,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9598427342155285,
+            "scoreError": 0.11398446781820099
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 871.2168594285713,
+          "scoreError": 83.83729733324542,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9366293582414044,
+            "scoreError": 0.15946108888882166
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 509.55678595121947,
+          "scoreError": 55.456312456779415,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.00752758092425,
+            "scoreError": 0.14096903080347659
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 129.84569925423725,
+          "scoreError": 6.4731491040904805,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9655899981111077,
+            "scoreError": 0.09198582746005347
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 143.20052906666666,
+          "scoreError": 8.842696215153916,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.102483957772718,
+            "scoreError": 0.08498342553086835
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 114.01014256716415,
+          "scoreError": 7.239540027128779,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0056417562794275,
+            "scoreError": 0.07863705901218886
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 117.178368,
+          "scoreError": 5.204932248220675,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8639823478097257,
+            "scoreError": 0.07338198276565473
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 118.3982664566929,
+          "scoreError": 5.543152741806638,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9260856814856737,
+            "scoreError": 0.06351717893359368
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 207.34541824000007,
+          "scoreError": 10.029020847928676,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9255568191182537,
+            "scoreError": 0.07631957919184462
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 229.6766945882353,
+          "scoreError": 13.205245932165242,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9896128146798019,
+            "scoreError": 0.0798101655188542
+          }
+        }
+      ]
+    },
+    {
+      "id": "43680645970",
+      "date": "2026-03-17T02:04:15Z",
+      "commit": "a1f20b4760712a60f4e1bd64171041017cd9ddc8",
+      "version": "9.5.0",
+      "reference": "9.1.0",
+      "results": [
+        {
+          "benchmark": "PathlingBenchmark.decodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 1113.7275221333334,
+          "scoreError": 216.42741452896945,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9022893114639832,
+            "scoreError": 0.24662003111005193
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 2180.120576,
+          "scoreError": 502.7264245086518,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9394768948066035,
+            "scoreError": 0.2863458952396252
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 6207.569919999999,
+          "scoreError": 1637.1892974129946,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9583423267860995,
+            "scoreError": 0.3758213984823579
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 661.848064,
+          "scoreError": 87.4342969546428,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0101747675367703,
+            "scoreError": 0.19991932963243075
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 3428.843519999999,
+          "scoreError": 713.9149036774943,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0064635272391502,
+            "scoreError": 0.30496648967708173
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 577.8130385454543,
+          "scoreError": 108.16476221535883,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8959481680842019,
+            "scoreError": 0.25004804795614116
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 1204.1022902857144,
+          "scoreError": 306.7741635576532,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9238877689954558,
+            "scoreError": 0.3582940387974442
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 4722.405003636362,
+          "scoreError": 543.0324450581934,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9345194977665094,
+            "scoreError": 0.16332980292655824
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 254.20977493333334,
+          "scoreError": 22.349613291277596,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9768027361867525,
+            "scoreError": 0.12806258136800466
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 1217.6790449230768,
+          "scoreError": 262.1368965235407,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9834782231037054,
+            "scoreError": 0.3109230963977858
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 196.40504980645153,
+          "scoreError": 22.45778228494475,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.213639077603318,
+            "scoreError": 0.2301240641127779
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 283.47532549019604,
+          "scoreError": 45.64669103485769,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0055322153896427,
+            "scoreError": 0.2322794902229292
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 48.80884622222221,
+          "scoreError": 5.047090344610584,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8839053176408531,
+            "scoreError": 0.15264211099196007
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 70.83622399999999,
+          "scoreError": 11.568976960444365,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.989252439764302,
+            "scoreError": 0.2266610961798323
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 53.476700371133994,
+          "scoreError": 7.624463213085367,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0336138586083232,
+            "scoreError": 0.18941375419101555
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 1758.98624,
+          "scoreError": 352.60596043730004,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0007457121551084,
+            "scoreError": 0.27404086611161915
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 1057.3316096,
+          "scoreError": 192.51423503138932,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9673813978030412,
+            "scoreError": 0.22007719245370602
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 257.49531306666665,
+          "scoreError": 26.13605803929866,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9925008144086843,
+            "scoreError": 0.1555526015457538
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 275.82698057142863,
+          "scoreError": 31.4968804923581,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9621955113860418,
+            "scoreError": 0.160918812201908
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 221.09973942857138,
+          "scoreError": 22.039070282708405,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8777441895039396,
+            "scoreError": 0.13193380335122984
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 248.42226570491795,
+          "scoreError": 28.66033175895293,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8930126043783853,
+            "scoreError": 0.14327788783766238
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 257.39430616949153,
+          "scoreError": 29.171226035351424,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8186206050716813,
+            "scoreError": 0.12094880038428199
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 444.9107967999999,
+          "scoreError": 55.22341225471267,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9783582581197705,
+            "scoreError": 0.1717335459619822
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 475.94229139393923,
+          "scoreError": 58.83401028117981,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8884492990453252,
+            "scoreError": 0.15216593357117877
+          }
+        }
+      ]
+    },
+    {
+      "id": "43680651480",
+      "date": "2026-04-23T04:48:12Z",
+      "commit": "b6398c4a6b1bf2901336184f45b8bdebe8d59007",
+      "version": "9.6.0",
+      "reference": "9.1.0",
+      "results": [
+        {
+          "benchmark": "PathlingBenchmark.decodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 743.3569745454546,
+          "scoreError": 133.49716288810922,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9270569563821819,
+            "scoreError": 0.22894108397437213
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 1481.8563413333331,
+          "scoreError": 298.202254085611,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.015935300284559,
+            "scoreError": 0.2989930306291774
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 4532.7843328,
+          "scoreError": 718.4196973107836,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9978762696214222,
+            "scoreError": 0.26464376679497253
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 454.8048603428571,
+          "scoreError": 34.88342921296913,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0642732995457667,
+            "scoreError": 0.1269857694289786
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 2547.253248,
+          "scoreError": 461.59339071770876,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0656942311910507,
+            "scoreError": 0.27612527122889635
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 414.45315925333324,
+          "scoreError": 58.40773541503346,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9897994958179601,
+            "scoreError": 0.18781516691127637
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 861.6535309473684,
+          "scoreError": 210.94115446118042,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9280667787571543,
+            "scoreError": 0.33127880310582775
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 3032.481792,
+          "scoreError": 454.16725295166935,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9734096263884215,
+            "scoreError": 0.1836134225513899
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 172.881746440678,
+          "scoreError": 11.217432235090437,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9018764610620319,
+            "scoreError": 0.07793699272405663
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 866.4638547027026,
+          "scoreError": 153.7769920975085,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9856424795624955,
+            "scoreError": 0.24491956135769255
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 145.24535882926824,
+          "scoreError": 20.025474674420387,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1913653979351384,
+            "scoreError": 0.20632594132715995
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 188.86018844444442,
+          "scoreError": 19.224060188818516,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9280917049810192,
+            "scoreError": 0.13919545747722054
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 39.2572259858156,
+          "scoreError": 3.5685880815322277,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8181905145930733,
+            "scoreError": 0.10351844663730497
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 48.928129024000015,
+          "scoreError": 5.077347717959178,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9551349545358432,
+            "scoreError": 0.12815650573370888
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 43.90177996799999,
+          "scoreError": 4.197041098787533,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.835049380407622,
+            "scoreError": 0.11151544994812192
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 1211.724893090909,
+          "scoreError": 164.62819890893596,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.860027965088744,
+            "scoreError": 0.1541206953612128
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 861.25838336,
+          "scoreError": 122.53220064428281,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0448277616648858,
+            "scoreError": 0.19543579448354628
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 205.3461333333334,
+          "scoreError": 15.80332977920103,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9853947780277932,
+            "scoreError": 0.10548063686562571
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 196.43323733333335,
+          "scoreError": 14.320284373410086,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9712272196786067,
+            "scoreError": 0.11198372389973012
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 169.3140968988764,
+          "scoreError": 15.304219947168649,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9862248592788336,
+            "scoreError": 0.11859236387254679
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 195.58967138461534,
+          "scoreError": 18.083274079026598,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9966239275465493,
+            "scoreError": 0.13601458874888053
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 210.5890133333333,
+          "scoreError": 19.634416299124975,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9757029383421431,
+            "scoreError": 0.12958769482842294
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 318.6173074285715,
+          "scoreError": 26.31560219178713,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0502382178880627,
+            "scoreError": 0.12493821160429935
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 355.336192,
+          "scoreError": 29.17693815305976,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9762835682683406,
+            "scoreError": 0.11576464693599263
+          }
+        }
+      ]
+    },
+    {
+      "id": "43680656608",
+      "date": "2026-06-03T00:00:01Z",
+      "commit": "21d9b2728c804ed681a8d4cbf3b6033ff8be9ebe",
+      "version": "9.7.1",
+      "reference": "9.1.0",
+      "results": [
+        {
+          "benchmark": "PathlingBenchmark.decodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 607.2077452549021,
+          "scoreError": 82.43716842192418,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.2169108392002348,
+            "scoreError": 0.21479151040993458
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 1277.2865575384617,
+          "scoreError": 202.26239041803635,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.2034795207660682,
+            "scoreError": 0.29493025697637176
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 3577.0422613333335,
+          "scoreError": 566.9741369822335,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0344688163347824,
+            "scoreError": 0.23431627753950104
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 321.81179733333335,
+          "scoreError": 23.763060153233013,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9390378257322067,
+            "scoreError": 0.11101787349323013
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 2274.885632,
+          "scoreError": 339.3312096198535,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.08056281907608,
+            "scoreError": 0.26150641816501513
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 320.52292266666655,
+          "scoreError": 34.232681200177126,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1160094949486326,
+            "scoreError": 0.14961389466170466
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 658.6804906666666,
+          "scoreError": 137.9147346957648,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1272431210953078,
+            "scoreError": 0.2815654547585948
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 2423.259136,
+          "scoreError": 594.6882932370844,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0882335628936373,
+            "scoreError": 0.3719585491616476
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 139.50870781651375,
+          "scoreError": 7.581498942777978,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0332719448856609,
+            "scoreError": 0.07601708002069368
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 692.174135652174,
+          "scoreError": 103.3112227656052,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0607173188927357,
+            "scoreError": 0.23158940728018002
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 105.17509965048538,
+          "scoreError": 8.759202911526987,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0774484642273365,
+            "scoreError": 0.13185366043796906
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 160.9138176,
+          "scoreError": 13.409424792331565,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1675872718717772,
+            "scoreError": 0.1466640583107634
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 34.986529325443804,
+          "scoreError": 2.4837951941130907,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1115683387646238,
+            "scoreError": 0.10500937574094914
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 46.614034686131376,
+          "scoreError": 5.251332747905535,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0242560883199165,
+            "scoreError": 0.15174656644416357
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 34.676634864197524,
+          "scoreError": 2.273747791615771,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8506713012066427,
+            "scoreError": 0.09691979357712169
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 1003.1813973333332,
+          "scoreError": 154.14598590406436,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9580829741222912,
+            "scoreError": 0.21107605557395007
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 493.5122944000001,
+          "scoreError": 63.98487159956434,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.7376959247648904,
+            "scoreError": 0.14860939490388805
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 161.709066556701,
+          "scoreError": 10.923060226500713,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8749945163413029,
+            "scoreError": 0.0958580142696459
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 160.41726416494848,
+          "scoreError": 12.366144633153521,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8433929528457557,
+            "scoreError": 0.10492096387055044
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 150.33076184615385,
+          "scoreError": 12.207895226354559,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9462746705096263,
+            "scoreError": 0.12557592401473652
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 147.43977203809519,
+          "scoreError": 12.505251073002094,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9488501172157423,
+            "scoreError": 0.10259482124288921
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 158.9087503673469,
+          "scoreError": 13.395855094555637,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0315623795778397,
+            "scoreError": 0.11688470014610292
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 260.3439445333333,
+          "scoreError": 18.060452134380338,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9094021932161249,
+            "scoreError": 0.09093572801076699
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 291.4231016727272,
+          "scoreError": 20.771750229056426,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1096934608613584,
+            "scoreError": 0.12102675712945456
+          }
+        }
+      ]
+    },
+    {
+      "id": "43680661872",
+      "date": "2026-06-20T07:23:46Z",
+      "commit": "eaf9e9ffea0cbfd2a5fdd7a039a386fd4920706b",
+      "version": "9.8.0",
+      "reference": "9.1.0",
+      "results": [
+        {
+          "benchmark": "PathlingBenchmark.decodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 1156.6958364444442,
+          "scoreError": 242.11602668466108,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9824769740794931,
+            "scoreError": 0.28459517292143577
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 2313.717896533333,
+          "scoreError": 510.47655631683705,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.146356172198113,
+            "scoreError": 0.37157275269880524
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 5865.035093333333,
+          "scoreError": 1397.4787717823865,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9347147950089125,
+            "scoreError": 0.3200282718985551
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 646.6882764800001,
+          "scoreError": 82.27009716631049,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9674357519524736,
+            "scoreError": 0.16437668999944838
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 3280.2952533333337,
+          "scoreError": 845.2929066114084,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0025638286507854,
+            "scoreError": 0.3168772827123934
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 576.5452148363637,
+          "scoreError": 109.48550764404943,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9447516284993777,
+            "scoreError": 0.2515177069985452
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 1275.270065230769,
+          "scoreError": 309.49211330277063,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9389416247392899,
+            "scoreError": 0.32596790424364075
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 4690.163939555555,
+          "scoreError": 595.2937213458703,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0066818709238585,
+            "scoreError": 0.1851162206123607
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 239.3147666141732,
+          "scoreError": 22.101925604299613,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9320435803126893,
+            "scoreError": 0.1279643107517384
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 1188.6579863703703,
+          "scoreError": 248.50037323016642,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9510004971414368,
+            "scoreError": 0.29640091598125107
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 167.04729212121208,
+          "scoreError": 25.20172263514056,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9234155265578385,
+            "scoreError": 0.19053186724646862
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 300.14963712,
+          "scoreError": 56.095264278417915,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0699547714275035,
+            "scoreError": 0.27492414813541904
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 49.47366752293578,
+          "scoreError": 5.668064574410884,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9209887054455677,
+            "scoreError": 0.14793514680910663
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 66.38657361702127,
+          "scoreError": 9.8200647751583,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.7911314459179281,
+            "scoreError": 0.1666582968354086
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 58.22626959139785,
+          "scoreError": 8.050982943846503,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.147711945112359,
+            "scoreError": 0.20388341256874462
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 1758.855168,
+          "scoreError": 259.1576553527113,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.993337774816789,
+            "scoreError": 0.20240745111980643
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 1075.4100130909092,
+          "scoreError": 154.7689381897556,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0290209790209792,
+            "scoreError": 0.21204983991668405
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 275.3732325517241,
+          "scoreError": 28.684623223141433,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9626799995468522,
+            "scoreError": 0.14949464331907433
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 290.73199476363635,
+          "scoreError": 33.37036561227062,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.137147685824001,
+            "scoreError": 0.17270820116638008
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 216.4977144788732,
+          "scoreError": 18.327323993170406,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8776237888526295,
+            "scoreError": 0.11881535485905828
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 284.12196571428575,
+          "scoreError": 30.74273801232997,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0361239895737433,
+            "scoreError": 0.1623181659789098
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 251.44260541935483,
+          "scoreError": 26.912710061597522,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0368951820473393,
+            "scoreError": 0.1529484556558277
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 465.6875812571428,
+          "scoreError": 51.02313814266313,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9841088952200062,
+            "scoreError": 0.15361442103499992
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 517.439488,
+          "scoreError": 78.54283687830774,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9400598488696978,
+            "scoreError": 0.17366283735801158
+          }
+        }
+      ]
+    },
+    {
+      "id": "43680667473",
+      "date": "2026-09-01T05:02:20Z",
+      "commit": "6b03c331ab98feb1f76dbd50ddd7710812de9447",
+      "version": "9.9.0",
+      "reference": "9.1.0",
+      "results": [
+        {
+          "benchmark": "PathlingBenchmark.decodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 483.5306574769231,
+          "scoreError": 48.249923627053924,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8590364553479309,
+            "scoreError": 0.12991689850236687
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 877.4313928648651,
+          "scoreError": 143.75975921944573,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.117425096860231,
+            "scoreError": 0.23634595656135227
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 3236.6045866666664,
+          "scoreError": 564.9970109047309,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0383494056963445,
+            "scoreError": 0.23954007970779387
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 266.80157572413793,
+          "scoreError": 17.80755226055606,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9536149621100866,
+            "scoreError": 0.08708784274656273
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 1862.6205013333336,
+          "scoreError": 334.85887864343454,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0483423412230026,
+            "scoreError": 0.2526500554095785
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 256.73149741176474,
+          "scoreError": 16.642853080182757,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.00233993706653,
+            "scoreError": 0.09405958672833063
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 487.8782148923078,
+          "scoreError": 52.422472441501235,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9467889484502225,
+            "scoreError": 0.14445608723037312
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 1955.7107484444443,
+          "scoreError": 300.6918030387961,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9621560019690748,
+            "scoreError": 0.2255476732977463
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 107.99958308571428,
+          "scoreError": 3.900751289512363,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8864597492129476,
+            "scoreError": 0.046790802303473496
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 561.418825142857,
+          "scoreError": 61.34447655114689,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0031449697213017,
+            "scoreError": 0.16675757509545255
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 79.85655222857146,
+          "scoreError": 7.125768128421557,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.049831500409115,
+            "scoreError": 0.123341617711044
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 115.73999526956528,
+          "scoreError": 8.098125372657995,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0118943175927035,
+            "scoreError": 0.0986660489540405
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 29.466705108910872,
+          "scoreError": 2.0696393560147324,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.031736603546243,
+            "scoreError": 0.10469028044007889
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 32.744694417112306,
+          "scoreError": 2.9289725616328117,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9615517214763898,
+            "scoreError": 0.10545550315533382
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 32.694412434285724,
+          "scoreError": 2.933420166704565,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.2535518946667736,
+            "scoreError": 0.12948051902122604
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 811.2133461333334,
+          "scoreError": 67.07541275333662,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9572131389011639,
+            "scoreError": 0.13791771917678303
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 556.5104570810811,
+          "scoreError": 65.73138784932829,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.020103896103896,
+            "scoreError": 0.14769074883458275
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 121.52975034920632,
+          "scoreError": 5.500748507941493,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9899497744331414,
+            "scoreError": 0.06166234043686096
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 125.00508537704923,
+          "scoreError": 6.023671091140804,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9792898617310752,
+            "scoreError": 0.06316781574062115
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 117.89367565891474,
+          "scoreError": 8.677261680755397,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0738581537795429,
+            "scoreError": 0.103728861956467
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 119.09594103937002,
+          "scoreError": 7.0055420670002855,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8841704794995277,
+            "scoreError": 0.08729424989282245
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 125.88772943089431,
+          "scoreError": 8.968512804970334,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0848267090777257,
+            "scoreError": 0.09594167980755706
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 224.33827617391304,
+          "scoreError": 12.948776078956094,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.173736329186002,
+            "scoreError": 0.09099931537375397
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 224.24172251428575,
+          "scoreError": 13.075044691957133,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9337657182551498,
+            "scoreError": 0.0826542756584728
+          }
+        }
+      ]
+    },
+    {
+      "id": "43680673104",
+      "date": "2026-10-21T04:27:47Z",
+      "commit": "2e654ed47ff200aee6b90c340f4b8307b7223ed4",
+      "version": "10.0.0",
+      "reference": "9.1.0",
+      "results": [
+        {
+          "benchmark": "PathlingBenchmark.decodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 897.9106084571426,
+          "scoreError": 153.90908221072604,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0677576859307842,
+            "scoreError": 0.2637148212742323
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 1500.2387144347827,
+          "scoreError": 291.4118063172733,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9249614179457083,
+            "scoreError": 0.2650740840295165
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 4510.5545216,
+          "scoreError": 940.7032931242593,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.972508591065292,
+            "scoreError": 0.282964635051273
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 450.4773676521739,
+          "scoreError": 47.112137041456776,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0580771049790147,
+            "scoreError": 0.14769388085505306
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 2492.9544874666663,
+          "scoreError": 467.62902733875404,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0008419398293669,
+            "scoreError": 0.27351827993191075
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 399.7561567179488,
+          "scoreError": 47.115921685862084,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.011893013917719,
+            "scoreError": 0.159049595115801
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 800.6664192000001,
+          "scoreError": 179.27184571908398,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8860177276390011,
+            "scoreError": 0.27107536072532945
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 3133.494613333333,
+          "scoreError": 483.44581904223935,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0071902033479385,
+            "scoreError": 0.20044175489754673
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 168.3362765082873,
+          "scoreError": 9.726393114038165,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9052400966766538,
+            "scoreError": 0.07630263371080584
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 874.5706382222223,
+          "scoreError": 160.34763797883878,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9934347011188371,
+            "scoreError": 0.24919889419058133
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 128.5465778604651,
+          "scoreError": 11.297713243008294,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1726478661267785,
+            "scoreError": 0.1674283769169062
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 203.36548977777775,
+          "scoreError": 17.84794037035204,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.1394460393306347,
+            "scoreError": 0.1419658320024776
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 41.46252417910448,
+          "scoreError": 4.238232157207554,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8341133542584057,
+            "scoreError": 0.10630234652404083
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 54.2191507256637,
+          "scoreError": 6.001213462539887,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.037215605507221,
+            "scoreError": 0.16461088019083578
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 45.65436020168067,
+          "scoreError": 4.072085923481176,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0054644167698197,
+            "scoreError": 0.13109010262908002
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 1247.2561859047619,
+          "scoreError": 199.59379494683273,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9232196448899337,
+            "scoreError": 0.20162998539897253
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 783.2862719999999,
+          "scoreError": 94.9513086146269,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.971797611857083,
+            "scoreError": 0.16918439278524777
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 195.18777681012656,
+          "scoreError": 13.788238209370158,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0028736806741203,
+            "scoreError": 0.11011122929842865
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 207.68795306666664,
+          "scoreError": 13.548256961306176,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9871555039712341,
+            "scoreError": 0.09005683450382493
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 172.78890479120884,
+          "scoreError": 14.799698006461227,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0036517272862853,
+            "scoreError": 0.11994324903987888
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 181.54252190476183,
+          "scoreError": 14.780913184477983,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.000593415666173,
+            "scoreError": 0.11086770513468165
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 175.24915487640442,
+          "scoreError": 12.907249209475898,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.984610847312614,
+            "scoreError": 0.10843196240857948
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 305.18701678431376,
+          "scoreError": 21.856281573713535,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.977076373689667,
+            "scoreError": 0.11728272924124881
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 370.73403123809527,
+          "scoreError": 30.750881264375497,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.038665935411053,
+            "scoreError": 0.13133233844474193
+          }
+        }
+      ]
+    },
+    {
+      "id": "43682835872",
+      "date": "2026-11-15T06:52:38Z",
+      "commit": "2c5e82f1eb81262a85137d28566ba73e8f3ea22c",
+      "version": "11.0.0-SNAPSHOT",
+      "reference": "9.1.0",
+      "results": [
+        {
+          "benchmark": "PathlingBenchmark.decodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 350.1253518222222,
+          "scoreError": 31.643145721115612,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.32907557533690107,
+            "scoreError": 0.062284367607999776
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 432.1093083943662,
+          "scoreError": 42.51292963603392,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.20622774030109423,
+            "scoreError": 0.05250776973710359
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 846.0628614736843,
+          "scoreError": 105.0025415220628,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.14235504958585599,
+            "scoreError": 0.05775512247303038
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 328.4747982978722,
+          "scoreError": 29.240384230385555,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.4830580071524655,
+            "scoreError": 0.07598390038107776
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.decodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 410.8624303157895,
+          "scoreError": 40.90604478553709,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.1276454383869327,
+            "scoreError": 0.02879487863258089
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 310.48706068686863,
+          "scoreError": 27.825130468465968,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.5206127990527238,
+            "scoreError": 0.096236218009624
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 623.0053809230769,
+          "scoreError": 75.54224447008077,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.4802359561040819,
+            "scoreError": 0.12788128617543185
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 2248.270305882353,
+          "scoreError": 178.8125174728935,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.5449970911740241,
+            "scoreError": 0.09302220274801247
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 135.69419824215245,
+          "scoreError": 8.399698180023961,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.5215616796498265,
+            "scoreError": 0.05522871393881279
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 459.9856188235294,
+          "scoreError": 31.393059105520464,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.38502908477609876,
+            "scoreError": 0.08986932403228944
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 172.86083764705887,
+          "scoreError": 19.45075421293243,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.860944530134979,
+            "scoreError": 0.12896100826955065
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 193.11133729032258,
+          "scoreError": 24.79006373723715,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.7474785746002867,
+            "scoreError": 0.15686760348399667
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 53.47180544000002,
+          "scoreError": 5.193608581421738,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9535798261956286,
+            "scoreError": 0.15441093406292292
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 52.14469806185566,
+          "scoreError": 5.887626811634362,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.7511911985684686,
+            "scoreError": 0.1336287021334321
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executePatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 55.81794742857144,
+          "scoreError": 6.172968694599194,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0674716570339984,
+            "scoreError": 0.17384631881676457
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 369.42643200000003,
+          "scoreError": 56.198706097783464,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.21566301935878798,
+            "scoreError": 0.053275348113194676
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.executeUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 667.2313782857143,
+          "scoreError": 94.45176537350073,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.6588728492762005,
+            "scoreError": 0.12319707777845139
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planConditionFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 257.2375381333334,
+          "scoreError": 26.99698608065599,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9158888681475954,
+            "scoreError": 0.13687807031965565
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planEncounterFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 257.67881386666664,
+          "scoreError": 29.787379339154466,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9650304117720078,
+            "scoreError": 0.16229895793380733
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAddresses",
+          "mode": "sample",
+          "params": "",
+          "score": 229.2410729411764,
+          "scoreError": 19.70978514030432,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0253447066020536,
+            "scoreError": 0.14129114623483963
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientAndContactAddressUnion",
+          "mode": "sample",
+          "params": "",
+          "score": 254.17397677419353,
+          "scoreError": 25.812967860592835,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.067624075688592,
+            "scoreError": 0.16118907501980326
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planPatientDemographics",
+          "mode": "sample",
+          "params": "",
+          "score": 285.85193543859646,
+          "scoreError": 29.702910134359964,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 1.0426561804954206,
+            "scoreError": 0.14891969557511606
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planQuestionnaireResponseFlat",
+          "mode": "sample",
+          "params": "",
+          "score": 352.75261724444437,
+          "scoreError": 35.085165505978175,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.7714587314587313,
+            "scoreError": 0.11746841445629069
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.planUsCoreBloodPressures",
+          "mode": "sample",
+          "params": "",
+          "score": 470.92183660606065,
+          "scoreError": 54.80092674048146,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.9354899794855611,
+            "scoreError": 0.18678880884861473
+          }
         }
       ]
     }
