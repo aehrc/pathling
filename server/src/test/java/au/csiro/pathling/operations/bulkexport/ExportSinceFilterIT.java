@@ -24,6 +24,8 @@ import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import au.csiro.pathling.io.DynamicDeltaSource;
+import au.csiro.pathling.io.ResourceEncoding;
+import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.FileInformation;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
@@ -39,11 +41,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.spark.sql.Encoders;
+import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.Resource;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -82,10 +86,10 @@ class ExportSinceFilterIT {
   private static final String SINCE_CUTOFF = "2020-01-01T00:00:00Z";
 
   /** Stamped onto the first partition: well before the cut-off, in any time zone. */
-  private static final String BEFORE_CUTOFF_TIMESTAMP = "2015-06-15 00:00:00";
+  private static final String BEFORE_CUTOFF_TIMESTAMP = "2015-06-15T00:00:00Z";
 
   /** Stamped onto the second partition: well after the cut-off, in any time zone. */
-  private static final String AFTER_CUTOFF_TIMESTAMP = "2025-06-15 00:00:00";
+  private static final String AFTER_CUTOFF_TIMESTAMP = "2025-06-15T00:00:00Z";
 
   @LocalServerPort int port;
 
@@ -98,6 +102,8 @@ class ExportSinceFilterIT {
   @Autowired private SparkSession sparkSession;
 
   @Autowired private QueryableDataSource deltaLake;
+
+  @Autowired private PathlingContext pathlingContext;
 
   private IParser parser;
 
@@ -175,13 +181,27 @@ class ExportSinceFilterIT {
     FileUtils.cleanDirectory(warehouseDir.toFile());
   }
 
-  /** Updates meta.lastUpdated on the Delta table for the given resource IDs. */
+  /**
+   * Sets meta.lastUpdated on the given resources of the Patient table. The table is in the Parquet
+   * on FHIR layout, whose schema carries meta.lastUpdated only once some resource has it, so the
+   * resources are decoded, stamped and written back rather than updated in place with SQL.
+   */
   private void stampLastUpdated(
       final String tablePath, final Set<String> ids, final String timestamp) {
-    final String idList = ids.stream().map(id -> "'" + id + "'").collect(Collectors.joining(","));
-    sparkSession.sql(
-        "UPDATE delta.`%s` SET meta.lastUpdated = timestamp'%s' WHERE id IN (%s)"
-            .formatted(tablePath, timestamp, idList));
+    final List<IBaseResource> patients =
+        ResourceEncoding.decode(
+            pathlingContext, "Patient", sparkSession.read().format("delta").load(tablePath));
+    patients.stream()
+        .filter(patient -> ids.contains(patient.getIdElement().getIdPart()))
+        .forEach(
+            patient ->
+                ((Resource) patient).getMeta().setLastUpdatedElement(new InstantType(timestamp)));
+    ResourceEncoding.encode(pathlingContext, "Patient", patients)
+        .write()
+        .format("delta")
+        .mode(SaveMode.Overwrite)
+        .option("overwriteSchema", "true")
+        .save(tablePath);
   }
 
   @Test
