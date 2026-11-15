@@ -14,10 +14,18 @@ allowing for large data sets to be imported efficiently.
 
 The following source formats are supported:
 
-| Format  | MIME type                        | Description                                                                                                  |
-| ------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| NDJSON  | `application/fhir+ndjson`        | [FHIR Newline Delimited JSON](https://hl7.org/fhir/R4/nd-json.html) format                                   |
-| Parquet | `application/vnd.apache.parquet` | [Apache Parquet](https://parquet.apache.org/) conforming to the [Pathling schema](/docs/libraries/io/schema) |
+| Format  | MIME type                        | Description                                                                                                                                                        |
+| ------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| NDJSON  | `application/fhir+ndjson`        | [FHIR Newline Delimited JSON](https://hl7.org/fhir/R4/nd-json.html) format                                                                                         |
+| Parquet | `application/vnd.apache.parquet` | [Apache Parquet](https://parquet.apache.org/) in the [Parquet on FHIR layout](/docs/libraries/io/schema), or in the layout written by earlier versions of Pathling |
+
+Parquet in the layout written by earlier versions of Pathling, such as the
+Parquet output of `$export` from a server before 3.2.0, is converted to the
+Parquet on FHIR layout as it is imported. The conversion keeps what that layout
+stored, as described under
+[upgrading a warehouse](../configuration#upgrading-a-warehouse-written-by-an-earlier-version).
+Parquet files of one resource type that mix the two layouts are rejected with a
+`400` error.
 
 ## Supported URL schemes
 

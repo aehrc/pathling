@@ -153,9 +153,8 @@ Codes that exist only in later releases, such as a `relatedArtifact.type` of
 `part-of`, are rejected with a `400` error rather than dropped.
 
 A warehouse that holds a ViewDefinition table written by an earlier version of
-Pathling needs
-[`pathling.storage.schemaAutoMerge`](../configuration#storage) enabled when
-upgrading, so that the table gains the columns for the additional elements.
+Pathling is converted when the server starts, as described under
+[upgrading a warehouse](../configuration#upgrading-a-warehouse-written-by-an-earlier-version).
 
 ## Batch operations
 
