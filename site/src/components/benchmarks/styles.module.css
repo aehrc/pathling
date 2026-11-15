@@ -23,6 +23,13 @@
 
 .chart {
     margin: 0;
+    /* The colour behind the chart, which the theme leaves transparent in light
+       mode. */
+    --chart-background: #fff;
+}
+
+[data-theme="dark"] .chart {
+    --chart-background: var(--ifm-background-color);
 }
 
 .chart svg {
@@ -78,15 +85,21 @@
     stroke-width: 8;
 }
 
-.annotationLabel {
+/* The outline is painted beneath the text, in the colour behind the chart, so
+   that a tag stays legible over whatever it crosses. */
+.annotationTag {
     font-size: 12px;
+    paint-order: stroke;
+    stroke: var(--chart-background);
+    stroke-width: 3px;
+    stroke-linejoin: round;
 }
 
-.releaseAnnotation .annotationLabel {
+.releaseAnnotation .annotationTag {
     fill: var(--ifm-color-emphasis-700);
 }
 
-.changeAnnotation .annotationLabel {
+.changeAnnotation .annotationTag {
     fill: var(--ifm-font-color-base);
     font-weight: 600;
 }

@@ -23,7 +23,7 @@
  */
 
 import React from "react";
-import { assignLabelRows } from "../../benchmarks/annotations.js";
+import { lineObstacles, placeTags } from "../../benchmarks/annotations.js";
 import { commitUrl, formatDate, formatNumber, formatScore } from "./format";
 import styles from "./styles.module.css";
 
@@ -33,14 +33,18 @@ const PLOT_WIDTH = WIDTH - MARGIN.left - MARGIN.right;
 const PLOT_HEIGHT = 240;
 // The minimum horizontal distance between commit labels.
 const LABEL_SPACING = 56;
-// The number of rows of annotation labels above the plot, and their height.
-// Four rows are enough to label the patch releases that follow a release.
-const ANNOTATION_ROWS = 4;
-const ANNOTATION_ROW_HEIGHT = 15;
-// The approximate width of a character in a release label and in the bold
-// label of a change, and the minimum space between two labels in a row.
-const ANNOTATION_CHAR_WIDTH = { release: 6.5, change: 7.5 };
-const ANNOTATION_LABEL_GAP = 6;
+const POINT_RADIUS = 4;
+// The space that the tag of an annotation takes up across its line, the space
+// between the foot of the plot and the first tag on a line, and the minimum
+// space between two tags along a line.
+const TAG_THICKNESS = 14;
+const TAG_INSET = 4;
+const TAG_GAP = 6;
+// The approximate width of a character in the tag of a release and in the bold
+// tag of a change.
+const TAG_CHAR_WIDTH = { release: 6, change: 7 };
+const HEIGHT = MARGIN.top + PLOT_HEIGHT + MARGIN.bottom;
+const PLOT_BOTTOM = MARGIN.top + PLOT_HEIGHT;
 
 // A qualitative palette that remains distinguishable in light and dark modes.
 const COLOURS = [
@@ -87,6 +91,32 @@ function annotationTitle({ kind, label, date, description }) {
 }
 
 /**
+ * Renders part of the marker of an annotation, linked to the page about the
+ * annotation if it has one.
+ *
+ * @param {object} props - The component props.
+ * @param {import("../../benchmarks/annotations.js").Annotation}
+ *   props.annotation - The annotation.
+ * @param {React.ReactNode} props.children - The part of the marker.
+ * @returns {React.ReactElement} The linked part.
+ */
+function AnnotationLink({ annotation, children }) {
+  return (
+    <a
+      href={annotation.url}
+      className={
+        annotation.kind === "release"
+          ? styles.releaseAnnotation
+          : styles.changeAnnotation
+      }
+    >
+      <title>{annotationTitle(annotation)}</title>
+      {children}
+    </a>
+  );
+}
+
+/**
  * Renders the timeline of one benchmark.
  *
  * @param {object} props - The component props.
@@ -123,44 +153,67 @@ export default function TimelineChart({
       ? PLOT_WIDTH / 2
       : ((Date.parse(date) - minTime) / (maxTime - minTime)) * PLOT_WIDTH);
 
-  // Mark each annotation with a vertical line through the plot, labelled above
-  // the plot. A label that would overlap another moves up a row, and is left
-  // out when no row has room, leaving its line and hover text. The plot moves
-  // down to make room for the rows that are used.
-  const markers = annotations.map((annotation) => {
-    const halfWidth =
-      (annotation.label.length * ANNOTATION_CHAR_WIDTH[annotation.kind]) / 2;
-    // Keep labels near the edges within the chart.
-    const labelX = Math.min(
-      Math.max(x(annotation.date), halfWidth),
-      WIDTH - halfWidth,
-    );
-    return { annotation, labelX, halfWidth };
+  const y = (value) => MARGIN.top + PLOT_HEIGHT * (1 - value / yMax);
+
+  // Mark each annotation with a vertical line through the plot, tagged with
+  // its label. A tag runs up its line from the foot of the plot, where the
+  // scores usually leave room, as they lie near one on an axis from zero.
+  // Where a series is in the way, the tag moves up its line to clear it, and
+  // is drawn over the series only when it cannot. A tag with no room clear of
+  // the other tags is left out, leaving its line and hover text.
+  const tagOffset = (value) => PLOT_BOTTOM - TAG_INSET - y(value);
+  const obstacles = timeline.series.flatMap((series) => {
+    const centres = series.points.map((point) => ({
+      x: x(point.date),
+      offset: tagOffset(point.score),
+    }));
+    return [
+      // Each point, with its error bar.
+      ...series.points.map((point, index) => {
+        const centre = centres[index];
+        const error = point.scoreError ?? 0;
+        return {
+          from: centre.x - POINT_RADIUS,
+          to: centre.x + POINT_RADIUS,
+          start: Math.min(
+            centre.offset - POINT_RADIUS,
+            tagOffset(point.score - error),
+          ),
+          end: Math.max(
+            centre.offset + POINT_RADIUS,
+            tagOffset(point.score + error),
+          ),
+        };
+      }),
+      // The line from each point to the next.
+      ...centres
+        .slice(1)
+        .flatMap((centre, index) =>
+          lineObstacles(centres[index], centre, TAG_THICKNESS / 2),
+        ),
+    ];
   });
-  const labelRows = assignLabelRows(
-    markers.map(({ annotation, labelX, halfWidth }) => ({
-      left: labelX - halfWidth - ANNOTATION_LABEL_GAP / 2,
-      right: labelX + halfWidth + ANNOTATION_LABEL_GAP / 2,
+  const tagPlacements = placeTags(
+    annotations.map((annotation) => ({
+      x: x(annotation.date),
+      length: annotation.label.length * TAG_CHAR_WIDTH[annotation.kind],
       kind: annotation.kind,
     })),
-    ANNOTATION_ROWS,
+    {
+      thickness: TAG_THICKNESS,
+      gap: TAG_GAP,
+      minX: MARGIN.left,
+      maxX: WIDTH - MARGIN.right,
+      maxOffset: PLOT_HEIGHT - TAG_INSET,
+    },
+    obstacles,
   );
-  const rowsUsed = Math.max(
-    0,
-    ...labelRows.filter((row) => row !== null).map((row) => row + 1),
+  // Paint the lines of changes over those of releases, as a change often lands
+  // just before the release that ships it, and would otherwise be hidden
+  // beneath it.
+  const linePaintOrder = [...annotations].sort(
+    (a, b) => Number(a.kind === "change") - Number(b.kind === "change"),
   );
-  const top = MARGIN.top + rowsUsed * ANNOTATION_ROW_HEIGHT;
-  const height = top + PLOT_HEIGHT + MARGIN.bottom;
-  const y = (value) => top + PLOT_HEIGHT * (1 - value / yMax);
-  // Paint changes over releases, as a change often lands just before the
-  // release that ships it, and would otherwise be hidden beneath it.
-  const paintOrder = markers
-    .map((marker, index) => ({ ...marker, row: labelRows[index] }))
-    .sort(
-      (a, b) =>
-        Number(a.annotation.kind === "change") -
-        Number(b.annotation.kind === "change"),
-    );
 
   // Label each run in this chart with its commit, skipping labels that would
   // overlap, but always labelling the first and last runs with their date too.
@@ -196,7 +249,7 @@ export default function TimelineChart({
   return (
     <figure className={styles.chart}>
       <svg
-        viewBox={`0 0 ${WIDTH} ${height}`}
+        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         role="img"
         aria-label={`${timeline.benchmark} scores over time`}
       >
@@ -222,42 +275,23 @@ export default function TimelineChart({
         ))}
         <text
           className={styles.axisLabel}
-          transform={`translate(14 ${top + PLOT_HEIGHT / 2}) rotate(-90)`}
+          transform={`translate(14 ${MARGIN.top + PLOT_HEIGHT / 2}) rotate(-90)`}
           textAnchor="middle"
         >
           {timeline.unit}
         </text>
-        {paintOrder.map(({ annotation, labelX, row }) => {
+        {linePaintOrder.map((annotation) => {
           const lineProps = {
             x1: x(annotation.date),
             x2: x(annotation.date),
-            y1: top,
-            y2: top + PLOT_HEIGHT,
+            y1: MARGIN.top,
+            y2: PLOT_BOTTOM,
           };
           return (
-            <a
-              key={annotation.label}
-              href={annotation.url}
-              className={
-                annotation.kind === "release"
-                  ? styles.releaseAnnotation
-                  : styles.changeAnnotation
-              }
-            >
-              <title>{annotationTitle(annotation)}</title>
+            <AnnotationLink key={annotation.label} annotation={annotation}>
               <line className={styles.annotationLine} {...lineProps} />
               <line className={styles.annotationHitArea} {...lineProps} />
-              {row !== null && (
-                <text
-                  className={styles.annotationLabel}
-                  x={labelX}
-                  y={top - 8 - row * ANNOTATION_ROW_HEIGHT}
-                  textAnchor="middle"
-                >
-                  {annotation.label}
-                </text>
-              )}
-            </a>
+            </AnnotationLink>
           );
         })}
         {labelled.map((run, index) => (
@@ -267,7 +301,7 @@ export default function TimelineChart({
               <text
                 className={styles.commitLabel}
                 x={x(run.date)}
-                y={height - 26}
+                y={HEIGHT - 26}
                 textAnchor="middle"
               >
                 {run.commit.slice(0, 7)}
@@ -277,7 +311,7 @@ export default function TimelineChart({
               <text
                 className={styles.axisLabel}
                 x={x(run.date)}
-                y={height - 8}
+                y={HEIGHT - 8}
                 textAnchor="middle"
               >
                 {dateLabel(run.date)}
@@ -321,12 +355,38 @@ export default function TimelineChart({
                     className={styles.point}
                     cx={x(point.date)}
                     cy={y(point.score)}
-                    r={4}
+                    r={POINT_RADIUS}
                     fill={colour}
                   />
                 </a>
               ))}
             </g>
+          );
+        })}
+        {/* The tags are painted last, so that their outlines keep them legible
+            over the lines and scores that they cross. */}
+        {annotations.map((annotation, index) => {
+          const placement = tagPlacements[index];
+          if (placement === null) {
+            return null;
+          }
+          const centre =
+            x(annotation.date) +
+            ((placement.side === "left" ? -1 : 1) * TAG_THICKNESS) / 2;
+          const start = PLOT_BOTTOM - TAG_INSET - placement.offset;
+          return (
+            <AnnotationLink
+              key={`tag-${annotation.label}`}
+              annotation={annotation}
+            >
+              <text
+                className={styles.annotationTag}
+                transform={`translate(${centre} ${start}) rotate(-90)`}
+                dominantBaseline="central"
+              >
+                {annotation.label}
+              </text>
+            </AnnotationLink>
           );
         })}
       </svg>
