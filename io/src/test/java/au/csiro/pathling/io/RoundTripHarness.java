@@ -26,6 +26,7 @@ import au.csiro.pathling.definition.ElementDefinition;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import au.csiro.pathling.schema.LayoutEntry;
 import au.csiro.pathling.schema.LayoutFields;
+import au.csiro.pathling.utilities.AnnotationNames;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -320,7 +321,7 @@ public final class RoundTripHarness {
       }
       final String name = path + "." + field.name();
       if (field.name().startsWith(LayoutFields.METADATA_GROUP_PREFIX)
-          && !LayoutFields.isAnnotation(field.name())) {
+          && !AnnotationNames.isAnnotation(field.name())) {
         assertTrue(
             LayoutFields.METADATA_GROUP_FIELDS.stream()
                 .noneMatch(inner -> List.of(structure.fieldNames()).contains(inner)),

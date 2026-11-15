@@ -30,7 +30,6 @@ import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.comparison.DefaultComparator;
-import au.csiro.pathling.fhirpath.comparison.StoredPrimitiveComparator;
 import com.google.common.collect.ImmutableSet;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
@@ -194,9 +193,7 @@ public class IntegerCollection extends Collection
   @Override
   @Nonnull
   public ColumnComparator getComparator() {
-    return holdsPrimitiveMetadata()
-        ? StoredPrimitiveComparator.of(DefaultComparator.getInstance())
-        : DefaultComparator.getInstance();
+    return comparatorFor(DefaultComparator.getInstance());
   }
 
   @Nonnull

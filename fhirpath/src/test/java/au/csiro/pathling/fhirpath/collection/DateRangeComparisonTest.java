@@ -17,21 +17,20 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import static au.csiro.pathling.test.layout.AnnotatedDatasets.readSchema;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
-import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.io.Annotator;
 import au.csiro.pathling.schema.SchemaConfiguration;
 import au.csiro.pathling.schema.annotation.kinds.DateRangeKind;
 import au.csiro.pathling.search.SearchColumnBuilder;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.datasource.PrunedSchemaReader;
 import au.csiro.pathling.test.helpers.PrimitiveValues;
+import au.csiro.pathling.test.layout.AnnotatedDatasets;
 import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
@@ -48,7 +47,6 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.execution.FileSourceScanExec;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -59,7 +57,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import scala.jdk.javaapi.CollectionConverters;
 
 /**
  * Tests that date comparison, equality and date search give the same results where the range
@@ -427,17 +424,6 @@ class DateRangeComparisonTest {
     return count;
   }
 
-  /** Returns the schema the scan of a query reads, which shows what the read prunes to. */
-  @Nonnull
-  private static String readSchema(@Nonnull final Dataset<Row> query) {
-    return CollectionConverters.asJava(query.queryExecution().executedPlan().collectLeaves())
-        .stream()
-        .filter(FileSourceScanExec.class::isInstance)
-        .map(scan -> ((FileSourceScanExec) scan).requiredSchema().simpleString())
-        .findFirst()
-        .orElseThrow();
-  }
-
   /**
    * Builds the fixtures, as read or annotated as encoding stores them under a configuration, and
    * writes them to Parquet and reads them back, so that the engine reads stored files.
@@ -449,24 +435,14 @@ class DateRangeComparisonTest {
         .collect(
             Collectors.toMap(
                 Map.Entry::getKey,
-                fixture -> {
-                  final String resourceType = fixture.getKey();
-                  final Dataset<Row> resources =
-                      PofDatasets.fromJson(
-                          spark, fhirEncoders.getContext(), resourceType, fixture.getValue());
-                  final Dataset<Row> dataset =
-                      annotation
-                          .map(
-                              configuration ->
-                                  Annotator.of(
-                                          FhirDefinitionContext.of(fhirEncoders.getContext()),
-                                          configuration)
-                                      .annotate(resourceType, resources))
-                          .orElse(resources);
-                  return PrunedSchemaReader.write(
-                          dataset, tempDir.resolve(name + "-" + resourceType).toString())
-                      .read();
-                }));
+                fixture ->
+                    AnnotatedDatasets.stored(
+                        fhirEncoders.getContext(),
+                        fixture.getKey(),
+                        PofDatasets.fromJson(
+                            spark, fhirEncoders.getContext(), fixture.getKey(), fixture.getValue()),
+                        annotation,
+                        tempDir.resolve(name + "-" + fixture.getKey()).toString())));
   }
 
   /** Selects the column an expression builds over each resource in the dataset. */

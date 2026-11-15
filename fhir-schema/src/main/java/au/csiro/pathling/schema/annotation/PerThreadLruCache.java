@@ -74,24 +74,14 @@ public final class PerThreadLruCache<K, V> {
    */
   @Nonnull
   public V get(@Nonnull final K input) {
-    final LruMap<K, V> cache = entries.get();
-    // The annotations of one value are computed one after the other, so the input is most often the
-    // last one read, which is compared before the input is hashed for the map.
-    if (input.equals(cache.lastInput)) {
-      // The last value is set with the last input, so it is not null once the input matches.
-      return Objects.requireNonNull(cache.lastValue);
-    }
-    final V value =
-        cache.computeIfAbsent(
-            input,
-            key -> {
-              computations.increment();
-              return Objects.requireNonNull(
-                  computation.apply(key), "The computation returned null");
-            });
-    cache.lastInput = input;
-    cache.lastValue = value;
-    return value;
+    return entries.get().get(input, this::compute);
+  }
+
+  /** Runs the computation on an input the cache does not hold, counting it. */
+  @Nonnull
+  private V compute(@Nonnull final K input) {
+    computations.increment();
+    return Objects.requireNonNull(computation.apply(input), "The computation returned null");
   }
 
   /**

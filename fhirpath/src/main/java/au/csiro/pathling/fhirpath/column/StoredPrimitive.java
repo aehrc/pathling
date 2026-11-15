@@ -41,13 +41,14 @@ public final class StoredPrimitive {
 
   /**
    * Returns the primitive of a stored value and its metadata group, or the primitives of a
-   * repeating one paired by position, each with its value and the named metadata fields of its
-   * group, where its schema carries them. Nothing is left out: a primitive without a value is a
+   * repeating one paired by position, each with its value and the named fields of its group, such
+   * as a primitive's {@code id} and {@code extension} and its annotations, where the group's schema
+   * carries them. Nothing is computed, and nothing is left out: a primitive without a value is a
    * structure without one.
    *
    * @param values the stored value, or the values where it repeats
    * @param groups the metadata group beside it, or the groups where it repeats
-   * @param metadata the names of the metadata fields to read from the groups
+   * @param fields the names of the fields to read from the groups, in order
    * @param repeating whether the primitive repeats
    * @return the primitives, paired with their groups
    */
@@ -55,10 +56,10 @@ public final class StoredPrimitive {
   public static Column paired(
       @Nonnull final Column values,
       @Nonnull final Column groups,
-      @Nonnull final List<String> metadata,
+      @Nonnull final List<String> fields,
       final boolean repeating) {
     return ColumnFunctions.resolveOrNone(
-        groups, metadata, List.of(VALUE), List.of(values), repeating);
+        groups, fields, List.of(VALUE), List.of(values), repeating);
   }
 
   /**

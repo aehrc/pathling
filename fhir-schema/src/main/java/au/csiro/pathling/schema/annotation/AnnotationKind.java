@@ -29,8 +29,10 @@ import org.apache.spark.sql.Column;
  * <p>A kind is carried in one or more fields, whose names and positions {@link
  * au.csiro.pathling.schema.LayoutFields} fixes, and is governed by one switch whichever field it is
  * carried in. Ingest computes it and stores it. The engine reads the stored annotation where the
- * schema carries it and computes it otherwise. Which of the two is decided by the {@link
- * AnnotationResolver} that applying the kind takes.
+ * schema carries it and computes it otherwise. Every choice between the stored annotation and the
+ * computed one is made by {@link #apply}, and which of the two it takes is decided by the {@link
+ * AnnotationResolver} it is given: the annotation step's, which knows the schema, or the engine's,
+ * which learns it as Spark analyses the plan.
  *
  * <p>The set of kinds is closed. This class is public so that the modules that apply kinds can
  * reach it, not as an extension point.
@@ -140,6 +142,32 @@ public abstract class AnnotationKind {
    * <p>Where the element repeats, the caller pairs the values with the containers by position,
    * either applying the kind at each position or resolving the field over all the containers at
    * once, so that a read of the containers can prune to it.
+   *
+   * <p>The annotation is computed as {@link #compute(String, Column, Function)} computes it, and is
+   * not {@linkplain #read read}: the engine reads what this returns, and the annotation step stores
+   * it as it is.
+   *
+   * @param field the field of this kind to apply
+   * @param value the stored value of the element
+   * @param fieldOf reads a field of a complex value by name, null where the value does not carry it
+   * @param container the structure that carries the annotation
+   * @param resolver resolves the field to the stored one or to the computed one
+   * @return the annotation
+   */
+  @Nonnull
+  public Column apply(
+      @Nonnull final String field,
+      @Nonnull final Column value,
+      @Nonnull final Function<String, Column> fieldOf,
+      @Nonnull final Column container,
+      @Nonnull final AnnotationResolver resolver) {
+    return resolver.resolve(container, field, compute(field, value, fieldOf));
+  }
+
+  /**
+   * Applies this kind for one of its fields to one value, as {@link #apply(String, Column,
+   * Function, Column, AnnotationResolver)} does, with the annotation computed from the value alone,
+   * as {@link #compute(String, Column)} computes it.
    *
    * @param field the field of this kind to apply
    * @param value the stored value of the element

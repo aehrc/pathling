@@ -15,10 +15,11 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.schema.annotation.kinds;
+package au.csiro.pathling.schema.unit;
 
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
+import lombok.Value;
 
 /**
  * The canonical form of a quantity: its value expressed in the base units of UCUM, and the code of
@@ -26,40 +27,12 @@ import java.math.BigDecimal;
  *
  * @author Piotr Szul
  */
-public final class CanonicalQuantity {
+@Value
+public class CanonicalQuantity {
 
-  @Nonnull private final BigDecimal value;
+  /** The value, in the canonical units, with every digit canonicalisation gave it. */
+  @Nonnull BigDecimal value;
 
-  @Nonnull private final String code;
-
-  /**
-   * Creates a canonical form.
-   *
-   * @param value the value, in the canonical units
-   * @param code the code of the canonical units
-   */
-  public CanonicalQuantity(@Nonnull final BigDecimal value, @Nonnull final String code) {
-    this.value = value;
-    this.code = code;
-  }
-
-  /**
-   * Returns the value, in the canonical units.
-   *
-   * @return the value, with every digit canonicalisation gave it
-   */
-  @Nonnull
-  public BigDecimal getValue() {
-    return value;
-  }
-
-  /**
-   * Returns the code of the canonical units.
-   *
-   * @return the code
-   */
-  @Nonnull
-  public String getCode() {
-    return code;
-  }
+  /** The code of the canonical units. */
+  @Nonnull String code;
 }

@@ -27,7 +27,6 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
-import au.csiro.pathling.fhirpath.comparison.StoredPrimitiveComparator;
 import au.csiro.pathling.fhirpath.comparison.TemporalComparator;
 import jakarta.annotation.Nonnull;
 import java.text.ParseException;
@@ -130,9 +129,7 @@ public class TimeCollection extends Collection
   @Override
   @Nonnull
   public ColumnComparator getComparator() {
-    return holdsPrimitiveMetadata()
-        ? StoredPrimitiveComparator.of(TemporalComparator.forTime())
-        : TemporalComparator.forTime();
+    return comparatorFor(TemporalComparator.forTime());
   }
 
   @Override

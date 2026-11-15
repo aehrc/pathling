@@ -350,11 +350,6 @@ public class DecimalCollection extends Collection
   @Override
   @Nonnull
   public ColumnComparator getComparator() {
-    if (!isStored()) {
-      return DecimalComparator.getInstance();
-    }
-    return holdsPrimitiveMetadata()
-        ? StoredDecimalComparator.withMetadata()
-        : StoredDecimalComparator.getInstance();
+    return isStored() ? StoredDecimalComparator.getInstance() : DecimalComparator.getInstance();
   }
 }

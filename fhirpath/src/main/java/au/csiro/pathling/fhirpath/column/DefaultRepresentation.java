@@ -25,15 +25,13 @@ import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.fhirpath.definition.PrimitiveMetadata;
 import au.csiro.pathling.schema.LayoutFields;
-import au.csiro.pathling.schema.annotation.AnnotationKind;
-import au.csiro.pathling.schema.annotation.kinds.DecimalNumericKind;
-import au.csiro.pathling.utilities.SystemDecimal;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
@@ -313,19 +311,18 @@ public class DefaultRepresentation extends ColumnRepresentation {
       final boolean keepAbsent) {
     final List<String> metadata =
         withMetadata ? List.of(PrimitiveMetadata.ID, PrimitiveMetadata.EXTENSION) : List.of();
-    final Column paired;
-    if (isDate(fhirType)) {
-      paired = SystemDateTime.paired(values, groups, metadata, repeating);
-    } else if (isDecimal(fhirType)) {
-      paired = StoredDecimal.paired(values, groups, metadata, repeating);
-    } else {
-      // A base64Binary is held as its base64 text, as it is without its metadata.
-      final Column decoded =
-          fhirType.filter(FHIRDefinedType.BASE64BINARY::equals).isPresent()
-              ? base64Text(values, repeating)
-              : values;
-      paired = StoredPrimitive.paired(decoded, groups, metadata, repeating);
-    }
+    // The metadata fields, then the annotations of the type, in their stored order.
+    final List<String> fields =
+        Stream.concat(
+                metadata.stream(),
+                fhirType.map(LayoutFields::annotationNames).orElse(List.of()).stream())
+            .toList();
+    // A base64Binary is held as its base64 text, as it is without its metadata.
+    final Column decoded =
+        fhirType.filter(FHIRDefinedType.BASE64BINARY::equals).isPresent()
+            ? base64Text(values, repeating)
+            : values;
+    final Column paired = StoredPrimitive.paired(decoded, groups, fields, repeating);
     final UnaryOperator<Column> decode =
         isDecimal(fhirType) ? StoredDecimal::decodable : UnaryOperator.identity();
     if (!repeating) {
@@ -340,39 +337,6 @@ public class DefaultRepresentation extends ColumnRepresentation {
                     paired, primitive -> when(isElement(primitive, withMetadata), primitive)))
             : functions.filter(paired, primitive -> isElement(primitive, withMetadata));
     return isDecimal(fhirType) ? functions.transform(elements, decode::apply) : elements;
-  }
-
-  /**
-   * Returns the numeric annotation of one singular decimal: the stored one where the schema carries
-   * it, and the decoding of its text otherwise.
-   *
-   * <p>The value is not tested for presence. A stored annotation is taken as given (ticket 31), and
-   * the annotation step computes it as null wherever the text is null, so it is null wherever the
-   * value is absent. The annotation is read as the kind reads it, at the engine's System.Decimal
-   * type, whatever type it was stored at.
-   *
-   * @param value the stored text of the decimal
-   * @param group the metadata group beside it
-   * @return the decimal, typed as {@link SystemDecimal#TYPE}
-   */
-  @Nonnull
-  public static Column numericValue(@Nonnull final Column value, @Nonnull final Column group) {
-    return resolveAnnotation(
-        DecimalNumericKind.INSTANCE, LayoutFields.NUMERIC_ANNOTATION, value, group);
-  }
-
-  /**
-   * Resolves one field of an annotation of one value: the stored one where the schema carries it,
-   * and the computed one otherwise, decided once for the schema by the Catalyst resolver, and read
-   * as the kind reads it.
-   */
-  @Nonnull
-  private static Column resolveAnnotation(
-      @Nonnull final AnnotationKind kind,
-      @Nonnull final String annotationField,
-      @Nonnull final Column value,
-      @Nonnull final Column container) {
-    return kind.read(kind.apply(annotationField, value, container, ColumnFunctions::resolveOrElse));
   }
 
   /**

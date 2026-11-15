@@ -106,21 +106,6 @@ public class FhirPathDateTime {
   }
 
   /**
-   * Checks if given string represents a valid FhirPath dateTime value.
-   *
-   * @param dateTimeValue the dateTime value
-   * @return true is the value is valid dateTime
-   */
-  public static boolean isDateTimeValue(@Nonnull final String dateTimeValue) {
-    try {
-      parse(dateTimeValue);
-      return true;
-    } catch (final DateTimeParseException ignore) {
-      return false;
-    }
-  }
-
-  /**
    * Checks if given string represents a valid FhirPath date value.
    *
    * @param dateValue the date value

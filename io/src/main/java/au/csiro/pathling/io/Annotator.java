@@ -29,9 +29,10 @@ import au.csiro.pathling.schema.PrimitiveTypes;
 import au.csiro.pathling.schema.SchemaConfiguration;
 import au.csiro.pathling.schema.annotation.AnnotationKind;
 import au.csiro.pathling.schema.annotation.AnnotationRegistry;
+import au.csiro.pathling.schema.annotation.AnnotationResolver;
+import au.csiro.pathling.utilities.AnnotationNames;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -155,7 +156,7 @@ public final class Annotator {
         new LinkedHashMap<>();
     for (final StructField stored : observed.fields()) {
       final String name = stored.name();
-      if (!LayoutFields.isAnnotation(name)) {
+      if (!AnnotationNames.isAnnotation(name)) {
         node.entry(name)
             .flatMap(entry -> replaced(node, entry, observed, stored))
             .ifPresent(replacement -> replacements.put(name, replacement));
@@ -172,7 +173,7 @@ public final class Annotator {
           for (final StructField stored : observed.fields()) {
             final String name = stored.name();
             // The annotations of a structure are placed at its end.
-            if (!LayoutFields.isAnnotation(name)) {
+            if (!AnnotationNames.isAnnotation(name)) {
               result.addAll(
                   Optional.ofNullable(replacements.get(name))
                       .map(replacement -> replacement.apply(field))
@@ -318,7 +319,8 @@ public final class Annotator {
     if (extensions.isEmpty() && !annotationsChange(observed, derived, kept)) {
       return Optional.empty();
     }
-    final boolean holdsContent = fieldNames(observed).anyMatch(n -> !LayoutFields.isAnnotation(n));
+    final boolean holdsContent =
+        fieldNames(observed).anyMatch(n -> !AnnotationNames.isAnnotation(n));
     if (!holdsContent && derived.isEmpty() && kept.isEmpty()) {
       return Optional.of(field -> List.of());
     }
@@ -328,12 +330,12 @@ public final class Annotator {
         field -> {
           final Optional<Column> values = value.map(field);
           final Optional<Column> groups = stored.map(StructField::name).map(field);
+          final BiFunction<Column, Optional<Column>, Column> at =
+              (v, g) -> groupAt(observed, v, g, derived, kept, extensions);
           final Column rebuilt =
               primitive.isRepeating()
-                  ? repeatingGroup(
-                      node, observed, values, groups, absent, derived, kept, extensions)
-                  : groupAt(
-                      node, observed, values.orElse(absent), groups, derived, kept, extensions);
+                  ? repeatingGroup(values, groups, absent, at)
+                  : at.apply(values.orElse(absent), groups);
           return List.of(rebuilt.alias(name));
         });
   }
@@ -341,32 +343,22 @@ public final class Annotator {
   /**
    * Returns the group of a repeating primitive, built position by position from the value and the
    * group at each position.
+   *
+   * @param values the values of the primitive, where the input carries them
+   * @param groups the groups beside them, where the input carries them
+   * @param absent the value a primitive the input does not carry takes
+   * @param at builds the group at one position from the value and the group there
    */
   @Nonnull
-  private Column repeatingGroup(
-      @Nonnull final MetadataGroupStructure node,
-      @Nonnull final Optional<StructType> observed,
+  private static Column repeatingGroup(
       @Nonnull final Optional<Column> values,
       @Nonnull final Optional<Column> groups,
       @Nonnull final Column absent,
-      @Nonnull final Map<String, AnnotationKind> derived,
-      @Nonnull final List<String> kept,
-      @Nonnull final Optional<UnaryOperator<Column>> extensions) {
+      @Nonnull final BiFunction<Column, Optional<Column>, Column> at) {
     // Where the primitive has no values, the groups the input carries are rebuilt as they stand.
     final Optional<Column> fromGroups =
         groups.map(
-            stored ->
-                functions.transform(
-                    stored,
-                    group ->
-                        groupAt(
-                            node,
-                            observed,
-                            absent,
-                            Optional.of(group),
-                            derived,
-                            kept,
-                            extensions)));
+            stored -> functions.transform(stored, group -> at.apply(absent, Optional.of(group))));
     return values
         .map(
             stored -> {
@@ -374,14 +366,7 @@ public final class Annotator {
                   functions.transform(
                       stored,
                       (value, index) ->
-                          groupAt(
-                              node,
-                              observed,
-                              value,
-                              groups.map(group -> functions.get(group, index)),
-                              derived,
-                              kept,
-                              extensions));
+                          at.apply(value, groups.map(group -> functions.get(group, index))));
               return fromGroups
                   .map(rebuilt -> functions.when(stored.isNotNull(), fromValues).otherwise(rebuilt))
                   .orElse(fromValues);
@@ -392,7 +377,6 @@ public final class Annotator {
   /** Returns the group at one position, which is null where there is neither value nor group. */
   @Nonnull
   private Column groupAt(
-      @Nonnull final MetadataGroupStructure node,
       @Nonnull final Optional<StructType> observed,
       @Nonnull final Column value,
       @Nonnull final Optional<Column> group,
@@ -436,7 +420,7 @@ public final class Annotator {
           final Column stored = group.orElseThrow();
           for (final StructField field : structure.fields()) {
             final String name = field.name();
-            if (!LayoutFields.isAnnotation(name)) {
+            if (!AnnotationNames.isAnnotation(name)) {
               final Column column = stored.getField(name);
               result.add(
                   extensions
@@ -478,15 +462,25 @@ public final class Annotator {
       @Nonnull final Function<String, Column> fieldOf,
       @Nonnull final Column container,
       @Nonnull final Function<Map<String, Column>, Column> build) {
+    final AnnotationResolver resolver = resolver(observed);
     final Map<String, Column> annotations = new LinkedHashMap<>();
     derived.forEach(
         (name, kind) ->
-            annotations.put(
-                name,
-                computes(observed, name)
-                    ? kind.compute(name, value, fieldOf)
-                    : container.getField(name)));
+            annotations.put(name, kind.apply(name, value, fieldOf, container, resolver)));
     return build.apply(annotations);
+  }
+
+  /**
+   * Returns how this step resolves an annotation in a container, knowing the schema of the dataset
+   * it rebuilds: to the stored annotation where the container the input carries has it and
+   * annotations are not recomputed, and to the computed one otherwise (decision 135).
+   *
+   * @param observed the container the input carries, where it carries one
+   */
+  @Nonnull
+  private AnnotationResolver resolver(@Nonnull final Optional<StructType> observed) {
+    return (container, name, computed) ->
+        computes(observed, name) ? computed : container.getField(name);
   }
 
   /**
@@ -498,7 +492,7 @@ public final class Annotator {
       @Nonnull final Column value,
       @Nonnull final StructType structure,
       @Nonnull final String name) {
-    return Arrays.asList(structure.fieldNames()).contains(name)
+    return fieldOf(structure, name).isPresent()
         ? value.getField(name).cast(DataTypes.StringType)
         : functions.lit(null).cast(DataTypes.StringType);
   }
@@ -540,7 +534,7 @@ public final class Annotator {
             .map(LayoutEntry::getName)
             .collect(Collectors.toSet());
     return fieldNames(observed)
-        .filter(LayoutFields::isAnnotation)
+        .filter(AnnotationNames::isAnnotation)
         .filter(name -> !derived.containsKey(name))
         .filter(
             name ->
@@ -563,7 +557,7 @@ public final class Annotator {
     final List<String> stored = fieldNames(observed).toList();
     final List<String> rebuilt =
         Stream.of(
-                stored.stream().filter(name -> !LayoutFields.isAnnotation(name)),
+                stored.stream().filter(name -> !AnnotationNames.isAnnotation(name)),
                 derived.keySet().stream(),
                 kept.stream())
             .flatMap(Function.identity())

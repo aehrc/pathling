@@ -37,8 +37,9 @@ import au.csiro.pathling.fhirpath.definition.MetadataElementDefinition;
 import au.csiro.pathling.fhirpath.definition.PrimitiveMetadata;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
-import au.csiro.pathling.schema.LayoutFields;
 import au.csiro.pathling.schema.PrimitiveTypes;
+import au.csiro.pathling.schema.annotation.kinds.DateRangeKind;
+import au.csiro.pathling.schema.annotation.kinds.DecimalNumericKind;
 import au.csiro.pathling.sql.SqlFunctions;
 import au.csiro.pathling.utilities.CanonicalStructure;
 import jakarta.annotation.Nonnull;
@@ -48,6 +49,7 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
 
@@ -84,13 +86,11 @@ public class CombiningLogic {
    */
   @Nonnull
   private static final List<String> PRIMITIVE_FIELDS =
-      List.of(
-          StoredPrimitive.VALUE,
-          PrimitiveMetadata.ID,
-          PrimitiveMetadata.EXTENSION,
-          LayoutFields.START_ANNOTATION,
-          LayoutFields.END_ANNOTATION,
-          LayoutFields.NUMERIC_ANNOTATION);
+      Stream.concat(
+              Stream.of(StoredPrimitive.VALUE, PrimitiveMetadata.ID, PrimitiveMetadata.EXTENSION),
+              Stream.of(DateRangeKind.INSTANCE, DecimalNumericKind.INSTANCE)
+                  .flatMap(kind -> kind.getFields().stream()))
+          .toList();
 
   /**
    * Unifies operands that must share a type: promotes their FHIR types to a common type where one

@@ -18,9 +18,12 @@
 package au.csiro.pathling.fhirpath.comparison;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
-import au.csiro.pathling.schema.LayoutFields;
+import au.csiro.pathling.schema.annotation.kinds.DateRangeKind;
+import au.csiro.pathling.schema.annotation.kinds.DecimalNumericKind;
+import au.csiro.pathling.schema.annotation.kinds.QuantityCanonicalKind;
 import jakarta.annotation.Nonnull;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 
 /**
@@ -50,12 +53,9 @@ public class DefaultComparator implements ColumnComparator {
    */
   @Nonnull
   public static final List<String> RECOGNISED_ANNOTATIONS =
-      List.of(
-          LayoutFields.START_ANNOTATION,
-          LayoutFields.END_ANNOTATION,
-          LayoutFields.NUMERIC_ANNOTATION,
-          LayoutFields.CANONICAL_CODE_ANNOTATION,
-          LayoutFields.CANONICAL_VALUE_EXACT_ANNOTATION);
+      Stream.of(DateRangeKind.INSTANCE, DecimalNumericKind.INSTANCE, QuantityCanonicalKind.INSTANCE)
+          .flatMap(kind -> kind.getFields().stream())
+          .toList();
 
   /**
    * Returns the deduplication of an array by the key of each element, keeping the first element of

@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import static au.csiro.pathling.test.layout.AnnotatedDatasets.readSchema;
 import static au.csiro.pathling.views.FhirView.columns;
 import static au.csiro.pathling.views.FhirView.forEach;
 import static au.csiro.pathling.views.FhirView.unionAll;
@@ -29,8 +30,6 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
-import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.Annotator;
 import au.csiro.pathling.io.FhirReader;
@@ -38,6 +37,7 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.schema.SchemaConfiguration;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
+import au.csiro.pathling.test.layout.AnnotatedDatasets;
 import au.csiro.pathling.test.layout.PofDatasets;
 import au.csiro.pathling.views.Column;
 import au.csiro.pathling.views.FhirView;
@@ -64,7 +64,6 @@ import org.apache.spark.sql.catalyst.expressions.IsNotNull;
 import org.apache.spark.sql.catalyst.expressions.IsNull;
 import org.apache.spark.sql.catalyst.expressions.Size;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
-import org.apache.spark.sql.execution.FileSourceScanExec;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.StructType;
@@ -444,27 +443,11 @@ class EmissionShapesTest {
   }
 
   @Nonnull
-  private static String readSchema(@Nonnull final Dataset<Row> query) {
-    return CollectionConverters.asJava(query.queryExecution().executedPlan().collectLeaves())
-        .stream()
-        .filter(FileSourceScanExec.class::isInstance)
-        .map(FileSourceScanExec.class::cast)
-        .findFirst()
-        .orElseThrow()
-        .requiredSchema()
-        .simpleString();
-  }
-
-  @Nonnull
   private Dataset<Row> evaluate(
       @Nonnull final Dataset<Row> data,
       @Nonnull final ResourceType resourceType,
       @Nonnull final String expression) {
-    final DatasetEvaluator evaluator =
-        DatasetEvaluatorBuilder.create(resourceType, fhirEncoders.getContext())
-            .withDataset(data)
-            .build();
-    return evaluator.evaluate(PARSER.parse(expression)).toIdValueDataset();
+    return AnnotatedDatasets.evaluate(fhirEncoders.getContext(), resourceType, data, expression);
   }
 
   @Nonnull

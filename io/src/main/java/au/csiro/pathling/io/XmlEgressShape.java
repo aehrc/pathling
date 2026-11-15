@@ -114,19 +114,9 @@ final class XmlEgressShape {
                 .alias(name));
       } else {
         final DefinitionCanonicalStructure child = node.elementStructure(entry).orElseThrow();
-        final StructType inner = (StructType) elementTypeOf(field.dataType());
-        final FHIRDefinedType childType = XmlIngestShape.fhirType(entry);
-        if (hasElements(child, inner)) {
+        if (hasElements(child, (StructType) elementTypeOf(field.dataType()))) {
           columns.add(
-              each(
-                      field.dataType(),
-                      column,
-                      value ->
-                          functions.when(
-                              value.isNotNull(),
-                              functions.struct(
-                                  fields(child, childType, false, inner, value::getField)
-                                      .toArray(Column[]::new))))
+              structure(child, XmlIngestShape.fhirType(entry), field.dataType(), column)
                   .alias(name));
         }
       }
@@ -164,42 +154,35 @@ final class XmlEgressShape {
     final Optional<StructField> extension = fieldOf(group, LayoutFields.METADATA_GROUP_EXTENSION);
     final Optional<DefinitionCanonicalStructure> extensionStructure =
         MetadataGroups.extensionStructure(node, entry);
+    // The extensions are written, and so count as content, only where their structure is known.
+    final StructType written =
+        extensionStructure.isPresent()
+            ? group
+            : new StructType(
+                Stream.of(group.fields())
+                    .filter(field -> !LayoutFields.METADATA_GROUP_EXTENSION.equals(field.name()))
+                    .toArray(StructField[]::new));
     final BinaryOperator<Column> pair =
         (value, metadata) -> {
           final List<Column> fields = new ArrayList<>();
-          final List<Column> present = new ArrayList<>();
-          present.add(value.isNotNull());
           if (fieldOf(group, LayoutFields.METADATA_GROUP_ID).isPresent()) {
-            final Column id = metadata.getField(LayoutFields.METADATA_GROUP_ID);
-            fields.add(id.alias(XmlIngestShape.ATTRIBUTE + LayoutFields.METADATA_GROUP_ID));
-            present.add(id.isNotNull());
+            fields.add(
+                metadata
+                    .getField(LayoutFields.METADATA_GROUP_ID)
+                    .alias(XmlIngestShape.ATTRIBUTE + LayoutFields.METADATA_GROUP_ID));
           }
           fields.add(text(type, value).alias(XmlIngestShape.ATTRIBUTE + "value"));
           if (extension.isPresent() && extensionStructure.isPresent()) {
-            final DefinitionCanonicalStructure child = extensionStructure.get();
-            final StructType inner = (StructType) elementTypeOf(extension.get().dataType());
-            final Column extensions = metadata.getField(LayoutFields.METADATA_GROUP_EXTENSION);
             fields.add(
-                each(
+                structure(
+                        extensionStructure.get(),
+                        FHIRDefinedType.EXTENSION,
                         extension.get().dataType(),
-                        extensions,
-                        single ->
-                            functions.when(
-                                single.isNotNull(),
-                                functions.struct(
-                                    fields(
-                                            child,
-                                            FHIRDefinedType.EXTENSION,
-                                            false,
-                                            inner,
-                                            single::getField)
-                                        .toArray(Column[]::new))))
+                        metadata.getField(LayoutFields.METADATA_GROUP_EXTENSION))
                     .alias(LayoutFields.METADATA_GROUP_EXTENSION));
-            present.add(
-                MetadataGroups.hasContent(LayoutFields.METADATA_GROUP_EXTENSION, extensions));
           }
           return functions.when(
-              present.stream().reduce(Column::or).orElseThrow(),
+              value.isNotNull().or(MetadataGroups.hasContent(written, metadata)),
               functions.struct(fields.toArray(Column[]::new)));
         };
     if (!(valueType instanceof ArrayType)) {
@@ -215,6 +198,27 @@ final class XmlEgressShape {
                     groups, unused -> functions.lit(null).cast(elementTypeOf(valueType)))),
             (value, index) -> pair.apply(value, functions.try_element_at(groups, index.plus(1))));
     return functions.filter(paired, Column::isNotNull);
+  }
+
+  /**
+   * Returns a complex element as XML writes it, built from its stored form, each occurrence where
+   * it repeats.
+   */
+  @Nonnull
+  private static Column structure(
+      @Nonnull final DefinitionCanonicalStructure node,
+      @Nonnull final FHIRDefinedType type,
+      @Nonnull final DataType stored,
+      @Nonnull final Column column) {
+    final StructType inner = (StructType) elementTypeOf(stored);
+    return each(
+        stored,
+        column,
+        value ->
+            functions.when(
+                value.isNotNull(),
+                functions.struct(
+                    fields(node, type, false, inner, value::getField).toArray(Column[]::new))));
   }
 
   /** Returns whether a stored structure has any field that is written. */

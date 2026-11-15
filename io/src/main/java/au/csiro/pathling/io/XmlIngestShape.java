@@ -260,21 +260,37 @@ final class XmlIngestShape {
     if (entry.primitiveType().isPresent()) {
       return primitive(node, entry, parsedType, column);
     }
-    final DefinitionCanonicalStructure child = node.elementStructure(entry).orElseThrow();
-    final StructType inner = (StructType) elementTypeOf(parsedType);
-    final FHIRDefinedType childType = fhirType(entry);
     return List.of(
-        wrap(
+        structure(
+                node.elementStructure(entry).orElseThrow(),
+                fhirType(entry),
                 parsedType,
                 entry.isRepeating(),
-                column,
-                value ->
-                    functions.when(
-                        value.isNotNull(),
-                        functions.struct(
-                            fields(child, childType, false, inner, value::getField)
-                                .toArray(Column[]::new))))
+                column)
             .alias(name));
+  }
+
+  /**
+   * Returns a complex element in the JSON data model, built from its parsed form, each occurrence
+   * where it repeats.
+   */
+  @Nonnull
+  private Column structure(
+      @Nonnull final DefinitionCanonicalStructure node,
+      @Nonnull final FHIRDefinedType type,
+      @Nonnull final DataType parsedType,
+      final boolean repeating,
+      @Nonnull final Column column) {
+    final StructType inner = (StructType) elementTypeOf(parsedType);
+    return wrap(
+        parsedType,
+        repeating,
+        column,
+        value ->
+            functions.when(
+                value.isNotNull(),
+                functions.struct(
+                    fields(node, type, false, inner, value::getField).toArray(Column[]::new))));
   }
 
   /**
@@ -335,19 +351,12 @@ final class XmlIngestShape {
       @Nonnull final LayoutEntry entry,
       @Nonnull final StructField parsed,
       @Nonnull final Column value) {
-    final DefinitionCanonicalStructure extension =
-        MetadataGroups.extensionStructure(node, entry).orElseThrow();
-    final StructType inner = (StructType) elementTypeOf(parsed.dataType());
-    return wrap(
+    return structure(
+        MetadataGroups.extensionStructure(node, entry).orElseThrow(),
+        FHIRDefinedType.EXTENSION,
         parsed.dataType(),
         true,
-        value.getField(EXTENSION),
-        single ->
-            functions.when(
-                single.isNotNull(),
-                functions.struct(
-                    fields(extension, FHIRDefinedType.EXTENSION, false, inner, single::getField)
-                        .toArray(Column[]::new))));
+        value.getField(EXTENSION));
   }
 
   /**

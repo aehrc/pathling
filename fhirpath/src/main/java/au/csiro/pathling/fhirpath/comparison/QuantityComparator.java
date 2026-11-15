@@ -77,12 +77,7 @@ public class QuantityComparator implements ColumnComparator, ElementWiseEquality
               return when(
                   not(eitherBounded),
                   coalesce(
-                      test.apply(
-                          QuantityEncoding.compareCanonical(
-                              QuantityEncoding.canonicalCode(l),
-                              QuantityEncoding.canonicalValueExact(l),
-                              QuantityEncoding.canonicalCode(r),
-                              QuantityEncoding.canonicalValueExact(r))),
+                      test.apply(QuantityEncoding.compareCanonical(l, r)),
                       leftQuantity
                           .originalValue()
                           .compare(rightQuantity.originalValue(), decimalComparator)));

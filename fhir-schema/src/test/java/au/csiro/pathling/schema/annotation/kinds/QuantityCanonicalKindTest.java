@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import au.csiro.pathling.schema.unit.CanonicalQuantity;
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.ArrayList;

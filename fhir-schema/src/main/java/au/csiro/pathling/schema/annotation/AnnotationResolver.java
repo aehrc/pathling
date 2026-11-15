@@ -25,10 +25,13 @@ import org.apache.spark.sql.Column;
  * fallback where it does not.
  *
  * <p>Applying an annotation kind takes one, because its two clients learn the schema at different
- * times (decision 135). The annotation step knows the schema of the dataset it rebuilds, and
- * resolves in Java. The engine builds its columns without a schema and learns presence only when
- * Spark analyses the plan, so it resolves with a Catalyst expression, which this module may not
- * hold (FR-048). Either way presence is decided once for the schema, never per row (FR-023).
+ * times (decision 135), and so resolve by two strategies. The annotation step knows the schema of
+ * the dataset it rebuilds, and resolves statically, in Java: it builds a resolver for each
+ * container from the structure the input carries there, which takes the stored field where the
+ * container carries it and annotations are not recomputed, and the fallback otherwise. The engine
+ * builds its columns without a schema and learns presence only when Spark analyses the plan, so it
+ * resolves dynamically, with a Catalyst expression, which this module may not hold (FR-048). Either
+ * way presence is decided once for the schema, never per row (FR-023).
  */
 @FunctionalInterface
 public interface AnnotationResolver {

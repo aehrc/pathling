@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import static au.csiro.pathling.test.layout.AnnotatedDatasets.readSchema;
 import static au.csiro.pathling.views.FhirView.columns;
 import static au.csiro.pathling.views.FhirView.forEach;
 import static org.apache.spark.sql.functions.col;
@@ -53,7 +54,6 @@ import org.apache.spark.sql.catalyst.expressions.Coalesce;
 import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.catalyst.expressions.GetArrayStructFields;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
-import org.apache.spark.sql.execution.FileSourceScanExec;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -744,18 +744,6 @@ class PrimitiveMetadataTest {
           }
         };
     return new FhirViewExecutor(fhirEncoders.getContext(), source).buildQuery(view);
-  }
-
-  @Nonnull
-  private static String readSchema(@Nonnull final Dataset<Row> query) {
-    return CollectionConverters.asJava(query.queryExecution().executedPlan().collectLeaves())
-        .stream()
-        .filter(FileSourceScanExec.class::isInstance)
-        .map(FileSourceScanExec.class::cast)
-        .findFirst()
-        .orElseThrow()
-        .requiredSchema()
-        .simpleString();
   }
 
   @Nonnull

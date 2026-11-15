@@ -77,7 +77,6 @@ class FhirPathDateTimeTest {
       final String ignoredDescription) {
     assertEquals(
         fromDateTimeString(expectedInstant, expectedPrecision), FhirPathDateTime.parse(input));
-    assertTrue(FhirPathDateTime.isDateTimeValue(input));
     if (expectedPrecision == TemporalPrecision.DAY
         || expectedPrecision == TemporalPrecision.MONTH
         || expectedPrecision == TemporalPrecision.YEAR) {
@@ -194,7 +193,6 @@ class FhirPathDateTimeTest {
   @MethodSource("invalidValueProvider")
   void testParseErrorsInvalidValues(final String input, final String ignoredDescription) {
     assertThrows(DateTimeParseException.class, () -> FhirPathDateTime.parse(input));
-    assertFalse(FhirPathDateTime.isDateTimeValue(input));
     assertFalse(FhirPathDateTime.isDateValue(input));
   }
 }

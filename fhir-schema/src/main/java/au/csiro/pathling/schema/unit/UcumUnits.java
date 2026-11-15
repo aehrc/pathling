@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.schema.unit;
 
-import au.csiro.pathling.schema.annotation.kinds.CanonicalQuantity;
 import io.github.fhnaumann.funcs.CanonicalizerService;
 import io.github.fhnaumann.funcs.ConverterService;
 import io.github.fhnaumann.funcs.ConverterService.ConversionResult;

@@ -22,12 +22,11 @@
  */
 package au.csiro.pathling.sql.types;
 
+import au.csiro.pathling.utilities.ExactDecimal;
 import au.csiro.pathling.utilities.SystemDecimal;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
-import java.math.MathContext;
-import java.math.RoundingMode;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -38,10 +37,6 @@ import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Decimal;
-import org.apache.spark.sql.types.Metadata;
-import org.apache.spark.sql.types.MetadataBuilder;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
 
 /**
  * Implementation of flexible decimal type represented as the unscaled value with up to 38 digits
@@ -55,21 +50,13 @@ public final class FlexiDecimal {
   private FlexiDecimal() {}
 
   /** The maximum precision (the number of significant digits). */
-  public static final int MAX_PRECISION = 38;
+  public static final int MAX_PRECISION = ExactDecimal.MAX_PRECISION;
 
   /** The SQL type for the unscaled value. */
   public static final DataType DECIMAL_TYPE = DataTypes.createDecimalType(MAX_PRECISION, 0);
 
-  @Nonnull
-  private static StructType createFlexibleDecimalType() {
-    final Metadata metadata = new MetadataBuilder().build();
-    final StructField value = new StructField("value", DECIMAL_TYPE, true, metadata);
-    final StructField scale = new StructField("scale", DataTypes.IntegerType, true, metadata);
-    return new StructType(new StructField[] {value, scale});
-  }
-
   /** The SQL (struct) type for flexible decimal. */
-  @Nonnull public static final DataType DATA_TYPE = createFlexibleDecimalType();
+  @Nonnull public static final DataType DATA_TYPE = ExactDecimal.TYPE;
 
   @Nonnull
   private static UserDefinedFunction toBooleanUdf(
@@ -155,25 +142,11 @@ public final class FlexiDecimal {
    *
    * @param decimal the decimal to normalise
    * @return the normalised decimal, or null if it cannot be represented
+   * @see ExactDecimal#normalize(BigDecimal)
    */
   @Nullable
   public static BigDecimal normalize(@Nullable final BigDecimal decimal) {
-    if (decimal == null) {
-      return null;
-    } else {
-      final BigDecimal adjustedValue =
-          decimal.scale() < 0 ? decimal.setScale(0, RoundingMode.UNNECESSARY) : decimal;
-      // This may be may have too many digits
-      if (adjustedValue.precision() > MAX_PRECISION) {
-        // Rounding to a precision rather than to a scale accounts for a carry, which adds a
-        // digit, as 0.99…9 does in rounding to 1.00…0.
-        final BigDecimal rounded =
-            adjustedValue.round(new MathContext(MAX_PRECISION, RoundingMode.HALF_UP));
-        return rounded.scale() >= 0 ? rounded : null;
-      } else {
-        return adjustedValue;
-      }
-    }
+    return ExactDecimal.normalize(decimal);
   }
 
   private static final UserDefinedFunction EQUALS_UDF = toBooleanUdf((l, r) -> l.compareTo(r) == 0);

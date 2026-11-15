@@ -59,8 +59,7 @@ case class AnnotationOrElse(child: Expression, fieldName: String, fallback: Expr
   override def right: Expression = fallback
 
   override lazy val replacement: Expression = structOf(child, Seq.empty)
-    .filter(_.names.map(String.valueOf).contains(fieldName))
-    .map(struct => struct.valExprs(struct.names.map(String.valueOf).indexOf(fieldName)))
+    .flatMap(fieldOf(_, fieldName))
     .getOrElse(ResolveOrElse(child, fieldName, fallback).replacement)
 
   /**
@@ -99,7 +98,11 @@ case class AnnotationOrElse(child: Expression, fieldName: String, fallback: Expr
 
   /** The element's own value, the structure's `value` field. */
   private def valueOf(struct: CreateNamedStruct): Option[Expression] =
-    struct.names.map(String.valueOf).indexOf(AnnotationOrElse.ValueField) match {
+    fieldOf(struct, AnnotationOrElse.ValueField)
+
+  /** A named field of a structure the plan builds, where it has one. */
+  private def fieldOf(struct: CreateNamedStruct, name: String): Option[Expression] =
+    struct.names.map(String.valueOf).indexOf(name) match {
       case -1 => None
       case ordinal => Some(struct.valExprs(ordinal))
     }

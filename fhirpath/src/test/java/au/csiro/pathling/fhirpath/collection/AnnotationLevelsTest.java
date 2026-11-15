@@ -22,17 +22,13 @@ import static org.apache.spark.sql.functions.col;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
-import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
-import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.io.Annotator;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.schema.SchemaConfiguration;
 import au.csiro.pathling.search.SearchColumnBuilder;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.datasource.PrunedSchemaReader;
+import au.csiro.pathling.test.layout.AnnotatedDatasets;
 import au.csiro.pathling.test.layout.PofDatasets;
 import au.csiro.pathling.views.Column;
 import au.csiro.pathling.views.FhirView;
@@ -42,6 +38,7 @@ import jakarta.annotation.Nullable;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -336,12 +333,11 @@ class AnnotationLevelsTest {
       @Nonnull final Map<String, Dataset<Row>> data,
       @Nonnull final String resourceType,
       @Nonnull final String expression) {
-    final DatasetEvaluator evaluator =
-        DatasetEvaluatorBuilder.create(
-                ResourceType.fromCode(resourceType), fhirEncoders.getContext())
-            .withDataset(data.get(resourceType))
-            .build();
-    return evaluator.evaluate(PARSER.parse(expression)).toIdValueDataset();
+    return AnnotatedDatasets.evaluate(
+        fhirEncoders.getContext(),
+        ResourceType.fromCode(resourceType),
+        data.get(resourceType),
+        expression);
   }
 
   /** A view of the resource id and the value of an expression, as a collection. */
@@ -393,27 +389,23 @@ class AnnotationLevelsTest {
   @Nonnull
   private Map<String, Dataset<Row>> stored(
       @Nonnull final String name, @Nullable final SchemaConfiguration annotation) {
-    final FhirDefinitionContext definitions = FhirDefinitionContext.of(fhirEncoders.getContext());
     return Map.of(
-        "Observation", store(name, "Observation", annotation, definitions),
-        "MedicationRequest", store(name, "MedicationRequest", annotation, definitions));
+        "Observation", store(name, "Observation", annotation),
+        "MedicationRequest", store(name, "MedicationRequest", annotation));
   }
 
   @Nonnull
   private Dataset<Row> store(
       @Nonnull final String name,
       @Nonnull final String resourceType,
-      @Nullable final SchemaConfiguration annotation,
-      @Nonnull final FhirDefinitionContext definitions) {
-    final Dataset<Row> resources =
+      @Nullable final SchemaConfiguration annotation) {
+    return AnnotatedDatasets.stored(
+        fhirEncoders.getContext(),
+        resourceType,
         PofDatasets.fromJson(
-            spark, fhirEncoders.getContext(), resourceType, FIXTURES.get(resourceType));
-    final Dataset<Row> dataset =
-        annotation == null
-            ? resources
-            : Annotator.of(definitions, annotation).annotate(resourceType, resources);
-    return PrunedSchemaReader.write(dataset, tempDir.resolve(name + "-" + resourceType).toString())
-        .read();
+            spark, fhirEncoders.getContext(), resourceType, FIXTURES.get(resourceType)),
+        Optional.ofNullable(annotation),
+        tempDir.resolve(name + "-" + resourceType).toString());
   }
 
   @Nonnull

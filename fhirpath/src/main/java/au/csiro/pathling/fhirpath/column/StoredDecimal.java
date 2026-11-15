@@ -27,7 +27,6 @@ import au.csiro.pathling.utilities.CanonicalStructure;
 import au.csiro.pathling.utilities.SystemDecimal;
 import jakarta.annotation.Nonnull;
 import java.util.List;
-import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 
 /**
@@ -48,13 +47,10 @@ import org.apache.spark.sql.Column;
 public final class StoredDecimal {
 
   /** The name of the stored text of a decimal. */
-  @Nonnull public static final String VALUE = "value";
+  @Nonnull public static final String VALUE = StoredPrimitive.VALUE;
 
   /** The name of the numeric annotation of a decimal. */
   @Nonnull public static final String NUMERIC = LayoutFields.NUMERIC_ANNOTATION;
-
-  /** The names of the annotations of a decimal. */
-  @Nonnull private static final List<String> ANNOTATIONS = List.of(NUMERIC);
 
   /**
    * The canonical order of the fields of a decimal, by which decimals of different shapes merge.
@@ -63,35 +59,6 @@ public final class StoredDecimal {
   public static final CanonicalStructure STRUCTURE = FlatStructure.of(List.of(VALUE, NUMERIC));
 
   private StoredDecimal() {}
-
-  /**
-   * Returns the decimal of a stored text and its metadata group, or the decimals of a repeating one
-   * paired by position, each with its text, the named metadata fields of its group, such as a
-   * primitive's {@code id} and {@code extension}, and the numeric annotation where the group's
-   * schema carries it. Nothing is decoded, and nothing is left out: a decimal without a text is a
-   * structure without a value.
-   *
-   * @param texts the stored text of the decimal, or the texts where it repeats
-   * @param groups the metadata group beside it, or the groups where it repeats
-   * @param metadata the names of the metadata fields to read from the groups, where they have them
-   * @param repeating whether the decimal repeats
-   * @return the decimals, paired with their groups
-   */
-  @Nonnull
-  public static Column paired(
-      @Nonnull final Column texts,
-      @Nonnull final Column groups,
-      @Nonnull final List<String> metadata,
-      final boolean repeating) {
-    return ColumnFunctions.resolveOrNone(
-        groups, fieldsOf(metadata), List.of(VALUE), List.of(texts), repeating);
-  }
-
-  /** The names of the fields read from a metadata group: the metadata fields, then the number. */
-  @Nonnull
-  private static List<String> fieldsOf(@Nonnull final List<String> metadata) {
-    return Stream.concat(metadata.stream(), ANNOTATIONS.stream()).toList();
-  }
 
   /**
    * Returns a decimal where its number decodes, and null where it does not. A decimal without a
@@ -129,6 +96,6 @@ public final class StoredDecimal {
   public static Column number(@Nonnull final Column decimal) {
     final DecimalNumericKind kind = DecimalNumericKind.INSTANCE;
     return kind.read(
-        ColumnFunctions.annotationOrElse(decimal, NUMERIC, kind.compute(NUMERIC, text(decimal))));
+        kind.apply(NUMERIC, text(decimal), decimal, ColumnFunctions::annotationOrElse));
   }
 }

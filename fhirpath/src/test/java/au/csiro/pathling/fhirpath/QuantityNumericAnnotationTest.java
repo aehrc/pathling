@@ -20,17 +20,15 @@ package au.csiro.pathling.fhirpath;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
-import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.io.Annotator;
 import au.csiro.pathling.schema.SchemaConfiguration;
 import au.csiro.pathling.search.SearchColumnBuilder;
 import au.csiro.pathling.search.SearchParameterRegistry;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.datasource.PrunedSchemaReader;
+import au.csiro.pathling.test.layout.AnnotatedDatasets;
 import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
@@ -269,16 +267,12 @@ class QuantityNumericAnnotationTest {
   @Nonnull
   private Dataset<Row> stored(
       @Nonnull final String name, @Nonnull final Optional<SchemaConfiguration> annotation) {
-    final Dataset<Row> read =
-        PofDatasets.fromJson(spark, fhirEncoders.getContext(), "Observation", OBSERVATIONS);
-    final Dataset<Row> dataset =
-        annotation
-            .map(
-                configuration ->
-                    Annotator.of(FhirDefinitionContext.of(fhirEncoders.getContext()), configuration)
-                        .annotate("Observation", read))
-            .orElse(read);
-    return PrunedSchemaReader.write(dataset, tempDir.resolve(name).toString()).read();
+    return AnnotatedDatasets.stored(
+        fhirEncoders.getContext(),
+        "Observation",
+        PofDatasets.fromJson(spark, fhirEncoders.getContext(), "Observation", OBSERVATIONS),
+        annotation,
+        tempDir.resolve(name).toString());
   }
 
   /**

@@ -204,14 +204,11 @@ public class PathlingContext {
       return;
     }
     log.warn(
-        "The Spark session writes timestamps to Parquet as {} (`{}`), rather than as INT64"
-            + " TIMESTAMP(MICROS), as Pathling stores the range annotations of dates. Writing data"
-            + " that carries them to Parquet, Delta or a catalog table will fail. To write it, set"
-            + " `{}={}` on the session.",
-        spark.conf().get(OUTPUT_TIMESTAMP_TYPE),
-        OUTPUT_TIMESTAMP_TYPE,
-        OUTPUT_TIMESTAMP_TYPE,
-        TIMESTAMP_MICROS);
+        "The Spark session {}, rather than as INT64 TIMESTAMP(MICROS), as Pathling stores the"
+            + " range annotations of dates. Writing data that carries them to Parquet, Delta or a"
+            + " catalog table will fail. To write it, set {} on the session.",
+        TimestampStorage.describe(spark),
+        TimestampStorage.REQUIRED_SETTING);
   }
 
   @Nonnull

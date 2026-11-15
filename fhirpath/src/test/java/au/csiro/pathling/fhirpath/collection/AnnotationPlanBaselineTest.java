@@ -21,14 +21,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
-import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.Annotator;
 import au.csiro.pathling.schema.SchemaConfiguration;
 import au.csiro.pathling.search.SearchColumnBuilder;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
+import au.csiro.pathling.test.layout.AnnotatedDatasets;
 import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
@@ -308,12 +307,11 @@ class AnnotationPlanBaselineTest {
       @Nonnull final Map<String, Dataset<Row>> data,
       @Nonnull final String resourceType,
       @Nonnull final String expression) {
-    final DatasetEvaluator evaluator =
-        DatasetEvaluatorBuilder.create(
-                ResourceType.fromCode(resourceType), fhirEncoders.getContext())
-            .withDataset(data.get(resourceType))
-            .build();
-    return evaluator.evaluate(PARSER.parse(expression)).toIdValueDataset();
+    return AnnotatedDatasets.evaluate(
+        fhirEncoders.getContext(),
+        ResourceType.fromCode(resourceType),
+        data.get(resourceType),
+        expression);
   }
 
   /** Whether the optimised plan of a query computes the range of a date. */

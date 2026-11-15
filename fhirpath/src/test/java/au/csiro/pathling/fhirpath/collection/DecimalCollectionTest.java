@@ -17,21 +17,20 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import static au.csiro.pathling.test.layout.AnnotatedDatasets.readSchema;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
-import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.evaluation.CollectionDataset;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.io.Annotator;
 import au.csiro.pathling.schema.SchemaConfiguration;
 import au.csiro.pathling.search.SearchColumnBuilder;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.datasource.PrunedSchemaReader;
+import au.csiro.pathling.test.layout.AnnotatedDatasets;
 import au.csiro.pathling.test.layout.PofDatasets;
 import au.csiro.pathling.utilities.SystemDecimal;
 import jakarta.annotation.Nonnull;
@@ -45,7 +44,6 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.execution.FileSourceScanExec;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.DecimalType;
@@ -58,7 +56,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import scala.jdk.javaapi.CollectionConverters;
 
 /**
  * Tests decimal comparison, arithmetic and ordering over decimals stored as text in the Parquet on
@@ -450,17 +447,6 @@ class DecimalCollectionTest {
         .containsExactlyInAnyOrderElementsOf(expected);
   }
 
-  /** Returns the schema the scan of a query reads, which shows what the read prunes to. */
-  @Nonnull
-  private static String readSchema(@Nonnull final Dataset<Row> query) {
-    return CollectionConverters.asJava(query.queryExecution().executedPlan().collectLeaves())
-        .stream()
-        .filter(FileSourceScanExec.class::isInstance)
-        .map(scan -> ((FileSourceScanExec) scan).requiredSchema().simpleString())
-        .findFirst()
-        .orElseThrow();
-  }
-
   /**
    * Builds each fixture, as read or annotated as encoding stores it under a configuration, and
    * writes it to Parquet and reads it back, so that the engine reads stored files.
@@ -483,17 +469,12 @@ class DecimalCollectionTest {
       @Nonnull final String resourceType,
       @Nonnull final List<String> json,
       @Nonnull final Optional<SchemaConfiguration> annotation) {
-    final Dataset<Row> read =
-        PofDatasets.fromJson(spark, fhirEncoders.getContext(), resourceType, json);
-    final Dataset<Row> dataset =
-        annotation
-            .map(
-                configuration ->
-                    Annotator.of(FhirDefinitionContext.of(fhirEncoders.getContext()), configuration)
-                        .annotate(resourceType, read))
-            .orElse(read);
-    return PrunedSchemaReader.write(dataset, tempDir.resolve(name + "-" + resourceType).toString())
-        .read();
+    return AnnotatedDatasets.stored(
+        fhirEncoders.getContext(),
+        resourceType,
+        PofDatasets.fromJson(spark, fhirEncoders.getContext(), resourceType, json),
+        annotation,
+        tempDir.resolve(name + "-" + resourceType).toString());
   }
 
   /** Selects the column an expression builds over each resource in the dataset. */

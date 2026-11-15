@@ -125,16 +125,6 @@ public final class LayoutFields {
   }
 
   /**
-   * Returns whether a field's name marks it as an annotation, whether or not Pathling defines it.
-   *
-   * @param name the name of the field
-   * @return true where the field is an annotation
-   */
-  public static boolean isAnnotation(@Nonnull final String name) {
-    return AnnotationNames.isAnnotation(name);
-  }
-
-  /**
    * Returns the names of the annotations that an element of the given type carries, in the order
    * they appear in the container the element owns: its metadata group where it is a primitive, and
    * its own structure where it is complex.

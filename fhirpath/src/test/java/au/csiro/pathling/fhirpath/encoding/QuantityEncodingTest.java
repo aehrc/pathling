@@ -62,7 +62,7 @@ class QuantityEncodingTest {
       },
       nullValues = "NULL")
   void decodesTheTextOfAValue(@Nullable final String text, @Nullable final String expected) {
-    assertThat(QuantityEncoding.decodeValue(text))
+    assertThat(QuantityCanonicalKind.parseValue(text))
         .isEqualTo(expected == null ? null : new BigDecimal(expected));
   }
 

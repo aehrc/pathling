@@ -67,19 +67,39 @@ final class MetadataGroups {
   }
 
   /**
-   * Returns whether a field of a stored metadata group has content: an id that is not null, or an
-   * extension array holding an extension. An empty extension array, or one holding only nulls, has
-   * none, so a group holding nothing else is not written (FR-019).
+   * Returns whether a stored metadata group has content: an id that is not null, or an extension
+   * array holding an extension, of the two fields the group's type has. An empty extension array,
+   * or one holding only nulls, has none, so a group holding nothing else is not written (FR-019).
    *
-   * @param name the name of the field, {@code id} or {@code extension}
-   * @param field the field's value
-   * @return the condition, which is not true where the field is null
+   * @param group the type of the group
+   * @param value the group's value
+   * @return the condition, which is not true where the group is null, and false where its type has
+   *     neither field
    */
   @Nonnull
-  static Column hasContent(@Nonnull final String name, @Nonnull final Column field) {
-    return LayoutFields.METADATA_GROUP_EXTENSION.equals(name)
-        ? functions.exists(field, Column::isNotNull)
-        : field.isNotNull();
+  static Column hasContent(@Nonnull final StructType group, @Nonnull final Column value) {
+    return LayoutFields.METADATA_GROUP_FIELDS.stream()
+        .filter(name -> fieldOf(group, name).isPresent())
+        .map(
+            name ->
+                LayoutFields.METADATA_GROUP_EXTENSION.equals(name)
+                    ? functions.exists(value.getField(name), Column::isNotNull)
+                    : value.getField(name).isNotNull())
+        .reduce(Column::or)
+        .orElse(functions.lit(false));
+  }
+
+  /**
+   * Returns the entry of the extensions in the metadata group of a primitive at a node, as the
+   * transform plans the group's extensions from it.
+   *
+   * @param node the canonical structure of the node carrying the primitive
+   * @return the entry, or empty where the node has no extension element to take the shape from
+   */
+  @Nonnull
+  static Optional<LayoutEntry> extensionEntry(@Nonnull final DefinitionCanonicalStructure node) {
+    return node.extensionElement()
+        .map(element -> LayoutEntry.element(LayoutFields.METADATA_GROUP_EXTENSION, element));
   }
 
   /**

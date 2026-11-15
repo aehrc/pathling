@@ -17,10 +17,9 @@
 
 package au.csiro.pathling.library.io.sink;
 
-import static au.csiro.pathling.io.TimestampStorage.OUTPUT_TIMESTAMP_TYPE;
-import static au.csiro.pathling.io.TimestampStorage.TIMESTAMP_MICROS;
 import static au.csiro.pathling.io.TimestampStorage.writesMicros;
 
+import au.csiro.pathling.io.TimestampStorage;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.Map;
@@ -56,7 +55,7 @@ final class StoredTimestamps {
     if (writesMicros(spark)) {
       return;
     }
-    final String value = spark.conf().get(OUTPUT_TIMESTAMP_TYPE);
+    final String session = TimestampStorage.describe(spark);
     datasets.forEach(
         (resourceType, dataset) -> {
           if (holdsTimestamp(dataset.schema())) {
@@ -64,16 +63,11 @@ final class StoredTimestamps {
                 "The "
                     + resourceType
                     + " data carries the range annotations of dates, which Pathling stores as"
-                    + " INT64 TIMESTAMP(MICROS), but the Spark session writes timestamps to"
-                    + " Parquet as "
-                    + value
-                    + " (`"
-                    + OUTPUT_TIMESTAMP_TYPE
-                    + "`). Set `"
-                    + OUTPUT_TIMESTAMP_TYPE
-                    + "="
-                    + TIMESTAMP_MICROS
-                    + "` on the session before writing.");
+                    + " INT64 TIMESTAMP(MICROS), but the Spark session "
+                    + session
+                    + ". Set "
+                    + TimestampStorage.REQUIRED_SETTING
+                    + " on the session before writing.");
           }
         });
   }

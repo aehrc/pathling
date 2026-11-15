@@ -50,20 +50,34 @@ case class ResolveOrElse(child: Expression, fieldName: String, fallback: Express
 
   override def right: Expression = fallback
 
-  override lazy val replacement: Expression = child.dataType match {
-    case struct: StructType if struct.fieldNames.contains(fieldName) =>
-      GetStructField(child, struct.fieldIndex(fieldName), Some(fieldName))
-    case ArrayType(struct: StructType, containsNull) if struct.fieldNames.contains(fieldName) =>
-      val ordinal = struct.fieldIndex(fieldName)
-      val field = struct.fields(ordinal)
-      GetArrayStructFields(child, field, ordinal, struct.length, containsNull || field.nullable)
-    case _ =>
-      fallback
-  }
+  override lazy val replacement: Expression =
+    ResolveOrElse.extract(child, fieldName).getOrElse(fallback)
 
   override def prettyName: String = "resolve_or_else"
 
   override protected def withNewChildrenInternal(newLeft: Expression,
                                                  newRight: Expression): Expression =
     copy(child = newLeft, fallback = newRight)
+}
+
+object ResolveOrElse {
+
+  /**
+   * Extracts a field of a structure, or of every element of an array of structures, where the
+   * resolved type carries it.
+   *
+   * @param child     the structure, or array of structures, to take the field from
+   * @param fieldName the name of the field
+   * @return the field, or none where the child's type does not carry it
+   */
+  def extract(child: Expression, fieldName: String): Option[Expression] = child.dataType match {
+    case struct: StructType if struct.fieldNames.contains(fieldName) =>
+      Some(GetStructField(child, struct.fieldIndex(fieldName), Some(fieldName)))
+    case ArrayType(struct: StructType, containsNull) if struct.fieldNames.contains(fieldName) =>
+      val ordinal = struct.fieldIndex(fieldName)
+      val field = struct.fields(ordinal)
+      Some(GetArrayStructFields(child, field, ordinal, struct.length,
+        containsNull || field.nullable))
+    case _ => None
+  }
 }

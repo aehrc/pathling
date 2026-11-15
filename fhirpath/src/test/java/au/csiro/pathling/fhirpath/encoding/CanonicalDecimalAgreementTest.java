@@ -22,9 +22,9 @@ import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import au.csiro.pathling.schema.annotation.kinds.CanonicalQuantity;
 import au.csiro.pathling.schema.annotation.kinds.DecimalNumericKind;
 import au.csiro.pathling.schema.annotation.kinds.QuantityCanonicalKind;
+import au.csiro.pathling.schema.unit.CanonicalQuantity;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import java.math.BigDecimal;
 import java.util.List;

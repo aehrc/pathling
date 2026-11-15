@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.library.io.sink;
 
+import static au.csiro.pathling.io.TimestampStorage.OUTPUT_TIMESTAMP_TYPE;
+import static au.csiro.pathling.io.TimestampStorage.TIMESTAMP_MICROS;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -62,11 +64,6 @@ import org.slf4j.LoggerFactory;
  */
 class RangeAnnotationTypeTest {
 
-  /** The Spark setting that says how timestamps are written to Parquet. */
-  private static final String OUTPUT_TIMESTAMP_TYPE = "spark.sql.parquet.outputTimestampType";
-
-  private static final String TIMESTAMP_MICROS = "TIMESTAMP_MICROS";
-
   /** The type of a bound in the footer of a file written in microseconds. */
   private static final String MICROS = "optional int64 %s (TIMESTAMP(MICROS,true))";
 
@@ -80,9 +77,7 @@ class RangeAnnotationTypeTest {
 
   @BeforeAll
   static void setUp() {
-    spark =
-        TestHelpers.sparkBuilder().config(OUTPUT_TIMESTAMP_TYPE, TIMESTAMP_MICROS).getOrCreate();
-    spark.conf().set(OUTPUT_TIMESTAMP_TYPE, TIMESTAMP_MICROS);
+    spark = TestHelpers.sparkBuilder().getOrCreate();
     context = PathlingContext.create(spark);
   }
 

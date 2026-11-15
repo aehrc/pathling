@@ -30,7 +30,6 @@ import au.csiro.pathling.utilities.CanonicalStructure;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
-import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
@@ -59,16 +58,13 @@ import org.apache.spark.sql.types.StructType;
 public final class SystemDateTime {
 
   /** The name of the text of a System date. */
-  @Nonnull public static final String VALUE = "value";
+  @Nonnull public static final String VALUE = StoredPrimitive.VALUE;
 
   /** The name of the lower bound of a System date. */
   @Nonnull public static final String START = LayoutFields.START_ANNOTATION;
 
   /** The name of the upper bound of a System date. */
   @Nonnull public static final String END = LayoutFields.END_ANNOTATION;
-
-  /** The names of the range annotations of a date. */
-  @Nonnull private static final List<String> ANNOTATIONS = List.of(START, END);
 
   /** The canonical order of the fields of a date, by which dates of different shapes merge. */
   @Nonnull
@@ -108,35 +104,6 @@ public final class SystemDateTime {
   }
 
   /**
-   * Returns the date of a stored text and its metadata group, or the dates of a repeating one
-   * paired by position, each with its text, the named metadata fields of its group, such as a
-   * primitive's {@code id} and {@code extension}, and the range annotations the group's schema
-   * carries. Nothing is computed, and nothing is left out: a date without a text is a structure
-   * without a value.
-   *
-   * @param texts the stored text of the date, or the texts where it repeats
-   * @param groups the metadata group beside it, or the groups where it repeats
-   * @param metadata the names of the metadata fields to read from the groups, where they have them
-   * @param repeating whether the date repeats
-   * @return the dates, paired with their groups
-   */
-  @Nonnull
-  public static Column paired(
-      @Nonnull final Column texts,
-      @Nonnull final Column groups,
-      @Nonnull final List<String> metadata,
-      final boolean repeating) {
-    return ColumnFunctions.resolveOrNone(
-        groups, fieldsOf(metadata), List.of(VALUE), List.of(texts), repeating);
-  }
-
-  /** The names of the fields read from a metadata group: the metadata fields, then the bounds. */
-  @Nonnull
-  private static List<String> fieldsOf(@Nonnull final List<String> metadata) {
-    return Stream.concat(metadata.stream(), ANNOTATIONS.stream()).toList();
-  }
-
-  /**
    * Returns the System date of a date held with its id and extensions: its text and the range
    * annotations it carries, without its {@code id} and {@code extension} (decision 142, D8). A date
    * without a text has no System value. Nothing is computed.
@@ -154,7 +121,11 @@ public final class SystemDateTime {
             when(
                 text(d).isNotNull(),
                 ColumnFunctions.resolveOrNone(
-                    d, ANNOTATIONS, List.of(VALUE), List.of(text(d)), false)));
+                    d,
+                    DateRangeKind.INSTANCE.getFields(),
+                    List.of(VALUE),
+                    List.of(text(d)),
+                    false)));
   }
 
   /**
@@ -216,7 +187,7 @@ public final class SystemDateTime {
    */
   @Nonnull
   public static Column lowerBound(@Nonnull final Column date) {
-    return ColumnFunctions.annotationOrElse(date, START, DateRangeKind.INSTANCE.start(text(date)));
+    return bound(START, date);
   }
 
   /**
@@ -228,6 +199,16 @@ public final class SystemDateTime {
    */
   @Nonnull
   public static Column upperBound(@Nonnull final Column date) {
-    return ColumnFunctions.annotationOrElse(date, END, DateRangeKind.INSTANCE.end(text(date)));
+    return bound(END, date);
+  }
+
+  /**
+   * Returns one bound of a date: the field where the date carries it, and the bound computed from
+   * its text otherwise, read as the range annotation's kind reads it.
+   */
+  @Nonnull
+  private static Column bound(@Nonnull final String bound, @Nonnull final Column date) {
+    final DateRangeKind kind = DateRangeKind.INSTANCE;
+    return kind.read(kind.apply(bound, text(date), date, ColumnFunctions::annotationOrElse));
   }
 }

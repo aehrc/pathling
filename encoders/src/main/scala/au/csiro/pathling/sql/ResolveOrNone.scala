@@ -22,7 +22,7 @@
  */
 package au.csiro.pathling.sql
 
-import org.apache.spark.sql.catalyst.expressions.{ArraysZip, Coalesce, CreateNamedStruct, Expression, GetArrayStructFields, GetStructField, If, IsNull, Literal, RuntimeReplaceable}
+import org.apache.spark.sql.catalyst.expressions.{ArraysZip, Coalesce, CreateNamedStruct, Expression, If, IsNull, Literal, RuntimeReplaceable}
 import org.apache.spark.sql.catalyst.util.GenericArrayData
 import org.apache.spark.sql.types.{ArrayType, StructType}
 
@@ -57,27 +57,25 @@ case class ResolveOrNone(source: Expression, fieldNames: Seq[String], content: S
     contentNames: Seq[String], repeating: Boolean) extends RuntimeReplaceable {
 
   override lazy val replacement: Expression = {
-    val present: Seq[(String, Expression)] = if (repeating) {
-      source.dataType match {
-        case ArrayType(struct: StructType, containsNull) =>
-          fieldNames.filter(struct.fieldNames.contains).map { name =>
-            val ordinal = struct.fieldIndex(name)
-            val field = struct.fields(ordinal)
-            val extracted = GetArrayStructFields(source, field, ordinal, struct.length,
-              containsNull || field.nullable)
-            name -> Coalesce(Seq(extracted,
+    // The form is decided from repeating and the source's type together.
+    val formMatches = source.dataType match {
+      case ArrayType(_: StructType, _) => repeating
+      case _: StructType => !repeating
+      case _ => false
+    }
+    val present: Seq[(String, Expression)] = if (formMatches) {
+      fieldNames.flatMap { name =>
+        ResolveOrElse.extract(source, name).map { extracted =>
+          name -> (if (repeating) {
+            Coalesce(Seq(extracted,
               Literal(new GenericArrayData(Array.empty[Any]), extracted.dataType)))
-          }
-        case _ => Seq.empty
+          } else {
+            extracted
+          })
+        }
       }
     } else {
-      source.dataType match {
-        case struct: StructType =>
-          fieldNames.filter(struct.fieldNames.contains).map { name =>
-            name -> GetStructField(source, struct.fieldIndex(name), Some(name))
-          }
-        case _ => Seq.empty
-      }
+      Seq.empty
     }
     val paired = if (repeating && present.nonEmpty) {
       content.map(array => Coalesce(Seq(array, If(IsNull(source), Literal(null, array.dataType),

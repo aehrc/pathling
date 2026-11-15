@@ -23,12 +23,12 @@ import static au.csiro.pathling.schema.LayoutFields.CANONICAL_VALUE_EXACT_ANNOTA
 import au.csiro.pathling.schema.annotation.AnnotationKind;
 import au.csiro.pathling.schema.annotation.AnnotationSwitch;
 import au.csiro.pathling.schema.annotation.PerThreadLruCache;
+import au.csiro.pathling.schema.unit.CanonicalQuantity;
 import au.csiro.pathling.schema.unit.UcumUnits;
+import au.csiro.pathling.utilities.ExactDecimal;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
-import java.math.MathContext;
-import java.math.RoundingMode;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -102,20 +102,13 @@ public final class QuantityCanonicalKind extends AnnotationKind {
   @Nonnull public static final String CODE_FIELD = "code";
 
   /** The field of {@code __canonical_value_exact} that holds the scale. */
-  @Nonnull public static final String SCALE_FIELD = "scale";
+  @Nonnull public static final String SCALE_FIELD = ExactDecimal.SCALE_FIELD;
 
   /** The field of a quantity that holds its system. */
   @Nonnull private static final String SYSTEM_FIELD = "system";
 
-  /** The maximum number of digits of a value. */
-  private static final int MAX_PRECISION = 38;
-
   /** The type of {@code __canonical_value_exact}: the unscaled value and its scale. */
-  @Nonnull
-  public static final StructType EXACT_VALUE_TYPE =
-      new StructType()
-          .add(VALUE_FIELD, DataTypes.createDecimalType(MAX_PRECISION, 0))
-          .add(SCALE_FIELD, DataTypes.IntegerType);
+  @Nonnull public static final StructType EXACT_VALUE_TYPE = ExactDecimal.TYPE;
 
   /**
    * The number of canonicalisations each thread's cache holds, as many as the dates of {@link
@@ -245,7 +238,8 @@ public final class QuantityCanonicalKind extends AnnotationKind {
    */
   @Nullable
   public static CanonicalQuantity toExact(@Nullable final CanonicalQuantity canonical) {
-    final BigDecimal exact = canonical == null ? null : exactValue(canonical.getValue());
+    final BigDecimal exact =
+        canonical == null ? null : ExactDecimal.normalize(canonical.getValue());
     return exact == null ? null : new CanonicalQuantity(exact, canonical.getCode());
   }
 
@@ -354,21 +348,5 @@ public final class QuantityCanonicalKind extends AnnotationKind {
     } catch (final NumberFormatException e) {
       return null;
     }
-  }
-
-  /**
-   * Returns a value with at most the maximum number of digits, dropping fractional digits where it
-   * has more, or null where its integer digits alone are too many.
-   */
-  @Nullable
-  private static BigDecimal exactValue(@Nonnull final BigDecimal value) {
-    final BigDecimal integral = value.scale() < 0 ? value.setScale(0) : value;
-    if (integral.precision() <= MAX_PRECISION) {
-      return integral;
-    }
-    // Rounding to a precision rather than to a scale accounts for a carry, which adds a digit, as
-    // 0.99…9 does in rounding to 1.00…0.
-    final BigDecimal rounded = integral.round(new MathContext(MAX_PRECISION, RoundingMode.HALF_UP));
-    return rounded.scale() < 0 ? null : rounded;
   }
 }

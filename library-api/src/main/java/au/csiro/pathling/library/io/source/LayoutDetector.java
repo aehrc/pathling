@@ -20,6 +20,7 @@ import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.encoders.QuantitySupport;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.schema.LayoutFields;
+import au.csiro.pathling.utilities.AnnotationNames;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
@@ -289,9 +290,7 @@ public final class LayoutDetector {
     final String name = field.name();
     final boolean resourceType =
         LayoutFields.RESOURCE_TYPE.equals(name) && DataTypes.StringType.equals(field.dataType());
-    return resourceType
-        || name.startsWith(LayoutFields.ANNOTATION_PREFIX)
-        || isMetadataGroup(field, parent);
+    return resourceType || AnnotationNames.isAnnotation(name) || isMetadataGroup(field, parent);
   }
 
   /**
@@ -303,7 +302,7 @@ public final class LayoutDetector {
     final String name = field.name();
     final String prefix = LayoutFields.METADATA_GROUP_PREFIX;
     return name.startsWith(prefix)
-        && !name.startsWith(LayoutFields.ANNOTATION_PREFIX)
+        && !AnnotationNames.isAnnotation(name)
         && sibling(parent, name.substring(prefix.length())).isPresent()
         && groupStruct(field.dataType())
             .filter(struct -> struct.fields().length > 0)

@@ -26,6 +26,7 @@ import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import au.csiro.pathling.schema.LayoutEntry;
 import au.csiro.pathling.schema.LayoutFields;
+import au.csiro.pathling.utilities.AnnotationNames;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
@@ -452,14 +453,8 @@ final class ResourceTransformer {
     fieldOf(group, LayoutFields.METADATA_GROUP_EXTENSION)
         .flatMap(
             field ->
-                node.extensionElement()
-                    .flatMap(
-                        element ->
-                            value(
-                                node,
-                                LayoutEntry.element(LayoutFields.METADATA_GROUP_EXTENSION, element),
-                                field.dataType(),
-                                references)))
+                MetadataGroups.extensionEntry(node)
+                    .flatMap(entry -> value(node, entry, field.dataType(), references)))
         .ifPresent(
             stored ->
                 fields.add(
@@ -597,7 +592,7 @@ final class ResourceTransformer {
       @Nonnull final Function<String, Column> source,
       final boolean forElement) {
     return Stream.of(schema.fields())
-        .filter(field -> !LayoutFields.isAnnotation(field.name()))
+        .filter(field -> !AnnotationNames.isAnnotation(field.name()))
         .filter(field -> !forElement || node.entry(field.name()).isPresent())
         .flatMap(
             field ->
@@ -663,15 +658,14 @@ final class ResourceTransformer {
     fieldOf(group, LayoutFields.METADATA_GROUP_EXTENSION)
         .flatMap(
             extension ->
-                node.extensionElement()
+                MetadataGroups.extensionEntry(node)
                     .map(
-                        element ->
+                        entry ->
                             (Function<Column, Column>)
                                 value ->
                                     egressValue(
                                             node,
-                                            LayoutEntry.element(
-                                                LayoutFields.METADATA_GROUP_EXTENSION, element),
+                                            entry,
                                             value.getField(LayoutFields.METADATA_GROUP_EXTENSION),
                                             extension.dataType(),
                                             forElement)
@@ -680,11 +674,7 @@ final class ResourceTransformer {
     final UnaryOperator<Column> single =
         value ->
             functions.when(
-                Stream.of(LayoutFields.METADATA_GROUP_ID, LayoutFields.METADATA_GROUP_EXTENSION)
-                    .filter(name -> fieldOf(group, name).isPresent())
-                    .map(name -> MetadataGroups.hasContent(name, value.getField(name)))
-                    .reduce(Column::or)
-                    .orElseThrow(),
+                MetadataGroups.hasContent(group, value),
                 functions.struct(
                     fields.stream().map(build -> build.apply(value)).toArray(Column[]::new)));
     if (type instanceof ArrayType) {

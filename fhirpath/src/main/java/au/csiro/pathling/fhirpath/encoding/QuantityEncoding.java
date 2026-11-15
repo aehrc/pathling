@@ -24,13 +24,12 @@ import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.fhirpath.FhirPathQuantity;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.FlatStructure;
 import au.csiro.pathling.fhirpath.unit.UcumUnit;
 import au.csiro.pathling.schema.LayoutFields;
-import au.csiro.pathling.schema.annotation.kinds.CanonicalQuantity;
 import au.csiro.pathling.schema.annotation.kinds.DecimalNumericKind;
 import au.csiro.pathling.schema.annotation.kinds.QuantityCanonicalKind;
+import au.csiro.pathling.schema.unit.CanonicalQuantity;
 import au.csiro.pathling.sql.types.FlexiDecimal;
 import au.csiro.pathling.utilities.CanonicalStructure;
 import au.csiro.pathling.utilities.SystemDecimal;
@@ -39,6 +38,7 @@ import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
@@ -106,10 +106,6 @@ public final class QuantityEncoding {
   /** The content fields of a System quantity, in order. */
   private static final List<String> CONTENT =
       List.of(VALUE_COLUMN, UNIT_COLUMN, CODE_COLUMN, SYSTEM_COLUMN);
-
-  /** The canonical annotations of a quantity. */
-  private static final List<String> ANNOTATIONS =
-      List.of(CANONICAL_CODE_COLUMN, CANONICAL_VALUE_EXACT_COLUMN);
 
   /**
    * The canonical order of the fields of a System quantity, by which System quantities merge, with
@@ -234,7 +230,7 @@ public final class QuantityEncoding {
                 hasSystemForm(s),
                 ColumnFunctions.resolveOrNone(
                     s,
-                    ANNOTATIONS,
+                    QuantityCanonicalKind.INSTANCE.getFields(),
                     CONTENT,
                     List.of(
                         numericValue(s),
@@ -284,17 +280,7 @@ public final class QuantityEncoding {
    */
   @Nonnull
   public static Column asText(@Nonnull final Column quantity) {
-    return let(
-        quantity,
-        q ->
-            when(
-                hasSystemForm(q),
-                struct(
-                        valueText(q).as(VALUE_COLUMN),
-                        field(q, UNIT_COLUMN).as(UNIT_COLUMN),
-                        field(q, CODE_COLUMN).as(CODE_COLUMN),
-                        field(q, SYSTEM_COLUMN).as(SYSTEM_COLUMN))
-                    .cast(TEXT_TYPE)));
+    return asTextWith(quantity, QuantityEncoding::valueText);
   }
 
   /**
@@ -309,13 +295,23 @@ public final class QuantityEncoding {
    */
   @Nonnull
   public static Column asSystemText(@Nonnull final Column quantity) {
+    return asTextWith(quantity, q -> numericValue(q).cast(DataTypes.StringType));
+  }
+
+  /**
+   * Returns a quantity, stored or System, with its value as the text a function gives for it, typed
+   * as {@link #textType()}, or null where the quantity has no System form.
+   */
+  @Nonnull
+  private static Column asTextWith(
+      @Nonnull final Column quantity, @Nonnull final UnaryOperator<Column> valueText) {
     return let(
         quantity,
         q ->
             when(
                 hasSystemForm(q),
                 struct(
-                        numericValue(q).cast(DataTypes.StringType).as(VALUE_COLUMN),
+                        valueText.apply(q).as(VALUE_COLUMN),
                         field(q, UNIT_COLUMN).as(UNIT_COLUMN),
                         field(q, CODE_COLUMN).as(CODE_COLUMN),
                         field(q, SYSTEM_COLUMN).as(SYSTEM_COLUMN))
@@ -373,13 +369,14 @@ public final class QuantityEncoding {
   public static Column canonical(@Nonnull final String annotation, @Nonnull final Column quantity) {
     // Only the fields the canonical form is computed from are passed to the computation, each read
     // by name, so that the rest of a stored quantity, such as its extensions, is not read for it.
-    return ColumnFunctions.resolveOrElse(
-        quantity,
-        annotation,
-        QuantityCanonicalKind.INSTANCE.compute(
+    final QuantityCanonicalKind kind = QuantityCanonicalKind.INSTANCE;
+    return kind.read(
+        kind.apply(
             annotation,
             quantity,
-            name -> VALUE_COLUMN.equals(name) ? valueText(quantity) : field(quantity, name)));
+            name -> VALUE_COLUMN.equals(name) ? valueText(quantity) : field(quantity, name),
+            quantity,
+            ColumnFunctions::resolveOrElse));
   }
 
   /**
@@ -404,6 +401,24 @@ public final class QuantityEncoding {
   @Nonnull
   public static Column canonicalValueExact(@Nonnull final Column quantity) {
     return canonical(CANONICAL_VALUE_EXACT_COLUMN, quantity);
+  }
+
+  /**
+   * Compares the canonical forms of two quantities, stored or System.
+   *
+   * @param left one quantity
+   * @param right the other
+   * @return the sign of the comparison of their canonical values, or null where either has no
+   *     canonical form or their codes differ
+   * @see #compareCanonical(Column, Column, Column, Column)
+   */
+  @Nonnull
+  public static Column compareCanonical(@Nonnull final Column left, @Nonnull final Column right) {
+    return compareCanonical(
+        canonicalCode(left),
+        canonicalValueExact(left),
+        canonicalCode(right),
+        canonicalValueExact(right));
   }
 
   /**
@@ -443,28 +458,23 @@ public final class QuantityEncoding {
    * _value.__numeric}, where the schema carries it, and the decoding of its text by {@link
    * DecimalNumericKind} otherwise, decided once for the schema (FR-023).
    *
+   * <p>The value is not tested for presence. A stored annotation is taken as given (ticket 31), and
+   * the annotation step computes it as null wherever the text is null, so it is null wherever the
+   * value is absent. The annotation is read as the kind reads it, at the engine's System.Decimal
+   * type, whatever type it was stored at.
+   *
    * @param quantity a stored quantity, or a System quantity
    * @return the value, typed as {@link SystemDecimal#TYPE}
    */
   @Nonnull
   public static Column numericValue(@Nonnull final Column quantity) {
-    return DefaultRepresentation.numericValue(
-        ColumnFunctions.resolveOrNull(quantity, VALUE_COLUMN, DataTypes.StringType),
-        ColumnFunctions.resolveOrNull(quantity, VALUE_GROUP_COLUMN, DataTypes.NullType));
-  }
-
-  /**
-   * Decodes the text of a quantity's value to a decimal with every digit it has. The value is kept
-   * as text, not as {@link SystemDecimal#TYPE}, so nothing is rounded here: conversion and the
-   * string form work from every digit of a stored quantity's text. The canonical form does not: it
-   * is computed from the System.Decimal value (owner, 2026-11-12).
-   *
-   * @param text the text of the value
-   * @return the value, or null where there is no text or it is not a decimal
-   */
-  @Nullable
-  static BigDecimal decodeValue(@Nullable final String text) {
-    return QuantityCanonicalKind.parseValue(text);
+    final DecimalNumericKind kind = DecimalNumericKind.INSTANCE;
+    return kind.read(
+        kind.apply(
+            LayoutFields.NUMERIC_ANNOTATION,
+            ColumnFunctions.resolveOrNull(quantity, VALUE_COLUMN, DataTypes.StringType),
+            ColumnFunctions.resolveOrNull(quantity, VALUE_GROUP_COLUMN, DataTypes.NullType),
+            ColumnFunctions::resolveOrElse));
   }
 
   /**
@@ -492,8 +502,10 @@ public final class QuantityEncoding {
               + " but got "
               + schema.simpleString());
     }
+    // The value keeps every digit of its text, not only those System.Decimal holds, as conversion
+    // and the string form work from every digit of a stored quantity's text.
     return FhirPathQuantity.of(
-        decodeValue(row.getString(VALUE_INDEX)),
+        QuantityCanonicalKind.parseValue(row.getString(VALUE_INDEX)),
         row.getString(SYSTEM_INDEX),
         row.getString(CODE_INDEX),
         row.getString(UNIT_INDEX));

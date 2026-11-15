@@ -17,9 +17,12 @@
 
 package au.csiro.pathling.schema.annotation;
 
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * A map that holds at most a fixed number of entries, evicting the one least recently read. It is
@@ -28,17 +31,18 @@ import java.util.Map;
  * @param <K> the type of the keys
  * @param <V> the type of the values
  */
-final class LruMap<K, V> extends LinkedHashMap<K, V> {
-
-  private static final long serialVersionUID = 1L;
+final class LruMap<K, V> {
 
   private final int capacity;
 
+  /** The entries, ordered by access, so that the eldest entry is the one least recently read. */
+  @Nonnull private final LinkedHashMap<K, V> entries;
+
   /** The input last read from the map, which is also its most recently read entry. */
-  @Nullable transient K lastInput;
+  @Nullable private K lastInput;
 
   /** The value of the input last read. */
-  @Nullable transient V lastValue;
+  @Nullable private V lastValue;
 
   /**
    * Creates an empty map.
@@ -46,13 +50,34 @@ final class LruMap<K, V> extends LinkedHashMap<K, V> {
    * @param capacity the number of entries it holds
    */
   LruMap(final int capacity) {
-    // Ordered by access, so that the eldest entry is the one least recently read.
-    super(capacity * 2, 0.75f, true);
     this.capacity = capacity;
+    this.entries = new LinkedHashMap<>(capacity * 2, 0.75f, true);
   }
 
-  @Override
-  protected boolean removeEldestEntry(final Map.Entry<K, V> eldest) {
-    return size() > capacity;
+  /**
+   * Returns the value of an input, from the map where it holds it, and computed and held otherwise,
+   * evicting the entry least recently read where the map then holds too many.
+   *
+   * @param input the input
+   * @param computation computes the value of an input the map does not hold, never null
+   * @return the value
+   */
+  @Nonnull
+  V get(@Nonnull final K input, @Nonnull final Function<K, V> computation) {
+    // The annotations of one value are computed one after the other, so the input is most often the
+    // last one read, which is compared before the input is hashed for the map.
+    if (input.equals(lastInput)) {
+      // The last value is set with the last input, so it is not null once the input matches.
+      return Objects.requireNonNull(lastValue);
+    }
+    final V value = entries.computeIfAbsent(input, computation);
+    if (entries.size() > capacity) {
+      final Iterator<K> eldest = entries.keySet().iterator();
+      eldest.next();
+      eldest.remove();
+    }
+    lastInput = input;
+    lastValue = value;
+    return value;
   }
 }

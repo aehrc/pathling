@@ -27,8 +27,8 @@ import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.unit.UcumUnit;
-import au.csiro.pathling.schema.annotation.kinds.CanonicalQuantity;
 import au.csiro.pathling.schema.annotation.kinds.QuantityCanonicalKind;
+import au.csiro.pathling.schema.unit.CanonicalQuantity;
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -209,8 +209,8 @@ public class QuantityMatcher implements ElementMatcher {
     final CanonicalQuantity exact = QuantityCanonicalKind.toExact(canonical);
     final Column comparison =
         QuantityEncoding.compareCanonical(
-            QuantityEncoding.canonical(QuantityEncoding.CANONICAL_CODE_COLUMN, element),
-            QuantityEncoding.canonical(QuantityEncoding.CANONICAL_VALUE_EXACT_COLUMN, element),
+            QuantityEncoding.canonicalCode(element),
+            QuantityEncoding.canonicalValueExact(element),
             QuantityCanonicalKind.toCodeLiteral(exact),
             QuantityCanonicalKind.toValueExactLiteral(exact));
     final Column canonicalMatch =

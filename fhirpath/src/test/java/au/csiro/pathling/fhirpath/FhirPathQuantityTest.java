@@ -23,8 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
 import au.csiro.pathling.fhirpath.unit.UcumUnit;
-import au.csiro.pathling.schema.annotation.kinds.CanonicalQuantity;
 import au.csiro.pathling.schema.annotation.kinds.QuantityCanonicalKind;
+import au.csiro.pathling.schema.unit.CanonicalQuantity;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;

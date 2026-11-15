@@ -25,7 +25,6 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
 import au.csiro.pathling.fhirpath.comparison.DefaultComparator;
-import au.csiro.pathling.fhirpath.comparison.StoredPrimitiveComparator;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.BooleanType;
@@ -172,8 +171,6 @@ public class BooleanCollection extends Collection implements StringCoercible, Ma
   @Override
   @Nonnull
   public ColumnEquality getComparator() {
-    return holdsPrimitiveMetadata()
-        ? StoredPrimitiveComparator.of(DefaultComparator.getInstance())
-        : DefaultComparator.getInstance();
+    return comparatorFor(DefaultComparator.getInstance());
   }
 }

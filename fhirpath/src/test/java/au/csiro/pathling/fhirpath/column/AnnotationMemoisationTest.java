@@ -174,7 +174,9 @@ class AnnotationMemoisationTest {
     // A repeating date without stored annotations computes each bound where it is read, here in a
     // pass of its own. Changed by ticket 43: traversal computes nothing, so the bounds are read
     // through the accessors rather than by converting the dates.
-    final Column traversed = SystemDateTime.paired(col("a"), lit(null), List.of(), true);
+    final Column traversed =
+        StoredPrimitive.paired(
+            col("a"), lit(null), List.of(SystemDateTime.START, SystemDateTime.END), true);
     final Dataset<Row> query =
         dates(1161)
             .select(

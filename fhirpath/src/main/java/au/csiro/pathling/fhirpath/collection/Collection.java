@@ -35,8 +35,10 @@ import au.csiro.pathling.fhirpath.collection.mixed.MixedCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.StoredPrimitive;
+import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
 import au.csiro.pathling.fhirpath.comparison.Equatable;
+import au.csiro.pathling.fhirpath.comparison.StoredPrimitiveComparator;
 import au.csiro.pathling.fhirpath.definition.PrimitiveMetadata;
 import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
@@ -923,6 +925,19 @@ public class Collection implements Equatable {
    */
   public boolean holdsPrimitiveMetadata() {
     return PrimitiveMetadata.carriedBy(getDefinition());
+  }
+
+  /**
+   * Returns the comparator of this collection's values from the comparator of their System values:
+   * a primitive held with its id and extensions is compared by its value alone (decision 151), and
+   * any other value as the System comparator compares it.
+   *
+   * @param system the comparator of the System values
+   * @return the comparator of the values as this collection holds them
+   */
+  @Nonnull
+  protected ColumnComparator comparatorFor(@Nonnull final ColumnComparator system) {
+    return holdsPrimitiveMetadata() ? StoredPrimitiveComparator.of(system) : system;
   }
 
   /**

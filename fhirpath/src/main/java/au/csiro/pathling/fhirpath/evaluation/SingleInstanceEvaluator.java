@@ -32,7 +32,7 @@ import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TraceResult;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TypedValue;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.schema.LayoutFields;
+import au.csiro.pathling.utilities.AnnotationNames;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -438,7 +438,7 @@ public class SingleInstanceEvaluator {
     final List<Object> filteredValues = new ArrayList<>();
 
     for (final StructField field : schema.fields()) {
-      if (!LayoutFields.isAnnotation(field.name())) {
+      if (!AnnotationNames.isAnnotation(field.name())) {
         final Object value = row.get(row.fieldIndex(field.name()));
         // Skip fields with null values.
         if (value != null) {

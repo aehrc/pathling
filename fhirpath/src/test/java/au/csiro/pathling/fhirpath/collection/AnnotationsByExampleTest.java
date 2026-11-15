@@ -27,14 +27,13 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
-import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.Annotator;
 import au.csiro.pathling.schema.SchemaConfiguration;
 import au.csiro.pathling.search.SearchColumnBuilder;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
+import au.csiro.pathling.test.layout.AnnotatedDatasets;
 import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
@@ -396,11 +395,8 @@ class AnnotationsByExampleTest {
       @Nonnull final String dataset,
       @Nonnull final ResourceType resourceType,
       @Nonnull final String expression) {
-    final DatasetEvaluator evaluator =
-        DatasetEvaluatorBuilder.create(resourceType, fhirEncoders.getContext())
-            .withDataset(data.get(dataset))
-            .build();
-    return evaluator.evaluate(PARSER.parse(expression)).toIdValueDataset();
+    return AnnotatedDatasets.evaluate(
+        fhirEncoders.getContext(), resourceType, data.get(dataset), expression);
   }
 
   @Nonnull

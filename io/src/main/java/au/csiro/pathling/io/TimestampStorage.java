@@ -34,7 +34,29 @@ public final class TimestampStorage {
   /** The value of {@link #OUTPUT_TIMESTAMP_TYPE} that writes them as the layout stores them. */
   @Nonnull public static final String TIMESTAMP_MICROS = "TIMESTAMP_MICROS";
 
+  /** The setting a session needs to write timestamps as the layout stores them, quoted. */
+  @Nonnull
+  public static final String REQUIRED_SETTING =
+      "`" + OUTPUT_TIMESTAMP_TYPE + "=" + TIMESTAMP_MICROS + "`";
+
   private TimestampStorage() {}
+
+  /**
+   * Describes how a session writes timestamps to Parquet, for a message about a session that does
+   * not write them as the layout stores them.
+   *
+   * @param spark the session
+   * @return the description, a predicate of the session such as {@code writes timestamps to Parquet
+   *     as INT96 (`spark.sql.parquet.outputTimestampType`)}
+   */
+  @Nonnull
+  public static String describe(@Nonnull final SparkSession spark) {
+    return "writes timestamps to Parquet as "
+        + spark.conf().get(OUTPUT_TIMESTAMP_TYPE)
+        + " (`"
+        + OUTPUT_TIMESTAMP_TYPE
+        + "`)";
+  }
 
   /**
    * Returns whether a session writes timestamps to Parquet as {@code INT64} microseconds, as the

@@ -17,13 +17,13 @@
 
 package au.csiro.pathling.search.filter;
 
-import static au.csiro.pathling.encoders.ColumnFunctions.resolveOrElse;
 import static au.csiro.pathling.encoders.ColumnFunctions.resolveOrNull;
 import static au.csiro.pathling.encoders.ColumnFunctions.resolveStringOrNull;
 import static au.csiro.pathling.sql.SqlFunctions.let;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
 
+import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.fhirpath.FhirPathDateTime;
 import au.csiro.pathling.fhirpath.column.SystemDateTime;
 import au.csiro.pathling.schema.LayoutFields;
@@ -151,10 +151,13 @@ public class DateMatcher implements ElementMatcher {
   @Nonnull
   private static Column bound(
       @Nonnull final Column period, @Nonnull final String date, @Nonnull final String annotation) {
-    return resolveOrElse(
-        resolveOrNull(period, LayoutFields.metadataGroupName(date), DataTypes.NullType),
-        annotation,
-        DateRangeKind.INSTANCE.compute(annotation, resolveStringOrNull(period, date)));
+    final DateRangeKind kind = DateRangeKind.INSTANCE;
+    return kind.read(
+        kind.apply(
+            annotation,
+            resolveStringOrNull(period, date),
+            resolveOrNull(period, LayoutFields.metadataGroupName(date), DataTypes.NullType),
+            ColumnFunctions::resolveOrElse));
   }
 
   /**
