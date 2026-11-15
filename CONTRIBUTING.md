@@ -279,7 +279,10 @@ Unless `publish` is unset, the workflow then publishes the results to the
 - `runs/<workflow run ID>.json` - the JMH JSON output of the run.
 - `runs/<workflow run ID>-reference.json` - the JMH JSON output of the
   reference release from the same run.
-- `index.json` - every run, with a summary of its results.
+- `index.json` - every run, with the commit and version it benchmarked and a
+  summary of its results. The version is the release, or for a build the
+  version in its POM, such as `11.0.0-SNAPSHOT`. The page labels runs with it,
+  naming a release by its tag, such as `v10.0.0`.
 
 The [benchmarks page](https://pathling.csiro.au/benchmarks)
 (`site/src/pages/benchmarks.js`) reads this data in the browser, so new runs
@@ -329,7 +332,7 @@ cd site
 bun scripts/publishBenchmark.js --results benchmark-abc1234567.json \
   --reference-results benchmark-abc1234567-reference.json --reference 9.1.0 \
   --data-dir ../gh-pages/benchmarks/data --run-id <workflow run ID> \
-  --commit <full commit SHA> --date 2026-01-01T00:00:00Z
+  --commit <full commit SHA> --version <version> --date 2026-01-01T00:00:00Z
 ```
 
 To preview the page locally, build the site, copy a data directory to

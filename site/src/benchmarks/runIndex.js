@@ -36,6 +36,9 @@
  *   reference release at `runs/<id>-reference.json`.
  * @property {string} date - The ISO 8601 time at which the benchmark ran.
  * @property {string} commit - The SHA of the commit that was benchmarked.
+ * @property {string} [version] - The version that was benchmarked: a release,
+ *   such as "10.0.0", or the development version of the commit, such as
+ *   "11.0.0-SNAPSHOT". Runs published before versions were recorded have none.
  * @property {string} reference - The version of the reference release that
  *   was benchmarked on the same runner.
  * @property {ResultSummary[]} results - The summarised results.
@@ -69,6 +72,7 @@ export function addRun(index, entry) {
  * @property {string} runId - The run ID.
  * @property {string} date - The time at which the benchmark ran.
  * @property {string} commit - The commit SHA.
+ * @property {string} [version] - The benchmarked version.
  * @property {number} score - The score relative to the reference release.
  * @property {number | null} scoreError - The error of the relative score.
  */
@@ -123,6 +127,7 @@ export function buildTimelines(index) {
         runId: run.id,
         date: run.date,
         commit: run.commit,
+        version: run.version,
         score: result.relative.score,
         scoreError: result.relative.scoreError,
       });

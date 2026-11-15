@@ -73,13 +73,41 @@ export function formatDate(date) {
 }
 
 /**
- * Builds the label for a run.
+ * Names the version that a run benchmarked. A release is named by its tag, and
+ * a development version, which has no tag, as it is.
  *
- * @param {{date: string, commit: string}} run - The run.
- * @returns {string} The date and short commit SHA.
+ * @param {string | undefined} version - The version, which is absent for runs
+ *   published before versions were recorded.
+ * @returns {string | undefined} For example "v10.0.0" or "11.0.0-SNAPSHOT".
+ */
+function versionName(version) {
+  return /^\d+\.\d+\.\d+$/.test(version) ? `v${version}` : version;
+}
+
+/**
+ * Builds the label for a run in the run selectors, which shows the date
+ * without the time.
+ *
+ * @param {{date: string, commit: string, version?: string}} run - The run.
+ * @returns {string} For example "v10.0.0, 2026-10-21 (2e654ed)".
  */
 export function runLabel(run) {
-  return `${formatDate(run.date)} (${run.commit.slice(0, 7)})`;
+  const date = new Date(run.date).toISOString().slice(0, 10);
+  const name = [versionName(run.version), date].filter(Boolean).join(", ");
+  return `${name} (${run.commit.slice(0, 7)})`;
+}
+
+/**
+ * Builds the name of a run, from its version and the time at which it ran.
+ *
+ * @param {{date: string, version?: string}} run - The run, or a point of a
+ *   timeline.
+ * @returns {string} For example "v10.0.0, 2026-10-21 04:27 UTC".
+ */
+export function runName(run) {
+  return [versionName(run.version), formatDate(run.date)]
+    .filter(Boolean)
+    .join(", ");
 }
 
 /**

@@ -32,7 +32,14 @@ import { buildCombinedTimelines, geometricMean } from "./combined.js";
  * @returns {object} An index entry.
  */
 function run(id, date, results = []) {
-  return { id, date, commit: `sha-${id}`, reference: "9.1.0", results };
+  return {
+    id,
+    date,
+    commit: `sha-${id}`,
+    version: "9.9.0",
+    reference: "9.1.0",
+    results,
+  };
 }
 
 /**
@@ -133,6 +140,7 @@ describe("buildCombinedTimelines", () => {
       runId: "1",
       date: "2026-01-01T00:00:00Z",
       commit: "sha-1",
+      version: "9.9.0",
       score: expect.any(Number),
       scoreError: expect.any(Number),
     });

@@ -63,6 +63,7 @@ function options(overrides = {}) {
     dataDir: join(dir, "data"),
     runId: "123",
     commit: "abc",
+    version: "9.9.0",
     date: "2026-01-01T00:00:00Z",
     ...overrides,
   };
@@ -108,6 +109,7 @@ test("publishing copies the results and records the run in the index", () => {
         id: "123",
         date: "2026-01-01T00:00:00Z",
         commit: "abc",
+        version: "9.9.0",
         reference: "9.1.0",
         results: [
           {

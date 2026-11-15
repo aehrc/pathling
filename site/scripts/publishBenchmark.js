@@ -27,7 +27,8 @@
  *   bun scripts/publishBenchmark.js --results benchmark-abc1234.json \
  *     --reference-results benchmark-abc1234-reference.json \
  *     --reference 9.1.0 --data-dir gh-pages/benchmarks/data \
- *     --run-id 123456789 --commit <sha> --date 2026-01-01T00:00:00Z
+ *     --run-id 123456789 --commit <sha> --version 11.0.0-SNAPSHOT \
+ *     --date 2026-01-01T00:00:00Z
  *
  * @author John Grimes
  */
@@ -49,6 +50,8 @@ import { addRun } from "../src/benchmarks/runIndex.js";
  * @param {string} options.dataDir - The benchmark data directory.
  * @param {string} options.runId - The GitHub Actions run ID of the benchmark.
  * @param {string} options.commit - The SHA of the benchmarked commit.
+ * @param {string} options.version - The benchmarked version: a release, or the
+ *   development version of the commit.
  * @param {string} options.date - The ISO 8601 time at which the benchmark ran.
  * @returns {void}
  * @throws {Error} If either results file is not a JMH result array, or the
@@ -61,6 +64,7 @@ export function publishRun({
   dataDir,
   runId,
   commit,
+  version,
   date,
 }) {
   // Runs are ordered by comparing dates as strings, so they must share a format.
@@ -92,6 +96,7 @@ export function publishRun({
     id: runId,
     date,
     commit,
+    version,
     reference,
     results: summariseResults(results, referenceResults),
   });
@@ -126,6 +131,7 @@ if (import.meta.main) {
       "data-dir": { type: "string" },
       "run-id": { type: "string" },
       commit: { type: "string" },
+      version: { type: "string" },
       date: { type: "string" },
     },
   });
@@ -136,6 +142,7 @@ if (import.meta.main) {
     "data-dir",
     "run-id",
     "commit",
+    "version",
     "date",
   ].filter((name) => !values[name]);
   if (missing.length > 0) {
@@ -151,6 +158,7 @@ if (import.meta.main) {
     dataDir: values["data-dir"],
     runId: values["run-id"],
     commit: values.commit,
+    version: values.version,
     date: values.date,
   });
   console.log(`Published run ${values["run-id"]} to ${values["data-dir"]}`);
