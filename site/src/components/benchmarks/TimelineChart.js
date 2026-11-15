@@ -37,9 +37,9 @@ const LABEL_SPACING = 56;
 // Four rows are enough to label the patch releases that follow a release.
 const ANNOTATION_ROWS = 4;
 const ANNOTATION_ROW_HEIGHT = 15;
-// The approximate width of a character in an annotation label, and the
-// minimum space between two labels in a row.
-const ANNOTATION_CHAR_WIDTH = 6.5;
+// The approximate width of a character in a release label and in the bold
+// label of a change, and the minimum space between two labels in a row.
+const ANNOTATION_CHAR_WIDTH = { release: 6.5, change: 7.5 };
 const ANNOTATION_LABEL_GAP = 6;
 
 // A qualitative palette that remains distinguishable in light and dark modes.
@@ -97,8 +97,9 @@ function annotationTitle({ kind, label, date, description }) {
  * @param {(runId: string) => string} props.runHref - Builds the link to a run.
  * @param {[string, string]} props.dateRange - The dates of the first and last
  *   runs, so that every chart shares the same time axis.
- * @param {import("../../benchmarks/annotations.js").Annotation[]} props.annotations
- *   - The annotations to mark, which must lie within the date range.
+ * @param {import("../../benchmarks/annotations.js").Annotation[]}
+ *   props.annotations - The annotations to mark, which must lie within the
+ *   date range.
  * @returns {React.ReactElement} The chart.
  */
 export default function TimelineChart({
@@ -127,7 +128,8 @@ export default function TimelineChart({
   // out when no row has room, leaving its line and hover text. The plot moves
   // down to make room for the rows that are used.
   const markers = annotations.map((annotation) => {
-    const halfWidth = (annotation.label.length * ANNOTATION_CHAR_WIDTH) / 2;
+    const halfWidth =
+      (annotation.label.length * ANNOTATION_CHAR_WIDTH[annotation.kind]) / 2;
     // Keep labels near the edges within the chart.
     const labelX = Math.min(
       Math.max(x(annotation.date), halfWidth),
@@ -150,6 +152,15 @@ export default function TimelineChart({
   const top = MARGIN.top + rowsUsed * ANNOTATION_ROW_HEIGHT;
   const height = top + PLOT_HEIGHT + MARGIN.bottom;
   const y = (value) => top + PLOT_HEIGHT * (1 - value / yMax);
+  // Paint changes over releases, as a change often lands just before the
+  // release that ships it, and would otherwise be hidden beneath it.
+  const paintOrder = markers
+    .map((marker, index) => ({ ...marker, row: labelRows[index] }))
+    .sort(
+      (a, b) =>
+        Number(a.annotation.kind === "change") -
+        Number(b.annotation.kind === "change"),
+    );
 
   // Label each run in this chart with its commit, skipping labels that would
   // overlap, but always labelling the first and last runs with their date too.
@@ -216,8 +227,7 @@ export default function TimelineChart({
         >
           {timeline.unit}
         </text>
-        {markers.map(({ annotation, labelX }, index) => {
-          const row = labelRows[index];
+        {paintOrder.map(({ annotation, labelX, row }) => {
           const lineProps = {
             x1: x(annotation.date),
             x2: x(annotation.date),
