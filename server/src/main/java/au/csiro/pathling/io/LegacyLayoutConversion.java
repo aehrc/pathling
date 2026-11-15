@@ -33,9 +33,7 @@ import org.apache.spark.sql.types.StructType;
  *
  * <p>Each resource is decoded with the legacy encoder, serialised as FHIR JSON, and encoded again
  * by the library, which is the migration route the library provides (its ADR-0001). The conversion
- * carries over only what the legacy layout stored: decimals come back at the fixed scale it stored
- * them at, and content it never stored, such as contained resources, the ids and extensions of
- * primitives, and anything beyond its nesting, extension and open-type bounds, stays lost.
+ * carries over only what the legacy layout stored, which {@link #LOSSES} describes.
  *
  * <pre>{@code
  * Dataset<Row> converted = LegacyLayoutConversion.convertIfLegacy(context, "Patient", table);
@@ -45,12 +43,13 @@ import org.apache.spark.sql.types.StructType;
  */
 public final class LegacyLayoutConversion {
 
-  /** The losses of the conversion, as reported to an operator. */
+  /** What the conversion cannot recover, as reported to an operator. */
   public static final String LOSSES =
-      "decimals keep the fixed scale of six decimal places the earlier layout stored them at, and "
-          + "content the earlier layout never stored (contained resources, ids and extensions of "
-          + "primitive elements, and content beyond its nesting, extension and open type limits) "
-          + "remains absent";
+      "content the earlier layout did not store is absent from the converted data: digits of "
+          + "decimals beyond the sixth decimal place, the offset and sub-millisecond precision of "
+          + "instants, modifier extensions, ids and extensions of primitive elements, contained "
+          + "resources, and content beyond its nesting, extension and open type limits (see "
+          + "https://pathling.csiro.au/docs/libraries/io/schema#what-the-legacy-export-loses)";
 
   private LegacyLayoutConversion() {}
 
