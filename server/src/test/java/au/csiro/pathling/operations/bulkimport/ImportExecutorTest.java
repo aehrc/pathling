@@ -27,23 +27,40 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ImportConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.AccessDeniedError;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.io.DynamicDeltaSource;
+import au.csiro.pathling.io.ResourceEncoding;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.library.io.sink.FileInformation;
 import au.csiro.pathling.library.io.sink.WriteDetails;
+import au.csiro.pathling.library.io.source.LayoutDetector;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.library.io.source.StorageLayout;
+import au.csiro.pathling.library.io.source.UnsupportedLayoutException;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
+import ca.uhn.fhir.parser.IParser;
+import jakarta.annotation.Nonnull;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Patient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -70,6 +87,10 @@ class ImportExecutorTest {
   @Autowired private ServerConfiguration serverConfiguration;
 
   @Autowired private CacheableDatabase cacheableDatabase;
+
+  @Autowired private FhirEncoders fhirEncoders;
+
+  @Autowired private IParser jsonParser;
 
   @TempDir private Path tempDir;
 
@@ -829,8 +850,239 @@ class ImportExecutorTest {
   }
 
   // ========================================
+  // Parquet Layout Tests
+  // ========================================
+
+  /**
+   * Parquet written in the layout used before Parquet on FHIR (the legacy layout) is converted as
+   * it is imported, so the warehouse holds the same resources in the Parquet on FHIR layout.
+   */
+  @Test
+  void legacyLayoutParquetIsImportedAsParquetOnFhir() {
+    // Given - Parquet written by the legacy encoders.
+    final List<Patient> patients = patientsFromNdjson();
+    final String patientUrl = writeParquet("Patient", legacyDataset("Patient", patients));
+
+    // When
+    final ImportResponse response = importExecutor.execute(parquetRequest(patientUrl), JOB_ID);
+
+    // Then - the warehouse table is in the Parquet on FHIR layout and holds the same resources.
+    final Dataset<Row> table = warehouseTable(response);
+    assertThat(LayoutDetector.detect(table.schema()).getLayout())
+        .isEqualTo(StorageLayout.PARQUET_ON_FHIR);
+    assertThat(summarise(table)).isEqualTo(summarise(patients));
+  }
+
+  /** Parquet already in the Parquet on FHIR layout is imported as it is. */
+  @Test
+  void parquetOnFhirParquetIsImportedUnchanged() {
+    // Given - Parquet written in the Parquet on FHIR layout.
+    final List<Patient> patients = patientsFromNdjson();
+    final String patientUrl =
+        writeParquet("Patient", ResourceEncoding.encode(pathlingContext, "Patient", patients));
+
+    // When
+    final ImportResponse response = importExecutor.execute(parquetRequest(patientUrl), JOB_ID);
+
+    // Then
+    final Dataset<Row> table = warehouseTable(response);
+    assertThat(LayoutDetector.detect(table.schema()).getLayout())
+        .isEqualTo(StorageLayout.PARQUET_ON_FHIR);
+    assertThat(summarise(table)).isEqualTo(summarise(patients));
+  }
+
+  /**
+   * Parquet that mixes the two layouts can be neither read as it is nor converted, so it is
+   * rejected as invalid input carrying the library's explanation, and nothing is written.
+   */
+  @Test
+  void parquetMixingTheLayoutsIsRejectedAsInvalidInput() {
+    // Given - a legacy-layout table carrying a column only the Parquet on FHIR layout has.
+    final Dataset<Row> mixed =
+        legacyDataset("Patient", patientsFromNdjson())
+            .withColumn("resourceType", functions.lit("Patient"));
+    final String patientUrl = writeParquet("Patient", mixed);
+    final String expectedMessage = libraryRefusal(mixed);
+
+    // When/Then
+    assertThatThrownBy(() -> importExecutor.execute(parquetRequest(patientUrl), JOB_ID))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessage(expectedMessage)
+        .hasCauseInstanceOf(UnsupportedLayoutException.class);
+    assertThat(uniqueTempDir.resolve("Patient.parquet")).doesNotExist();
+    verifyNoInteractions(dataSource);
+  }
+
+  /**
+   * A warehouse table in the legacy layout is a server-side state, not a defect in the client's
+   * data: an append into it is refused with the library's exception rather than as invalid input.
+   */
+  @Test
+  void appendIntoLegacyWarehouseTableIsNotReportedAsInvalidInput() {
+    // Given - a legacy-layout warehouse table, and valid Parquet on FHIR input.
+    final List<Patient> patients = patientsFromNdjson();
+    legacyDataset("Patient", patients)
+        .write()
+        .format("delta")
+        .save(uniqueTempDir.resolve("Patient.parquet").toString());
+    final String patientUrl =
+        writeParquet("Patient", ResourceEncoding.encode(pathlingContext, "Patient", patients));
+
+    // When/Then
+    assertThatThrownBy(
+            () -> importExecutor.execute(parquetRequest(patientUrl, SaveMode.APPEND), JOB_ID))
+        .isInstanceOf(UnsupportedLayoutException.class);
+  }
+
+  /** A Parquet import in overwrite mode replaces the table, whatever the layout of the input. */
+  @Test
+  void parquetOverwriteReplacesTheTable() {
+    // Given - a Parquet on FHIR import, then a legacy-layout import of a subset.
+    final List<Patient> patients = patientsFromNdjson();
+    final List<Patient> subset = patients.subList(0, 10);
+    importExecutor.execute(
+        parquetRequest(
+            writeParquet("Patient", ResourceEncoding.encode(pathlingContext, "Patient", patients))),
+        JOB_ID);
+
+    // When
+    final ImportResponse response =
+        importExecutor.execute(
+            parquetRequest(writeParquet("Patient", legacyDataset("Patient", subset))), JOB_ID);
+
+    // Then - only the subset remains.
+    assertThat(summarise(warehouseTable(response))).isEqualTo(summarise(subset));
+  }
+
+  /** A Parquet import in append mode adds converted legacy-layout rows to the table. */
+  @Test
+  void parquetAppendAddsToTheTable() {
+    // Given - a legacy-layout import.
+    final String patientUrl =
+        writeParquet("Patient", legacyDataset("Patient", patientsFromNdjson()));
+    importExecutor.execute(parquetRequest(patientUrl), JOB_ID);
+
+    // When - the same data is appended.
+    final ImportResponse response =
+        importExecutor.execute(parquetRequest(patientUrl, SaveMode.APPEND), JOB_ID);
+
+    // Then - every row is there twice.
+    assertThat(warehouseTable(response).count()).isEqualTo(200L);
+  }
+
+  /**
+   * A Parquet import in merge mode updates existing resources by id and inserts new ones, with
+   * legacy-layout input merged into a Parquet on FHIR table.
+   */
+  @Test
+  void parquetMergeUpdatesAndInsertsByResourceId() {
+    // Given - the first 50 patients imported in the Parquet on FHIR layout.
+    final List<Patient> patients = patientsFromNdjson();
+    importExecutor.execute(
+        parquetRequest(
+            writeParquet(
+                "Patient",
+                ResourceEncoding.encode(pathlingContext, "Patient", patients.subList(0, 50)))),
+        JOB_ID);
+
+    // When - every patient is merged in from legacy-layout Parquet, with the first renamed.
+    final List<Patient> updated = patientsFromNdjson();
+    updated.getFirst().getNameFirstRep().setFamily("Merged");
+    final ImportResponse response =
+        importExecutor.execute(
+            parquetRequest(
+                writeParquet("Patient", legacyDataset("Patient", updated)), SaveMode.MERGE),
+            JOB_ID);
+
+    // Then - the table holds each patient once, as merged.
+    assertThat(summarise(warehouseTable(response))).isEqualTo(summarise(updated));
+  }
+
+  // ========================================
   // Helper Methods
   // ========================================
+
+  /** Parses the patients in the NDJSON test data. */
+  @Nonnull
+  private List<Patient> patientsFromNdjson() {
+    try (final Stream<String> lines = Files.lines(TEST_DATA_PATH.resolve("Patient.ndjson"))) {
+      return lines
+          .filter(line -> !line.isBlank())
+          .map(line -> jsonParser.parseResource(Patient.class, line))
+          .collect(Collectors.toCollection(ArrayList::new));
+    } catch (final IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
+
+  /** Encodes resources with the legacy encoders, as Parquet written before Parquet on FHIR was. */
+  @Nonnull
+  private Dataset<Row> legacyDataset(
+      @Nonnull final String resourceType, @Nonnull final List<? extends IBaseResource> resources) {
+    return pathlingContext
+        .getSpark()
+        .createDataset(List.copyOf(resources), fhirEncoders.of(resourceType))
+        .toDF();
+  }
+
+  /** Writes a dataset as Parquet named for its resource type, returning its URL. */
+  @Nonnull
+  private String writeParquet(
+      @Nonnull final String resourceType, @Nonnull final Dataset<Row> data) {
+    final Path path =
+        tempDir.resolve("input-" + UUID.randomUUID()).resolve(resourceType + ".parquet");
+    data.write().parquet(path.toString());
+    return "file://" + path.toAbsolutePath();
+  }
+
+  @Nonnull
+  private static ImportRequest parquetRequest(@Nonnull final String patientUrl) {
+    return parquetRequest(patientUrl, SaveMode.OVERWRITE);
+  }
+
+  @Nonnull
+  private static ImportRequest parquetRequest(
+      @Nonnull final String patientUrl, @Nonnull final SaveMode saveMode) {
+    return new ImportRequest(
+        "http://example.com/fhir/$import",
+        Map.of("Patient", List.of(patientUrl)),
+        saveMode,
+        ImportFormat.PARQUET);
+  }
+
+  /** Reads the warehouse table an import wrote. */
+  @Nonnull
+  private Dataset<Row> warehouseTable(@Nonnull final ImportResponse response) {
+    final String tablePath = getWriteDetails(response).fileInfos().getFirst().absoluteUrl();
+    return pathlingContext.getSpark().read().format("delta").load(tablePath);
+  }
+
+  /** Summarises patients as their ids mapped to their first family names, for comparison. */
+  @Nonnull
+  private Map<String, String> summarise(@Nonnull final List<? extends IBaseResource> patients) {
+    return patients.stream()
+        .map(Patient.class::cast)
+        .collect(
+            Collectors.toMap(
+                patient -> patient.getIdElement().getIdPart(),
+                patient -> patient.getNameFirstRep().getFamily()));
+  }
+
+  @Nonnull
+  private Map<String, String> summarise(@Nonnull final Dataset<Row> table) {
+    return summarise(ResourceEncoding.decode(pathlingContext, "Patient", table));
+  }
+
+  /** Returns the message the library refuses a dataset's layout with. */
+  @Nonnull
+  private static String libraryRefusal(@Nonnull final Dataset<Row> data) {
+    try {
+      LayoutDetector.check("Patient", data.schema());
+    } catch (final UnsupportedLayoutException e) {
+      return e.getMessage();
+    }
+    throw new AssertionError("Expected the library to refuse the layout");
+  }
 
   /** Extract WriteDetails from ImportResponse using reflection. */
   private WriteDetails getWriteDetails(final ImportResponse response) {
