@@ -18,9 +18,10 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
+import au.csiro.pathling.io.ResourceEncoding;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess.AccessType;
 import au.csiro.pathling.security.SecurityAspect;
@@ -35,8 +36,6 @@ import java.util.List;
 import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -65,7 +64,7 @@ public class ViewResolver {
 
   @Nonnull private final DataSource dataSource;
 
-  @Nonnull private final FhirEncoders fhirEncoders;
+  @Nonnull private final PathlingContext pathlingContext;
 
   @Nonnull private final ServerConfiguration serverConfiguration;
 
@@ -77,18 +76,18 @@ public class ViewResolver {
    * Constructs a new ViewResolver.
    *
    * @param dataSource the data source used to match stored ViewDefinitions by url
-   * @param fhirEncoders FHIR encoders used to decode the matched ViewDefinition rows
+   * @param pathlingContext the Pathling context, used to decode the matched ViewDefinition rows
    * @param serverConfiguration server configuration (used for the auth toggle)
    * @param fhirContext FHIR context used to serialise the resolved ViewDefinition for parsing
    */
   @Autowired
   public ViewResolver(
       @Nonnull final DataSource dataSource,
-      @Nonnull final FhirEncoders fhirEncoders,
+      @Nonnull final PathlingContext pathlingContext,
       @Nonnull final ServerConfiguration serverConfiguration,
       @Nonnull final FhirContext fhirContext) {
     this.dataSource = dataSource;
-    this.fhirEncoders = fhirEncoders;
+    this.pathlingContext = pathlingContext;
     this.serverConfiguration = serverConfiguration;
     this.fhirContext = fhirContext;
     this.gson = ViewDefinitionGson.create();
@@ -146,13 +145,8 @@ public class ViewResolver {
       }
       throw e;
     }
-    Dataset<Row> filtered =
-        viewDefinitions.filter(viewDefinitions.col("url").equalTo(canonical.getUrl()));
-    if (canonical.hasVersion()) {
-      filtered = filtered.filter(functions.col("version").equalTo(canonical.getVersion()));
-    }
-    final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(VIEW_DEFINITION);
-    return filtered.as(encoder).collectAsList();
+    return ResourceEncoding.decode(
+        pathlingContext, VIEW_DEFINITION, canonical.match(viewDefinitions));
   }
 
   /**

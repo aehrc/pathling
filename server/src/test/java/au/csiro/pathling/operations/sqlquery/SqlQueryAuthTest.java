@@ -31,11 +31,11 @@ import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ExternalTableConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.SqlQueryConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.SelectComponent;
 import au.csiro.pathling.errors.AccessDeniedError;
+import au.csiro.pathling.io.ResourceEncoding;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.operations.sql.SqlRunProvider;
@@ -51,6 +51,7 @@ import au.csiro.pathling.terminology.conceptmap.ConceptMapping;
 import au.csiro.pathling.terminology.expand.ValueSetExpansion;
 import au.csiro.pathling.terminology.expand.ValueSetMember;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.util.FhirServerTestConfiguration;
 import au.csiro.pathling.views.FhirView;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
@@ -59,7 +60,6 @@ import java.util.List;
 import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Library;
 import org.hl7.fhir.r4.model.StringType;
@@ -67,6 +67,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -85,6 +86,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
  *
  * @author John Grimes
  */
+@Import(FhirServerTestConfiguration.class)
 @SpringBootUnitTest
 class SqlQueryAuthTest {
 
@@ -94,8 +96,7 @@ class SqlQueryAuthTest {
   private static final String VALUE_SET_URL = "https://example.org/ValueSet/cvd";
   private static final String CONCEPT_MAP_URL = "https://example.org/ConceptMap/sct-to-icd10";
 
-  @Autowired private SparkSession spark;
-  @Autowired private FhirEncoders fhirEncoders;
+  @Autowired private PathlingContext pathlingContext;
   @Autowired private FhirContext fhirContext;
 
   private DataSource dataSource;
@@ -123,18 +124,18 @@ class SqlQueryAuthTest {
     serverConfiguration.setSqlQuery(sqlQuery);
 
     final ViewResolver viewResolver =
-        new ViewResolver(dataSource, fhirEncoders, serverConfiguration, fhirContext);
+        new ViewResolver(dataSource, pathlingContext, serverConfiguration, fhirContext);
     final LibraryReferenceResolver libraryReferenceResolver =
-        new LibraryReferenceResolver(dataSource, fhirEncoders, serverConfiguration);
+        new LibraryReferenceResolver(dataSource, pathlingContext, serverConfiguration);
     valueSetMembershipResolver = mock(ValueSetMembershipResolver.class);
     terminologyService = mock(TerminologyService.class);
     final TerminologyServiceFactory terminologyServiceFactory =
         mock(TerminologyServiceFactory.class);
     when(terminologyServiceFactory.build()).thenReturn(terminologyService);
-    final PathlingContext pathlingContext = mock(PathlingContext.class);
-    when(pathlingContext.getTerminologyServiceFactory()).thenReturn(terminologyServiceFactory);
+    final PathlingContext terminologyContext = mock(PathlingContext.class);
+    when(terminologyContext.getTerminologyServiceFactory()).thenReturn(terminologyServiceFactory);
     final ConceptMapResolver conceptMapResolver =
-        new ConceptMapResolver(pathlingContext, serverConfiguration);
+        new ConceptMapResolver(terminologyContext, serverConfiguration);
     resolver =
         new SqlDependencyResolver(
             viewResolver,
@@ -355,14 +356,12 @@ class SqlQueryAuthTest {
 
   @Nonnull
   private Dataset<Row> viewDefinitionDataset(@Nonnull final ViewDefinitionResource... views) {
-    return spark
-        .createDataset(List.of(views), fhirEncoders.of(ViewDefinitionResource.class))
-        .toDF();
+    return ResourceEncoding.encode(pathlingContext, "ViewDefinition", List.of(views));
   }
 
   @Nonnull
   private Dataset<Row> libraryDataset(@Nonnull final Library... libraries) {
-    return spark.createDataset(List.of(libraries), fhirEncoders.of("Library")).toDF();
+    return ResourceEncoding.encode(pathlingContext, "Library", List.of(libraries));
   }
 
   /**

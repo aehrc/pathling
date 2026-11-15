@@ -20,8 +20,8 @@ package au.csiro.pathling.search;
 import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
 
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.security.OperationAccess;
 import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess;
@@ -67,7 +67,7 @@ public class SearchProvider implements IResourceProvider {
 
   @Nonnull private final DataSource dataSource;
 
-  @Nonnull private final FhirEncoders fhirEncoders;
+  @Nonnull private final PathlingContext pathlingContext;
 
   @Nonnull private final Class<? extends IBaseResource> resourceClass;
 
@@ -79,19 +79,19 @@ public class SearchProvider implements IResourceProvider {
    * @param configuration the server configuration
    * @param fhirContext the FHIR context for FHIR operations
    * @param dataSource the data source containing the resources to query
-   * @param fhirEncoders the encoders for converting Spark rows to FHIR resources
+   * @param pathlingContext the Pathling context, used to decode rows into FHIR resources
    * @param resourceClass the class of the resource type to search
    */
   public SearchProvider(
       @Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final DataSource dataSource,
-      @Nonnull final FhirEncoders fhirEncoders,
+      @Nonnull final PathlingContext pathlingContext,
       @Nonnull final Class<? extends IBaseResource> resourceClass) {
     this.configuration = configuration;
     this.fhirContext = fhirContext;
     this.dataSource = dataSource;
-    this.fhirEncoders = fhirEncoders;
+    this.pathlingContext = pathlingContext;
     this.resourceClass = resourceClass;
     this.resourceTypeCode = fhirContext.getResourceDefinition(resourceClass).getName();
   }
@@ -170,7 +170,7 @@ public class SearchProvider implements IResourceProvider {
     return new SearchExecutor(
         fhirContext,
         dataSource,
-        fhirEncoders,
+        pathlingContext,
         resourceTypeCode,
         standardSearchQueryString,
         filters,

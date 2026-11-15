@@ -21,7 +21,6 @@ import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.LIBRARY_TYP
 import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.SQL_QUERY_TYPE_CODE;
 import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.SQL_VIEW_TYPE_CODE;
 
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.SelectComponent;
@@ -33,7 +32,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Attachment;
 import org.hl7.fhir.r4.model.CodeType;
@@ -118,18 +116,13 @@ public class SqlRunTestConfiguration {
    * Substitutes the server's data source with an in-memory one holding the stored subjects and
    * Patient data.
    *
-   * @param sparkSession the Spark session
    * @param pathlingContext the Pathling context
-   * @param fhirEncoders the FHIR encoders
    * @return the in-memory data source
    */
   @Primary
   @Bean
   @Nonnull
-  public QueryableDataSource deltaLake(
-      @Nonnull final SparkSession sparkSession,
-      @Nonnull final PathlingContext pathlingContext,
-      @Nonnull final FhirEncoders fhirEncoders) {
+  public QueryableDataSource deltaLake(@Nonnull final PathlingContext pathlingContext) {
     final List<IBaseResource> resources = new ArrayList<>();
     resources.add(patientView());
     resources.add(patientsByFamily());
@@ -139,7 +132,7 @@ public class SqlRunTestConfiguration {
     resources.add(patient("p1", "Smith"));
     resources.add(patient("p2", "Johnson"));
     resources.add(patient("p3", "Williams"));
-    return new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, resources);
+    return new CustomObjectDataSource(pathlingContext, resources);
   }
 
   /** Builds the stored Patient ViewDefinition. */

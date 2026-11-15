@@ -20,7 +20,6 @@ package au.csiro.pathling.operations.view;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ConstantComponent;
@@ -35,7 +34,6 @@ import au.csiro.pathling.util.FhirServerTestConfiguration;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.StringType;
@@ -56,11 +54,7 @@ import org.springframework.context.annotation.Import;
 @SpringBootUnitTest
 class ViewDefinitionReadTest {
 
-  @Autowired private SparkSession sparkSession;
-
   @Autowired private PathlingContext pathlingContext;
-
-  @Autowired private FhirEncoders fhirEncoders;
 
   private CustomObjectDataSource dataSource;
   private ReadExecutor readExecutor;
@@ -86,9 +80,8 @@ class ViewDefinitionReadTest {
     // Complex ViewDefinition with nested selects.
     viewDefinitions.add(createComplexViewDefinition("view-complex", "complex_view"));
 
-    dataSource =
-        new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, viewDefinitions);
-    readExecutor = new ReadExecutor(dataSource, fhirEncoders);
+    dataSource = new CustomObjectDataSource(pathlingContext, viewDefinitions);
+    readExecutor = new ReadExecutor(dataSource, pathlingContext);
   }
 
   // -------------------------------------------------------------------------
