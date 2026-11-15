@@ -137,6 +137,7 @@ export function buildCombinedTimelines(index) {
           runId: run.id,
           date: run.date,
           commit: run.commit,
+          version: run.version,
           ...geometricMean(
             group.results.map(
               (result) => results.get(resultKey(result)).relative,

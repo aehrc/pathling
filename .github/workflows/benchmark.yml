@@ -36,6 +36,7 @@ jobs:
     outputs:
       commit_sha: ${{ steps.get_commit.outputs.commit_sha }}
       short_sha: ${{ steps.get_commit.outputs.short_sha }}
+      version: ${{ steps.get_version.outputs.version }}
       date: ${{ steps.run_benchmark.outputs.date }}
     permissions:
       actions: read
@@ -272,6 +273,7 @@ jobs:
         env:
           SHORT_SHA: ${{ needs.benchmark.outputs.short_sha }}
           COMMIT_SHA: ${{ needs.benchmark.outputs.commit_sha }}
+          VERSION: ${{ needs.benchmark.outputs.version }}
           DATE: ${{ needs.benchmark.outputs.date }}
         run: |
           bun site/scripts/publishBenchmark.js \
@@ -281,6 +283,7 @@ jobs:
             --data-dir gh-pages/benchmarks/data \
             --run-id "${{ github.run_id }}" \
             --commit "${COMMIT_SHA}" \
+            --version "${VERSION}" \
             --date "${DATE}"
 
       - name: Commit and push

@@ -32,9 +32,9 @@ import {
 } from "../../benchmarks/jmh.js";
 import {
   commitUrl,
-  formatDate,
   formatNumber,
   formatScore,
+  runName,
   workflowRunUrl,
 } from "./format";
 import styles from "./styles.module.css";
@@ -65,7 +65,7 @@ export default function RunDetail({
 
   return (
     <section>
-      <h2>Run {formatDate(run.date)}</h2>
+      <h2>Run {runName(run)}</h2>
       {navigation}
       <dl className={styles.metadata}>
         <dt>Commit</dt>

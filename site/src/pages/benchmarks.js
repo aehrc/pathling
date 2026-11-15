@@ -44,6 +44,7 @@ import {
   commitUrl,
   formatDate,
   runLabel,
+  runName,
 } from "../components/benchmarks/format";
 import styles from "../components/benchmarks/styles.module.css";
 import useJson from "../components/benchmarks/useJson";
@@ -82,7 +83,7 @@ export default function Benchmarks() {
         navigate({ run: runId });
       }}
     >
-      {formatDate(findRun(runId).date)}
+      {runName(findRun(runId))}
     </a>
   );
   const overviewLink = (

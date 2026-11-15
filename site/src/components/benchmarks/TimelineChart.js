@@ -24,7 +24,13 @@
 
 import React from "react";
 import { lineObstacles, placeTags } from "../../benchmarks/annotations.js";
-import { commitUrl, formatDate, formatNumber, formatScore } from "./format";
+import {
+  commitUrl,
+  formatDate,
+  formatNumber,
+  formatScore,
+  runName,
+} from "./format";
 import styles from "./styles.module.css";
 
 const WIDTH = 800;
@@ -339,7 +345,7 @@ export default function TimelineChart({
                 >
                   <title>
                     {`${series.label}: ${formatScore(point)} ${timeline.unit}\n` +
-                      `${formatDate(point.date)}, commit ${point.commit.slice(0, 7)}`}
+                      `${runName(point)}, commit ${point.commit.slice(0, 7)}`}
                   </title>
                   {point.scoreError !== null && (
                     <line
