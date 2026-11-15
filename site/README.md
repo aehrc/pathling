@@ -23,18 +23,17 @@ Most changes are reflected live without having to restart the server.
 The benchmarks page fetches its data at runtime from `/benchmarks/data`, rather
 than building it into the site. The benchmark workflow publishes this data to
 the `gh-pages` branch. To view the page on a local development server, copy the
-data into `static`:
+data into `static/benchmarks`:
 
 ```
-$ git fetch origin gh-pages
-$ git archive origin/gh-pages benchmarks/data | tar -x -C static
+$ bun run fetch-benchmarks
 ```
 
-To add the results of a local JMH run instead, use `scripts/publishBenchmark.js`
-with `--data-dir static/benchmarks/data`. Its header comment describes the
-other options.
+This replaces any existing local copy. To add the results of a local JMH run,
+use `scripts/publishBenchmark.js` with `--data-dir static/benchmarks/data`. Its
+header comment describes the other options.
 
-Delete `static/benchmarks` afterwards so that it is not committed.
+`static/benchmarks` is ignored by Git.
 
 ### Build
 

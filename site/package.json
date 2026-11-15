@@ -12,7 +12,8 @@
     "serve": "docusaurus serve --dir target/site",
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
-    "test": "bun test"
+    "test": "bun test",
+    "fetch-benchmarks": "git fetch origin gh-pages && rm -rf static/benchmarks && git -C \"$(git rev-parse --show-toplevel)\" archive origin/gh-pages benchmarks/data | tar -x -C static"
   },
   "dependencies": {
     "@docusaurus/core": "^3.8.1",
