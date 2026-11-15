@@ -51,6 +51,27 @@ public enum TemporalPrecision {
   }
 
   /**
+   * Returns the precision whose unit is the given one.
+   *
+   * @param chronoUnit the unit of a precision, as {@code FhirDateTime} gives it
+   * @return the precision
+   * @throws IllegalArgumentException if no precision has the unit
+   */
+  @Nonnull
+  public static TemporalPrecision of(@Nonnull final ChronoUnit chronoUnit) {
+    return switch (chronoUnit) {
+      case YEARS -> YEAR;
+      case MONTHS -> MONTH;
+      case DAYS -> DAY;
+      case HOURS -> HOUR;
+      case MINUTES -> MINUTE;
+      case SECONDS -> SECOND;
+      case NANOS -> FRACS;
+      default -> throw new IllegalArgumentException("No precision has the unit " + chronoUnit);
+    };
+  }
+
+  /**
    * Returns true if the underlying ChronoUnit is time-based.
    *
    * @return true if the underlying ChronoUnit is time-based, false otherwise

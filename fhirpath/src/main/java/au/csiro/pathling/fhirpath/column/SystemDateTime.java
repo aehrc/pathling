@@ -28,6 +28,7 @@ import au.csiro.pathling.schema.annotation.kinds.DateRangeKind;
 import au.csiro.pathling.schema.date.FhirDateTime;
 import au.csiro.pathling.utilities.CanonicalStructure;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
@@ -181,6 +182,18 @@ public final class SystemDateTime {
         lit(text).alias(VALUE),
         lit(parsed.getLowerBoundary()).alias(START),
         lit(parsed.getUpperBoundary()).alias(END));
+  }
+
+  /**
+   * Returns the System date of a FHIR value, or the absent System date where the value has no text,
+   * as a constant without a value is empty.
+   *
+   * @param text the text of the date, or null
+   * @return the System date, or a null one
+   */
+  @Nonnull
+  public static Column fromValue(@Nullable final String text) {
+    return text == null ? empty() : fromLiteral(text);
   }
 
   /**

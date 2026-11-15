@@ -93,7 +93,7 @@ public class DateCollection extends Collection
   @Nonnull
   public static DateCollection fromValue(@Nonnull final DateType value) {
     return DateCollection.build(
-        new DefaultRepresentation(SystemDateTime.fromLiteral(value.getValueAsString())));
+        new DefaultRepresentation(SystemDateTime.fromValue(value.getValueAsString())));
   }
 
   /**

@@ -26,13 +26,27 @@ import java.util.Optional;
  * A resource resolver whose resources are read with their primitives' ids and extensions (decision
  * 141, D14): it resolves what another resolver does, under definitions that read them (see {@link
  * PrimitiveMetadata}).
- *
- * @param delegate the resolver that resolves the resources
- * @param metadata the definitions of a primitive's id and extensions
  */
-record PrimitiveMetadataResolver(
-    @Nonnull ResourceResolver delegate, @Nonnull PrimitiveMetadata metadata)
-    implements ResourceResolver {
+final class PrimitiveMetadataResolver implements ResourceResolver {
+
+  /** The resolver that resolves the resources. */
+  @Nonnull private final ResourceResolver delegate;
+
+  /** The definitions of a primitive's id and extensions. */
+  @Nonnull private final PrimitiveMetadata metadata;
+
+  /**
+   * Creates a resolver that resolves what another does, under definitions that read primitive
+   * metadata.
+   *
+   * @param delegate the resolver that resolves the resources
+   * @param metadata the definitions of a primitive's id and extensions
+   */
+  PrimitiveMetadataResolver(
+      @Nonnull final ResourceResolver delegate, @Nonnull final PrimitiveMetadata metadata) {
+    this.delegate = delegate;
+    this.metadata = metadata;
+  }
 
   @Override
   @Nonnull

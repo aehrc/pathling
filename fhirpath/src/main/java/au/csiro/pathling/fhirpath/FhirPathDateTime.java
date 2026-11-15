@@ -22,7 +22,6 @@ import jakarta.annotation.Nonnull;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
-import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 
@@ -50,12 +49,7 @@ public class FhirPathDateTime {
   @Nonnull
   public static FhirPathDateTime parse(@Nonnull final String dateTimeString) {
     final FhirDateTime parsed = FhirDateTime.parse(dateTimeString);
-    final TemporalPrecision precision =
-        Stream.of(TemporalPrecision.values())
-            .filter(candidate -> candidate.getChronoUnit() == parsed.getPrecision())
-            .findFirst()
-            .orElseThrow();
-    return new FhirPathDateTime(parsed.getValue(), precision);
+    return new FhirPathDateTime(parsed.getValue(), TemporalPrecision.of(parsed.getPrecision()));
   }
 
   /**

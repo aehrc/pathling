@@ -19,7 +19,6 @@ package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.annotations.UsedByReflection;
 import au.csiro.pathling.definition.NodeDefinition;
-import au.csiro.pathling.fhirpath.FhirPathDateTime;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
@@ -28,6 +27,7 @@ import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.SystemDateTime;
 import jakarta.annotation.Nonnull;
 import java.text.ParseException;
+import java.time.format.DateTimeParseException;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.DateTimeType;
@@ -98,7 +98,7 @@ public class DateTimeCollection extends Collection
   @Nonnull
   public static DateTimeCollection fromValue(@Nonnull final DateTimeType value) {
     return DateTimeCollection.build(
-        new DefaultRepresentation(SystemDateTime.fromLiteral(value.getValueAsString())));
+        new DefaultRepresentation(SystemDateTime.fromValue(value.getValueAsString())));
   }
 
   /**
@@ -112,7 +112,7 @@ public class DateTimeCollection extends Collection
   @Nonnull
   public static DateTimeCollection fromValue(@Nonnull final InstantType value) {
     final ColumnRepresentation column =
-        new DefaultRepresentation(SystemDateTime.fromLiteral(value.getValueAsString()));
+        new DefaultRepresentation(SystemDateTime.fromValue(value.getValueAsString()));
     return new DateTimeCollection(
         column,
         Optional.of(FhirPathType.DATETIME),
@@ -131,11 +131,12 @@ public class DateTimeCollection extends Collection
   public static DateTimeCollection fromLiteral(@Nonnull final String dateTimeLiteral)
       throws ParseException {
     final String dateTimeString = dateTimeLiteral.replaceFirst("^@", "");
-    if (!FhirPathDateTime.isDateTimeValue(dateTimeString)) {
+    try {
+      return DateTimeCollection.build(
+          new DefaultRepresentation(SystemDateTime.fromLiteral(dateTimeString)));
+    } catch (final DateTimeParseException e) {
       throw new ParseException("Invalid dateTime literal: " + dateTimeLiteral, 0);
     }
-    return DateTimeCollection.build(
-        new DefaultRepresentation(SystemDateTime.fromLiteral(dateTimeString)));
   }
 
   /**
