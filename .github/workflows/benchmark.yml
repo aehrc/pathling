@@ -1,6 +1,11 @@
-# This workflow benchmarks the library API using a previously successful build.
+# This workflow benchmarks the library API and publishes the results to the
+# benchmarks page of the site.
 #
-# It is triggered manually and requires the user to input the workflow run ID of the build.
+# It is triggered manually, and benchmarks either the JARs of a previously
+# successful build, given by its workflow run ID, or a release published to
+# Maven Central, given by its version. Every run also benchmarks a fixed
+# reference release on the same runner, and the site shows scores relative to
+# it, which cancels out most of the difference in speed between runners.
 
 name: Benchmark
 
@@ -9,18 +14,51 @@ on:
     inputs:
       run_id:
         description: "Workflow run ID of a successful build"
-        required: true
+        required: false
+      version:
+        description: "Released version to benchmark instead, e.g. 9.9.0"
+        required: false
+      publish:
+        description: "Publish the results to the site"
+        type: boolean
+        default: true
+
+env:
+  # The earliest release in which every view in PathlingBenchmark gives the
+  # same results as today: earlier releases ignore the repeat clause used by
+  # QuestionnaireResponseFlat. Changing it makes earlier runs incomparable with
+  # later ones.
+  REFERENCE_VERSION: "9.1.0"
 
 jobs:
   benchmark:
     runs-on: ubuntu-latest
+    outputs:
+      commit_sha: ${{ steps.get_commit.outputs.commit_sha }}
+      short_sha: ${{ steps.get_commit.outputs.short_sha }}
+      date: ${{ steps.run_benchmark.outputs.date }}
     permissions:
       actions: read
       contents: read
 
     steps:
+      - name: Validate inputs
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ -n "$RUN_ID" && -n "$RELEASE_VERSION" ]] || [[ -z "$RUN_ID" && -z "$RELEASE_VERSION" ]]; then
+            echo "::error::Specify either run_id or version"
+            exit 1
+          fi
+          if [[ -n "$RELEASE_VERSION" && ! "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid version: must be in the form 1.2.3"
+            exit 1
+          fi
+
       - name: Get workflow run info
         id: get_run_info
+        if: inputs.run_id != ''
         uses: actions/github-script@v7
         env:
           RUN_ID: ${{ github.event.inputs.run_id }}
@@ -43,7 +81,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ steps.get_run_info.outputs.commit_sha }}
+          ref: ${{ steps.get_run_info.outputs.commit_sha || github.sha }}
 
       - name: Set up build environment
         uses: ./.github/actions/setup-build-tools
@@ -52,6 +90,7 @@ jobs:
           sonar-cache: "false"
 
       - name: Download JARs from specified run
+        if: inputs.run_id != ''
         uses: actions/download-artifact@v4
         with:
           name: jars
@@ -59,17 +98,35 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: jars/
 
-      - name: Get version from POM
+      - name: Get version
         id: get_version
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
         run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout -f utilities/pom.xml)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          if [[ -n "$RELEASE_VERSION" ]]; then
+            VERSION=$RELEASE_VERSION
+          else
+            VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout -f utilities/pom.xml)
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Get short SHA
-        id: get_short_sha
-        run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      # A release is benchmarked as the commit of its tag, while the benchmark
+      # code comes from the commit that the workflow runs on.
+      - name: Get benchmarked commit
+        id: get_commit
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ -n "$RELEASE_VERSION" ]]; then
+            COMMIT=$(git rev-parse "v${RELEASE_VERSION}^{commit}")
+          else
+            COMMIT=$(git rev-parse HEAD)
+          fi
+          echo "commit_sha=$COMMIT" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$(git rev-parse --short "$COMMIT")" >> "$GITHUB_OUTPUT"
 
       - name: Install artifacts
+        if: inputs.run_id != ''
         run: |
           VERSION="${{ steps.get_version.outputs.version }}"
 
@@ -104,19 +161,135 @@ jobs:
               -Dclassifier=sources
           done
 
-      - name: Build benchmark JAR
-        run: mvn --batch-mode package -pl benchmark
-
-      - name: Run benchmark
+      # A release, and the reference release, are built by giving a copy of the
+      # benchmark module the release's parent POM, and with it the Spark
+      # version, from Maven Central. Only PathlingBenchmark is built, as the
+      # other benchmarks use APIs that older releases do not have, and the JOL
+      # version is supplied because older parent POMs do not define it. The
+      # checkstyle and licence checks are skipped, as some parent POMs look for
+      # their configuration relative to the module rather than the root.
+      - name: Build benchmark JARs
+        id: build
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          VERSION: ${{ steps.get_version.outputs.version }}
         run: |
-          java -Xshare:off -Xmx8g -ea -Duser.timezone=UTC \
-            --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
-            --add-opens=java.base/java.net=ALL-UNNAMED \
-            -jar benchmark/target/benchmark-${{ steps.get_version.outputs.version }}.jar \
-            -rf json -rff benchmark-${{ steps.get_short_sha.outputs.short_sha }}.json
+          build_release() {
+            local version=$1 dir=$2
+            cp -R benchmark "$dir"
+            find "$dir/src/main/java" -name '*.java' ! -name 'PathlingBenchmark*.java' -delete
+            rm -rf "$dir/src/test"
+            sed -i "0,/<version>[^<]*<\/version>/s//<version>${version}<\/version>/" "$dir/pom.xml"
+            mvn --batch-mode package -f "$dir/pom.xml" -DskipTests -Dcheckstyle.skip \
+              -Dlicense.skip -Dpathling.jolVersion=0.17
+          }
+          build_release "$REFERENCE_VERSION" benchmark-reference
+          echo "reference_jar=benchmark-reference/target/benchmark-${REFERENCE_VERSION}.jar" >> "$GITHUB_OUTPUT"
+          if [[ -n "$RELEASE_VERSION" ]]; then
+            build_release "$RELEASE_VERSION" benchmark-release
+            echo "jar=benchmark-release/target/benchmark-${VERSION}.jar" >> "$GITHUB_OUTPUT"
+          else
+            mvn --batch-mode package -pl benchmark
+            echo "jar=benchmark/target/benchmark-${VERSION}.jar" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The reference release is benchmarked on the same runner, immediately
+      # before the code under test, so that its scores can be used to cancel
+      # out the speed of the runner. TerminologyBenchmark is excluded, as it
+      # needs a terminology source that is not available here. The module
+      # options are those that the Spark launcher adds, which releases built on
+      # Spark 3.5 need on Java 21. The QuestionnaireResponseFlat view is
+      # excluded for releases before the reference, as they ignore its repeat
+      # clause and return different rows, so their results are not comparable.
+      - name: Run benchmark
+        id: run_benchmark
+        env:
+          JAR: ${{ steps.build.outputs.jar }}
+          REFERENCE_JAR: ${{ steps.build.outputs.reference_jar }}
+          RELEASE_VERSION: ${{ inputs.version }}
+          SHORT_SHA: ${{ steps.get_commit.outputs.short_sha }}
+        run: |
+          OPENS=()
+          for PACKAGE in java.lang java.lang.invoke java.lang.reflect java.io java.net \
+            java.nio java.util java.util.concurrent java.util.concurrent.atomic sun.nio.ch \
+            sun.nio.cs sun.security.action sun.util.calendar; do
+            OPENS+=("--add-opens=java.base/$PACKAGE=ALL-UNNAMED")
+          done
+          run_benchmark() {
+            java -Xshare:off -Xmx8g -ea -Duser.timezone=UTC \
+              --add-exports=java.base/sun.nio.ch=ALL-UNNAMED "${OPENS[@]}" \
+              -jar "$1" -rf json -rff "$2" "${@:3}" PathlingBenchmark
+          }
+          EXCLUDES=()
+          if [[ "$RELEASE_VERSION" =~ ^(8\.|9\.0\.) ]]; then
+            EXCLUDES=(-e QuestionnaireResponseFlat)
+          fi
+          run_benchmark "$REFERENCE_JAR" "benchmark-${SHORT_SHA}-reference.json"
+          run_benchmark "$JAR" "benchmark-${SHORT_SHA}.json" "${EXCLUDES[@]}"
+          echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       - name: Save results
         uses: actions/upload-artifact@v4
         with:
-          name: benchmark-results-${{ steps.get_short_sha.outputs.short_sha }}
+          name: benchmark-results-${{ steps.get_commit.outputs.short_sha }}
           path: benchmark-*.json
+
+  # Adds the results to the data served at /benchmarks/data on the site. The
+  # site deployment preserves this directory, and shares the concurrency group
+  # so that the two never write to gh-pages at the same time.
+  publish:
+    needs: benchmark
+    if: inputs.publish
+    runs-on: ubuntu-latest
+    concurrency:
+      group: gh-pages
+      cancel-in-progress: false
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-tools
+        with:
+          java: "false"
+          bun: "true"
+
+      - name: Download results
+        uses: actions/download-artifact@v4
+        with:
+          name: benchmark-results-${{ needs.benchmark.outputs.short_sha }}
+
+      - name: Add results to benchmark data
+        env:
+          SHORT_SHA: ${{ needs.benchmark.outputs.short_sha }}
+          COMMIT_SHA: ${{ needs.benchmark.outputs.commit_sha }}
+          DATE: ${{ needs.benchmark.outputs.date }}
+        run: |
+          bun site/scripts/publishBenchmark.js \
+            --results "benchmark-${SHORT_SHA}.json" \
+            --reference-results "benchmark-${SHORT_SHA}-reference.json" \
+            --reference "${REFERENCE_VERSION}" \
+            --data-dir gh-pages/benchmarks/data \
+            --run-id "${{ github.run_id }}" \
+            --commit "${COMMIT_SHA}" \
+            --date "${DATE}"
+
+      - name: Commit and push
+        working-directory: gh-pages
+        env:
+          SHORT_SHA: ${{ needs.benchmark.outputs.short_sha }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add benchmarks/data
+          git commit -m "Publish benchmark results for ${SHORT_SHA}"
+          git push
