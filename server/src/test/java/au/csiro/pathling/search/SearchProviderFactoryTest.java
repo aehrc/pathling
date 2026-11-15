@@ -25,7 +25,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import ca.uhn.fhir.context.FhirContext;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -51,7 +51,7 @@ class SearchProviderFactoryTest {
   @Mock private ApplicationContext applicationContext;
   @Mock private ServerConfiguration configuration;
   @Mock private QueryableDataSource dataSource;
-  @Mock private FhirEncoders fhirEncoders;
+  @Mock private PathlingContext pathlingContext;
 
   private SearchProviderFactory factory;
   private FhirContext fhirContext;
@@ -61,7 +61,7 @@ class SearchProviderFactoryTest {
     fhirContext = FhirContext.forR4();
     factory =
         new SearchProviderFactory(
-            applicationContext, configuration, fhirContext, dataSource, fhirEncoders);
+            applicationContext, configuration, fhirContext, dataSource, pathlingContext);
   }
 
   @Test
@@ -80,7 +80,7 @@ class SearchProviderFactoryTest {
             configuration,
             fhirContext,
             dataSource,
-            fhirEncoders,
+            pathlingContext,
             Patient.class);
   }
 
@@ -100,7 +100,7 @@ class SearchProviderFactoryTest {
             configuration,
             fhirContext,
             dataSource,
-            fhirEncoders,
+            pathlingContext,
             Patient.class);
   }
 }

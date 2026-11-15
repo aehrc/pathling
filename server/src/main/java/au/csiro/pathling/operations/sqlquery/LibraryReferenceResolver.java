@@ -18,8 +18,9 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.io.ResourceEncoding;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess.AccessType;
 import au.csiro.pathling.security.SecurityAspect;
@@ -28,8 +29,6 @@ import java.util.List;
 import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Library;
@@ -50,7 +49,7 @@ public class LibraryReferenceResolver {
 
   @Nonnull private final DataSource dataSource;
 
-  @Nonnull private final FhirEncoders fhirEncoders;
+  @Nonnull private final PathlingContext pathlingContext;
 
   @Nonnull private final ServerConfiguration serverConfiguration;
 
@@ -58,16 +57,16 @@ public class LibraryReferenceResolver {
    * Constructs a new LibraryReferenceResolver.
    *
    * @param dataSource the data source searched for matching Libraries
-   * @param fhirEncoders FHIR encoders used to decode the search result rows
+   * @param pathlingContext the Pathling context, used to decode the matched rows
    * @param serverConfiguration the server configuration (used for the auth toggle)
    */
   @Autowired
   public LibraryReferenceResolver(
       @Nonnull final DataSource dataSource,
-      @Nonnull final FhirEncoders fhirEncoders,
+      @Nonnull final PathlingContext pathlingContext,
       @Nonnull final ServerConfiguration serverConfiguration) {
     this.dataSource = dataSource;
-    this.fhirEncoders = fhirEncoders;
+    this.pathlingContext = pathlingContext;
     this.serverConfiguration = serverConfiguration;
   }
 
@@ -101,13 +100,8 @@ public class LibraryReferenceResolver {
       }
       throw e;
     }
-    Dataset<Row> filtered = libraries.filter(libraries.col("url").equalTo(reference.getUrl()));
-    if (reference.hasVersion()) {
-      filtered = filtered.filter(functions.col("version").equalTo(reference.getVersion()));
-    }
-
-    final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(LIBRARY);
-    final List<IBaseResource> candidates = filtered.as(encoder).collectAsList();
+    final List<IBaseResource> candidates =
+        ResourceEncoding.decode(pathlingContext, LIBRARY, reference.match(libraries));
     if (candidates.isEmpty()) {
       return Optional.empty();
     }

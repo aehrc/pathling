@@ -206,4 +206,59 @@ class UpdateOperationIT {
 
     log.info("Update with missing resource correctly returned error");
   }
+
+  // The stored Patient table holds no generalPractitioner, as no test Patient has one. An update
+  // that introduces it must widen the table, and the new element must be visible to read and search
+  // straight away, without a restart.
+  @Test
+  void testUpdateIntroducingUnseenElementIsReadableAndSearchable() {
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
+
+    final String patientId = "121503c8-9564-4b48-9086-a22df717948e";
+    final String baseUri = "http://localhost:" + port + "/fhir/Patient";
+    final String requestBody =
+        """
+        {
+          "resourceType": "Patient",
+          "id": "%s",
+          "gender": "female",
+          "generalPractitioner": [{"reference": "Practitioner/gp-1"}]
+        }
+        """
+            .formatted(patientId);
+
+    webTestClient
+        .put()
+        .uri(baseUri + "/" + patientId)
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .bodyValue(requestBody)
+        .exchange()
+        .expectStatus()
+        .isOk();
+
+    webTestClient
+        .get()
+        .uri(baseUri + "/" + patientId)
+        .header("Accept", "application/fhir+json")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.generalPractitioner[0].reference")
+        .isEqualTo("Practitioner/gp-1");
+
+    webTestClient
+        .get()
+        .uri(baseUri + "?general-practitioner=Practitioner/gp-1")
+        .header("Accept", "application/fhir+json")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.total")
+        .isEqualTo(1)
+        .jsonPath("$.entry[0].resource.id")
+        .isEqualTo(patientId);
+  }
 }

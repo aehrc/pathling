@@ -19,7 +19,6 @@ package au.csiro.pathling.operations.compartment;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.CustomObjectDataSource;
@@ -30,7 +29,6 @@ import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Appointment;
 import org.hl7.fhir.r4.model.Appointment.AppointmentParticipantComponent;
 import org.hl7.fhir.r4.model.Observation;
@@ -56,11 +54,7 @@ class PatientCompartmentServiceTest {
 
   @Autowired private PatientCompartmentService service;
 
-  @Autowired private SparkSession sparkSession;
-
   @Autowired private PathlingContext pathlingContext;
-
-  @Autowired private FhirEncoders fhirEncoders;
 
   // ==================== Tests for getPatientCompartmentPaths ====================
 
@@ -152,8 +146,7 @@ class PatientCompartmentServiceTest {
     patient2.setId("patient-2");
 
     final CustomObjectDataSource dataSource =
-        new CustomObjectDataSource(
-            sparkSession, pathlingContext, fhirEncoders, List.of(patient1, patient2));
+        new CustomObjectDataSource(pathlingContext, List.of(patient1, patient2));
 
     final Dataset<Row> dataset = dataSource.read("Patient");
     final Dataset<Row> filtered =
@@ -195,8 +188,7 @@ class PatientCompartmentServiceTest {
     obs3.setSubject(new Reference("Device/device-1")); // Not a patient reference.
 
     final CustomObjectDataSource dataSource =
-        new CustomObjectDataSource(
-            sparkSession, pathlingContext, fhirEncoders, List.of(obs1, obs2, obs3));
+        new CustomObjectDataSource(pathlingContext, List.of(obs1, obs2, obs3));
 
     final Dataset<Row> dataset = dataSource.read("Observation");
     final Dataset<Row> filtered =
@@ -249,8 +241,7 @@ class PatientCompartmentServiceTest {
     appt3.addParticipant(participant3);
 
     final CustomObjectDataSource dataSource =
-        new CustomObjectDataSource(
-            sparkSession, pathlingContext, fhirEncoders, List.of(appt1, appt2, appt3));
+        new CustomObjectDataSource(pathlingContext, List.of(appt1, appt2, appt3));
 
     final Dataset<Row> dataset = dataSource.read("Appointment");
     final Dataset<Row> filtered =
@@ -268,7 +259,7 @@ class PatientCompartmentServiceTest {
     org1.setId("org-1");
 
     final CustomObjectDataSource dataSource =
-        new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, List.of(org1));
+        new CustomObjectDataSource(pathlingContext, List.of(org1));
 
     final Dataset<Row> dataset = dataSource.read("Organization");
     final Dataset<Row> filtered =
