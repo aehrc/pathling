@@ -261,6 +261,15 @@ each benchmark over time, the details of each run, and comparisons of two runs.
 Comparisons use a two-sided Welch's t-test on the per-iteration scores divided
 by the reference score, with a significance level of 0.05.
 
+Above the individual benchmarks, the page shows an overall combined score and
+one for each phase (`encode`, `decode`, `plan` and `execute`, taken from the
+leading word of the method name). A combined score is the geometric mean of the
+scores relative to the reference, and its error is propagated from the errors
+of those scores assuming that they are independent. Only the benchmarks present
+in every published run are combined, so adding a benchmark does not shift the
+combined score. The scores are computed by the page
+(`site/src/benchmarks/combined.js`), not stored with the results.
+
 The timelines are annotated with releases and with changes that affected
 performance, such as the switch to the ucumate UCUM library. Unlike the
 results, the annotations are part of the site source, in
