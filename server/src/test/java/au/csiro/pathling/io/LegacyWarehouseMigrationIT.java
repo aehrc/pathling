@@ -114,7 +114,8 @@ class LegacyWarehouseMigrationIT {
   void everyTableIsConvertedAndItsEarlierVersionKept() {
     for (final String type : TABLES) {
       final String path = tablePath(type);
-      assertThat(LayoutDetector.detect(spark.read().format("delta").load(path).schema()).getLayout())
+      assertThat(
+              LayoutDetector.detect(spark.read().format("delta").load(path).schema()).getLayout())
           .as(type)
           .isEqualTo(StorageLayout.PARQUET_ON_FHIR);
       final long latest =
