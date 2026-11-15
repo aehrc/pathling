@@ -35,6 +35,7 @@ import {
   annotationsBetween,
   interleaveAnnotations,
 } from "../benchmarks/annotations.js";
+import { buildCombinedTimelines } from "../benchmarks/combined.js";
 import { buildTimelines } from "../benchmarks/runIndex.js";
 import RunComparison from "../components/benchmarks/RunComparison";
 import RunDetail from "../components/benchmarks/RunDetail";
@@ -218,6 +219,19 @@ function Overview({ runs, index, runHref, runLink, onSelectRun, onCompare }) {
   ));
   const dateRange = [runs[0].date, runs[runs.length - 1].date];
   const visibleAnnotations = annotationsBetween(annotations, ...dateRange);
+  const combinedTimelines = buildCombinedTimelines(index);
+  const timelineSection = (timeline) => (
+    <section key={timeline.benchmark}>
+      <h2>{timeline.benchmark}</h2>
+      <TimelineChart
+        timeline={timeline}
+        runHref={runHref}
+        onSelectRun={onSelectRun}
+        dateRange={dateRange}
+        annotations={visibleAnnotations}
+      />
+    </section>
+  );
 
   return (
     <>
@@ -257,18 +271,15 @@ function Overview({ runs, index, runHref, runLink, onSelectRun, onCompare }) {
           Compare
         </button>
       </form>
-      {buildTimelines(index).map((timeline) => (
-        <section key={timeline.benchmark}>
-          <h2>{timeline.benchmark}</h2>
-          <TimelineChart
-            timeline={timeline}
-            runHref={runHref}
-            onSelectRun={onSelectRun}
-            dateRange={dateRange}
-            annotations={visibleAnnotations}
-          />
-        </section>
-      ))}
+      {combinedTimelines.length > 0 && (
+        <p>
+          The overall score, and the score of each phase, is the geometric mean
+          of the scores relative to the reference, over the benchmarks present
+          in every run.
+        </p>
+      )}
+      {combinedTimelines.map(timelineSection)}
+      {buildTimelines(index).map(timelineSection)}
       <section>
         <h2>Runs</h2>
         <ul>

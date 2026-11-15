@@ -198,12 +198,15 @@ jobs:
       # out the speed of the runner. TerminologyBenchmark is excluded, as it
       # needs a terminology source that is not available here. The module
       # options are those that the Spark launcher adds, which releases built on
-      # Spark 3.5 need on Java 21.
+      # Spark 3.5 need on Java 21. The QuestionnaireResponseFlat view is
+      # excluded for releases before the reference, as they ignore its repeat
+      # clause and return different rows, so their results are not comparable.
       - name: Run benchmark
         id: run_benchmark
         env:
           JAR: ${{ steps.build.outputs.jar }}
           REFERENCE_JAR: ${{ steps.build.outputs.reference_jar }}
+          RELEASE_VERSION: ${{ inputs.version }}
           SHORT_SHA: ${{ steps.get_commit.outputs.short_sha }}
         run: |
           OPENS=()
@@ -215,10 +218,14 @@ jobs:
           run_benchmark() {
             java -Xshare:off -Xmx8g -ea -Duser.timezone=UTC \
               --add-exports=java.base/sun.nio.ch=ALL-UNNAMED "${OPENS[@]}" \
-              -jar "$1" -rf json -rff "$2" PathlingBenchmark
+              -jar "$1" -rf json -rff "$2" "${@:3}" PathlingBenchmark
           }
+          EXCLUDES=()
+          if [[ "$RELEASE_VERSION" =~ ^(8\.|9\.0\.) ]]; then
+            EXCLUDES=(-e QuestionnaireResponseFlat)
+          fi
           run_benchmark "$REFERENCE_JAR" "benchmark-${SHORT_SHA}-reference.json"
-          run_benchmark "$JAR" "benchmark-${SHORT_SHA}.json"
+          run_benchmark "$JAR" "benchmark-${SHORT_SHA}.json" "${EXCLUDES[@]}"
           echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       - name: Save results

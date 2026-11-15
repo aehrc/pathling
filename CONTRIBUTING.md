@@ -241,9 +241,14 @@ fixed reference release, set by `REFERENCE_VERSION` in the workflow, on the
 same runner, and scores are reported as a multiple of the reference score. The
 reference is 9.1.0, the earliest release in which every view in
 `PathlingBenchmark` gives the same results as today. Changing it makes earlier
-runs incomparable with later ones, so they would need to be run again. Any
-change to `PathlingBenchmark` must also still compile against the reference
-release.
+runs incomparable with later ones, so they would need to be run again. Releases
+before 9.1.0 ignore the `repeat` clause of the `QuestionnaireResponseFlat`
+view, so the workflow excludes the benchmarks of that view
+(`-e QuestionnaireResponseFlat`) when it runs one of them.
+
+`PathlingBenchmark` must compile against every release that is benchmarked,
+from 8.0.0 onwards, so it can only use API that all of them have. Only classes
+whose names start with `PathlingBenchmark` are built for a release.
 
 Unless `publish` is unset, the workflow then publishes the results to the
 `gh-pages` branch, under `benchmarks/data`:
@@ -260,6 +265,15 @@ appear without rebuilding the site. The site deployment preserves
 each benchmark over time, the details of each run, and comparisons of two runs.
 Comparisons use a two-sided Welch's t-test on the per-iteration scores divided
 by the reference score, with a significance level of 0.05.
+
+Above the individual benchmarks, the page shows an overall combined score and
+one for each phase (`encode`, `decode`, `plan` and `execute`, taken from the
+leading word of the method name). A combined score is the geometric mean of the
+scores relative to the reference, and its error is propagated from the errors
+of those scores assuming that they are independent. Only the benchmarks present
+in every published run are combined, so adding a benchmark does not shift the
+combined score. The scores are computed by the page
+(`site/src/benchmarks/combined.js`), not stored with the results.
 
 The timelines are annotated with releases and with changes that affected
 performance, such as the switch to the ucumate UCUM library. Unlike the
