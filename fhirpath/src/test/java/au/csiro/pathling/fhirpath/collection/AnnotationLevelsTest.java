@@ -23,7 +23,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.schema.SchemaConfiguration;
 import au.csiro.pathling.search.SearchColumnBuilder;
@@ -70,8 +69,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 @SpringBootUnitTest
 @TestInstance(Lifecycle.PER_CLASS)
 class AnnotationLevelsTest {
-
-  private static final Parser PARSER = new Parser();
 
   private static final String DATE_URL = "http://example.org/date";
 

@@ -277,7 +277,7 @@ final class XmlIngestShape {
   @Nonnull
   private Column structure(
       @Nonnull final DefinitionCanonicalStructure node,
-      @Nonnull final FHIRDefinedType type,
+      @Nullable final FHIRDefinedType type,
       @Nonnull final DataType parsedType,
       final boolean repeating,
       @Nonnull final Column column) {

@@ -30,7 +30,6 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.Annotator;
 import au.csiro.pathling.io.FhirReader;
 import au.csiro.pathling.io.source.DataSource;
@@ -103,8 +102,6 @@ import scala.jdk.javaapi.CollectionConverters;
 @SpringBootUnitTest
 @TestInstance(Lifecycle.PER_CLASS)
 class EmissionShapesTest {
-
-  private static final Parser PARSER = new Parser();
 
   private static final List<String> PATIENTS =
       List.of(

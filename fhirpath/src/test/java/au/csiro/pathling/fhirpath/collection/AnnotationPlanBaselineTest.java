@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.Annotator;
 import au.csiro.pathling.schema.SchemaConfiguration;
 import au.csiro.pathling.search.SearchColumnBuilder;
@@ -72,8 +71,6 @@ import scala.jdk.javaapi.CollectionConverters;
 @SpringBootUnitTest
 @TestInstance(Lifecycle.PER_CLASS)
 class AnnotationPlanBaselineTest {
-
-  private static final Parser PARSER = new Parser();
 
   /** Any computation of a date's range, whether as one structure or as one bound at a time. */
   private static final Pattern RANGE_COMPUTATION = Pattern.compile("date_(range|start|end)\\(");

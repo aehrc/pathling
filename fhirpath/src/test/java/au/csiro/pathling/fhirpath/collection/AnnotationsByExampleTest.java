@@ -27,7 +27,6 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.Annotator;
 import au.csiro.pathling.schema.SchemaConfiguration;
 import au.csiro.pathling.search.SearchColumnBuilder;
@@ -73,8 +72,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 @SpringBootUnitTest
 @TestInstance(Lifecycle.PER_CLASS)
 class AnnotationsByExampleTest {
-
-  private static final Parser PARSER = new Parser();
 
   private static final String UCUM = "http://unitsofmeasure.org";
 
