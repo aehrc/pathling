@@ -21,8 +21,6 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.AbstractSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
-import au.csiro.pathling.library.query.FhirViewQuery;
-import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Set;
@@ -39,9 +37,8 @@ import org.apache.spark.sql.Row;
  * <p>Deferring resolution is what makes the derivation see the same data its parent does. A source
  * built eagerly over the parent's resource map is frozen at the moment of derivation, so a type
  * whose table appears later - or whose dataset the parent replaces on refresh - is invisible to it.
- * Because a read here calls the parent's own {@code read}, the parent's dynamic discovery,
- * empty-dataset fallback and schema drift guard all apply, and they apply equally to a source
- * derived from a derived source.
+ * Because a read here calls the parent's own {@code read}, the parent's dynamic discovery and
+ * empty-dataset fallback apply, and they apply equally to a source derived from a derived source.
  *
  * <p>Extending {@link AbstractSource} gives this source a query dispatcher and sink builder over
  * itself, so view queries and writes resolve their datasets through this class's {@code read}
@@ -64,8 +61,6 @@ public class DerivedSource extends AbstractSource {
 
   @Nonnull private final Predicate<String> typePredicate;
 
-  @Nonnull private final Set<String> driftedTypes;
-
   /**
    * Constructs a new DerivedSource.
    *
@@ -73,20 +68,16 @@ public class DerivedSource extends AbstractSource {
    * @param parent the source this one is derived from, through which all reads are resolved
    * @param operator the transformation applied to each dataset read from the parent
    * @param typePredicate the types this source retains from the parent
-   * @param driftedTypes the resource types whose tables are drifted and unmigrated; held by
-   *     reference so that guard decisions reflect the parent's current state
    */
   DerivedSource(
       @Nonnull final PathlingContext context,
       @Nonnull final QueryableDataSource parent,
       @Nonnull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator,
-      @Nonnull final Predicate<String> typePredicate,
-      @Nonnull final Set<String> driftedTypes) {
+      @Nonnull final Predicate<String> typePredicate) {
     super(context);
     this.parent = parent;
     this.operator = operator;
     this.typePredicate = typePredicate;
-    this.driftedTypes = driftedTypes;
   }
 
   @Override
@@ -111,51 +102,22 @@ public class DerivedSource extends AbstractSource {
 
   @Override
   @Nonnull
-  public FhirViewQuery view(@Nullable final String subjectResource) {
-    checkNotDrifted(subjectResource);
-    return super.view(subjectResource);
-  }
-
-  @Override
-  @Nonnull
-  public FhirViewQuery view(@Nullable final FhirView view) {
-    if (view != null) {
-      checkNotDrifted(view.getResource());
-    }
-    return super.view(view);
-  }
-
-  @Override
-  @Nonnull
   public QueryableDataSource map(
       @Nonnull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
-    return new DerivedSource(context, this, operator, RETAIN_ALL_TYPES, driftedTypes);
+    return new DerivedSource(context, this, operator, RETAIN_ALL_TYPES);
   }
 
   @Override
   @Nonnull
   public QueryableDataSource filterByResourceType(
       @Nonnull final Predicate<String> resourceTypePredicate) {
-    return new DerivedSource(context, this, IDENTITY_OPERATOR, resourceTypePredicate, driftedTypes);
+    return new DerivedSource(context, this, IDENTITY_OPERATOR, resourceTypePredicate);
   }
 
   @Override
   @Nonnull
   public DataSource cache() {
     return new DerivedSource(
-        context, this, (resourceType, dataset) -> dataset.cache(), RETAIN_ALL_TYPES, driftedTypes);
-  }
-
-  /**
-   * Fails with a {@link SchemaDriftError} if the given resource type is marked as drifted. A read
-   * inherits this check from the parent, but a view query is only executed later, so its subject is
-   * checked when the query is constructed - as {@link DriftGuardedSource} does.
-   *
-   * @param resourceCode the resource type code to check, or null to skip the check
-   */
-  private void checkNotDrifted(@Nullable final String resourceCode) {
-    if (resourceCode != null && driftedTypes.contains(resourceCode)) {
-      throw new SchemaDriftError(resourceCode);
-    }
+        context, this, (resourceType, dataset) -> dataset.cache(), RETAIN_ALL_TYPES);
   }
 }
