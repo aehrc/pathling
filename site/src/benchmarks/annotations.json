@@ -1,0 +1,118 @@
+[
+  {
+    "date": "2025-08-29T09:54:04Z",
+    "kind": "release",
+    "label": "v8.0.0",
+    "url": "https://github.com/aehrc/pathling/releases/tag/v8.0.0"
+  },
+  {
+    "date": "2025-08-31T06:30:14Z",
+    "kind": "release",
+    "label": "v8.0.1",
+    "url": "https://github.com/aehrc/pathling/releases/tag/v8.0.1"
+  },
+  {
+    "date": "2025-09-12T05:52:46Z",
+    "kind": "release",
+    "label": "v8.0.2",
+    "url": "https://github.com/aehrc/pathling/releases/tag/v8.0.2"
+  },
+  {
+    "date": "2025-09-22T07:39:19Z",
+    "kind": "release",
+    "label": "v8.1.0",
+    "url": "https://github.com/aehrc/pathling/releases/tag/v8.1.0"
+  },
+  {
+    "date": "2025-10-27T21:20:04Z",
+    "kind": "change",
+    "label": "UCUM engine",
+    "description": "Replaced Ucum-java with ucumate for UCUM unit conversion and comparison.",
+    "url": "https://github.com/aehrc/pathling/pull/2511"
+  },
+  {
+    "date": "2025-10-28T00:17:42Z",
+    "kind": "release",
+    "label": "v9.0.0",
+    "url": "https://github.com/aehrc/pathling/releases/tag/v9.0.0"
+  },
+  {
+    "date": "2025-11-24T19:10:55Z",
+    "kind": "release",
+    "label": "v9.1.0",
+    "url": "https://github.com/aehrc/pathling/releases/tag/v9.1.0"
+  },
+  {
+    "date": "2026-01-20T02:07:31Z",
+    "kind": "release",
+    "label": "v9.2.0",
+    "url": "https://github.com/aehrc/pathling/releases/tag/v9.2.0"
+  },
+  {
+    "date": "2026-02-15T21:00:20Z",
+    "kind": "release",
+    "label": "v9.3.0",
+    "url": "https://github.com/aehrc/pathling/releases/tag/v9.3.0"
+  },
+  {
+    "date": "2026-02-16T07:10:46Z",
+    "kind": "release",
+    "label": "v9.3.1",
+    "url": "https://github.com/aehrc/pathling/releases/tag/v9.3.1"
+  },
+  {
+    "date": "2026-02-17T22:47:03Z",
+    "kind": "release",
+    "label": "v9.4.0",
+    "url": "https://github.com/aehrc/pathling/releases/tag/v9.4.0"
+  },
+  {
+    "date": "2026-03-17T02:04:15Z",
+    "kind": "release",
+    "label": "v9.5.0",
+    "url": "https://github.com/aehrc/pathling/releases/tag/v9.5.0"
+  },
+  {
+    "date": "2026-04-23T04:48:12Z",
+    "kind": "release",
+    "label": "v9.6.0",
+    "url": "https://github.com/aehrc/pathling/releases/tag/v9.6.0"
+  },
+  {
+    "date": "2026-05-30T11:07:18Z",
+    "kind": "release",
+    "label": "v9.7.0",
+    "url": "https://github.com/aehrc/pathling/releases/tag/v9.7.0"
+  },
+  {
+    "date": "2026-06-03T00:00:01Z",
+    "kind": "release",
+    "label": "v9.7.1",
+    "url": "https://github.com/aehrc/pathling/releases/tag/v9.7.1"
+  },
+  {
+    "date": "2026-06-20T07:23:46Z",
+    "kind": "release",
+    "label": "v9.8.0",
+    "url": "https://github.com/aehrc/pathling/releases/tag/v9.8.0"
+  },
+  {
+    "date": "2026-09-01T05:02:20Z",
+    "kind": "release",
+    "label": "v9.9.0",
+    "url": "https://github.com/aehrc/pathling/releases/tag/v9.9.0"
+  },
+  {
+    "date": "2026-10-21T04:27:47Z",
+    "kind": "release",
+    "label": "v10.0.0",
+    "url": "https://github.com/aehrc/pathling/releases/tag/v10.0.0"
+  },
+  {
+    "date": "2026-11-05T01:52:08Z",
+    "kind": "change",
+    "label": "Parquet on FHIR",
+    "description": "Resources are stored and read in the Parquet on FHIR layout.",
+    "url": "https://github.com/aehrc/pathling/issues/2367"
+  }
+]
