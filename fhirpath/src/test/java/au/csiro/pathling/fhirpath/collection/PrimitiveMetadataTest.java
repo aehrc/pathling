@@ -54,6 +54,8 @@ import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.catalyst.expressions.GetArrayStructFields;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.execution.FileSourceScanExec;
+import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -319,6 +321,50 @@ class PrimitiveMetadataTest {
           .isEqualTo(
               "p1=ArraySeq(Anne, Mary, Jo, Sue) p2=ArraySeq(B) p3=ArraySeq(C) "
                   + "p4=ArraySeq(Ann, Ann)");
+    }
+  }
+
+  /**
+   * A repeating primitive stored as an absent array of values beside its metadata groups, as
+   * another producer may store it, is an element at each group's position.
+   */
+  @Test
+  void aRepeatingPrimitiveWithGroupsButAnAbsentArrayOfValues() {
+    final FhirDefinitionContext definitions = FhirDefinitionContext.of(fhirEncoders.getContext());
+    final Dataset<Row> read =
+        read(
+            FhirReader.of(
+                spark,
+                definitions,
+                SchemaConfiguration.builder().storePrimitiveMetadata(true).build()),
+            "Patient",
+            List.of(
+                "{\"resourceType\":\"Patient\",\"id\":\"p5\",\"name\":[{\"family\":\"Doe\","
+                    + "\"_given\":[{\"id\":\"x\"},{\"extension\":[{\"url\":\""
+                    + NICKNAME
+                    + "\",\"valueBoolean\":true}]}]}]}"));
+    // The reader stores an array of null values beside the groups, so the values are made absent.
+    final Dataset<Row> patients =
+        read.withColumn(
+            "name",
+            functions.transform(
+                col("name"),
+                name ->
+                    name.withField(
+                        "given",
+                        functions
+                            .lit(null)
+                            .cast(DataTypes.createArrayType(DataTypes.StringType)))));
+    final Annotator annotator = Annotator.of(definitions, SchemaConfiguration.builder().build());
+    for (final Dataset<Row> stored :
+        List.of(
+            store("valueless", patients),
+            store("valuelessAnnotated", annotator.annotate("Patient", patients)))) {
+      final Map<String, Dataset<Row>> data = Map.of("Patient", stored);
+      assertThat(rows(data, ResourceType.PATIENT, "name.given.count()")).isEqualTo("p5=2");
+      assertThat(rows(data, ResourceType.PATIENT, "name.given.id")).isEqualTo("p5=ArraySeq(x)");
+      assertThat(rows(data, ResourceType.PATIENT, "name.given.extension.exists()"))
+          .isEqualTo("p5=true");
     }
   }
 

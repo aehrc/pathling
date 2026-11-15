@@ -169,6 +169,27 @@ class StoredNumericAnnotationTest {
                 + " struct<s:struct<x:array<string>,_x:array<struct<__numeric:decimal(38,6)>>>>");
   }
 
+  /**
+   * Read without its id and extensions, a repeating decimal under a repeating parent whose array of
+   * values is absent beside present metadata groups is no element, rather than an item for each
+   * group.
+   */
+  @Test
+  void aRepeatingDecimalWithAnAbsentArrayOfValuesUnderARepeatingParent() {
+    final Dataset<Row> data =
+        spark.sql(
+            "SELECT array(named_struct('x', cast(null as array<string>), '_x',"
+                + " array(named_struct('__numeric', cast(1.5 as decimal(38,6))),"
+                + " named_struct('__numeric', cast(2.5 as decimal(38,6)))))) AS s");
+    final ColumnRepresentation decimals =
+        new DefaultRepresentation(data.col("s"))
+            .traverse(
+                "x",
+                Optional.of(FHIRDefinedType.DECIMAL),
+                DataTypes.createArrayType(DataTypes.StringType));
+    assertThat(data.select(decimals.getValue()).first().getList(0)).isEmpty();
+  }
+
   /** Returns the SQL of a value stored as an annotation at a type. */
   @Nonnull
   private static String stored(@Nonnull final String value, @Nonnull final String type) {

@@ -37,13 +37,10 @@ import java.util.function.Function;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.api.java.UDF1;
 import org.apache.spark.sql.api.java.UDF3;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.functions;
-import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StringType;
 import org.apache.spark.sql.types.StructType;
 
 /**
@@ -144,36 +141,6 @@ public final class QuantityCanonicalKind extends AnnotationKind {
           .withName("quantity_canonical_code");
 
   @Nonnull
-  private static final UserDefinedFunction CODE_OF_STRUCTURE =
-      functions
-          .udf(
-              (UDF1<Row, String>)
-                  quantity ->
-                      quantity == null
-                          ? null
-                          : codeOf(
-                              textField(quantity, VALUE_FIELD),
-                              textField(quantity, SYSTEM_FIELD),
-                              textField(quantity, CODE_FIELD)),
-              DataTypes.StringType)
-          .withName("quantity_canonical_code");
-
-  @Nonnull
-  private static final UserDefinedFunction VALUE_EXACT_OF_STRUCTURE =
-      functions
-          .udf(
-              (UDF1<Row, Row>)
-                  quantity ->
-                      quantity == null
-                          ? null
-                          : valueExactOf(
-                              textField(quantity, VALUE_FIELD),
-                              textField(quantity, SYSTEM_FIELD),
-                              textField(quantity, CODE_FIELD)),
-              EXACT_VALUE_TYPE)
-          .withName("quantity_canonical_value_exact");
-
-  @Nonnull
   private static final UserDefinedFunction VALUE_EXACT =
       functions
           .udf(
@@ -188,15 +155,10 @@ public final class QuantityCanonicalKind extends AnnotationKind {
   }
 
   /**
-   * Computes one canonical annotation of a quantity structure whose schema the caller does not
-   * know.
-   *
-   * <p>The quantity's {@code value}, {@code system} and {@code code} are read by name from each
-   * row, and a field the structure does not carry is taken as null, so the quantity may be pruned
-   * to the fields it populates. Each is text where the structure carries it, and one of another
-   * type fails the computation with an {@link IllegalArgumentException}. This converts the
-   * structure for each annotation, so a caller that knows the schema passes the fields as columns
-   * instead, through {@link #compute(String, Column, Function)}.
+   * Computes one canonical annotation of a quantity structure, reading its {@code value}, {@code
+   * system} and {@code code} as text, as {@link #compute(String, Column, Function)} does. The
+   * structure must carry the three fields; a caller whose quantity may be pruned to the fields it
+   * populates passes a function that reads them instead.
    *
    * @param field the annotation, {@code __canonical_code} or {@code __canonical_value_exact}
    * @param value the quantity
@@ -206,10 +168,7 @@ public final class QuantityCanonicalKind extends AnnotationKind {
   @Override
   @Nonnull
   public Column compute(@Nonnull final String field, @Nonnull final Column value) {
-    return (CANONICAL_CODE_ANNOTATION.equals(requireField(field))
-            ? CODE_OF_STRUCTURE
-            : VALUE_EXACT_OF_STRUCTURE)
-        .apply(value);
+    return compute(field, value, name -> value.getField(name).cast(DataTypes.StringType));
   }
 
   /**
@@ -363,25 +322,6 @@ public final class QuantityCanonicalKind extends AnnotationKind {
     }
     // The key holds nulls, which an immutable list cannot, and is never changed.
     return CANONICALISATIONS.get(Arrays.asList(value, system, code));
-  }
-
-  /**
-   * Reads a text field of a quantity structure by name, null where the field is null or the
-   * structure does not carry it.
-   */
-  @Nullable
-  private static String textField(@Nonnull final Row quantity, @Nonnull final String name) {
-    final scala.Option<Object> found = quantity.schema().getFieldIndex(name);
-    if (found.isEmpty()) {
-      return null;
-    }
-    final int index = (Integer) found.get();
-    final DataType type = quantity.schema().fields()[index].dataType();
-    if (!(type instanceof StringType)) {
-      throw new IllegalArgumentException(
-          "Field '" + name + "' must be a string, but is " + type.simpleString());
-    }
-    return quantity.isNullAt(index) ? null : quantity.getString(index);
   }
 
   /**

@@ -87,6 +87,7 @@ public final class MetadataGroupStructure implements CanonicalStructure {
     if (!LayoutFields.METADATA_GROUP_EXTENSION.equals(name)) {
       return Optional.empty();
     }
-    return extensionElement.map(element -> DefinitionCanonicalStructure.of(element, false, memo));
+    return extensionElement.map(
+        extension -> DefinitionCanonicalStructure.of(extension, false, memo));
   }
 }

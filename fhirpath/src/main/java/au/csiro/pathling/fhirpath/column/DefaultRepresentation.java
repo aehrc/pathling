@@ -331,10 +331,13 @@ public class DefaultRepresentation extends ColumnRepresentation {
     if (!repeating) {
       return when(isElement(values, groups, withMetadata), decode.apply(paired));
     }
+    // An absent array of values keeps no null items, though the pairing pads it beside its groups.
     final Column elements =
         keepAbsent
-            ? functions.transform(
-                paired, primitive -> when(isElement(primitive, withMetadata), primitive))
+            ? when(
+                values.isNotNull(),
+                functions.transform(
+                    paired, primitive -> when(isElement(primitive, withMetadata), primitive)))
             : functions.filter(paired, primitive -> isElement(primitive, withMetadata));
     return isDecimal(fhirType) ? functions.transform(elements, decode::apply) : elements;
   }

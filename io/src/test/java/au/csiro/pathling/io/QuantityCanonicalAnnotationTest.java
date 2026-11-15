@@ -164,14 +164,16 @@ class QuantityCanonicalAnnotationTest {
   @Test
   void aQuantityWithoutASystemHasNoCanonicalFormThroughTheStructure() {
     // The kind applied to a quantity's structure, as AnnotationKind.apply does by default, reads
-    // its fields by name and takes one the structure lacks as null, rather than failing.
+    // its fields by name.
     final Dataset<Row> quantities =
         TransformFixtures.spark()
             .createDataset(List.of("1.5"), Encoders.STRING())
             .select(
                 functions
                     .struct(
-                        functions.col("value").alias("value"), functions.lit("kg").alias("code"))
+                        functions.col("value").alias("value"),
+                        functions.lit(null).cast(DataTypes.StringType).alias("system"),
+                        functions.lit("kg").alias("code"))
                     .alias("q"));
     final QuantityCanonicalKind kind = QuantityCanonicalKind.INSTANCE;
     final Row row =

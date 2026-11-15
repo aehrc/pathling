@@ -24,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.definition.ChildDefinition;
-import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
@@ -47,6 +46,7 @@ import au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase;
 import au.csiro.pathling.test.yaml.format.ExcludeRule;
 import au.csiro.pathling.test.yaml.resolver.ResolverBuilder;
 import au.csiro.pathling.test.yaml.resolver.RuntimeContext;
+import au.csiro.pathling.utilities.SystemDecimal;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
@@ -484,13 +484,13 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
       final int index = quantityRow.fieldIndex(field);
       normalized.add(quantityRow.isNullAt(index) ? null : quantityRow.get(index));
     }
-    final int valueIndex = 0;
+    final int valueIndex = QuantityEncoding.dataType().fieldIndex(QuantityEncoding.VALUE_COLUMN);
     normalized.set(
         valueIndex,
         normalized.get(valueIndex) == null
             ? null
             : new BigDecimal(normalized.get(valueIndex).toString())
-                .setScale(DecimalCustomCoder.scale(), RoundingMode.HALF_UP));
+                .setScale(SystemDecimal.SCALE, RoundingMode.HALF_UP));
     return normalized;
   }
 
@@ -585,7 +585,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
       return intValue.longValue();
     } else if (actualRaw instanceof final BigDecimal bdValue) {
       // Scale BigDecimal to 6 places and convert to Long.
-      return bdValue.setScale(DecimalCustomCoder.scale(), RoundingMode.HALF_UP).longValue();
+      return bdValue.setScale(SystemDecimal.SCALE, RoundingMode.HALF_UP).longValue();
     } else {
       // Return other types unchanged.
       return actualRaw;

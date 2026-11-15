@@ -22,7 +22,7 @@
  */
 package au.csiro.pathling.sql
 
-import org.apache.spark.sql.catalyst.expressions.{ArraysZip, Coalesce, CreateNamedStruct, Expression, GetArrayStructFields, GetStructField, Literal, RuntimeReplaceable}
+import org.apache.spark.sql.catalyst.expressions.{ArraysZip, Coalesce, CreateNamedStruct, Expression, GetArrayStructFields, GetStructField, If, IsNull, Literal, RuntimeReplaceable}
 import org.apache.spark.sql.catalyst.util.GenericArrayData
 import org.apache.spark.sql.types.{ArrayType, StructType}
 
@@ -40,9 +40,12 @@ import org.apache.spark.sql.types.{ArrayType, StructType}
  * of structures aligned by position with content that is arrays, and the result is
  * `arrays_zip(<content>, <the present fields of every source element>)`, each extracted field
  * guarded with `coalesce(field, array())` so that an absent array of sources pads its annotations
- * with nulls rather than nulling the pairing. Either form names its fields after the content and
- * the annotations, so the two forms have the same fields. A source of any other type, including
- * the bottom type an absent container resolves to, carries none of the fields.
+ * with nulls rather than nulling the pairing. Where any field is present, an absent array of
+ * content beside a present array of sources is likewise taken as empty, so that the content is
+ * padded with nulls; where the sources are absent too, the pairing is absent. Either form names
+ * its fields after the content and the annotations, so the two forms have the same fields. A
+ * source of any other type, including the bottom type an absent container resolves to, carries
+ * none of the fields.
  *
  * @param source       the structure, or array of structures, to take the named fields from
  * @param fieldNames   the names of the fields to take, where present
@@ -76,7 +79,13 @@ case class ResolveOrNone(source: Expression, fieldNames: Seq[String], content: S
         case _ => Seq.empty
       }
     }
-    val fields = contentNames.zip(content) ++ present
+    val paired = if (repeating && present.nonEmpty) {
+      content.map(array => Coalesce(Seq(array, If(IsNull(source), Literal(null, array.dataType),
+        Literal(new GenericArrayData(Array.empty[Any]), array.dataType)))))
+    } else {
+      content
+    }
+    val fields = contentNames.zip(paired) ++ present
     if (repeating) {
       ArraysZip(fields.map(_._2), fields.map(field => Literal(field._1)))
     } else {

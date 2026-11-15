@@ -94,6 +94,21 @@ class ResolveOrNoneTest extends SparkSessionSupport {
   }
 
   @Test
+  def repeatingPairsPresentSourcesWithAnAbsentContent(): Unit = {
+    // An absent array of content beside present sources pads the content with nulls, as an
+    // absent array of sources pads the annotations, and an absent pair stays absent.
+    val df = parquet("absentContent",
+      """select 1 as id, cast(null as array<string>) as vs,
+        |  array(named_struct('__start', 20, '__end', 29), named_struct('__start', 30, '__end', 39))
+        |    as gs
+        |union all
+        |select 2, cast(null as array<string>), cast(null as array<struct<__start: int, __end: int>>)
+        |""".stripMargin)
+    assertEquals(Seq("[1,ArraySeq([null,20,29], [null,30,39])]", "[2,null]"),
+      rows(df.select(F.col("id"), elements(F.col("gs")).alias("e"))))
+  }
+
+  @Test
   def repeatingOverAbsentAnnotationsHasTheSameNames(): Unit = {
     val withStart = onlyStart.select(elements(F.col("gs")).alias("e"))
     assertEquals("array<struct<value:string,__start:int>>", typeOf(withStart))
