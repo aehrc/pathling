@@ -241,9 +241,14 @@ fixed reference release, set by `REFERENCE_VERSION` in the workflow, on the
 same runner, and scores are reported as a multiple of the reference score. The
 reference is 9.1.0, the earliest release in which every view in
 `PathlingBenchmark` gives the same results as today. Changing it makes earlier
-runs incomparable with later ones, so they would need to be run again. Any
-change to `PathlingBenchmark` must also still compile against the reference
-release.
+runs incomparable with later ones, so they would need to be run again. Releases
+before 9.1.0 ignore the `repeat` clause of the `QuestionnaireResponseFlat`
+view, so the workflow excludes the benchmarks of that view
+(`-e QuestionnaireResponseFlat`) when it runs one of them.
+
+`PathlingBenchmark` must compile against every release that is benchmarked,
+from 8.0.0 onwards, so it can only use API that all of them have. Only classes
+whose names start with `PathlingBenchmark` are built for a release.
 
 Unless `publish` is unset, the workflow then publishes the results to the
 `gh-pages` branch, under `benchmarks/data`:
