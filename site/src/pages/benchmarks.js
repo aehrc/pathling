@@ -30,6 +30,11 @@ import { useHistory, useLocation } from "@docusaurus/router";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import Layout from "@theme/Layout";
 import React, { useState } from "react";
+import annotations from "../benchmarks/annotations.json";
+import {
+  annotationsBetween,
+  interleaveAnnotations,
+} from "../benchmarks/annotations.js";
 import { buildTimelines } from "../benchmarks/runIndex.js";
 import RunComparison from "../components/benchmarks/RunComparison";
 import RunDetail from "../components/benchmarks/RunDetail";
@@ -211,6 +216,8 @@ function Overview({ runs, index, runHref, runLink, onSelectRun, onCompare }) {
       {runLabel(run)}
     </option>
   ));
+  const dateRange = [runs[0].date, runs[runs.length - 1].date];
+  const visibleAnnotations = annotationsBetween(annotations, ...dateRange);
 
   return (
     <>
@@ -224,7 +231,8 @@ function Overview({ runs, index, runHref, runLink, onSelectRun, onCompare }) {
         runners vary in speed, so each run also benchmarks a fixed reference
         release on the same runner, and scores are shown as a multiple of the
         reference score. Compare runs using the significance test rather than by
-        eye.
+        eye. Dashed lines mark releases, and solid lines mark changes that
+        affected performance.
       </p>
       <form
         className={styles.compareForm}
@@ -256,21 +264,53 @@ function Overview({ runs, index, runHref, runLink, onSelectRun, onCompare }) {
             timeline={timeline}
             runHref={runHref}
             onSelectRun={onSelectRun}
-            dateRange={[runs[0].date, runs[runs.length - 1].date]}
+            dateRange={dateRange}
+            annotations={visibleAnnotations}
           />
         </section>
       ))}
       <section>
         <h2>Runs</h2>
         <ul>
-          {[...runs].reverse().map((run) => (
-            <li key={run.id}>
-              {runLink(run.id)}, commit{" "}
-              <a href={commitUrl(run.commit)}>{run.commit.slice(0, 7)}</a>
-            </li>
-          ))}
+          {interleaveAnnotations(runs, visibleAnnotations)
+            .reverse()
+            .map(({ run, annotation }) =>
+              run ? (
+                <li key={run.id}>
+                  {runLink(run.id)}, commit{" "}
+                  <a href={commitUrl(run.commit)}>{run.commit.slice(0, 7)}</a>
+                </li>
+              ) : (
+                <li key={`annotation-${annotation.label}`}>
+                  <AnnotationLabel annotation={annotation} />,{" "}
+                  {formatDate(annotation.date)}
+                  {annotation.description && ` - ${annotation.description}`}
+                </li>
+              ),
+            )}
         </ul>
       </section>
     </>
+  );
+}
+
+/**
+ * Renders the name of an annotation, linked to its page if it has one.
+ *
+ * @param {object} props - The component props.
+ * @param {import("../benchmarks/annotations.js").Annotation} props.annotation -
+ *   The annotation.
+ * @returns {React.ReactElement} The name.
+ */
+function AnnotationLabel({ annotation }) {
+  const label = annotation.url ? (
+    <a href={annotation.url}>{annotation.label}</a>
+  ) : (
+    annotation.label
+  );
+  return (
+    <strong>
+      {annotation.kind === "release" ? "Release" : "Change:"} {label}
+    </strong>
   );
 }

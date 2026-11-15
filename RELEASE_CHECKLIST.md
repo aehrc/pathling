@@ -26,6 +26,9 @@
 - [ ] Check that the draft shows the tag as existing and pointing at the merge
       commit on `main` before publishing
 - [ ] Publish the release and verify that it succeeds
+- [ ] Add an annotation for the release to
+      `site/src/benchmarks/annotations.json`, so that it is marked on the
+      benchmarks page (see "Benchmarks" in `CONTRIBUTING.md`)
 - [ ] Submit the built R package to CRAN manually
 
 ## Updating the core library version

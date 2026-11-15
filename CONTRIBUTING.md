@@ -261,6 +261,29 @@ each benchmark over time, the details of each run, and comparisons of two runs.
 Comparisons use a two-sided Welch's t-test on the per-iteration scores divided
 by the reference score, with a significance level of 0.05.
 
+The timelines are annotated with releases and with changes that affected
+performance, such as the switch to the ucumate UCUM library. Unlike the
+results, the annotations are part of the site source, in
+`site/src/benchmarks/annotations.json`, so a new annotation appears when the
+site is next deployed. Each annotation has a `date` (an ISO 8601 time in UTC),
+a `kind` (`release` or `change`), a short `label` shown on the charts, and an
+optional `description` and `url`. Date a release by the commit of its tag, and
+a change by its merge:
+
+```bash
+TZ=UTC git log -1 --date=format-local:%Y-%m-%dT%H:%M:%SZ --format=%cd 'v10.0.0^{commit}'
+```
+
+```json
+{
+    "date": "2025-10-27T21:20:04Z",
+    "kind": "change",
+    "label": "UCUM engine",
+    "description": "Replaced Ucum-java with ucumate for UCUM unit conversion and comparison.",
+    "url": "https://github.com/aehrc/pathling/pull/2511"
+}
+```
+
 To publish a run by hand, for example to add a run whose artifact is still
 available:
 

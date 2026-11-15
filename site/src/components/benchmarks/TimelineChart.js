@@ -23,16 +23,24 @@
  */
 
 import React from "react";
+import { assignLabelRows } from "../../benchmarks/annotations.js";
 import { commitUrl, formatDate, formatNumber, formatScore } from "./format";
 import styles from "./styles.module.css";
 
 const WIDTH = 800;
-const HEIGHT = 300;
 const MARGIN = { top: 12, right: 40, bottom: 48, left: 64 };
 const PLOT_WIDTH = WIDTH - MARGIN.left - MARGIN.right;
-const PLOT_HEIGHT = HEIGHT - MARGIN.top - MARGIN.bottom;
+const PLOT_HEIGHT = 240;
 // The minimum horizontal distance between commit labels.
 const LABEL_SPACING = 56;
+// The number of rows of annotation labels above the plot, and their height.
+// Four rows are enough to label the patch releases that follow a release.
+const ANNOTATION_ROWS = 4;
+const ANNOTATION_ROW_HEIGHT = 15;
+// The approximate width of a character in an annotation label, and the
+// minimum space between two labels in a row.
+const ANNOTATION_CHAR_WIDTH = 6.5;
+const ANNOTATION_LABEL_GAP = 6;
 
 // A qualitative palette that remains distinguishable in light and dark modes.
 const COLOURS = [
@@ -67,6 +75,18 @@ function niceTicks(max, count) {
 }
 
 /**
+ * Builds the hover text of an annotation.
+ *
+ * @param {import("../../benchmarks/annotations.js").Annotation} annotation -
+ *   The annotation.
+ * @returns {string} The label and date, and the description if there is one.
+ */
+function annotationTitle({ kind, label, date, description }) {
+  const heading = `${kind === "release" ? "Release " : ""}${label}, ${formatDate(date)}`;
+  return description ? `${heading}\n${description}` : heading;
+}
+
+/**
  * Renders the timeline of one benchmark.
  *
  * @param {object} props - The component props.
@@ -77,6 +97,8 @@ function niceTicks(max, count) {
  * @param {(runId: string) => string} props.runHref - Builds the link to a run.
  * @param {[string, string]} props.dateRange - The dates of the first and last
  *   runs, so that every chart shares the same time axis.
+ * @param {import("../../benchmarks/annotations.js").Annotation[]} props.annotations
+ *   - The annotations to mark, which must lie within the date range.
  * @returns {React.ReactElement} The chart.
  */
 export default function TimelineChart({
@@ -84,6 +106,7 @@ export default function TimelineChart({
   onSelectRun,
   runHref,
   dateRange,
+  annotations,
 }) {
   const points = timeline.series.flatMap((series) => series.points);
   const [minTime, maxTime] = dateRange.map((date) => Date.parse(date));
@@ -98,7 +121,35 @@ export default function TimelineChart({
     (maxTime === minTime
       ? PLOT_WIDTH / 2
       : ((Date.parse(date) - minTime) / (maxTime - minTime)) * PLOT_WIDTH);
-  const y = (value) => MARGIN.top + PLOT_HEIGHT * (1 - value / yMax);
+
+  // Mark each annotation with a vertical line through the plot, labelled above
+  // the plot. A label that would overlap another moves up a row, and is left
+  // out when no row has room, leaving its line and hover text. The plot moves
+  // down to make room for the rows that are used.
+  const markers = annotations.map((annotation) => {
+    const halfWidth = (annotation.label.length * ANNOTATION_CHAR_WIDTH) / 2;
+    // Keep labels near the edges within the chart.
+    const labelX = Math.min(
+      Math.max(x(annotation.date), halfWidth),
+      WIDTH - halfWidth,
+    );
+    return { annotation, labelX, halfWidth };
+  });
+  const labelRows = assignLabelRows(
+    markers.map(({ annotation, labelX, halfWidth }) => ({
+      left: labelX - halfWidth - ANNOTATION_LABEL_GAP / 2,
+      right: labelX + halfWidth + ANNOTATION_LABEL_GAP / 2,
+      kind: annotation.kind,
+    })),
+    ANNOTATION_ROWS,
+  );
+  const rowsUsed = Math.max(
+    0,
+    ...labelRows.filter((row) => row !== null).map((row) => row + 1),
+  );
+  const top = MARGIN.top + rowsUsed * ANNOTATION_ROW_HEIGHT;
+  const height = top + PLOT_HEIGHT + MARGIN.bottom;
+  const y = (value) => top + PLOT_HEIGHT * (1 - value / yMax);
 
   // Label each run in this chart with its commit, skipping labels that would
   // overlap, but always labelling the first and last runs with their date too.
@@ -134,7 +185,7 @@ export default function TimelineChart({
   return (
     <figure className={styles.chart}>
       <svg
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        viewBox={`0 0 ${WIDTH} ${height}`}
         role="img"
         aria-label={`${timeline.benchmark} scores over time`}
       >
@@ -160,11 +211,45 @@ export default function TimelineChart({
         ))}
         <text
           className={styles.axisLabel}
-          transform={`translate(14 ${MARGIN.top + PLOT_HEIGHT / 2}) rotate(-90)`}
+          transform={`translate(14 ${top + PLOT_HEIGHT / 2}) rotate(-90)`}
           textAnchor="middle"
         >
           {timeline.unit}
         </text>
+        {markers.map(({ annotation, labelX }, index) => {
+          const row = labelRows[index];
+          const lineProps = {
+            x1: x(annotation.date),
+            x2: x(annotation.date),
+            y1: top,
+            y2: top + PLOT_HEIGHT,
+          };
+          return (
+            <a
+              key={annotation.label}
+              href={annotation.url}
+              className={
+                annotation.kind === "release"
+                  ? styles.releaseAnnotation
+                  : styles.changeAnnotation
+              }
+            >
+              <title>{annotationTitle(annotation)}</title>
+              <line className={styles.annotationLine} {...lineProps} />
+              <line className={styles.annotationHitArea} {...lineProps} />
+              {row !== null && (
+                <text
+                  className={styles.annotationLabel}
+                  x={labelX}
+                  y={top - 8 - row * ANNOTATION_ROW_HEIGHT}
+                  textAnchor="middle"
+                >
+                  {annotation.label}
+                </text>
+              )}
+            </a>
+          );
+        })}
         {labelled.map((run, index) => (
           <g key={run.runId}>
             <a href={commitUrl(run.commit)}>
@@ -172,7 +257,7 @@ export default function TimelineChart({
               <text
                 className={styles.commitLabel}
                 x={x(run.date)}
-                y={HEIGHT - 26}
+                y={height - 26}
                 textAnchor="middle"
               >
                 {run.commit.slice(0, 7)}
@@ -182,7 +267,7 @@ export default function TimelineChart({
               <text
                 className={styles.axisLabel}
                 x={x(run.date)}
-                y={HEIGHT - 8}
+                y={height - 8}
                 textAnchor="middle"
               >
                 {dateLabel(run.date)}

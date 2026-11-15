@@ -58,6 +58,39 @@
     stroke-width: 2;
 }
 
+.annotationLine {
+    stroke-width: 1;
+}
+
+.releaseAnnotation .annotationLine {
+    stroke: var(--ifm-color-emphasis-500);
+    stroke-dasharray: 4 3;
+}
+
+.changeAnnotation .annotationLine {
+    stroke: var(--ifm-font-color-base);
+    stroke-width: 1.5;
+}
+
+/* A wider, invisible line that makes an annotation easier to hover. */
+.annotationHitArea {
+    stroke: transparent;
+    stroke-width: 8;
+}
+
+.annotationLabel {
+    font-size: 12px;
+}
+
+.releaseAnnotation .annotationLabel {
+    fill: var(--ifm-color-emphasis-700);
+}
+
+.changeAnnotation .annotationLabel {
+    fill: var(--ifm-font-color-base);
+    font-weight: 600;
+}
+
 .legend {
     display: flex;
     flex-wrap: wrap;
