@@ -22,7 +22,7 @@
  */
 package au.csiro.pathling.sql
 
-import au.csiro.pathling.utilities.{CanonicalStructure, StructureMerge}
+import au.csiro.pathling.utilities.{AnnotationNames, CanonicalStructure, StructureMerge}
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult.{TypeCheckFailure, TypeCheckSuccess}
 import org.apache.spark.sql.catalyst.expressions.{ArrayTransform, CreateNamedStruct, Expression, GetStructField, If, IsNull, KnownNotNull, KnownNullable, LambdaFunction, Literal, NamedLambdaVariable, RuntimeReplaceable}
@@ -92,9 +92,6 @@ case class MergeCast(operands: Seq[Expression], index: Int, canonical: Canonical
 }
 
 object MergeCast {
-
-  /** The prefix of the name of an annotation field (decision 152). */
-  private val AnnotationPrefix = "__"
 
   /** The type absent operands of both cardinalities agree on: an array of the bottom type. */
   private val AbsentRepeating: DataType = ArrayType(NullType, containsNull = true)
@@ -175,7 +172,7 @@ object MergeCast {
             case _ => None
           })
           val common = commonAnnotations(field.dataType, fields)
-          if (field.name.startsWith(AnnotationPrefix) && fields.exists(_.isEmpty)) {
+          if (AnnotationNames.isAnnotation(field.name) && fields.exists(_.isEmpty)) {
             None
           } else if (isEmptyStructure(common) && !isEmptyStructure(field.dataType)) {
             // A structure left with no fields, such as a metadata group that held only an

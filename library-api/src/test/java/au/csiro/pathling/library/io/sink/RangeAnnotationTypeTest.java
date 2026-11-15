@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.TestHelpers;
 import au.csiro.pathling.library.io.source.DatasetSource;
+import au.csiro.pathling.schema.SchemaConfiguration;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -170,6 +171,24 @@ class RangeAnnotationTypeTest {
                         && event
                             .getFormattedMessage()
                             .contains(OUTPUT_TIMESTAMP_TYPE + "=" + TIMESTAMP_MICROS)));
+  }
+
+  @Test
+  void aSuppliedSessionLeftAtInt96IsNotWarnedOfWithoutRangeAnnotations() {
+    captureLogs();
+    spark.conf().set(OUTPUT_TIMESTAMP_TYPE, "INT96");
+    final PathlingContext withoutRanges =
+        PathlingContext.builder(spark)
+            .schemaConfiguration(SchemaConfiguration.builder().enableRangeAnnotation(false).build())
+            .build();
+
+    assertFalse(
+        logs.list.stream()
+            .anyMatch(event -> event.getFormattedMessage().contains(OUTPUT_TIMESTAMP_TYPE)));
+    assertDoesNotThrow(
+        () ->
+            new DataSinkBuilder(withoutRanges, patients(withoutRanges, "p1:1980"))
+                .parquet(directory.toString()));
   }
 
   @Test

@@ -147,7 +147,7 @@ public class PathlingContext {
       @Nonnull final QueryConfiguration queryConfiguration,
       @Nonnull final SchemaConfiguration schemaConfiguration) {
     requireLegacySizeOfNullDisabled(spark);
-    warnUnlessTimestampsInMicros(spark);
+    warnUnlessTimestampsInMicros(spark, schemaConfiguration);
     this.spark = spark;
     this.fhirEncoders = fhirEncoders;
     this.terminologyServiceFactory = terminologyServiceFactory;
@@ -191,12 +191,16 @@ public class PathlingContext {
    * adjusted to UTC, which is how Pathling stores the range annotations of a date (decision 138).
    * Pathling sets this on the sessions it builds, and never changes the setting of a session it is
    * given. A session that is not set so can query, but Pathling's Parquet, Delta and catalog sinks
-   * refuse to write data that carries the range annotations from it.
+   * refuse to write data that carries the range annotations from it. A context that does not add
+   * the range annotations is not warned, as what it encodes carries none.
    *
    * @param spark the Spark session to check
+   * @param schemaConfiguration the schema configuration, which says whether the range annotations
+   *     are added
    */
-  private static void warnUnlessTimestampsInMicros(@Nonnull final SparkSession spark) {
-    if (TimestampStorage.writesMicros(spark)) {
+  private static void warnUnlessTimestampsInMicros(
+      @Nonnull final SparkSession spark, @Nonnull final SchemaConfiguration schemaConfiguration) {
+    if (!schemaConfiguration.isEnableRangeAnnotation() || TimestampStorage.writesMicros(spark)) {
       return;
     }
     log.warn(

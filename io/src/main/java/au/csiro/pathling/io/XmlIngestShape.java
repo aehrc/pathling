@@ -201,7 +201,7 @@ final class XmlIngestShape {
         kept.add(text(name));
       } else if (name.equals(EXTENSION)
           && elementTypeOf(field.dataType()) instanceof final StructType extension) {
-        extensionStructure(node, entry)
+        MetadataGroups.extensionStructure(node, entry)
             .map(
                 structure -> parseStructure(structure, FHIRDefinedType.EXTENSION, false, extension))
             .filter(type -> type.fields().length > 0)
@@ -212,14 +212,6 @@ final class XmlIngestShape {
       }
     }
     return DataTypes.createStructType(kept);
-  }
-
-  /** Returns the structure of the extensions in the metadata group of a primitive. */
-  @Nonnull
-  private static Optional<DefinitionCanonicalStructure> extensionStructure(
-      @Nonnull final DefinitionCanonicalStructure node, @Nonnull final LayoutEntry entry) {
-    return node.metadataGroup(LayoutFields.metadataGroupName(entry.getName()))
-        .flatMap(group -> group.extensionStructure(LayoutFields.METADATA_GROUP_EXTENSION));
   }
 
   /**
@@ -343,7 +335,8 @@ final class XmlIngestShape {
       @Nonnull final LayoutEntry entry,
       @Nonnull final StructField parsed,
       @Nonnull final Column value) {
-    final DefinitionCanonicalStructure extension = extensionStructure(node, entry).orElseThrow();
+    final DefinitionCanonicalStructure extension =
+        MetadataGroups.extensionStructure(node, entry).orElseThrow();
     final StructType inner = (StructType) elementTypeOf(parsed.dataType());
     return wrap(
         parsed.dataType(),

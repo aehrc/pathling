@@ -22,6 +22,7 @@
  */
 package au.csiro.pathling.sql
 
+import au.csiro.pathling.utilities.AnnotationNames
 import org.apache.spark.sql.types.{ArrayType, DataType, StructType}
 
 /**
@@ -31,9 +32,6 @@ import org.apache.spark.sql.types.{ArrayType, DataType, StructType}
  * recognises stay, because the value determines them. The key is planned from the resolved type.
  */
 object StripAnnotations {
-
-  /** The prefix of the name of an annotation field (decision 152). */
-  private val AnnotationPrefix = "__"
 
   /**
    * Returns a type without the annotation fields that are not recognised, at every depth.
@@ -45,7 +43,7 @@ object StripAnnotations {
   def stripped(dataType: DataType, recognised: Seq[String]): DataType = dataType match {
     case struct: StructType =>
       StructType(struct.fields
-        .filterNot(field => field.name.startsWith(AnnotationPrefix)
+        .filterNot(field => AnnotationNames.isAnnotation(field.name)
           && !recognised.contains(field.name))
         .map(field => field.copy(dataType = stripped(field.dataType, recognised))))
     case ArrayType(element, containsNull) => ArrayType(stripped(element, recognised), containsNull)

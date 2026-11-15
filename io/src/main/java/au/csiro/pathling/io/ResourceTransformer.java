@@ -353,7 +353,7 @@ final class ResourceTransformer {
     final UnaryOperator<Column> resolution =
         inReference && REFERENCE.equals(name) ? references : UnaryOperator.identity();
     final Optional<Function<Function<String, Column>, Column>> placeholders =
-        placeholders(entry, observed);
+        placeholders(node, entry, observed, references);
     return fieldOf(observed, name)
         .flatMap(
             from ->
@@ -373,8 +373,8 @@ final class ResourceTransformer {
 
   /**
    * Plans the value array of positional nulls that a repeating primitive takes in a row whose
-   * source carried it only as its groups, or returns empty where the groups are not stored or the
-   * source carried none in the shape FHIR gives them (decision 72).
+   * source carried it only as its groups, or returns empty where the groups are not stored, which
+   * includes where the source carried none that {@link #metadataGroup} stores (decision 72).
    *
    * <p>The array holds one null for each group, so that the values and the groups stay aligned by
    * position. It stands in for the value array wherever the source carried none, row by row, which
@@ -382,17 +382,22 @@ final class ResourceTransformer {
    */
   @Nonnull
   private Optional<Function<Function<String, Column>, Column>> placeholders(
-      @Nonnull final LayoutEntry entry, @Nonnull final StructType observed) {
+      @Nonnull final DefinitionCanonicalStructure node,
+      @Nonnull final LayoutEntry entry,
+      @Nonnull final StructType observed,
+      @Nonnull final UnaryOperator<Column> references) {
     if (!storePrimitiveMetadata || !entry.isRepeating()) {
       return Optional.empty();
     }
     final String group = LayoutFields.metadataGroupName(entry.getName());
+    // The nulls are planned exactly where the groups are, so that neither is stored without the
+    // other.
     return entry
         .primitiveType()
         .filter(
             type ->
-                fieldOf(observed, group)
-                    .filter(field -> isGroupShape(true, field.dataType()))
+                node.entry(group)
+                    .flatMap(stored -> metadataGroup(node, stored, observed, references))
                     .isPresent())
         .map(type -> functions.lit(null).cast(converter(type).getStored()))
         .map(typedNull -> fields -> functions.transform(fields.apply(group), unused -> typedNull));
@@ -416,7 +421,7 @@ final class ResourceTransformer {
       @Nonnull final UnaryOperator<Column> references) {
     final String name = entry.getName();
     return fieldOf(observed, name)
-        .filter(field -> isGroupShape(entry.isRepeating(), field.dataType()))
+        .filter(field -> MetadataGroups.isGroupShape(entry.isRepeating(), field.dataType()))
         .flatMap(
             field ->
                 groupValue(node, (StructType) elementTypeOf(field.dataType()), references)
@@ -471,16 +476,6 @@ final class ResourceTransformer {
                 value.isNotNull(),
                 functions.struct(
                     fields.stream().map(stored -> stored.apply(value)).toArray(Column[]::new))));
-  }
-
-  /**
-   * Returns whether a metadata group has the outer shape FHIR gives it: an object beside a singular
-   * primitive, and an array of objects beside a repeating one.
-   */
-  private static boolean isGroupShape(final boolean repeating, @Nonnull final DataType type) {
-    return repeating
-        ? type instanceof final ArrayType array && array.elementType() instanceof StructType
-        : type instanceof StructType;
   }
 
   /**
@@ -636,7 +631,7 @@ final class ResourceTransformer {
         entry.primitiveType().isPresent()
             && field.dataType() instanceof ArrayType
             && fieldOf(schema, LayoutFields.metadataGroupName(field.name()))
-                .filter(group -> holdsMetadata(group.dataType()))
+                .filter(group -> MetadataGroups.holdsMetadata(group.dataType()))
                 .isPresent();
     return Optional.of(
         (besideGroups ? functions.when(functions.exists(value, Column::isNotNull), value) : value)
@@ -645,8 +640,9 @@ final class ResourceTransformer {
 
   /**
    * Returns the value of a metadata group in the document, as the id and extensions it holds, or
-   * empty where the stored group holds neither. A group holding neither in a given row is a null,
-   * and so is an array of groups holding nothing but nulls, so that neither is written.
+   * empty where the stored group holds neither. A group holding neither in a given row, its
+   * extensions empty or only nulls where it has them, is a null, and so is an array of groups
+   * holding nothing but nulls, so that neither is written.
    */
   @Nonnull
   private static Optional<Column> egressGroup(
@@ -654,7 +650,8 @@ final class ResourceTransformer {
       @Nonnull final Column stored,
       @Nonnull final DataType type,
       final boolean forElement) {
-    if (!(elementTypeOf(type) instanceof final StructType group) || !holdsMetadata(type)) {
+    if (!(elementTypeOf(type) instanceof final StructType group)
+        || !MetadataGroups.holdsMetadata(type)) {
       return Optional.empty();
     }
     final List<Function<Column, Column>> fields = new ArrayList<>();
@@ -685,7 +682,7 @@ final class ResourceTransformer {
             functions.when(
                 Stream.of(LayoutFields.METADATA_GROUP_ID, LayoutFields.METADATA_GROUP_EXTENSION)
                     .filter(name -> fieldOf(group, name).isPresent())
-                    .map(name -> value.getField(name).isNotNull())
+                    .map(name -> MetadataGroups.hasContent(name, value.getField(name)))
                     .reduce(Column::or)
                     .orElseThrow(),
                 functions.struct(
@@ -695,16 +692,6 @@ final class ResourceTransformer {
       return Optional.of(functions.when(functions.exists(groups, Column::isNotNull), groups));
     }
     return Optional.of(single.apply(stored));
-  }
-
-  /**
-   * Returns whether a stored metadata group, or an array of them, has a field for an id or for
-   * extensions, which a group the annotation step added for its annotations alone has not.
-   */
-  private static boolean holdsMetadata(@Nonnull final DataType type) {
-    return elementTypeOf(type) instanceof final StructType group
-        && (fieldOf(group, LayoutFields.METADATA_GROUP_ID).isPresent()
-            || fieldOf(group, LayoutFields.METADATA_GROUP_EXTENSION).isPresent());
   }
 
   /**

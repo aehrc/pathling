@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.schema;
 
+import au.csiro.pathling.utilities.AnnotationNames;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Set;
@@ -56,7 +57,7 @@ public final class LayoutFields {
   @Nonnull public static final String METADATA_GROUP_PREFIX = "_";
 
   /** The prefix that marks an annotation. */
-  @Nonnull public static final String ANNOTATION_PREFIX = "__";
+  @Nonnull public static final String ANNOTATION_PREFIX = AnnotationNames.PREFIX;
 
   /** The field carrying the id of a primitive, within its metadata group. */
   @Nonnull public static final String METADATA_GROUP_ID = "id";
@@ -130,7 +131,7 @@ public final class LayoutFields {
    * @return true where the field is an annotation
    */
   public static boolean isAnnotation(@Nonnull final String name) {
-    return name.startsWith(ANNOTATION_PREFIX);
+    return AnnotationNames.isAnnotation(name);
   }
 
   /**

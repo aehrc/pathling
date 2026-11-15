@@ -248,8 +248,8 @@ test_that("annotate keeps an annotation Pathling does not define", {
   patients <- pathling_encode(def_pathling, json_resources_df, "Patient") %>%
     mutate(`__unknown` = "u")
 
-  # A patient carries no quantity, so the built-in kind changes nothing, and a field marked as an
-  # annotation is kept, as the default options say.
+  # By default annotate only fills annotations that are missing, so those encode already added are
+  # kept as they are, and so is a field marked as an annotation that Pathling does not define.
   annotated <- pathling_annotate(def_pathling, patients, "Patient")
 
   expect_equal(colnames(annotated), colnames(patients))

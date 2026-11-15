@@ -149,15 +149,7 @@ final class XmlEgressShape {
       @Nonnull final Function<String, Column> source) {
     final String groupName = LayoutFields.metadataGroupName(entry.getName());
     final Optional<StructField> groupField =
-        fieldOf(stored, groupName)
-            .filter(field -> elementTypeOf(field.dataType()) instanceof StructType)
-            .filter(
-                field ->
-                    LayoutFields.METADATA_GROUP_FIELDS.stream()
-                        .anyMatch(
-                            name ->
-                                fieldOf((StructType) elementTypeOf(field.dataType()), name)
-                                    .isPresent()));
+        fieldOf(stored, groupName).filter(field -> MetadataGroups.holdsMetadata(field.dataType()));
     if (groupField.isEmpty()) {
       return each(
           valueType,
@@ -171,8 +163,7 @@ final class XmlEgressShape {
     final Column groups = source.apply(groupName);
     final Optional<StructField> extension = fieldOf(group, LayoutFields.METADATA_GROUP_EXTENSION);
     final Optional<DefinitionCanonicalStructure> extensionStructure =
-        node.metadataGroup(groupName)
-            .flatMap(g -> g.extensionStructure(LayoutFields.METADATA_GROUP_EXTENSION));
+        MetadataGroups.extensionStructure(node, entry);
     final BinaryOperator<Column> pair =
         (value, metadata) -> {
           final List<Column> fields = new ArrayList<>();
@@ -204,7 +195,8 @@ final class XmlEgressShape {
                                             single::getField)
                                         .toArray(Column[]::new))))
                     .alias(LayoutFields.METADATA_GROUP_EXTENSION));
-            present.add(extensions.isNotNull());
+            present.add(
+                MetadataGroups.hasContent(LayoutFields.METADATA_GROUP_EXTENSION, extensions));
           }
           return functions.when(
               present.stream().reduce(Column::or).orElseThrow(),

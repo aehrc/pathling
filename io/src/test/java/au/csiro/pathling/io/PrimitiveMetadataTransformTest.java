@@ -31,6 +31,7 @@ import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.StructField;
@@ -198,6 +199,70 @@ class PrimitiveMetadataTransformTest {
     assertEquals(List.of("id"), List.of(group.fieldNames()));
     assertEquals("string", group.apply("id").dataType().typeName());
     assertEquals("5", numeric.selectExpr("_birthDate.id").first().getString(0));
+  }
+
+  /**
+   * Groups of a repeating primitive holding neither an id nor extensions are not stored, and the
+   * primitive takes no positional nulls for them, so nothing of it is written (FR-019).
+   */
+  @Test
+  void storesNoPositionalNullsForGroupsHoldingNeither(@TempDir @Nonnull final Path directory) {
+    final Dataset<Row> stored =
+        storing(
+            "Patient",
+            directory,
+            "{\"resourceType\":\"Patient\",\"id\":\"1\","
+                + "\"name\":[{\"family\":\"Smith\",\"_given\":[{\"fhir_comments\":\"x\"}]}]}");
+
+    assertTrue(groups(stored.schema()).isEmpty(), "a group holding neither is not stored");
+    assertTrue(stored.selectExpr("name[0].given is null").first().getBoolean(0));
+    assertJsonEquals(
+        "{\"resourceType\":\"Patient\",\"id\":\"1\",\"name\":[{\"family\":\"Smith\"}]}",
+        json("Patient", stored));
+  }
+
+  /**
+   * A stored group whose id is null and whose extension array is empty, or holds only nulls, has no
+   * content, and is written in neither JSON nor XML (FR-019). A repeating primitive's position that
+   * holds no value beside such a group is not written in XML either.
+   */
+  @Test
+  void writesNoGroupWhoseExtensionsAreEmptyOrOnlyNulls(@TempDir @Nonnull final Path directory) {
+    final Dataset<Row> source =
+        storing(
+            "Patient",
+            directory,
+            "{\"resourceType\":\"Patient\",\"id\":\"1\",\"name\":[{\"given\":[\"Ann\",null],"
+                + "\"_given\":[{\"id\":\"g1\"},"
+                + DATA_ABSENT
+                + "]}],\"birthDate\":\"2000-01-01\",\"_birthDate\":"
+                + DATA_ABSENT
+                + "}");
+    // Another producer's data: the singular group's extensions are empty, and the second
+    // position's are only nulls.
+    final Dataset<Row> stored =
+        source
+            .withColumn(
+                "_birthDate",
+                functions.expr(
+                    "named_struct('extension', filter(_birthDate.extension, e -> false))"))
+            .withColumn(
+                "name",
+                functions.expr(
+                    "transform(name, n -> named_struct('given', n.given, '_given',"
+                        + " transform(n._given, (g, i) -> if(i = 1, named_struct('id', g.id,"
+                        + " 'extension', transform(g.extension, e -> if(false, e, null))), g))))"));
+
+    assertJsonEquals(
+        "{\"resourceType\":\"Patient\",\"id\":\"1\",\"name\":[{\"given\":[\"Ann\",null],"
+            + "\"_given\":[{\"id\":\"g1\"},null]}],\"birthDate\":\"2000-01-01\"}",
+        json("Patient", stored));
+    assertEquals(
+        "<Patient"
+            + XMLNS
+            + "><id value=\"1\"/><name><given id=\"g1\" value=\"Ann\"/></name>"
+            + "<birthDate value=\"2000-01-01\"/></Patient>",
+        TransformFixtures.fhirWriter().xml().write("Patient", stored).collectAsList().get(0));
   }
 
   /**
