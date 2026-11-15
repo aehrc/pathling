@@ -405,6 +405,8 @@ class ErrorHandlingInterceptorTest {
             "DELTA_FAILED_TO_MERGE_FIELDS",
             new String[] {"a", "b"},
             Option.empty(),
+            Option.empty(),
+            Option.empty(),
             Option.empty());
 
     final BaseServerResponseException result = ErrorHandlingInterceptor.convertError(e, "Patient");
@@ -440,6 +442,8 @@ class ErrorHandlingInterceptorTest {
     return new DeltaAnalysisException(
         "DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION",
         new String[] {fromCatalog, toCatalog},
+        Option.empty(),
+        Option.empty(),
         Option.empty(),
         Option.empty());
   }

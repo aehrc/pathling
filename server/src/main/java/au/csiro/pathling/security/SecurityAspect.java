@@ -19,12 +19,12 @@ package au.csiro.pathling.security;
 
 import au.csiro.pathling.errors.AccessDeniedError;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Collection;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
-import org.jetbrains.annotations.Nullable;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AbstractAuthenticationToken;

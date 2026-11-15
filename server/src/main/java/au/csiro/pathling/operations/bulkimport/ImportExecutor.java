@@ -41,7 +41,6 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -170,7 +169,7 @@ public class ImportExecutor {
     return writeDetails;
   }
 
-  private @NotNull Map<String, Collection<String>> checkAuthority(
+  private @Nonnull Map<String, Collection<String>> checkAuthority(
       final ImportRequest request, @Nullable final List<String> customAllowableSources) {
     if (serverConfiguration.getAuth().isEnabled()) {
       // Check global write authority.
