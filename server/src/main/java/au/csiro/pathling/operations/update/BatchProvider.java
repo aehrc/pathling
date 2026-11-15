@@ -292,8 +292,7 @@ public class BatchProvider {
       @Nonnull final List<BundleEntryComponent> responseEntries,
       @Nonnull final String resourceCode,
       @Nonnull final Exception error) {
-    final BaseServerResponseException converted =
-        ErrorHandlingInterceptor.convertError(error, resourceCode);
+    final BaseServerResponseException converted = ErrorHandlingInterceptor.convertError(error);
     for (final BundleEntryComponent responseEntry : responseEntries) {
       final BundleEntryResponseComponent responseElement = responseEntry.getResponse();
       responseElement.setStatus(String.valueOf(converted.getStatusCode()));
