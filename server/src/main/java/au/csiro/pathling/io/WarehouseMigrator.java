@@ -43,8 +43,12 @@ import org.apache.spark.sql.types.DataTypes;
  * layout) to the Parquet on FHIR layout, which is the only layout the library reads.
  *
  * <p>Each resource table in the legacy layout is converted by {@link LegacyLayoutConversion} and
- * overwritten in place. The overwrite is a new Delta version, so the data as it was before the
- * migration stays readable through time travel until the table is vacuumed. Tables already in the
+ * overwritten in place. Before the overwrite, the table is kept as a shallow clone beside it, named
+ * {@code <Type>.legacy-layout}. A shallow clone has a transaction log of its own and refers to the
+ * table's data files rather than copying them, so it costs no more than its log, and it stays
+ * readable until the table is vacuumed. Time travel on the table itself is not enough: Delta
+ * removes log files older than its log retention period when it writes a checkpoint, which the
+ * overwrite can do, and the version before the migration then cannot be read. Tables already in the
  * Parquet on FHIR layout, or in no recognisable layout, are not written.
  *
  * <p>Each table is migrated by a single atomic overwrite, so a migration that stops part of the way
@@ -59,6 +63,13 @@ public class WarehouseMigrator {
 
   /** The directory-name suffix under which each resource type's Delta table is stored. */
   private static final String TABLE_SUFFIX = ".parquet";
+
+  /**
+   * The directory-name suffix under which the clone of a table as it was before the migration is
+   * kept. It does not end in {@link #TABLE_SUFFIX}, so the clone is never taken for a resource
+   * table.
+   */
+  static final String CLONE_SUFFIX = ".legacy-layout";
 
   /** The column holding the logical id of each resource. */
   private static final String ID = "id";
@@ -112,23 +123,26 @@ public class WarehouseMigrator {
       final long previousVersion = table.history(1).select("version").first().getLong(0);
       log.info(
           "Migrating the {} table at {} to the Parquet on FHIR layout", resourceType, tablePath);
+      final String clonePath = safelyJoinPaths(databasePath, resourceType + CLONE_SUFFIX);
+      keepClone(tablePath, previousVersion, clonePath);
       final Dataset<Row> converted =
           withIdColumn(LegacyLayoutConversion.convertIfLegacy(context, resourceType, data));
       // The library's sink applies its own checks to the write. An overwrite replaces the schema
-      // along with the data, and the files of the previous version stay in place for time travel.
+      // along with the data, and leaves the files of the previous version, which the clone refers
+      // to, in place.
       new DataSinkBuilder(context, new DatasetSource(context).dataset(resourceType, converted))
           .saveMode("overwrite")
           .delta(databasePath);
 
       log.warn(
           "The {} table at {} has been migrated from the layout written by earlier releases of"
-              + " Pathling to the Parquet on FHIR layout. {}. The data as it was before the"
-              + " migration remains readable at Delta version {} of the table (read it with the"
-              + " versionAsOf option) until the table is vacuumed.",
+              + " Pathling to the Parquet on FHIR layout. {}. The table as it was before the"
+              + " migration is kept as a Delta shallow clone at {}, which shares the table's data"
+              + " files and stays readable until the table is vacuumed.",
           resourceType,
           tablePath,
           LegacyLayoutConversion.LOSSES,
-          previousVersion);
+          clonePath);
       log.info(
           "Migrated the {} table, which now holds {} resources",
           resourceType,
@@ -145,6 +159,31 @@ public class WarehouseMigrator {
               + e.getMessage(),
           e);
     }
+  }
+
+  /**
+   * Keeps a table, at the given version, as a shallow clone at another path. A clone left there by
+   * an earlier attempt that stopped before its table was overwritten is removed first, because
+   * Delta will not clone into a table that holds data. The table is still in the legacy layout in
+   * that case, so the new clone holds what the old one did.
+   */
+  private void keepClone(
+      @Nonnull final String tablePath, final long version, @Nonnull final String clonePath)
+      throws IOException {
+    final Path clone = new Path(clonePath);
+    final FileSystem fileSystem = clone.getFileSystem(spark.sparkContext().hadoopConfiguration());
+    if (fileSystem.exists(clone)) {
+      fileSystem.delete(clone, true);
+    }
+    spark.sql(
+        "CREATE TABLE delta.%s SHALLOW CLONE delta.%s VERSION AS OF %d"
+            .formatted(quoted(clonePath), quoted(tablePath), version));
+  }
+
+  /** Quotes a path as a Spark SQL identifier. */
+  @Nonnull
+  private static String quoted(@Nonnull final String path) {
+    return "`" + path.replace("`", "``") + "`";
   }
 
   /**

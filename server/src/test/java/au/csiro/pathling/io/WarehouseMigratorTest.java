@@ -41,9 +41,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.IntStream;
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.delta.DeltaLog;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.CodeType;
@@ -114,25 +116,82 @@ class WarehouseMigratorTest {
     assertThat(migrated.select("id").distinct().count()).isEqualTo(500);
   }
 
-  // The data as it was before the migration stays readable through Delta time travel, at the
-  // version the table held before it was overwritten, so an operator can recover it.
+  // The table as it was before the migration is kept as a shallow clone beside it, which holds a
+  // log of its own and shares the table's data files rather than copying them.
   @Test
-  void keepsPreMigrationDataReadableThroughTimeTravel(@TempDir final Path tempDir) {
+  void keepsAShallowCloneOfTheLegacyTable(@TempDir final Path tempDir) throws IOException {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    writeLegacyTable(
+        databasePath, "Patient", List.of(patient("p1", "Smith"), patient("p2", "Jones")));
+
+    newMigrator(databasePath).migrate();
+
+    final Dataset<Row> clone = sparkSession.read().format("delta").load(clonePath(databasePath));
+    assertThat(LegacyLayoutConversion.isLegacy(clone.schema())).isTrue();
+    assertThat(clone.count()).isEqualTo(2);
+    assertThat(dataFiles(Path.of(clonePath(databasePath)))).isEmpty();
+  }
+
+  // The clone stays readable once the table's own log no longer reaches the version before the
+  // migration, as happens when Delta removes expired log files at the checkpoint the migration
+  // writes. Time travel on the table cannot recover the data at that point; the clone can.
+  @Test
+  void cloneSurvivesTheRemovalOfTheTablesEarlierLog(@TempDir final Path tempDir)
+      throws IOException {
     final String databasePath = tempDir.toAbsolutePath().toString();
     writeLegacyTable(databasePath, "Patient", List.of(patient("p1", "Smith")));
     final long versionBefore = latestVersion(databasePath, "Patient");
 
     newMigrator(databasePath).migrate();
+    final Path log = Path.of(tablePath(databasePath, "Patient"), "_delta_log");
+    for (long version = 0; version <= versionBefore; version++) {
+      Files.delete(log.resolve("%020d.json".formatted(version)));
+    }
+    DeltaLog.clearCache();
 
-    assertThat(latestVersion(databasePath, "Patient")).isGreaterThan(versionBefore);
-    final Dataset<Row> previous =
-        sparkSession
-            .read()
-            .format("delta")
-            .option("versionAsOf", versionBefore)
-            .load(tablePath(databasePath, "Patient"));
-    assertThat(LegacyLayoutConversion.isLegacy(previous.schema())).isTrue();
-    assertThat(previous.count()).isEqualTo(1);
+    final Dataset<Row> clone = sparkSession.read().format("delta").load(clonePath(databasePath));
+    assertThat(clone.select("id").as(Encoders.STRING()).collectAsList()).containsExactly("p1");
+  }
+
+  // A clone left by an earlier attempt that stopped before the table was overwritten is replaced,
+  // so the clone always holds the table as it was immediately before its migration.
+  @Test
+  void replacesACloneLeftByAnEarlierAttempt(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    writeLegacyTable(databasePath, "Patient", List.of(patient("p1", "Smith")));
+    legacyDataset("Patient", List.of(patient("stale", "Old")))
+        .write()
+        .format("delta")
+        .save(clonePath(databasePath));
+
+    newMigrator(databasePath).migrate();
+
+    final Dataset<Row> clone = sparkSession.read().format("delta").load(clonePath(databasePath));
+    assertThat(clone.select("id").as(Encoders.STRING()).collectAsList()).containsExactly("p1");
+  }
+
+  // The clone is not a resource table: a second run neither migrates nor rewrites it.
+  @Test
+  void aSecondRunLeavesTheCloneAlone(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    writeLegacyTable(databasePath, "Patient", List.of(patient("p1", "Smith")));
+    newMigrator(databasePath).migrate();
+    final long cloneVersion =
+        DeltaTable.forPath(sparkSession, clonePath(databasePath))
+            .history(1)
+            .select("version")
+            .first()
+            .getLong(0);
+
+    newMigrator(databasePath).migrate();
+
+    assertThat(
+            DeltaTable.forPath(sparkSession, clonePath(databasePath))
+                .history(1)
+                .select("version")
+                .first()
+                .getLong(0))
+        .isEqualTo(cloneVersion);
   }
 
   // A table already in the Parquet on FHIR layout is not written, so its version is unchanged.
@@ -292,13 +351,12 @@ class WarehouseMigratorTest {
     assertThat(observations.count()).isEqualTo(1);
   }
 
-  // Each migrated table is reported with a warning naming the table, the Delta version that still
-  // holds the data as it was before the migration, and what the conversion could not recover.
+  // Each migrated table is reported with a warning naming the table, the clone that holds the data
+  // as it was before the migration, and what the conversion could not recover.
   @Test
-  void warnsWithLossesAndRestorableVersion(@TempDir final Path tempDir) {
+  void warnsWithLossesAndTheCloneLocation(@TempDir final Path tempDir) {
     final String databasePath = tempDir.toAbsolutePath().toString();
     writeLegacyTable(databasePath, "Patient", List.of(patient("p1", "Smith")));
-    final long versionBefore = latestVersion(databasePath, "Patient");
 
     try (final LogCapture logCapture = LogCapture.forClass(WarehouseMigrator.class)) {
       newMigrator(databasePath).migrate();
@@ -310,8 +368,7 @@ class WarehouseMigratorTest {
                 assertThat(event.getFormattedMessage())
                     .contains("Patient")
                     .contains(tablePath(databasePath, "Patient"))
-                    .contains("version " + versionBefore)
-                    .contains("versionAsOf")
+                    .contains(clonePath(databasePath))
                     .contains(LegacyLayoutConversion.LOSSES);
               });
       // The row count of the migrated table is reported once the migration completes.
@@ -396,5 +453,18 @@ class WarehouseMigratorTest {
   private static String tablePath(
       @Nonnull final String databasePath, @Nonnull final String tableName) {
     return databasePath + "/" + tableName + ".parquet";
+  }
+
+  @Nonnull
+  private static String clonePath(@Nonnull final String databasePath) {
+    return databasePath + "/Patient.legacy-layout";
+  }
+
+  /** Lists the Parquet data files directly within a table directory. */
+  @Nonnull
+  private static List<Path> dataFiles(@Nonnull final Path table) throws IOException {
+    try (final var files = Files.list(table)) {
+      return files.filter(file -> file.toString().endsWith(".parquet")).toList();
+    }
   }
 }
