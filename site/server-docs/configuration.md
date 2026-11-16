@@ -411,13 +411,27 @@ Before it overwrites a table, the server keeps the table as it was as a Delta
 [shallow clone](https://docs.delta.io/latest/delta-utility.html#shallow-clone-a-delta-table)
 beside it, named `<resource type>.legacy-layout` (for example,
 `Patient.legacy-layout`), and logs a warning naming the clone. A shallow clone
-has a transaction log of its own and refers to the table's data files rather
-than copying them. It stays readable until the table is vacuumed, so the data
-can be recovered from it for use with an earlier version of the server, by
-copying it back over the table. A table restored in this way is converted again
-the next time this version starts. Once the conversion has been checked, the
-clones can be deleted. Do not vacuum a converted table while its clone may still
-be needed, as vacuuming removes the data files that the clone refers to.
+has a transaction log of its own and refers to the table's data files by their
+full paths rather than copying them, so the clone only works while the table
+stays where it is. It stays readable until the table is vacuumed.
+
+To recover a table for use with an earlier version of the server, stop the
+server and overwrite the table from its clone with Spark and Delta Lake, for
+example:
+
+```python
+spark.read.format("delta").load("<database>/Patient.legacy-layout") \
+    .write.format("delta").mode("overwrite") \
+    .option("overwriteSchema", "true") \
+    .save("<database>/Patient.parquet")
+```
+
+Do not copy, move or delete the table or clone directories with file system
+tools to do this: the clone holds only a transaction log, and its data files are
+in the table directory. A table recovered in this way is converted again the
+next time this version starts. Once the conversion has been checked, the clones
+can be deleted. Do not vacuum a converted table while its clone may still be
+needed, as vacuuming removes the data files that the clone refers to.
 
 If a table cannot be converted, the server stops with an error naming the table
 and the cause. Tables converted before the failure stay converted, and the next

@@ -173,6 +173,7 @@ public class WarehouseMigrator {
     final Path clone = new Path(clonePath);
     final FileSystem fileSystem = clone.getFileSystem(spark.sparkContext().hadoopConfiguration());
     if (fileSystem.exists(clone)) {
+      log.info("Replacing {}, left by an earlier attempt to migrate {}", clonePath, tablePath);
       fileSystem.delete(clone, true);
     }
     spark.sql(
