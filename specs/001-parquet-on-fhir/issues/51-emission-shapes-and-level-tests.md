@@ -10,7 +10,7 @@
 
 **Blocked by:** 50.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] Plan-shape tests for the emission shapes assert the plan and equal results, in CI on Spark 4.0.2, including that the zipped fields carry the singular names and that the aliases add no projection that blocks pruning.
 - [x] Engine tests cover each level, over annotated and unannotated data: a date and a quantity at the root, under a repeating parent (`Observation.component.valueQuantity`), inside an extension (an extension's `valueDate` and `valueQuantity`), and a repeating primitive under a repeating parent. Each gives the same results either way, reads the stored annotation where present, and computes nothing where only the value is output.

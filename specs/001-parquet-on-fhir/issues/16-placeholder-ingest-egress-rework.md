@@ -20,7 +20,7 @@
 
 **A stored decimal's text in views (decision 147; handed on from ticket 41, owner, 2026-11-10).** Once a decimal's lexical form is kept, a view outputs a stored decimal as its stored text, and a computed one as today, the `DECIMAL(38,6)` value as text with trailing zeros trimmed. The column stays a string. `fhirPathToColumn` and `$fhirpath` still return `DECIMAL(38,6)` for every decimal; ticket 40 specifies what they return. Ticket 50 builds the detection of stored and computed decimals this rests on (moved from ticket 43, owner, 2026-11-11).
 
-**Blocked by:** The owner's choice of mechanism (decision 134). Ticket 32, because the rework replaces what it builds. Ticket 31, for the date grammar it puts in `fhir-schema`.
+**Blocked by:** The owner's choice of mechanism (decision 134). Ticket 32, because the rework replaces what it builds. #2885, for the date grammar it puts in `fhir-schema`.
 
 **Status:** needs-info
 
@@ -32,7 +32,7 @@ Criteria that hold whichever mechanism is chosen:
 - [ ] Bundle references resolve to the target entry's relative reference, keeping its version (FR-062, decision 83).
 - [ ] The rework carries over what was built on the interim ingest: the primitive metadata group of ticket 17, with its `_x` arrays that have no `x` beside them, and the dense mode of ticket 18. Both pass their own tests on the new mechanism.
 - [ ] Encode and decode meet SC-011.
-- [ ] Ingest validates dates and decimals with the shared grammar in `fhir-schema`, so ingest and engine agree on what is valid (decision 133, principle 7). Ticket 31 puts the date grammar there; the decimal grammar, and whether ingest validates per value at all, come with the follow-up issue that ticket 26 raises.
+- [ ] Ingest validates dates and decimals with the shared grammar in `fhir-schema`, so ingest and engine agree on what is valid (decision 133, principle 7). #2885 puts the date grammar there; the decimal grammar, and whether ingest validates per value at all, come with the follow-up issue that ticket 26 raises.
 - [ ] Ingest's handling of non-conformant data, the modes of "Modes" in `evidence/ingress-strictness/README.md` among it, follows the follow-up issue that ticket 26 raises. #2367's ingest is `trust` (decision 133's addendum of 2026-10-22).
 - [ ] If the stored form of any value changes from the interim's, such as a decimal's text, the layout column's version (ticket 29) is bumped, and data written by the interim is read or refused as that rule says.
 - [ ] A view outputs a stored decimal as its stored text, and `fhirPathToColumn` and `$fhirpath` still return `DECIMAL(38,6)`.

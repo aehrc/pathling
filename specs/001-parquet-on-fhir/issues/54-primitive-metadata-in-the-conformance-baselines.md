@@ -26,7 +26,7 @@
 
 **Blocked by:** 52.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] No switch for primitive metadata remains in the code, including the `PathlingContext.Builder` option and the four-argument `FhirViewExecutor` constructor.
 - [x] The cases listed above run, and pass, with their exclusions removed.

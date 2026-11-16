@@ -6,11 +6,11 @@
 
 The cost that the switch bounded, and that this ticket weighs:
 
-- Once a primitive without a value but with an id or extensions is an element, the test of whether it is an element, `_x.extension IS NOT NULL`, reads the whole Extension struct of every primitive the expression reads, singular or repeating. The owner accepted that read (ticket 52, review finding 3). The candidate fix, testing `extension.url`, reads about 17.6 MB rather than 182.4 MB on 1M Patients with extension-heavy `_birthDate` (`evidence/annotations-design-singular-meta-pruning.md`), and is in ticket 26.
+- Once a primitive without a value but with an id or extensions is an element, the test of whether it is an element, `_x.extension IS NOT NULL`, reads the whole Extension struct of every primitive the expression reads, singular or repeating. The owner accepted that read (ticket 52, review finding 3). The candidate fix tests through one subfield, such as `extension.url`. On 1M Patients with extension-heavy `_birthDate`, a read without any extension field is about 17.6 MB, against 182.4 MB for the whole `_x`; what reading only `extension.url` costs is unmeasured (`evidence/annotations-design-singular-meta-pruning.md`). The fix is a bullet of #2889 (Profile and optimise query performance across the engine).
 - The design's constraint that an expression reads only the metadata it uses (`design/annotations-in-the-engine.md` §2) was a target for the final solution, not a release gate (owner, 2026-11-04). With one mode, §4.1 no longer meets it for ids and extensions.
 
 Questions for triage: whether the measured cost justifies a switch once the `extension.url` test is in; where it would live (not `QueryConfiguration`, which the server binds); and whether it should be an option or an analysis of the expression (principle P0, decision 140, rules out the latter).
 
-**Blocked by:** 54.
+**Blocked by:** None. Ticket 54 (Primitive metadata always on) is implemented (owner, 2026-11-16).
 
-**Status:** needs-triage
+**Status:** needs-triage (unblocked; triage is the next step)

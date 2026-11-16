@@ -12,7 +12,7 @@
 
 **Blocked by:** 17, for the stored group; 51, for the pairing's emission shape; and 50 (Decimals and System.Quantity in the engine), for decision 153's conversion rules.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] With the switch on, `x.id` and `x.extension(…)` return the stored values for a singular and a repeating primitive, and empty where the source carried neither; with it off they are empty with no error. A test shows each.
 - [x] The read names only the fields the expression needs, shown by a plan test. With the switch on, the test of whether a primitive without a value is an element reads its whole `extension` wherever the primitive is read; the owner accepted that cost (2026-11-13, review finding 3), and testing through `extension.url` is a candidate in ticket 26.

@@ -22,11 +22,11 @@
 
 **Contracts to update:** `contracts/engine-semantics.md` and `contracts/library-api.md`, which both document six fields. The change is a behaviour change of the library API.
 
-**Not in this ticket:** the type-system split itself (#2804); the equality of Codings (ticket 26).
+**Not in this ticket:** the type-system split itself (ticket 56, #2804), which this ticket now depends on; the equality of Codings (ticket 26).
 
-**Blocked by:** none.
+**Blocked by:** 56 (Tell System types from FHIR types in the engine, for Coding and Quantity), which tracks #2804. The separation goes first, so that the Coding shape changes only once (owner, 2026-11-16).
 
-**Status:** needs-triage (stage 5; the scope above is the owner's, the field list is not yet settled)
+**Status:** needs-triage (PoF_line issue; the scope above is the owner's, the field list is not yet settled)
 
 - [ ] The fields of System.Coding are settled, `version` and `userSelected` included, from what the terminology service returns.
 - [ ] `CodingSchema`, the engine, the library-level terminology functions and `toCoding` build that shape, and `SystemCodingShapeTest` and `TerminologyHelpersTest.toCoding` assert it.

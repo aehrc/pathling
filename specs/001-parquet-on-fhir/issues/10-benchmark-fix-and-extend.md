@@ -1,5 +1,7 @@
 # 10 — Benchmark: fix warm planning, add missing views, re-measure
 
+> **Folded into #2889 (owner, 2026-11-16):** this ticket, H1 among it, and the precomputed reference key of FR-033 become bullets of #2889 (Profile and optimise query performance across the engine), not issues of their own. H1 is weighed at the release cut, not as a gate. This ticket stays as the working record.
+
 **Spec:** `specs/001-parquet-on-fhir/spec.md` — SC-007, FR-033. Old tasks: T124g, T136b and the T136 re-runs.
 
 **What to build:** A benchmark that measures what the remaining work needs, re-run against the T003 baseline and the T136 numbers.

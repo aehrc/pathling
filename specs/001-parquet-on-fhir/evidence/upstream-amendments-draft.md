@@ -98,7 +98,7 @@ raised as [#4](https://github.com/aehrc/parquet-on-fhir/issues/4) on 2026-11-11.
 | 6 | Range annotations: a physical type that can be written, microsecond unit (not milliseconds, not nanoseconds), proleptic Gregorian calendar (with INT96 as the alternative) | amendment proposed | raised upstream ([#3](https://github.com/aehrc/parquet-on-fhir/issues/3)); the INT96 revision (ticket 44) is not yet drafted; INT96 cost and the NANOS range added here, 2026-11-05 |
 | 7 | `instant` carries range annotations | amendment proposed | raised upstream ([#3](https://github.com/aehrc/parquet-on-fhir/issues/3), item 3) |
 | 8 | The canonical annotation's value type, one stored representation per magnitude, and order for row-group skipping | amendment proposed | raised upstream ([#1](https://github.com/aehrc/parquet-on-fhir/issues/1)); the uniqueness requirement and the order consequence drafted here, 2026-11-05 |
-| 9 | Pathling emits `__canonical_exact` in place of `__canonical`, and the canonicalisation rules the specification leaves open | deviation in Pathling only | not yet drafted (the rules); the substitution is recorded in decision 137 |
+| 9 | Pathling emits `__canonical_code` and `__canonical_value_exact` in place of `__canonical`, and the canonicalisation rules the specification leaves open | deviation in Pathling only | not yet drafted (the rules); the substitution is recorded in decision 137 |
 | 10 | What the `numeric` annotation holds beyond six fractional digits and past its range | clarification | not yet drafted |
 | 11 | A decimal's text is numerically equal to the source, not its lexical form | deviation in Pathling only | not yet drafted (no upstream change is needed; tracked as OQ-1 and ticket 16) |
 | 12 | Primitive ids and extensions: repeating primitives, positional nulls, `_x` without `x`, and the specification's own example | amendment proposed | drafted here, 2026-11-12, from ticket 17's result (ticket 17, "Primitive metadata in the stored layout") |
@@ -323,7 +323,8 @@ canonical group.
 **What Pathling built.** Option 1 below (decision 135, part 4, owner,
 2026-10-22): a primitive's annotations are fields of its `_x` group, after `id`
 and `extension` (`_birthDate.__start`, `valueQuantity._value.__numeric`), and a
-complex element's are fields of its own structure (`valueQuantity.__canonical_exact`).
+complex element's are fields of its own structure (`valueQuantity.__canonical_code`,
+`valueQuantity.__canonical_value_exact`).
 The decimal (ticket 13), date range (ticket 14) and quantity (ticket 12)
 annotations are built this way on `issue/2832` [M]. No Pathling release writes
 annotations yet, so nothing is published in any placement.
@@ -467,11 +468,12 @@ element (`__bounds {start, end}`, `__canonical {value, code}`).
     layout's flat quantity fields (`_code_canonicalized`, `_value_canonicalized`).
   - Grouped adds a level to every path.
 - **Pathling.**
-  - Built so far: date ranges flat; quantity grouped (`__canonical_exact`,
-    decision 137).
-  - Pathling's current preference is flat (owner, 2026-11-04), including the
-    quantity (`design/annotations-in-the-engine.md` §4.7, not yet adopted). This
-    is a preference, not a proposal.
+  - Built: date ranges flat, and the quantity flat too: `__canonical_code`, a
+    string, and `__canonical_value_exact`, a FlexiDecimal struct. The struct is
+    the value's own type, not a grouping (decision 152).
+  - Pathling's preference is flat (owner, 2026-11-04). Whether to group is a
+    parked internal question (`design/annotations-in-the-engine.md` §6,
+    question 1). This is a preference, not a proposal.
 
 ### Proposal
 
@@ -500,8 +502,9 @@ and its table so that they agree.
   Under option 3, #3 stands as written for placement and Pathling moves. Under
   the other options, #3's text is reworded to the chosen names. The type (#3)
   and the placement can be agreed in either order.
-- **Overlap with #1.** Ticket 35 item 4 also offered `__canonical_exact` in place
-  of the specification's fixed-point form. The type belongs to section 8, and
+- **Overlap with #1.** Ticket 35 item 4 also offered Pathling's exact canonical
+  value, now `__canonical_value_exact`, in place of the specification's
+  fixed-point form. The type belongs to section 8, and
   this section carries only the placement and grouping.
 - **A stored shape the specification does not mention, under option 1.** A
   primitive carried only for an annotation has a `_x` group with no `id` or
@@ -859,12 +862,13 @@ carry a `canonical` annotation, "a group" with `value`
 not say which units are canonicalised or how.
 
 **What Pathling built.** Pathling first emitted both the specification's
-`__canonical` and its own `__canonical_exact` (decision 46). Decision 137
-(owner, 2026-10-26) reversed that: a quantity carries only `__canonical_exact`,
-because nothing read `__canonical` and the fixed scale makes quantities that
-differ by orders of magnitude compare equal. `__canonical_exact` is
-`struct<value struct<value decimal(38,0), scale int>, code string>` (ticket 12):
-the canonical value as a scaled integer with the decimal point anywhere, and the
+`__canonical` and its own exact form (decision 46). Decision 137 (owner,
+2026-10-26) reversed that: a quantity carries only the exact form, because
+nothing read `__canonical` and the fixed scale makes quantities that differ by
+orders of magnitude compare equal. The exact form is two flat fields of the
+quantity (decision 152): `__canonical_value_exact`, a FlexiDecimal
+`struct<value decimal(38,0), scale int>`, the canonical value as a scaled
+integer with the decimal point anywhere; and `__canonical_code`, a string, the
 canonical unit code beside it, because a value without its base unit lets one
 metre and one second compare equal.
 
@@ -921,7 +925,7 @@ recommendation.
 | Direction | One representation per magnitude | Ordered, with statistics |
 |---|---|---|
 | (1) `STRING` lexical form + `DECIMAL(38,6)` | Text: only with a normalisation rule [I] | Text: no, string order is not numeric order [I]. The fixed-scale field: yes [M] |
-| (2) Scaled integer `{value, scale}` (Pathling's `__canonical_exact`) | Only if trailing zeros are stripped [M] | No [M] |
+| (2) Scaled integer `{value, scale}` (Pathling's `__canonical_value_exact`) | Only if trailing zeros are stripped [M] | No [M] |
 | (3) Implementation-chosen | Depends on the producer | Depends on the producer |
 | (4) `DECIMAL(38,6)` only | Yes [I] | Yes [M], but loses small magnitudes (#1) |
 | (5, new) An order-preserving byte encoding | Yes, by construction [I] | Yes, in principle [I] |
@@ -940,14 +944,14 @@ requirements together. The cost is a second field.
 
 ### Other considerations
 
-- **Which direction Pathling wants.** Pathling's `__canonical_exact` is
-  direction 2 plus a `code` field, but #1 ranks direction 1 first. A `STRING` form
+- **Which direction Pathling wants.** Pathling's `__canonical_value_exact` is
+  direction 2, with `__canonical_code` beside it, but #1 ranks direction 1 first. A `STRING` form
   would cost the engine a parse per comparison or its own extra field. Pathling's
   plan, in #1, was to omit `canonical` and emit an equivalent under a different
   name, which decision 137 did. The owner should say which direction Pathling
   accepts.
-- **The type is proposed twice.** Ticket 35 item 4 also offers `__canonical_exact`
-  in place of the specification's. Settle the type here and the placement in
+- **The type is proposed twice.** Ticket 35 item 4 also offers Pathling's exact
+  canonical value in place of the specification's. Settle the type here and the placement in
   section 3.
 - **Evidence and cost.** `evidence/ticket-12-quantity-annotations.md` and ticket
   12's comments: with annotations a comparison `q > 100 'mg/dL'` over 10,000
@@ -961,17 +965,17 @@ requirements together. The cost is a second field.
   digits (ticket 12), so a value needing more is rounded. #1's direction 2 has
   the same limit.
 - **Compatibility.** No known producer writes `__canonical`; the upstream
-  example files carry none. Nobody reads Pathling's `__canonical_exact`.
+  example files carry none. Nobody reads Pathling's `__canonical_value_exact`.
 - **Dependence.** Overlaps section 3 (placement) and section 9 (the rules the
   type depends on).
 - **If rejected.** If the specification keeps `DECIMAL(38,6)`, Pathling keeps
-  emitting `__canonical_exact` as a non-standard annotation (decision 137 already
+  emitting `__canonical_code` and `__canonical_value_exact` as non-standard annotations (decision 137 already
   says it is replaced "if the specification adopts a magnitude-preserving
   representation"). Nothing is lost; interoperability on canonical quantities is.
 
 ---
 
-## 9. Pathling emits `__canonical_exact`, and the canonicalisation rules the specification leaves open
+## 9. Pathling emits `__canonical_code` and `__canonical_value_exact`, and the canonicalisation rules the specification leaves open
 
 **Kind:** deviation in Pathling only. **Status:** not yet drafted. The
 substitution is recorded in decision 137, FR-005 and
@@ -1011,9 +1015,9 @@ UCUM table, with a note on how a consumer treats a mismatch.
 
 - **Open question for the owner.** Whether to raise this with #1, or separately.
   Ticket 26 holds a related follow-up, annotation kinds as plugins, which covers
-  "the identity of a kind", including "versioned computations, such as
-  `__canonical_exact`'s dependence on the UCUM table, and data that outlives the
-  engine that wrote it". It is the same problem, at Pathling's level.
+  the identity of a kind, including versioned computations, such as
+  `__canonical_value_exact`'s dependence on the UCUM table, and data that
+  outlives the engine that wrote it. It is the same problem, at Pathling's level.
 - **Contradiction between decisions on UCUM.** Decision 77 had search follow FHIR
   search on UCUM while FHIRPath comparison "still canonicalises from the code
   whatever the system"; ticket 12's T096b then made comparison UCUM-only. The
