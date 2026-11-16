@@ -22,7 +22,6 @@ import static org.awaitility.Awaitility.await;
 
 import au.csiro.pathling.library.io.source.LayoutDetector;
 import au.csiro.pathling.library.io.source.StorageLayout;
-import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
@@ -32,6 +31,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.io.FileUtils;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
@@ -107,29 +108,23 @@ class LegacyWarehouseMigrationIT {
             .build();
   }
 
-  // Every table of the earlier layout has been converted at startup, and the version of each
-  // table that holds the data as 3.1.0 wrote it is still in the table's history.
+  // Every table of the earlier layout has been converted at startup, and each is kept as it was
+  // before the conversion in a shallow clone beside it, holding the same resources.
   @Test
   @Order(1)
-  void everyTableIsConvertedAndItsEarlierVersionKept() {
+  void everyTableIsConvertedAndKeptAsAClone() {
     for (final String type : TABLES) {
-      final String path = tablePath(type);
-      assertThat(
-              LayoutDetector.detect(spark.read().format("delta").load(path).schema()).getLayout())
+      final Dataset<Row> table = spark.read().format("delta").load(tablePath(type));
+      assertThat(LayoutDetector.detect(table.schema()).getLayout())
           .as(type)
           .isEqualTo(StorageLayout.PARQUET_ON_FHIR);
-      final long latest =
-          DeltaTable.forPath(spark, path).history(1).select("version").first().getLong(0);
-      assertThat(
-              LegacyLayoutConversion.isLegacy(
-                  spark
-                      .read()
-                      .format("delta")
-                      .option("versionAsOf", latest - 1)
-                      .load(path)
-                      .schema()))
-          .as(type)
-          .isTrue();
+      final Dataset<Row> clone =
+          spark
+              .read()
+              .format("delta")
+              .load(warehouseDir.resolve("default").resolve(type + ".legacy-layout").toString());
+      assertThat(LegacyLayoutConversion.isLegacy(clone.schema())).as(type).isTrue();
+      assertThat(clone.count()).as(type).isEqualTo(table.count());
     }
   }
 

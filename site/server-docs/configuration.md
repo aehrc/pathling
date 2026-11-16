@@ -407,14 +407,46 @@ The text of a decimal can change in the conversion while its value stays the
 same: for example, `100` may be returned as `100.0`, and `-71.093930` as
 `-71.09393`.
 
-The server logs a warning for each table it converts, naming the Delta version
-that still holds the data as it was before the conversion. Until the table is
-vacuumed, that version can be restored with Delta Lake's
-[time travel](https://docs.delta.io/latest/delta-utility.html#restore-a-delta-table-to-an-earlier-state),
-for use with an earlier version of the server. A restored table is converted
-again the next time this version starts. If a table cannot be converted, the
-server stops with an error naming the table and the cause. Tables converted
-before the failure stay converted, and the next start continues with the rest.
+Before it overwrites a table, the server keeps the table as it was as a Delta
+[shallow clone](https://docs.delta.io/latest/delta-utility.html#shallow-clone-a-delta-table)
+beside it, named `<resource type>.legacy-layout` (for example,
+`Patient.legacy-layout`), and logs a warning naming the clone. A shallow clone
+has a transaction log of its own and refers to the table's data files by their
+full paths rather than copying them, so the clone only works while the table
+stays where it is. It stays readable until the table is vacuumed.
+
+To recover a table for use with an earlier version of the server, stop the
+server and overwrite the table from its clone with Spark and Delta Lake, for
+example:
+
+```python
+spark.read.format("delta").load("<database>/Patient.legacy-layout") \
+    .write.format("delta").mode("overwrite") \
+    .option("overwriteSchema", "true") \
+    .save("<database>/Patient.parquet")
+```
+
+Do not copy, move or delete the table or clone directories with file system
+tools to do this: the clone holds only a transaction log, and its data files are
+in the table directory. A table recovered in this way is converted again the
+next time this version starts. Once the conversion has been checked, the clones
+can be deleted. Do not vacuum a converted table while its clone may still be
+needed, as vacuuming removes the data files that the clone refers to.
+
+If a table cannot be converted, the server stops with an error naming the table
+and the cause. Tables converted before the failure stay converted, and the next
+start continues with the rest.
+
+The conversion runs before the server starts to answer requests, including
+health checks, and its duration depends on the size of the warehouse. When the
+server runs on Kubernetes, allow for it in the startup probe: the
+[Helm chart](./deployment/kubernetes) tolerates three minutes by default, which
+can be raised with `pathling.deployment.startupProbeFailureThreshold`. The
+conversion also uses more memory outside the Java heap than normal operation.
+In one deployment, converting a table of about 840,000 Observations exceeded a
+container memory limit 2 GB above the maximum heap size, and completed with a
+limit 6 GB above it. Raise the memory limit for the first start if the
+warehouse holds large tables.
 
 In multi-replica deployments, start a single replica against an earlier
 warehouse and let it complete the conversion before starting the others.
