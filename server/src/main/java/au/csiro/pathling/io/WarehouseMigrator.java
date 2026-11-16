@@ -122,9 +122,9 @@ public class WarehouseMigrator {
 
       log.warn(
           "The {} table at {} has been migrated from the layout written by earlier releases of"
-              + " Pathling to the Parquet on FHIR layout. In the migrated data, {}. The data as it"
-              + " was before the migration remains readable at Delta version {} of the table (read"
-              + " it with the versionAsOf option) until the table is vacuumed.",
+              + " Pathling to the Parquet on FHIR layout. {}. The data as it was before the"
+              + " migration remains readable at Delta version {} of the table (read it with the"
+              + " versionAsOf option) until the table is vacuumed.",
           resourceType,
           tablePath,
           LegacyLayoutConversion.LOSSES,
@@ -133,7 +133,9 @@ public class WarehouseMigrator {
           "Migrated the {} table, which now holds {} resources",
           resourceType,
           spark.read().format("delta").load(tablePath).count());
-    } catch (final RuntimeException e) {
+    } catch (final Exception e) {
+      // Spark raises checked exceptions such as SparkException from Scala without declaring them,
+      // so the catch is broad enough to name the table whatever the failure.
       throw new IllegalStateException(
           "Failed to migrate the "
               + resourceType

@@ -45,7 +45,7 @@ public final class LegacyLayoutConversion {
 
   /** What the conversion cannot recover, as reported to an operator. */
   public static final String LOSSES =
-      "content the earlier layout did not store is absent from the converted data: digits of "
+      "Content the earlier layout did not store is absent from the converted data: digits of "
           + "decimals beyond the sixth decimal place, the offset and sub-millisecond precision of "
           + "instants, modifier extensions, ids and extensions of primitive elements, contained "
           + "resources, and content beyond its nesting, extension and open type limits (see "

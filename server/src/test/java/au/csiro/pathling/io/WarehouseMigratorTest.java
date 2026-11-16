@@ -209,6 +209,24 @@ class WarehouseMigratorTest {
     assertThat(latestVersion(databasePath, "Patient")).isEqualTo(versionBefore);
   }
 
+  // A failure that Spark raises as a checked exception, such as a data file missing from the
+  // table, also fails the migration with an error naming the table.
+  @Test
+  void namesTheTableWhenADataFileIsMissing(@TempDir final Path tempDir) throws IOException {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    writeLegacyTable(databasePath, "Patient", List.of(patient("p1", "Smith")));
+    try (final var files = Files.list(Path.of(tablePath(databasePath, "Patient")))) {
+      for (final Path file : files.filter(f -> f.toString().endsWith(".parquet")).toList()) {
+        Files.delete(file);
+      }
+    }
+
+    assertThatThrownBy(() -> newMigrator(databasePath).migrate())
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Failed to migrate the Patient table")
+        .hasMessageContaining(tablePath(databasePath, "Patient"));
+  }
+
   // Entries that are not resource tables - stray files, directories that are not Delta tables,
   // tables whose name is not a supported resource type, and the server's other directories - are
   // skipped and left untouched.
