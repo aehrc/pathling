@@ -85,7 +85,7 @@ extensions are stored and navigable.
 - [17](17-primitive-metadata-in-the-stored-layout.md) Primitive metadata in the stored layout (US6, #437)
 - [52](52-primitive-metadata-in-the-engine.md) Primitive metadata in the engine (US6, #437)
 - [15](15-schema-decided-plan-test-and-docs.md) Test that annotation use is decided from the schema, and document annotations
-- [53](53-system-coding-without-id.md) Drop `id` from System.Coding (needs triage; tentatively in this stage)
+- ~~[53](53-system-coding-without-id.md) Drop `id` from System.Coding~~ (deferred to stage 5, owner, 2026-11-15)
 - [54](54-primitive-metadata-in-the-conformance-baselines.md) Primitive metadata always on (US6, #437): remove the switch, and the full build, Search, Python, R and the fhirpath.js baseline pass with it
 - ~~[34](34-placeholder-content-outside-definitions.md) PLACEHOLDER: Carry content the definitions do not describe through ingest, egress and the engine~~ (moved to a follow-up issue, ticket 26)
 
@@ -133,6 +133,7 @@ Follow-ups and completion:
 - [26](26-raise-github-followups.md) Raise the GitHub follow-up issues, including everything the re-plan moved out of #2367
 - [36](36-followup-extra-fields.md) Scope the follow-up issue on extra fields: their support, and their place in the conformance levels
 - [48](48-annotation-decisions-to-adr.md) Decide which annotation decisions belong in an ADR
+- [53](53-system-coding-without-id.md) Drop `id` from System.Coding: one System.Coding, everywhere, with the fields the terminology service returns (deferred from stage 4, owner, 2026-11-15; field list not yet settled)
 - [55](55-optional-switch-to-skip-primitive-metadata.md) Optional switch to skip reading primitive metadata (needs triage; raised from 54)
 - [49](49-dependency-vulnerabilities.md) Clear the dependency vulnerabilities that the pre-release scan reports (after #2879, the move to Spark 4.1)
 - [28](28-completion-checklist.md) Completion checklist

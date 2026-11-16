@@ -165,7 +165,24 @@ public final class DefinitionCanonicalStructure implements CanonicalStructure {
         .filter(LayoutEntry::isElement)
         .flatMap(this::elementStructure)
         .map(CanonicalStructure.class::cast)
-        .or(() -> metadataGroup(name).map(CanonicalStructure.class::cast));
+        .or(() -> metadataGroup(name).map(CanonicalStructure.class::cast))
+        .or(() -> annotationStructure(name).map(CanonicalStructure.class::cast));
+  }
+
+  /**
+   * Returns the structure of an annotation that is a structure, so that a merge keeps its fields in
+   * the order of its type, which a reader may take them by.
+   *
+   * @param name the name of the annotation
+   * @return the structure of the annotation, or empty where this node has no such annotation or it
+   *     is not a structure
+   */
+  @Nonnull
+  private Optional<AnnotationStructure> annotationStructure(@Nonnull final String name) {
+    return entry(name)
+        .filter(LayoutEntry::isAnnotation)
+        .flatMap(unused -> LayoutFields.structuredAnnotationType(name))
+        .map(AnnotationStructure::new);
   }
 
   /**

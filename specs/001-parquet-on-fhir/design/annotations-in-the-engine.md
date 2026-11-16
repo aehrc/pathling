@@ -641,7 +641,8 @@ would be needed only if another system were canonicalised with codes that could 
 UCUM's, which would be a new kind (decision 135 keeps the set closed).
 
 **The exact value's scale is never negative.** A FlexiDecimal is an unscaled
-`DECIMAL(38,0)` and a scale, and `FlexiDecimal.normalize` raises a negative scale to 0.
+`DECIMAL(38,0)` and a scale, and `ExactDecimal.normalize` (in `utilities`; `FlexiDecimal`
+delegates to it) raises a negative scale to 0.
 So 72.50 kg is stored as `{ value: 72500, scale: 0 }`, not `{ value: 725, scale: -2 }`.
 D6 (decision 149) proposes upstream, as a SHALL, that equal quantities have byte-equal
 canonical values, which makes stripping trailing zeros a release requirement. Stripping

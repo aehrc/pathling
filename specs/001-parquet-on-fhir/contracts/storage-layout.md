@@ -66,7 +66,7 @@ are created, so they store the bounds as `int64` with
 Gregorian calendar, before the Gregorian cutover as after it. A session the user
 supplies, or one already active or default where Pathling would otherwise build
 one, keeps its own setting, `int96` by default. Where it is not `TIMESTAMP_MICROS`, a
-warning is logged when the context is created, and Pathling's Parquet, Delta and
+warning is logged when the context is created, if range annotations are enabled, and Pathling's Parquet, Delta and
 catalog sinks refuse to write data that carries the bounds. At milliseconds the
 stored upper bound would disagree with the one the engine computes, and change
 the results of comparisons. An `instant` carries them too. These are deviations

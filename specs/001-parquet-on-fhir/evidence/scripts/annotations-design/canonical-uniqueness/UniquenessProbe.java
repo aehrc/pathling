@@ -1,4 +1,4 @@
-import au.csiro.pathling.schema.annotation.kinds.CanonicalQuantity;
+import au.csiro.pathling.schema.unit.CanonicalQuantity;
 import au.csiro.pathling.schema.annotation.kinds.QuantityCanonicalKind;
 import java.math.BigDecimal;
 import java.util.ArrayList;

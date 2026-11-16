@@ -16,7 +16,7 @@
  */
 import au.csiro.pathling.schema.LayoutFields;
 import au.csiro.pathling.schema.annotation.PerThreadLruCache;
-import au.csiro.pathling.schema.annotation.kinds.CanonicalQuantity;
+import au.csiro.pathling.schema.unit.CanonicalQuantity;
 import au.csiro.pathling.schema.annotation.kinds.QuantityCanonicalKind;
 import java.util.Arrays;
 import java.util.List;
@@ -188,7 +188,7 @@ public final class QuantityCostProbe {
       functions.udf(
           (UDF1<Row, Row>) r -> {
             if (r == null) return null;
-            final au.csiro.pathling.schema.annotation.kinds.CanonicalQuantity c =
+            final au.csiro.pathling.schema.unit.CanonicalQuantity c =
                 QuantityCanonicalKind.toExact(
                     QuantityCanonicalKind.canonicalOf(
                         QuantityCanonicalKind.parseValue((String) r.getAs("value")),

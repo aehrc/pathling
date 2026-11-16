@@ -18,9 +18,13 @@
 package au.csiro.pathling.schema;
 
 import au.csiro.pathling.utilities.AnnotationNames;
+import au.csiro.pathling.utilities.ExactDecimal;
 import jakarta.annotation.Nonnull;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -99,6 +103,15 @@ public final class LayoutFields {
   public static final String CANONICAL_VALUE_EXACT_ANNOTATION =
       ANNOTATION_PREFIX + "canonical_value_exact";
 
+  /**
+   * The types of the annotations that are structures, whose fields are in the order of their type,
+   * because a reader may take them by position. A new annotation that is a structure must be
+   * registered here, or a merge orders its fields by name.
+   */
+  @Nonnull
+  private static final Map<String, StructType> STRUCTURED_ANNOTATIONS =
+      Map.of(CANONICAL_VALUE_EXACT_ANNOTATION, ExactDecimal.TYPE);
+
   /** The types whose stated precision implies a range, and which therefore carry range bounds. */
   @Nonnull private static final Set<String> RANGE_ANNOTATED = Set.of("date", "dateTime", "instant");
 
@@ -145,5 +158,16 @@ public final class LayoutFields {
       return List.of(CANONICAL_CODE_ANNOTATION, CANONICAL_VALUE_EXACT_ANNOTATION);
     }
     return List.of();
+  }
+
+  /**
+   * Returns the type of an annotation that is a structure, which fixes the order of its fields.
+   *
+   * @param name the name of the annotation
+   * @return the type, or empty where the annotation is not a structure
+   */
+  @Nonnull
+  public static Optional<StructType> structuredAnnotationType(@Nonnull final String name) {
+    return Optional.ofNullable(STRUCTURED_ANNOTATIONS.get(name));
   }
 }

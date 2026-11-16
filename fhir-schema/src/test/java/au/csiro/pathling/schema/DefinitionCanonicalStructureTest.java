@@ -400,6 +400,34 @@ class DefinitionCanonicalStructureTest {
     assertEquals(merged, StructureMerge.merge(right, left, patient()));
   }
 
+  @Test
+  void keepsTheFieldOrderOfAStructuredAnnotationThroughAMerge() {
+    // The exact canonical value is read by position, so a merge of quantities of differing shape
+    // must keep the order its type declares. Ordering its fields by name would swap them.
+    final StructType exact =
+        struct(
+            field("value", DataTypes.createDecimalType(38, 0)),
+            field("scale", DataTypes.IntegerType));
+    final StructType left =
+        struct(
+            field("value", DataTypes.StringType),
+            field("comparator", DataTypes.StringType),
+            field("__canonical_value_exact", exact));
+    final StructType right =
+        struct(field("value", DataTypes.StringType), field("__canonical_value_exact", exact));
+    final CanonicalStructure quantity =
+        descend(
+            DefinitionCanonicalStructure.forResource(DEFINITIONS, "Observation"), "valueQuantity");
+
+    final StructType merged = StructureMerge.merge(left, right, quantity);
+    assertEquals(List.of("value", "scale"), names(structAt(merged, "__canonical_value_exact")));
+    // A structure only one operand carries is ordered the same way.
+    final StructType bare = struct(field("value", DataTypes.StringType));
+    assertEquals(
+        List.of("value", "scale"),
+        names(structAt(StructureMerge.merge(left, bare, quantity), "__canonical_value_exact")));
+  }
+
   /**
    * Whether a node is a resource decides whether it carries {@code resourceType}, so one type
    * reached both as a resource and not within one memo must yield a structure for each.

@@ -4324,6 +4324,15 @@ _Decision_:
      `fhir-schema` may not use (FR-048). The kind, its fields and its switch are one definition either
      way; only the resolution of presence has two implementations. If ticket 9 binds columns to a
      schema, the engine's resolver can become a Java one too.
+
+     _Amended (owner, 2026-11-16, from PR #2877's simplification):_ every stored-or-computed choice
+     goes through one method, `AnnotationKind.apply`, which computes the kind and hands the
+     container, the field's name and the computed value to an `AnnotationResolver`. The two
+     strategies are the two clients'. The engine's is dynamic, resolved when Spark analyses the plan
+     (`annotationOrElse` or `resolveOrElse`). Ingest's is static, chosen per node in `Annotator`
+     from the schema it observed: the stored field where the container carries it and annotations
+     are not recomputed, the computed value otherwise. Only the engine applies `AnnotationKind.read` to the result. Ingest never does,
+     so a kept `__numeric` is stored at the type it was found at, not recast.
    - **The toggles govern what the annotation step stores, never what the engine can compute.**
 2. **A dense schema annotates every element the definitions describe**, subject to the toggles.
    Annotating only the populated elements cannot be known without seeing every row, which rules out the
@@ -4610,6 +4619,8 @@ _Decision_:
   `INT96`, which would store a type other than the layout's, as for `TIMESTAMP_MILLIS`, whose truncated upper
   bound would change comparisons. It superseded a warning alone, with the annotations stored as the session
   said.
+  _Amended (2026-11-16, from PR #2877's third review pass):_ the warning at context creation is logged
+  only when range annotations are enabled, since a context that stores none has no timestamp to write.
 - **An `instant` carries the range annotations,** as `date` and `dateTime` do. It compares as a dateTime.
 - **This is a deviation from the specification,** recorded in `contracts/storage-layout.md`, lasting until the
   specification is amended. An amendment proposing `int64` `TIMESTAMP(isAdjustedToUTC=true, MICROS)`, the
@@ -4847,7 +4858,9 @@ _Recommended_:
 - **D6, the quantity's canonical form: a flat code and an exact value,** optionally with a fixed-scale value
   beside it for row-group skipping. Proposed with it: two equal quantities SHALL have byte-equal canonical
   values, which makes stripping trailing zeros on the canonical path a Pathling release requirement.
-  Stripping stops at the decimal point: the exact value's scale is never negative (`FlexiDecimal.normalize`),
+  Stripping stops at the decimal point: the exact value's scale is never negative
+  (`FlexiDecimal.normalize`; _since 2026-11-16 the rule lives in `utilities`' `ExactDecimal.normalize`,
+  to which `FlexiDecimal` delegates_),
   so 72.50 kg is `{72500, 0}`, not `{725, -2}`.
 
 _Pathling's own write (owner decision, 2026-11-06):_ Pathling writes the exact form only,

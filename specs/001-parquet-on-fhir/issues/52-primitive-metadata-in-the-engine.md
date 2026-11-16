@@ -120,7 +120,8 @@ the owner's decision below resolved.
   keeps them (`Patient.name.given.distinct().count()` is 3). The existence of a singular element
   now depends on its `id` and `extension`, so a singular primitive reads both wherever it is read:
   the plan test asserts that the read names only fields of the group, never the group, and no
-  annotation that the expression does not use.
+  annotation that the expression does not use. _(Since PR #2877's simplification, 2026-11-16: the
+  three are one, `StoredPrimitive.paired`, called with each type's annotation names.)_
 - **Switch off (2).** The branch already matched `main` for every primitive but a date or decimal,
   which tickets 14 and 50 read through their metadata group: those left out a repeating one's
   positions without a value under a repeating parent. They now keep them as null items, as `main`
@@ -139,12 +140,15 @@ the owner's decision below resolved.
   Their output and conversion now leave them out, as every other primitive's does. A deduplication
   keeps one of them, for a decimal (`StoredDecimalComparator.withMetadata`) and a time
   (`StoredPrimitiveComparator`, whose equality takes two of them as equal) as for every other type.
+  _(Since PR #2877's simplification, 2026-11-16: `StoredDecimalComparator` has one form,
+  `getInstance()`, keyed by the number in a structure; its flag and its bare-number key are gone.)_
 - **The switch is off `QueryConfiguration`** (owner, review finding 4: no server surface). The
   server binds `QueryConfiguration` from its Spring configuration, so the library sets the switch
   through `PathlingContext.Builder.readPrimitiveMetadata`, which `PathlingContext` passes to
   `FhirViewExecutor` and `evaluateFhirPath`. Server exposure is part of ticket 54. _(Superseded in part by ticket 54 (Primitive metadata always on): there is no switch to expose, and `PathlingContext.Builder.readPrimitiveMetadata` is removed.)_
 - Dead code removed: `SystemDateTime.fromStored` and `fromStoredArray`, `StoredDecimal.fromStored`
-  and `fromStoredArray`; `AnnotationMemoisationTest` reads the date through `SystemDateTime.paired`.
+  and `fromStoredArray`; `AnnotationMemoisationTest` reads the date through `SystemDateTime.paired`
+  _(since 2026-11-16, `StoredPrimitive.paired` with the date's annotation names)_.
 - Tests added to `PrimitiveMetadataTest` for each of the above, and one that pins the switch off:
   a repeating date and decimal under a repeating parent keep a position without a value as a null
   item.
