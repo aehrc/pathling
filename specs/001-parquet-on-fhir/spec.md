@@ -318,7 +318,9 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
 ### Storage layout
 
 - **FR-001**: The system MUST store FHIR data in a layout conforming to the
-  Parquet on FHIR specification, with the deviations in FR-002 to FR-005.
+  Parquet on FHIR specification, with the deviations in FR-002 to FR-005, and
+  with `unsignedInt` and `positiveInt` stored as signed `INT32` rather than the
+  specification's `INT(32, false)`, which Spark cannot write (decision 155).
 - **FR-002**: Decimals MUST be stored as text, accompanied by a numeric
   annotation. The stored text MUST be numerically equal to the source, as a
   double holds it until OQ-1 is answered; whether it preserves the source's

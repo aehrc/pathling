@@ -48,12 +48,20 @@ representation of the resource:
 | FHIR type                                                                    | Stored as           | Notes                                                                            |
 | ---------------------------------------------------------------------------- | ------------------- | -------------------------------------------------------------------------------- |
 | `boolean`                                                                    | `BOOLEAN`           |                                                                                  |
-| `integer`, `unsignedInt`, `positiveInt`                                      | `INT32`             |                                                                                  |
+| `integer`, `unsignedInt`, `positiveInt`                                      | `INT32`             | Signed. See [Integers](#integers).                                               |
 | `decimal`                                                                    | `BINARY` (`STRING`) | Text that is numerically equal to the source value. See [Decimals](#decimals).   |
 | `date`, `dateTime`, `instant`, `time`                                        | `BINARY` (`STRING`) | Text, in the form the source gave it. An `instant` is text too, not a timestamp. |
 | `string`, `code`, `id`, `uri`, `url`, `canonical`, `oid`, `uuid`, `markdown` | `BINARY` (`STRING`) |                                                                                  |
 | `xhtml`                                                                      | `BINARY` (`STRING`) |                                                                                  |
 | `base64Binary`                                                               | `BINARY`            | The bytes the base64 text encodes, with no logical type.                         |
+
+### Integers
+
+`unsignedInt` and `positiveInt` are stored as signed `INT32`, as `integer` is,
+rather than as `INT32` with the unsigned logical type `INT(32, false)` that the
+specification gives them. Spark has no unsigned 32-bit type, so it cannot write
+that type, and the FHIR R4 range of both types, up to 2,147,483,647, fits a
+signed `INT32`, so no value is lost.
 
 ### Decimals
 
@@ -75,7 +83,9 @@ A decimal read from XML is stored as the text the source used.
 If you query decimals directly, parse them as numbers rather than comparing
 their text. Pathling's own queries decode the text to a decimal with a
 precision of 38 and a scale of 6, the type the specification gives the numeric
-annotation of a decimal. A decimal column in a query's output has this type.
+annotation of a decimal, or read that annotation where it is stored (see
+[Annotations](#annotations)). A decimal column in a query's output has this
+type.
 
 ### What is not stored
 
@@ -94,10 +104,6 @@ silently.
 Content that does not conform to the FHIR definitions, such as an element they
 do not describe, is not checked, and what is stored for it is undefined. See
 [Content that is not stored](./encoders.md#content-that-is-not-stored).
-
-This release does not write the optional annotation fields that the
-specification defines (fields prefixed with `__`, such as the numeric value of
-a decimal or the canonical form of a quantity).
 
 ### Ids and extensions of primitive elements
 
@@ -127,7 +133,106 @@ stored, so that FHIRPath can navigate to them, for example with
 `birthDate.extension(...)` or `name.given.id`. Where they were not stored,
 navigating to them gives an empty result. A primitive element is still
 returned as its value alone; its ids and extensions are returned only where an
-expression navigates to them.
+expression navigates to them. This is always the case, and there is no option
+to turn it off.
+
+The `_`-prefixed structure is also where the annotations of a primitive are
+stored, so a table can carry it for a primitive whose ids and extensions were
+not stored. It then holds only the annotations.
+
+## Annotations
+
+An annotation is a value that is derived from an element and stored with it,
+so that a query can read it rather than compute it again. The specification
+defines them as optional fields whose names begin with `__`. Encoding stores
+three kinds, each of which is on by default and can be turned off when the
+Pathling context is created:
+
+| Kind      | Element                       | Fields                                        | Option                        |
+| --------- | ----------------------------- | --------------------------------------------- | ----------------------------- |
+| Numeric   | `decimal`                     | `__numeric`                                   | `enable_numeric_annotation`   |
+| Range     | `date`, `dateTime`, `instant` | `__start`, `__end`                            | `enable_range_annotation`     |
+| Canonical | `Quantity` and its profiles   | `__canonical_code`, `__canonical_value_exact` | `enable_canonical_annotation` |
+
+The options are named in the Python and R form; in Java they are
+`enableNumericAnnotation`, `enableRangeAnnotation` and
+`enableCanonicalAnnotation` on the schema configuration.
+
+- **Numeric.** The decimal's value as a `DECIMAL(38,6)`, Pathling's own decoding
+  of the stored text. It is stored as the last field of the decimal's
+  `_`-prefixed structure, for example `_factorOverride.__numeric`, rather than
+  as the specification's sibling field `__factorOverride_numeric`.
+- **Range.** The earliest and the latest instant that the precision of the value
+  allows, as timestamps adjusted to UTC. `1980` has the range
+  `1980-01-01T00:00:00Z` to `1980-12-31T23:59:59.999999Z`, and a value stated to
+  the second or beyond is one instant, so both fields hold it. A time without a
+  timezone is taken as UTC. They are stored as the last fields of the date's
+  `_`-prefixed structure, for example `_birthDate.__start` and
+  `_birthDate.__end`.
+- **Canonical.** A quantity's unit code and value, converted to the base units
+  of [UCUM](https://ucum.org/): `__canonical_code` is the canonical unit code,
+  and `__canonical_value_exact` is the value in that unit, as a structure of an
+  unscaled `DECIMAL(38,0)` and a scale, so that quantities that differ by orders
+  of magnitude stay distinct. They are stored as the last fields of the
+  quantity's own structure, and are null for a quantity whose unit UCUM cannot
+  convert. They replace the specification's fixed-scale `__canonical`, which is
+  not stored.
+
+### Timestamps
+
+The range annotations are stored as `INT64` with the logical type
+`TIMESTAMP(isAdjustedToUTC=true, MICROS)`, rather than as the specification's
+`INT96`, which cannot carry the millisecond logical type the specification
+gives them. Spark writes timestamps as the session's
+`spark.sql.parquet.outputTimestampType` setting says, and the Spark sessions
+that Pathling creates set it to `TIMESTAMP_MICROS`. If you supply your own
+session and range annotations are enabled, set
+`spark.sql.parquet.outputTimestampType=TIMESTAMP_MICROS` on it. Otherwise a
+warning is logged when the Pathling context is created, and writing data that
+carries the range annotations to Parquet, Delta or a catalog table fails.
+
+### How queries use annotations
+
+Whether a query reads an annotation is decided from the schema of the data,
+never row by row. Where the schema carries an annotation, the query reads it in
+every row; where it does not, the query computes the same value from the
+element. Turning a kind off therefore makes the stored data narrower, and never
+changes the answer to a query over data that Pathling encoded.
+
+It follows that an annotation that is null where its element has a value is
+read as null, and the element is then not matched by a comparison that reads
+it. This happens in a table merged from annotated and unannotated data, such as
+two Delta writes with different options, or Parquet files from another
+producer read together with Pathling's: the schema carries the annotation, and
+the rows that came without it hold null. Annotate such a table again with
+`recompute_annotations` before querying it (see
+[#2923](https://github.com/aehrc/pathling/issues/2923)).
+
+### Annotating stored data
+
+Encoding annotates what it encodes. Writing resources and reading them for a
+query do not add annotations. To annotate resources that were stored without
+them, by another producer or with different options, pass them through the
+`annotate` method of the Pathling context (`pathling_annotate` in R), which
+applies the annotation options the context was created with:
+
+- **Fill**, the default, computes an annotation only where the input does not
+  carry it, and keeps the ones it does carry, including a null one.
+- **Recompute** (`recompute_annotations`) computes every annotation of a kind
+  that is on again, so that each one agrees with its element, whatever the input
+  carried. Use it for a merged table and for annotations from a producer you do
+  not trust.
+- An annotation in the input of a kind that is turned off is left out, unless
+  `keep_unrequested_annotations` is set, in which case it is kept unchanged.
+- A field whose name marks it as an annotation, but which is not one that
+  Pathling computes there, is kept unchanged, unless `drop_unknown_annotations`
+  is set.
+
+A streaming dataset cannot be encoded, because the schema is fitted to the
+data. Encode each micro-batch of the stream instead, for example with
+`foreachBatch`, as shown in [Streaming queries](../examples/streaming.md).
+Streaming encode is tracked in
+[#2881](https://github.com/aehrc/pathling/issues/2881).
 
 ## The schema is fitted to the data
 
@@ -142,6 +247,10 @@ directly:
 
 The types and cardinality of the elements that are present never vary with the
 data, because they come from the FHIR definitions.
+
+A dense schema, carrying every element that the definitions describe whether
+the data populates it or not, is tracked in
+[#2881](https://github.com/aehrc/pathling/issues/2881).
 
 ### Field order
 
@@ -212,6 +321,11 @@ The following is the schema of a `Patient` table written by Pathling from a
 small sample of synthetic patients, as Spark reports it. Only the elements that
 the sample populates are present, and `multipleBirthBoolean` and
 `deceasedDateTime` are the fields of choice elements that the sample uses.
+
+The sample was encoded with the [annotations](#annotations) turned off. With
+the default options, `birthDate` and `deceasedDateTime` are also followed by
+`_birthDate` and `_deceasedDateTime` structures holding `__start` and `__end`,
+and each `valueDecimal` by a `_valueDecimal` structure holding `__numeric`.
 
 ```
 root

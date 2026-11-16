@@ -509,6 +509,9 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testEmpty(
             "'2023-06-15T25'.toDateTime()",
             "toDateTime() returns empty for an hour that does not exist")
+        .testEmpty(
+            "'2023-02-30T10:00:00'.toDateTime()",
+            "toDateTime() returns empty for a day that does not exist")
         .testEquals(
             "2016-12-31T23:59:60Z",
             "'2016-12-31T23:59:60Z'.toDateTime()",

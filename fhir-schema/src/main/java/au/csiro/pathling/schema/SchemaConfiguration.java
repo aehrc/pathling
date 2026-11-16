@@ -83,6 +83,11 @@ public class SchemaConfiguration {
    * including one of the wrong value or the wrong type. Fill makes them consistent only where the
    * input's own annotations were consistent and not null.
    *
+   * <p>A table merged from annotated and unannotated data holds null annotations in the rows that
+   * came without them, and fill keeps those nulls. A query reads an annotation wherever the schema
+   * carries it, never computing it for a row whose annotation is null (FR-023), so such a table
+   * needs recomputing (#2923).
+   *
    * <p>Where the input carries a primitive's metadata group but not the primitive, the primitive is
    * taken to be null in every row. An annotation the group carries is then kept by fill and
    * replaced by the one computed for a null value by recomputing, and none is added.

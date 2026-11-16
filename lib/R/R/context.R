@@ -44,11 +44,11 @@ StorageType <- list(
 #' your own cluster, make sure it is on the list of packages.
 #'
 #' @param spark A pre-configured SparkSession instance, use this if you need to control the way
-#'   that the session is set up. Its settings are used as they are: where it does not set
-#'   \code{spark.sql.parquet.outputTimestampType} to \code{TIMESTAMP_MICROS}, as the session
-#'   Pathling creates does, a warning is logged, and writing data that carries the range
-#'   annotations of dates to Parquet, Delta or a catalog table fails, because Pathling stores them
-#'   as INT64 microseconds adjusted to UTC.
+#'   that the session is set up. Its settings are used as they are: where range annotations are
+#'   enabled and it does not set \code{spark.sql.parquet.outputTimestampType} to
+#'   \code{TIMESTAMP_MICROS}, as the session Pathling creates does, a warning is logged, and
+#'   writing data that carries the range annotations of dates to Parquet, Delta or a catalog table
+#'   fails, because Pathling stores them as INT64 microseconds adjusted to UTC.
 #' @param max_nesting_level Controls the maximum depth of nested element data that is encoded
 #'   upon import. This affects certain elements within FHIR resources that contain recursive
 #'   references, e.g., QuestionnaireResponse.item.
@@ -115,7 +115,10 @@ StorageType <- list(
 #'   again, rather than computed only where the input lacks it, which is the default. Recomputing
 #'   makes every such annotation consistent with its value, whatever the input carried, including
 #'   one of the wrong value or type. The default makes them consistent only where the input's own
-#'   annotations were consistent and not null.
+#'   annotations were consistent and not null. A table merged from annotated and unannotated data
+#'   holds null annotations in the rows that came without them, and the default keeps those nulls;
+#'   a query reads an annotation wherever the schema carries it, so such a table needs
+#'   recomputing.
 #' @param keep_unrequested_annotations Whether an annotation in the input of a kind that is turned
 #'   off is kept as it stands, trusting its producer, rather than left out, which is the default
 #' @param drop_unknown_annotations Whether a field in the input named as an annotation, but which is

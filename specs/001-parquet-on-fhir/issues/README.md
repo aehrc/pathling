@@ -87,7 +87,7 @@ extensions are stored and navigable.
 - ~~[51](51-emission-shapes-and-level-tests.md) Emission shapes, level tests and the by-example tests~~ (done)
 - ~~[17](17-primitive-metadata-in-the-stored-layout.md) Primitive metadata in the stored layout (US6, #437)~~ (done)
 - ~~[52](52-primitive-metadata-in-the-engine.md) Primitive metadata in the engine (US6, #437)~~ (done)
-- [15](15-schema-decided-plan-test-and-docs.md) Test that annotation use is decided from the schema, and document annotations
+- ~~[15](15-schema-decided-plan-test-and-docs.md) Test that annotation use is decided from the schema, and document annotations~~ (done)
 - ~~[53](53-system-coding-without-id.md) Drop `id` from System.Coding~~ (deferred to stage 5, owner, 2026-11-15)
 - ~~[54](54-primitive-metadata-in-the-conformance-baselines.md) Primitive metadata always on (US6, #437): remove the switch, and the full build, Search, Python, R and the fhirpath.js baseline pass with it~~ (done)
 - ~~[34](34-placeholder-content-outside-definitions.md) PLACEHOLDER: Carry content the definitions do not describe through ingest, egress and the engine~~ (moved to a follow-up issue, ticket 26)

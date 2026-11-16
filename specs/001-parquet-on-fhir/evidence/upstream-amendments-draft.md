@@ -103,7 +103,7 @@ raised as [#4](https://github.com/aehrc/parquet-on-fhir/issues/4) on 2026-11-11.
 | 11 | A decimal's text is numerically equal to the source, not its lexical form | deviation in Pathling only | not yet drafted (no upstream change is needed; tracked as OQ-1 and ticket 16) |
 | 12 | Primitive ids and extensions: repeating primitives, positional nulls, `_x` without `x`, and the specification's own example | amendment proposed | drafted here, 2026-11-12, from ticket 17's result (ticket 17, "Primitive metadata in the stored layout") |
 | 13 | Elements of the abstract `Resource` type, `contained` first, are not represented | deviation in Pathling only | not yet drafted |
-| 14 | `unsignedInt` and `positiveInt` are stored as signed `INT32` | deviation in Pathling only | not yet drafted (unrecorded in Pathling's deviation table) |
+| 14 | `unsignedInt` and `positiveInt` are stored as signed `INT32` | deviation in Pathling only | not yet drafted; recorded in Pathling's deviation table, FR-001 and decision 155 (ticket 15) |
 | 15 | Fields the definitions do not describe, and their place in the conformance levels | clarification | not yet drafted (ticket 36 scopes a Pathling issue) |
 | 16 | What an annotation means when it is null, when tables are merged, and who may trust it | clarification | a derived annotation SHOULD be non-null exactly where its value is: drafted here, 2026-11-05; the rest not yet drafted (tickets 38 and 26) |
 | 17 | The range of a value that states a time but no timezone | clarification | not yet drafted (ticket 26) |
@@ -1288,10 +1288,10 @@ resource type, or a JSON string).
 
 ## 14. `unsignedInt` and `positiveInt` are stored as signed `INT32`
 
-**Kind:** deviation in Pathling only. **Status:** not yet drafted. **It is not
-recorded** as a deviation in `contracts/storage-layout.md`, FR-001's list or
-`decisions.md`, as far as I found. (Decision 68 records the same kind of gap for
-`base64Binary` and fixes it.)
+**Kind:** deviation in Pathling only. **Status:** not yet drafted. Recorded as a
+deviation in `contracts/storage-layout.md`, FR-001 and decision 155 by ticket 15
+(2026-11-16). (Decision 68 records the same kind of gap for `base64Binary` and
+fixes it.)
 
 ### Context
 

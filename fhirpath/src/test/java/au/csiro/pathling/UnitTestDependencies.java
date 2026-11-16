@@ -17,6 +17,9 @@
 
 package au.csiro.pathling;
 
+import static au.csiro.pathling.io.TimestampStorage.OUTPUT_TIMESTAMP_TYPE;
+import static au.csiro.pathling.io.TimestampStorage.TIMESTAMP_MICROS;
+
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
@@ -87,6 +90,9 @@ public class UnitTestDependencies {
                 "spark.sql.catalog.spark_catalog",
                 "org.apache.spark.sql.delta.catalog.DeltaCatalog")
             .config("spark.sql.mapKeyDedupPolicy", "LAST_WIN")
+            // Range annotations are stored as INT64 microseconds, as the sessions Pathling builds
+            // write them (decision 138), so that the fixtures match the production layout.
+            .config(OUTPUT_TIMESTAMP_TYPE, TIMESTAMP_MICROS)
             .getOrCreate();
     configureAnsiMode(spark);
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);

@@ -5106,3 +5106,27 @@ _Decision_:
   exclusions that primitive metadata resolves are removed. The tests that read the raw form move to the
   output form (approved by the owner for the Search and higher-level tests, 2026-11-13).
 - **Server exposure is out of scope.**
+
+## 155. `unsignedInt` and `positiveInt` are stored as signed `INT32`
+
+Owner decision (2026-11-16), on pof-main's recommendation, recording a deviation that stage 4 built
+without recording it. Section 14 of `upstream-amendments-draft.md` found it; ticket 15 (Test that
+annotation use is decided from the schema, and document annotations) records it.
+
+The specification's "Primitive elements" table gives `integer` as `INT32` with `INT(32, true)`, and
+`unsignedInt` and `positiveInt` as `INT32` with `INT(32, false)`. Pathling stores all three as Spark's
+`IntegerType`, a signed `INT32` (`data-model.md`; decision 68: "`unsignedInt` and `positiveInt` accept
+`LongType` and store `IntegerType`"). Spark has no unsigned 32-bit type, so it cannot write
+`INT(32, false)`.
+
+_Decision_:
+
+- **The deviation stands and is recorded**, in `contracts/storage-layout.md` and FR-001. The FHIR R4
+  range of `unsignedInt` (0 to 2,147,483,647) and of `positiveInt` (1 to 2,147,483,647) fits a signed
+  `INT32`, so no value is lost.
+- **It is raised upstream** with section 14, proposing that the specification allow a signed `INT32` for
+  both types and require readers to accept either logical type (post-stage 4 decision 21).
+- **Reading a table that uses `INT(32, false)` is not covered.** Spark reads such a column as `LongType`,
+  where Pathling expects `IntegerType`; what the engine does with it is untested, and belongs with the
+  upstream outcome.
+

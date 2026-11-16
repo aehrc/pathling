@@ -75,11 +75,13 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Shows that the engine test suite runs over data written with no annotations, so that a green
  * default run is the evidence SC-004 asks for and FR-022 is exercised by every test in it (T089).
  *
- * <p>Until M5 the new layout is written in one mode only: the transform in {@code io} emits no
- * annotation of any kind (decision 50). Running the suite a second time "with every annotation
- * disabled" would therefore run the same suite over the same data, and prove nothing a default run
- * does not. What a default run does not prove on its own is the premise, that the data it runs over
- * really is annotation-free. That is what this class asserts, rather than duplicating the suite:
+ * <p>The fixtures the suite runs over are read with {@code FhirReader}, which never annotates:
+ * annotations are added only by encoding or by {@code annotate}, under a {@code
+ * SchemaConfiguration}. The default run therefore already runs over data with every annotation
+ * absent, as it would be with every kind switched off, and running the suite a second time would
+ * prove nothing a default run does not. What a default run does not prove on its own is the
+ * premise, that the data it runs over really is annotation-free. That is what this class asserts,
+ * rather than duplicating the suite:
  *
  * <ul>
  *   <li>The fixtures the tests build, through {@link PofDatasets}, carry no annotation at any
@@ -104,10 +106,9 @@ import org.springframework.beans.factory.annotation.Autowired;
  *       conformance suites.
  * </ul>
  *
- * <p>At M5 each kind starts being emitted by default and becomes individually disableable (FR-021).
- * This class then changes from asserting that none is emitted to asserting that none is emitted
- * with every kind switched off, and the annotated cases are covered per kind there, with T090
- * asserting that the choice is made from the schema.
+ * <p>Annotated data, and data annotated with each kind switched off, are covered per kind by the
+ * tests of each kind, and {@code AnnotationDecidedBySchemaTest} asserts that whether an annotation
+ * is used is decided from the schema (FR-023).
  *
  * @author Piotr Szul
  */

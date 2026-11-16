@@ -60,6 +60,9 @@ final class TransformFixtures {
               .config("spark.driver.host", "localhost")
               .config("spark.ui.enabled", "false")
               .config("spark.sql.shuffle.partitions", "1")
+              // Range annotations are stored as INT64 microseconds, as the sessions Pathling
+              // builds write them (decision 138), so that the fixtures match the production layout.
+              .config(TimestampStorage.OUTPUT_TIMESTAMP_TYPE, TimestampStorage.TIMESTAMP_MICROS)
               .getOrCreate();
     }
     return session;
