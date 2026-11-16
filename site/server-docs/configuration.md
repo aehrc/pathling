@@ -397,15 +397,24 @@ elements, contained resources, and content beyond the earlier layout's nesting,
 extension and open type limits remain absent. See
 [what the legacy export loses](/docs/libraries/io/schema#what-the-legacy-export-loses)
 for the full list. If the original FHIR data is still available, importing it
-again with this version stores it without these losses.
+again with this version recovers the decimal digits, the precision and offsets
+of instants, the modifier extensions and the content beyond the earlier limits.
+Contained resources and the ids and extensions of primitive elements are not
+stored by this version either, as described under
+[what is not stored](/docs/libraries/io/schema#what-is-not-stored).
+
+The text of a decimal can change in the conversion while its value stays the
+same: for example, `100` may be returned as `100.0`, and `-71.093930` as
+`-71.09393`.
 
 The server logs a warning for each table it converts, naming the Delta version
 that still holds the data as it was before the conversion. Until the table is
 vacuumed, that version can be restored with Delta Lake's
-[time travel](https://docs.delta.io/latest/delta-utility.html#restore-a-delta-table-to-an-earlier-state).
-If a table cannot be converted, the server stops with an error naming the
-table and the cause. Tables converted before the failure stay converted, and
-the next start continues with the rest.
+[time travel](https://docs.delta.io/latest/delta-utility.html#restore-a-delta-table-to-an-earlier-state),
+for use with an earlier version of the server. A restored table is converted
+again the next time this version starts. If a table cannot be converted, the
+server stops with an error naming the table and the cause. Tables converted
+before the failure stay converted, and the next start continues with the rest.
 
 In multi-replica deployments, start a single replica against an earlier
 warehouse and let it complete the conversion before starting the others.
