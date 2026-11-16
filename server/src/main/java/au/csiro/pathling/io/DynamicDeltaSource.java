@@ -113,8 +113,11 @@ public class DynamicDeltaSource extends DelegatingSource {
     final String tablePath = getTablePath(resourceCode);
     if (DeltaTable.isDeltaTable(spark, tablePath)) {
       log.debug("Dynamically discovered Delta table for resource type: {}", resourceCode);
+      // The type is registered only once its table has passed the layout check, so a refused table
+      // is checked again rather than served on the next read.
+      final Dataset<Row> table = readFromDelta(resourceCode);
       dynamicallyDiscoveredTypes.add(resourceCode);
-      return cacheIfEnabled(readFromDelta(resourceCode));
+      return cacheIfEnabled(table);
     }
 
     // No data found - return an empty dataset.
