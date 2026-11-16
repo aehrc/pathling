@@ -543,11 +543,8 @@ Install both packages:
 1. `pathling` PyPI package
 2. `au.csiro.pathling:library-api` Maven package
 
-Enable Java 21 support in Advanced Options > Spark > Environment Variables:
-
-```bash
-JNAME=zulu21-ca-amd64
-```
+Databricks Runtime 18 LTS uses Java 21 by default, so no environment variable is
+needed to select it.
 
 ## Common gotchas
 

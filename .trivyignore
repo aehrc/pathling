@@ -40,7 +40,6 @@ CVE-2022-46751
 # Zookeeper is a provided dependency, we do not bundle it into our distribution.
 CVE-2023-44981
 CVE-2024-23944
-CVE-2025-58457
 CVE-2026-24281
 CVE-2026-24308
 
@@ -51,13 +50,13 @@ CVE-2025-12383
 CVE-2025-12183
 CVE-2025-66566
 # Native XXHash JVM crash on invalid byte array ranges. No fixed version is published for the
-# org.lz4:lz4-java coordinate that Spark 4.0.2 pins. Pathling never calls the XXHash API, and the
+# org.lz4:lz4-java coordinate that Spark 4.1.0 pins. Pathling never calls the XXHash API, and the
 # vulnerable path requires the caller to supply a null array or an out-of-range offset or length,
 # which only Spark's own internal compression code does.
 CVE-2026-59949
 # Native library temp-file race, LZ4FrameInputStream / LZ4BlockInputStream /
 # LZ4DecompressorWithLength allocation DoS, and LZ4BlockInputStream stack exhaustion on empty
-# blocks. No fixed version exists for the org.lz4:lz4-java coordinate that Spark 4.0.2 pins; fixes
+# blocks. No fixed version exists for the org.lz4:lz4-java coordinate that Spark 4.1.0 pins; fixes
 # are only in the at.yawk.lz4 fork (>= 1.11.4). Pathling code never calls the lz4 API.
 CVE-2026-106449
 CVE-2026-106450
@@ -81,7 +80,7 @@ CVE-2026-49844
 CVE-2025-33042
 
 # aircompressor Snappy/LZ4 decompressor buffer content leakage (fixed in 3.4).
-# Transitive via Spark 4.0.2 → ORC 2.1.4 → aircompressor 2.0.2.
+# Transitive via Spark 4.1.0 → ORC 2.2.1 → aircompressor 2.0.2.
 # Not applicable in library context, user controls all compressed input.
 # See: https://github.com/aehrc/pathling/issues/2540
 CVE-2025-67721

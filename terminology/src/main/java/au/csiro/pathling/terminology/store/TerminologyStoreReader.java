@@ -41,6 +41,7 @@ import io.delta.kernel.data.FilteredColumnarBatch;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.defaults.engine.DefaultEngine;
 import io.delta.kernel.engine.Engine;
+import io.delta.kernel.engine.FileReadResult;
 import io.delta.kernel.exceptions.TableNotFoundException;
 import io.delta.kernel.expressions.Column;
 import io.delta.kernel.expressions.Literal;
@@ -292,7 +293,7 @@ public class TerminologyStoreReader {
       @Nonnull final Scan scan,
       @Nonnull final Consumer<TerminologyStoreRow> consumer) {
     final Row scanState = scan.getScanState(engine);
-    final StructType physicalReadSchema = ScanStateRow.getPhysicalDataReadSchema(engine, scanState);
+    final StructType physicalReadSchema = ScanStateRow.getPhysicalDataReadSchema(scanState);
 
     try (CloseableIterator<FilteredColumnarBatch> scanFiles = scan.getScanFiles(engine)) {
       while (scanFiles.hasNext()) {
@@ -319,7 +320,8 @@ public class TerminologyStoreReader {
         engine
             .getParquetHandler()
             .readParquetFiles(
-                Utils.singletonCloseableIterator(fileStatus), physicalReadSchema, Optional.empty());
+                Utils.singletonCloseableIterator(fileStatus), physicalReadSchema, Optional.empty())
+            .map(FileReadResult::getData);
     try (CloseableIterator<FilteredColumnarBatch> transformed =
         Scan.transformPhysicalData(engine, scanState, scanFileRow, physicalData)) {
       while (transformed.hasNext()) {

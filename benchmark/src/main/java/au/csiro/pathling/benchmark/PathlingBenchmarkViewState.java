@@ -34,19 +34,21 @@ import java.util.Map;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.openjdk.jmh.annotations.Level;
-import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
+import org.openjdk.jmh.infra.BenchmarkParams;
 
 /**
  * JMH (Java Microbenchmark Harness) state class for the view query benchmarks.
  *
  * <p>This class prepares a single view definition over a single resource type, and exposes the two
  * halves of running that view separately: building the query plan, and executing a plan that has
- * already been built. Encoding and decoding are measured by {@link EncodeBenchmarkState} and {@link
- * DecodeBenchmarkState} respectively, so that a query figure measures querying alone.
+ * already been built. The view is the subject of the benchmark that is running, as given by {@link
+ * PathlingBenchmarkResources#subjectOf}. Encoding and decoding are measured by {@link
+ * PathlingBenchmarkEncodeState} and {@link PathlingBenchmarkDecodeState} respectively, so that a
+ * query figure measures querying alone.
  *
  * <p>The class is annotated with @State(Scope.Benchmark) to ensure that the same instance is shared
  * across all benchmark iterations, providing consistent test conditions while amortising expensive
@@ -55,13 +57,14 @@ import org.openjdk.jmh.annotations.TearDown;
  * @author John Grimes
  */
 @State(Scope.Benchmark)
-public class PathlingBenchmarkState {
+public class PathlingBenchmarkViewState {
 
   /**
-   * The resource type that each benchmarked view definition selects over. None of these views
-   * follows a reference to another resource, so only the subject resource needs to be loaded.
+   * The resource type that each benchmarked view definition selects over, keyed by the name of the
+   * view definition. None of these views follows a reference to another resource, so only the
+   * subject resource needs to be loaded.
    */
-  private static final Map<String, String> VIEW_SUBJECTS =
+  static final Map<String, String> VIEW_SUBJECTS =
       Map.of(
           "ConditionFlat", "Condition",
           "EncounterFlat", "Encounter",
@@ -87,10 +90,13 @@ public class PathlingBenchmarkState {
   @Nullable private QueryableDataSource dataSource;
 
   /**
-   * The JSON representation of the view definition selected by the {@link #view} parameter, loaded
-   * during setup so that the benchmarks do not pay for the I/O.
+   * The JSON representation of the view definition named by the running benchmark, loaded during
+   * setup so that the benchmarks do not pay for the I/O.
    */
   @Nullable private String viewDefinition;
+
+  /** The resource type that the view definition selects over. */
+  @Nullable private String subjectResource;
 
   /**
    * A query plan built ahead of the operation that executes it, so that the execution benchmark
@@ -100,64 +106,41 @@ public class PathlingBenchmarkState {
   @Nullable private Dataset<Row> preparedQuery;
 
   /**
-   * JMH parameter that selects the view definition to benchmark. The values are the keys of {@link
-   * #VIEW_SUBJECTS}, which they must be kept in step with, as an annotation cannot refer to the
-   * map.
-   */
-  @Nullable
-  @Param({
-    "ConditionFlat",
-    "EncounterFlat",
-    "PatientAddresses",
-    "PatientAndContactAddressUnion",
-    "PatientDemographics",
-    "UsCoreBloodPressures",
-    "QuestionnaireResponseFlat"
-  })
-  private String view;
-
-  /**
-   * Setter for the view parameter. Used by JMH framework to inject parameter values during
-   * benchmark execution.
-   *
-   * @param view the name of the view definition to benchmark
-   */
-  @SuppressWarnings("unused")
-  public void setView(@Nullable final String view) {
-    this.view = view;
-  }
-
-  /**
    * Constructor initializes the core Spark session and Pathling context.
    *
    * <p>The Pathling context wraps this Spark session to provide FHIR-specific data processing
    * capabilities including resource encoding and FHIRPath queries.
    */
-  public PathlingBenchmarkState() {
-    this.pathlingContext = BenchmarkResources.createPathlingContext("PathlingBenchmark");
+  public PathlingBenchmarkViewState() {
+    this.pathlingContext =
+        PathlingBenchmarkResources.createPathlingContext("PathlingBenchmarkView");
   }
 
   /**
    * JMH setup method executed once per benchmark trial to prepare test data and resources.
    *
    * <p>This method performs expensive initialization that should be amortized across all benchmark
-   * iterations: it loads the subject resource of the selected view into Delta tables, and loads the
-   * view definition itself. Only the subject resource is loaded, because the cost of loading a
-   * resource type that the view does not read would fall entirely within setup and serve no
-   * purpose.
+   * iterations: it loads the subject resource of the view named by the running benchmark into Delta
+   * tables, and loads the view definition itself. Only the subject resource is loaded, because the
+   * cost of loading a resource type that the view does not read would fall entirely within setup
+   * and serve no purpose.
    *
    * <p>The query always reads stored Delta tables. Querying the encoded datasets directly would
    * encode the data lazily as part of every query, so the figures would measure encoding as well as
    * querying, which is the conflation these benchmarks exist to remove. Encoding has its own
-   * benchmark.
+   * benchmarks.
+   *
+   * @param params the parameters of the running benchmark, supplied by JMH
    */
   @Setup(Level.Trial)
-  public void setup() {
-    this.dataSource = initialiseDeltaSource(List.of(getSubjectResource()));
+  public void setup(@Nonnull final BenchmarkParams params) {
+    final String view = PathlingBenchmarkResources.subjectOf(params.getBenchmark());
+    this.subjectResource = requireNonNull(VIEW_SUBJECTS.get(view), "Unknown view: " + view);
+    this.dataSource = initialiseDeltaSource(List.of(subjectResource));
 
     // Pre-load the view definition to avoid I/O overhead during benchmark execution.
     try (final InputStream in =
-        BenchmarkResources.getResourceAsStream(requireNonNull(view) + JSON_EXTENSION)) {
+        PathlingBenchmarkResources.getResourceAsStream(view + JSON_EXTENSION)) {
       this.viewDefinition = new String(in.readAllBytes(), StandardCharsets.UTF_8);
     } catch (final IOException e) {
       throw new UncheckedIOException("Failed to read view definition: " + view, e);
@@ -178,7 +161,7 @@ public class PathlingBenchmarkState {
   }
 
   /**
-   * Builds the query plan for the selected view, up to and including the physical plan.
+   * Builds the query plan for the view, up to and including the physical plan.
    *
    * <p>Constructing the dataset runs the FHIRPath translation and the Catalyst analyzer. Forcing
    * the physical plan additionally runs the optimiser and the planner, so that everything which
@@ -232,7 +215,7 @@ public class PathlingBenchmarkState {
     for (final String resourceType : resourceTypes) {
       // Load the NDJSON file for the resource type and encode it.
       final Dataset<Row> strings =
-          BenchmarkResources.readResourceStrings(pathlingContext, resourceType);
+          PathlingBenchmarkResources.readResourceStrings(pathlingContext, resourceType);
       final Dataset<Row> encoded = pathlingContext.encode(strings, resourceType);
       // Register the dataset with the DatasetSource.
       datasetSource.dataset(resourceType, encoded);
@@ -253,7 +236,8 @@ public class PathlingBenchmarkState {
     final DatasetSource datasetSource = encodeResources(resourceTypes);
 
     // Create a temporary directory for the Delta tables.
-    final Path tempDir = BenchmarkResources.createTempDirectory("pathling-benchmark-delta-");
+    final Path tempDir =
+        PathlingBenchmarkResources.createTempDirectory("pathling-benchmark-delta-");
 
     // Write each dataset to a Delta table in the temporary directory.
     // This converts the in-memory datasets to optimized Delta Lake format.
@@ -279,7 +263,7 @@ public class PathlingBenchmarkState {
   }
 
   /**
-   * Provides access to the pre-loaded definition of the selected view.
+   * Provides access to the pre-loaded definition of the view.
    *
    * @return the JSON representation of the view definition
    * @throws IllegalStateException if called before setup() has loaded the view definition
@@ -293,13 +277,13 @@ public class PathlingBenchmarkState {
   }
 
   /**
-   * Resolves the resource type that the selected view selects over.
+   * Provides access to the resource type that the view selects over.
    *
-   * @return the subject resource type of the selected view
+   * @return the subject resource type of the view
    */
   @Nonnull
   private String getSubjectResource() {
-    return requireNonNull(VIEW_SUBJECTS.get(view), "Unknown view: " + view);
+    return requireNonNull(subjectResource, "Subject resource not set. Ensure setup() is called.");
   }
 
   /**

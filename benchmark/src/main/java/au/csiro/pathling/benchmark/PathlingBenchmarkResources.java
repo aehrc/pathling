@@ -27,6 +27,8 @@ import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
@@ -35,14 +37,15 @@ import org.apache.spark.sql.SparkSession;
 /**
  * Shared setup helpers for the benchmark state classes.
  *
- * <p>Each phase of the pipeline is measured by its own state class, so that a parameter which is
- * only meaningful to one phase does not multiply the fork count of the others. The construction of
- * the Spark session, the extraction of test data from the classpath and the forcing of lazy Spark
- * computation are common to all of them, and live here rather than being repeated.
+ * <p>Each phase of the pipeline is measured by its own state class. The construction of the Spark
+ * session, the extraction of test data from the classpath, the forcing of lazy Spark computation
+ * and the derivation of a benchmark's subject from its name are common to all of them, and live
+ * here rather than being repeated.
  *
  * @author Piotr Szul
+ * @author John Grimes
  */
-public final class BenchmarkResources {
+public final class PathlingBenchmarkResources {
 
   /** The directory within the test data archive that holds the bulk FHIR NDJSON files. */
   private static final String NDJSON_PREFIX = "bulk/fhir/";
@@ -57,8 +60,38 @@ public final class BenchmarkResources {
    */
   private static final String NOOP_FORMAT = "noop";
 
-  private BenchmarkResources() {
+  /** A benchmark method name: a lower-case phase word, followed by a capitalised subject. */
+  private static final Pattern BENCHMARK_NAME = Pattern.compile("[a-z]+([A-Z][A-Za-z0-9]*)");
+
+  private PathlingBenchmarkResources() {
     // This class is not designed to be instantiated.
+  }
+
+  /**
+   * Returns the subject of a benchmark, which is the part of its method name that follows the
+   * leading lower-case phase word.
+   *
+   * <p>The benchmarks take no JMH parameters, so that each result is identified by its name alone.
+   * A state class that is shared by several benchmarks instead works out what to measure from the
+   * name of the benchmark that is running. For example, the subject of {@code encodePatient} is
+   * {@code Patient}, and that of {@code executeUsCoreBloodPressures} is {@code
+   * UsCoreBloodPressures}.
+   *
+   * @param benchmark the name of the benchmark method, optionally qualified by its class name as in
+   *     {@link org.openjdk.jmh.infra.BenchmarkParams#getBenchmark()}
+   * @return the subject of the benchmark
+   * @throws IllegalArgumentException if the method name does not consist of a lower-case phase word
+   *     followed by a subject
+   */
+  @Nonnull
+  public static String subjectOf(@Nonnull final String benchmark) {
+    final String method = benchmark.substring(benchmark.lastIndexOf('.') + 1);
+    final Matcher matcher = BENCHMARK_NAME.matcher(method);
+    if (!matcher.matches()) {
+      throw new IllegalArgumentException(
+          "Benchmark name is not a lower-case phase followed by a subject: " + benchmark);
+    }
+    return matcher.group(1);
   }
 
   /**

@@ -6,7 +6,7 @@
 name: Setup Spark
 description: >
   Restores Spark from the GitHub Actions cache, downloading on cache miss.
-  Sets SPARK_HOME for subsequent steps.
+  Sets SPARK_HOME for subsequent steps, and points Spark at the CI Ivy settings.
 
 runs:
   using: composite
@@ -47,3 +47,12 @@ runs:
         SPARK_HOME="$HOME/spark/spark-${{ steps.versions.outputs.spark }}-bin-hadoop${{ steps.versions.outputs.hadoop }}"
         echo "SPARK_HOME=${SPARK_HOME}" >> "$GITHUB_ENV"
         echo "SPARK_HOME set to ${SPARK_HOME}"
+
+    # Packages requested with spark.jars.packages resolve through Ivy, whose default chain fails
+    # on POMs that the Maven build left in the local repository without their JARs. The settings
+    # file takes only Pathling's own artifacts from the local repository.
+    - name: Configure Ivy resolution
+      shell: bash
+      run: |
+        echo "spark.jars.ivySettings ${GITHUB_WORKSPACE}/.github/ivysettings.xml" \
+          > "${SPARK_HOME}/conf/spark-defaults.conf"

@@ -1,6 +1,6 @@
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
-ThisBuild / scalaVersion := "2.12.20"
+ThisBuild / scalaVersion := "2.13.17"
 
 lazy val root = (project in file("."))
     .settings(
@@ -11,7 +11,7 @@ lazy val root = (project in file("."))
       ),
       libraryDependencies ++= Seq(
         "au.csiro.pathling" % "library-runtime" % "10.0.0",
-        "org.apache.spark" %% "spark-sql" % "4.0.1"
+        "org.apache.spark" %% "spark-sql" % "4.1.0"
       ),
       run / fork := true,
       run / javaOptions ++= Seq(
