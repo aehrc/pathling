@@ -21,6 +21,7 @@ import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.FileSystemPersistence;
 import au.csiro.pathling.library.io.source.DatasetSource;
+import au.csiro.pathling.library.io.source.LayoutDetector;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
@@ -142,7 +143,8 @@ public class DynamicDeltaSource extends DelegatingSource {
       delegate.read(resourceCode).unpersist();
     }
 
-    final Dataset<Row> refreshed = spark.read().format("delta").load(tablePath);
+    final Dataset<Row> refreshed =
+        checkLayout(resourceCode, spark.read().format("delta").load(tablePath));
     if (delegate instanceof final DatasetSource datasetSource) {
       // Replace the pinned entry in the delegate's resource map, so every consumer that resolves
       // datasets through the delegate observes the evolved schema.
@@ -235,7 +237,9 @@ public class DynamicDeltaSource extends DelegatingSource {
       // independent of the mutable dataset cache, whose entries track the current table.
       pinnedDatasets.put(
           resourceType,
-          spark.read().format("delta").option("versionAsOf", version).load(tablePath));
+          checkLayout(
+              resourceType,
+              spark.read().format("delta").option("versionAsOf", version).load(tablePath)));
     }
 
     log.debug("Pinned {} resource-type tables for a snapshot read", pinnedVersions.size());
@@ -258,7 +262,23 @@ public class DynamicDeltaSource extends DelegatingSource {
   @Nonnull
   private Dataset<Row> readFromDelta(@Nonnull final String resourceCode) {
     final String tablePath = getTablePath(resourceCode);
-    return spark.read().format("delta").load(tablePath);
+    return checkLayout(resourceCode, spark.read().format("delta").load(tablePath));
+  }
+
+  /**
+   * Refuses a table in a layout the library does not read, such as one restored from before the
+   * startup migration or copied into the warehouse by hand, with the library's explanation. The
+   * delegate checks the tables it found at startup; this covers the tables this source loads
+   * itself. The schema is already resolved by the load, so the check reads nothing further.
+   *
+   * @throws au.csiro.pathling.library.io.source.UnsupportedLayoutException if the layout is not one
+   *     the library reads
+   */
+  @Nonnull
+  private static Dataset<Row> checkLayout(
+      @Nonnull final String resourceCode, @Nonnull final Dataset<Row> table) {
+    LayoutDetector.check(resourceCode, table.schema());
+    return table;
   }
 
   @Nonnull

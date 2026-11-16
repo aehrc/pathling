@@ -19,11 +19,13 @@ package au.csiro.pathling.io;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DatasetSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.library.io.source.UnsupportedLayoutException;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
 import au.csiro.pathling.util.LogCapture;
@@ -249,6 +251,43 @@ class DynamicDeltaSourceTest {
 
     assertThat(snapshot.getPinnedVersions()).containsKey("Patient");
     assertThat(snapshot.read("Patient").count()).isEqualTo(1);
+  }
+
+  // A table in the earlier layout that appears in the warehouse after startup, as one restored from
+  // Delta history or copied in by hand does, is refused on read with the library's explanation
+  // rather than failing later with an error that does not name the cause.
+  @Test
+  void readRefusesLegacyLayoutTableDiscoveredAfterStartup(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    final DynamicDeltaSource source = newTempDirSource(databasePath, false);
+    writePatientTable(databasePath, "id", "id_versioned");
+
+    assertThatThrownBy(() -> source.read("Patient"))
+        .isInstanceOf(UnsupportedLayoutException.class)
+        .hasMessageContaining("Patient")
+        .hasMessageContaining("id_versioned");
+  }
+
+  // Refreshing a type whose table has been replaced by one in the earlier layout is refused in the
+  // same way, so the legacy table is never served.
+  @Test
+  void refreshRefusesLegacyLayoutTable(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    final DynamicDeltaSource source = newTempDirSource(databasePath, false);
+    writePatientTable(databasePath, "id", "id_versioned");
+
+    assertThatThrownBy(() -> source.refresh("Patient"))
+        .isInstanceOf(UnsupportedLayoutException.class);
+  }
+
+  // A snapshot does not pin a table in the earlier layout.
+  @Test
+  void snapshotRefusesLegacyLayoutTable(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    final DynamicDeltaSource source = newTempDirSource(databasePath, false);
+    writePatientTable(databasePath, "id", "id_versioned");
+
+    assertThatThrownBy(source::snapshot).isInstanceOf(UnsupportedLayoutException.class);
   }
 
   // ---- helpers ----
