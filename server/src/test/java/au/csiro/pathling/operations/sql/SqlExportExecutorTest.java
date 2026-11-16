@@ -280,6 +280,8 @@ class SqlExportExecutorTest {
             "DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION",
             new String[] {"struct<id:string,extra:string>", "struct<id:string>"},
             Option.empty(),
+            Option.empty(),
+            Option.empty(),
             Option.empty());
     stubExecuteToThrow(failure);
 

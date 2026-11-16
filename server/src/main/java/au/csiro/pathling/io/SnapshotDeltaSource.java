@@ -17,19 +17,15 @@
 
 package au.csiro.pathling.io;
 
-import au.csiro.pathling.QueryHelpers;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DatasetSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Map;
-import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 
 /**
  * A {@link QueryableDataSource} that serves every resource type at the Delta version it held at one
@@ -40,7 +36,7 @@ import org.apache.spark.sql.SparkSession;
  * single snapshot. Pinning costs nothing beyond reading each table's Delta log at creation: reads
  * stay lazy, no data is copied, and Delta's own history serves the pinned version. A type whose
  * table did not exist at the pinned instant is invisible to the snapshot, and reads of it yield an
- * empty dataset.
+ * empty dataset in the Parquet on FHIR layout.
  *
  * <p>The snapshot deliberately bypasses the live source's mutable dataset cache, whose entries
  * track the current table rather than the pinned version.
@@ -48,35 +44,23 @@ import org.apache.spark.sql.SparkSession;
  * @author John Grimes
  */
 @Slf4j
-public class SnapshotDeltaSource extends DriftGuardedSource {
-
-  @Nonnull private final SparkSession spark;
-
-  @Nonnull private final FhirEncoders fhirEncoders;
+public class SnapshotDeltaSource extends DelegatingSource {
 
   @Nonnull private final Map<String, Long> pinnedVersions;
 
   /**
    * Constructs a new SnapshotDeltaSource over datasets already pinned to their captured versions.
    *
-   * @param context the Pathling context, used to construct derived sources
+   * @param context the Pathling context, used to construct derived sources and empty datasets for
+   *     unpinned types
    * @param pinned a source holding one {@code versionAsOf} dataset per resource type
-   * @param spark the Spark session, used to build empty datasets for unpinned types
-   * @param fhirEncoders the FHIR encoders, used to build empty datasets for unpinned types
    * @param pinnedVersions the Delta version captured for each resource type
-   * @param driftedTypes the resource types whose tables are drifted and unmigrated, held by
-   *     reference so the guard tracks the live source's current state
    */
   SnapshotDeltaSource(
       @Nonnull final PathlingContext context,
       @Nonnull final QueryableDataSource pinned,
-      @Nonnull final SparkSession spark,
-      @Nonnull final FhirEncoders fhirEncoders,
-      @Nonnull final Map<String, Long> pinnedVersions,
-      @Nonnull final Set<String> driftedTypes) {
-    super(context, pinned, driftedTypes);
-    this.spark = spark;
-    this.fhirEncoders = fhirEncoders;
+      @Nonnull final Map<String, Long> pinnedVersions) {
+    super(context, pinned);
     this.pinnedVersions = Map.copyOf(pinnedVersions);
   }
 
@@ -86,10 +70,9 @@ public class SnapshotDeltaSource extends DriftGuardedSource {
     if (resourceCode == null) {
       throw new IllegalArgumentException("Resource code must not be null");
     }
-    checkNotDrifted(resourceCode);
     if (!pinnedVersions.containsKey(resourceCode)) {
       // The type had no table at the pinned instant, so the job sees no data for it.
-      return QueryHelpers.createEmptyDataset(spark, fhirEncoders, resourceCode);
+      return ResourceEncoding.empty(context, resourceCode);
     }
     return delegate.read(resourceCode);
   }
@@ -108,24 +91,17 @@ public class SnapshotDeltaSource extends DriftGuardedSource {
    * Builds a snapshot source over the given pinned datasets.
    *
    * @param context the Pathling context used to hold the pinned datasets
-   * @param spark the Spark session
-   * @param fhirEncoders the FHIR encoders
    * @param pinnedDatasets the pinned dataset for each resource type
    * @param pinnedVersions the Delta version captured for each resource type
-   * @param driftedTypes the drifted resource types, held by reference
    * @return the snapshot source
    */
   @Nonnull
   static SnapshotDeltaSource of(
       @Nonnull final PathlingContext context,
-      @Nonnull final SparkSession spark,
-      @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final Map<String, Dataset<Row>> pinnedDatasets,
-      @Nonnull final Map<String, Long> pinnedVersions,
-      @Nonnull final Set<String> driftedTypes) {
+      @Nonnull final Map<String, Long> pinnedVersions) {
     final DatasetSource pinned = new DatasetSource(context);
     pinnedDatasets.forEach(pinned::dataset);
-    return new SnapshotDeltaSource(
-        context, pinned, spark, fhirEncoders, pinnedVersions, driftedTypes);
+    return new SnapshotDeltaSource(context, pinned, pinnedVersions);
   }
 }

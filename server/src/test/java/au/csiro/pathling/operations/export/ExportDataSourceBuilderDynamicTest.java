@@ -20,7 +20,6 @@ package au.csiro.pathling.operations.export;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.config.StorageConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.DynamicDeltaSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
@@ -57,8 +56,6 @@ class ExportDataSourceBuilderDynamicTest {
   @Autowired private SparkSession sparkSession;
 
   @Autowired private PathlingContext pathlingContext;
-
-  @Autowired private FhirEncoders fhirEncoders;
 
   @Autowired private FhirContext fhirContext;
 
@@ -127,12 +124,6 @@ class ExportDataSourceBuilderDynamicTest {
     storageConfiguration.setCacheDatasets(false);
     final QueryableDataSource baseSource = pathlingContext.read().delta(databasePath);
     return new DynamicDeltaSource(
-        pathlingContext,
-        baseSource,
-        sparkSession,
-        databasePath,
-        fhirEncoders,
-        storageConfiguration,
-        Set.of());
+        pathlingContext, baseSource, sparkSession, databasePath, storageConfiguration);
   }
 }

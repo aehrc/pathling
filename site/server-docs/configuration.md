@@ -366,34 +366,58 @@ is converted without the terminology layer.
   threshold, the table will be repartitioned back to the default number of
   partitions. This prevents large numbers of small updates causing poor
   subsequent query performance.
-- `pathling.storage.schemaAutoMerge` - (default: `false`) When enabled, the
-  schema of an existing Delta table is automatically evolved to accommodate new
-  fields produced by the FHIR encoder. This is useful when upgrading to a
-  Pathling version whose encoder emits additional columns or nested struct
-  fields that are not yet present in tables written by an earlier version.
-  Evolution happens in two places: at startup, every table in the warehouse
-  whose schema is missing encoder fields is migrated before it is served; and
-  on update, a table whose schema is behind the incoming data is evolved before
-  the merge, with the in-memory dataset refreshed so subsequent reads see the
-  new schema without a restart. Migration is additive only - no existing field
-  or row is modified, and existing rows present newly added fields as absent
-  values. When no table has drifted, startup adds only the cost of comparing
-  schemas. When the setting is disabled and a drifted table is detected, the
-  server logs a warning naming the table, the missing fields, and the remedy,
-  and requests against that resource type return an error that describes the
-  condition rather than a generic failure. In multi-replica deployments, a
-  runtime schema evolution is only visible to the replica that performed it;
-  other replicas require a restart, although redeploys (which replace all
-  replicas and re-run startup migration) are self-correcting.
 
-    Where a stored table and the running encoders cannot be reconciled at all, the
-    request fails with an error that describes the condition rather than a generic
-    one. The message names the resource type, which direction the two schemas
-    differ in, the field paths involved, and the remedy - enabling this setting
-    where the table is behind the encoders, or restoring the encoding
-    configuration the table was written with where it is ahead of them. It
-    deliberately excludes the underlying schema definitions and warehouse paths,
-    so the full detail remains in the server log alone.
+Resources are stored as [Delta Lake](https://delta.io/) tables, one per
+resource type, in the
+[Parquet on FHIR layout](/docs/libraries/io/schema). The schema of each table
+is fitted to the data it holds, so a table gains columns when a create, update
+or import introduces an element that it has not stored before. This happens
+automatically and needs no configuration. In multi-replica deployments, a
+replica that did not perform the write sees the new columns once it is
+restarted.
+
+The `pathling.storage.schemaAutoMerge` setting of earlier versions is no longer
+used. It is accepted and has no effect.
+
+#### Upgrading a warehouse written by an earlier version
+
+Versions of the server before 3.2.0 stored resources in an earlier layout,
+which the current version does not read. When the server starts, it checks the
+layout of every table in the warehouse, and converts each table in the earlier
+layout to the Parquet on FHIR layout before it serves any request. Tables
+already in the Parquet on FHIR layout are left as they are, so the conversion
+runs once per table.
+
+Each table is converted by decoding its resources and storing them again, and
+the table is overwritten with the result. The conversion keeps what the earlier
+layout stored, which is not everything the original resources held: digits of
+decimals beyond the sixth decimal place, the offset and sub-millisecond
+precision of instants, modifier extensions, the ids and extensions of primitive
+elements, contained resources, and content beyond the earlier layout's nesting,
+extension and open type limits remain absent. See
+[what the legacy export loses](/docs/libraries/io/schema#what-the-legacy-export-loses)
+for the full list. If the original FHIR data is still available, importing it
+again with this version recovers the decimal digits, the precision and offsets
+of instants, the modifier extensions and the content beyond the earlier limits.
+Contained resources and the ids and extensions of primitive elements are not
+stored by this version either, as described under
+[what is not stored](/docs/libraries/io/schema#what-is-not-stored).
+
+The text of a decimal can change in the conversion while its value stays the
+same: for example, `100` may be returned as `100.0`, and `-71.093930` as
+`-71.09393`.
+
+The server logs a warning for each table it converts, naming the Delta version
+that still holds the data as it was before the conversion. Until the table is
+vacuumed, that version can be restored with Delta Lake's
+[time travel](https://docs.delta.io/latest/delta-utility.html#restore-a-delta-table-to-an-earlier-state),
+for use with an earlier version of the server. A restored table is converted
+again the next time this version starts. If a table cannot be converted, the
+server stops with an error naming the table and the cause. Tables converted
+before the failure stay converted, and the next start continues with the rest.
+
+In multi-replica deployments, start a single replica against an earlier
+warehouse and let it complete the conversion before starting the others.
 
 Pathling will automatically detect AWS authentication details within the
 environment and use them to access S3 buckets. It uses a chain of authentication

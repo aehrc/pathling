@@ -152,8 +152,8 @@ class SqlQueryExecutorTest {
 
   /**
    * Reproduces the executor's describe pipeline in the JVM: register the backing dataset as the
-   * label-named temp view, run the parse-time gate, execute through {@code sparkSession.sql}, run
-   * the analysed-mode gate on the eagerly-executed plan, apply any limit, and collect.
+   * label-named temp view, run the parse-time gate, execute through the executor's {@code runSql},
+   * run the analysed-mode gate on the eagerly-executed plan, apply any limit, and collect.
    */
   @Nonnull
   private List<Row> runDescribe(
@@ -170,8 +170,7 @@ class SqlQueryExecutorTest {
     backing.createOrReplaceTempView(VIEW_NAME);
     try {
       sqlValidator.validate(sql, Set.of(VIEW_NAME));
-      Dataset<Row> result =
-          parameters.isEmpty() ? sparkSession.sql(sql) : sparkSession.sql(sql, parameters);
+      Dataset<Row> result = SqlQueryExecutor.runSql(sparkSession, sql, parameters);
       sqlValidator.validateAnalyzed(result.queryExecution().analyzed(), Set.of(VIEW_NAME));
       if (limit != null) {
         result = result.limit(limit);

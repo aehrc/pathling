@@ -18,9 +18,9 @@
 package au.csiro.pathling.operations.view;
 
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess.AccessType;
 import au.csiro.pathling.security.SecurityAspect;
@@ -46,7 +46,6 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
@@ -64,11 +63,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class ViewExecutionHelper {
 
-  @Nonnull private final SparkSession sparkSession;
+  @Nonnull private final PathlingContext pathlingContext;
 
   @Nonnull private final FhirContext fhirContext;
-
-  @Nonnull private final FhirEncoders fhirEncoders;
 
   @Nonnull private final ServerConfiguration serverConfiguration;
 
@@ -79,20 +76,17 @@ public class ViewExecutionHelper {
   /**
    * Constructs a new ViewExecutionHelper.
    *
-   * @param sparkSession the Spark session
+   * @param pathlingContext the Pathling context, used to encode inline resources
    * @param fhirContext the FHIR context
-   * @param fhirEncoders the FHIR encoders
    * @param serverConfiguration the server configuration
    */
   @Autowired
   public ViewExecutionHelper(
-      @Nonnull final SparkSession sparkSession,
+      @Nonnull final PathlingContext pathlingContext,
       @Nonnull final FhirContext fhirContext,
-      @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final ServerConfiguration serverConfiguration) {
-    this.sparkSession = sparkSession;
+    this.pathlingContext = pathlingContext;
     this.fhirContext = fhirContext;
-    this.fhirEncoders = fhirEncoders;
     this.serverConfiguration = serverConfiguration;
     this.gson = ViewDefinitionGson.create();
     this.streamingHelper = new ResultStreamingHelper(gson);
@@ -192,7 +186,7 @@ public class ViewExecutionHelper {
    */
   @Nonnull
   public DataSource inlineDataSource(@Nonnull final List<String> inlineResources) {
-    return new ObjectDataSource(sparkSession, fhirEncoders, parseInlineResources(inlineResources));
+    return new ObjectDataSource(pathlingContext, parseInlineResources(inlineResources));
   }
 
   /**

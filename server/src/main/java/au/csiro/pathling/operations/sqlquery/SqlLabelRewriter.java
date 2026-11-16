@@ -39,7 +39,8 @@ import org.apache.spark.sql.catalyst.plans.logical.SubqueryAlias;
 import org.apache.spark.sql.catalyst.plans.logical.UnresolvedWith;
 import org.apache.spark.sql.catalyst.trees.Origin;
 import org.apache.spark.sql.execution.command.DescribeQueryCommand;
-import scala.Tuple2;
+import scala.Option;
+import scala.Tuple3;
 import scala.collection.immutable.Seq;
 import scala.jdk.javaapi.CollectionConverters;
 
@@ -208,10 +209,10 @@ public final class SqlLabelRewriter {
       @Nonnull final Set<LogicalPlan> visited,
       @Nonnull final List<SqlEdit> edits) {
 
-    final List<Tuple2<String, SubqueryAlias>> ctes =
+    final List<Tuple3<String, SubqueryAlias, Option<Object>>> ctes =
         CollectionConverters.asJava(with.cteRelations());
     final Set<String> scope = new HashSet<>(cteScope);
-    for (final Tuple2<String, SubqueryAlias> cte : ctes) {
+    for (final Tuple3<String, SubqueryAlias, Option<Object>> cte : ctes) {
       if (with.allowRecursion()) {
         // A RECURSIVE clause puts a definition's own name in scope for its body, so a
         // self-reference there is the recursion rather than a label of the same name.

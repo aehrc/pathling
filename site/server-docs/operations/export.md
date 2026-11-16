@@ -97,9 +97,11 @@ queried directly using tools like Apache Spark, DuckDB, or pandas.
 
 Use `application/vnd.apache.parquet` or `parquet` as the `_outputFormat` value.
 
-The Parquet output follows the
-[Pathling Parquet specification](/docs/libraries/io/schema), which defines how
-FHIR resources are represented in the Parquet schema.
+The Parquet output is in the
+[Parquet on FHIR layout](/docs/libraries/io/schema), which defines how FHIR
+resources are represented in the Parquet schema. Versions of the server before
+3.2.0 wrote Parquet in an earlier layout, which differs in the representation of
+decimals, extensions and several other elements.
 
 ## Asynchronous processing
 

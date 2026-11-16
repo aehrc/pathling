@@ -20,7 +20,6 @@ package au.csiro.pathling.operations.bulkexport;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import lombok.Getter;
-import org.jetbrains.annotations.Contract;
 
 /**
  * Represents the output format for bulk export operations.
@@ -54,7 +53,6 @@ public enum ExportOutputFormat {
    *     if param is null.
    */
   @Nullable
-  @Contract(pure = true)
   public static ExportOutputFormat fromParam(@Nullable final String param) {
     if (param == null) {
       return NDJSON;
@@ -73,7 +71,6 @@ public enum ExportOutputFormat {
    * @return the string representation used in export parameters
    */
   @Nonnull
-  @Contract(pure = true)
   public static String asParam(@Nonnull final ExportOutputFormat exportOutputFormat) {
     return switch (exportOutputFormat) {
       case NDJSON -> "ndjson";

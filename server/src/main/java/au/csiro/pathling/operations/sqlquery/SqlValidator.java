@@ -46,7 +46,7 @@ import org.apache.spark.sql.execution.datasources.LogicalRelation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import scala.Option;
-import scala.Tuple2;
+import scala.Tuple3;
 import scala.jdk.javaapi.CollectionConverters;
 
 /**
@@ -429,9 +429,9 @@ public class SqlValidator {
   private static void collectCteNames(
       @Nonnull final LogicalPlan plan, @Nonnull final Set<String> out) {
     if (plan instanceof final UnresolvedWith with) {
-      final List<Tuple2<String, SubqueryAlias>> ctes =
+      final List<Tuple3<String, SubqueryAlias, Option<Object>>> ctes =
           CollectionConverters.asJava(with.cteRelations());
-      for (final Tuple2<String, SubqueryAlias> cte : ctes) {
+      for (final Tuple3<String, SubqueryAlias, Option<Object>> cte : ctes) {
         out.add(cte._1());
         collectCteNames(cte._2(), out);
       }
@@ -479,9 +479,9 @@ public class SqlValidator {
     // CTE names themselves are already in allowedLabels (collectCteNames runs first), so a CTE body
     // may legitimately reference a sibling or declared label but not an undeclared external table.
     if (plan instanceof final UnresolvedWith with) {
-      final List<Tuple2<String, SubqueryAlias>> ctes =
+      final List<Tuple3<String, SubqueryAlias, Option<Object>>> ctes =
           CollectionConverters.asJava(with.cteRelations());
-      for (final Tuple2<String, SubqueryAlias> cte : ctes) {
+      for (final Tuple3<String, SubqueryAlias, Option<Object>> cte : ctes) {
         walkPlanStrict(cte._2(), allowedLabels);
       }
     }

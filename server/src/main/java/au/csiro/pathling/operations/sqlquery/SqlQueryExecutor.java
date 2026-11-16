@@ -50,6 +50,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class SqlQueryExecutor {
 
+  /** The Spark setting that substitutes parameter markers in the analyser, not the parser. */
+  private static final String ANALYSER_PARAMETER_SUBSTITUTION =
+      "spark.sql.legacy.parameterSubstitution.constantsOnly";
+
   @Nonnull private final SparkSession sparkSession;
 
   @Nonnull private final ViewRegistrationService viewRegistrationService;
@@ -126,7 +130,7 @@ public class SqlQueryExecutor {
       final String rewrittenSql =
           viewRegistrationService.rewriteSql(request.getParsedQuery().getSql(), topLevelViews);
 
-      Dataset<Row> result = runSql(rewrittenSql, request.getParameterBindings());
+      Dataset<Row> result = runSql(sparkSession, rewrittenSql, request.getParameterBindings());
 
       sqlValidator.validateAnalyzed(
           result.queryExecution().analyzed(), Set.copyOf(topLevelViews.values()));
@@ -205,12 +209,30 @@ public class SqlQueryExecutor {
     return labelToViewName;
   }
 
+  /**
+   * Runs SQL against the session, binding any parameter markers to the supplied values.
+   *
+   * <p>Since Spark 4.1, parameter values reach the parser, and a parser injected by a session
+   * extension, as Delta's is, discards them, so the markers then fail analysis as unbound
+   * (SPARK-59672). Substitution in the analyser, as Spark 4.0 did it, is restored before binding.
+   * The setting is session-wide, but it is always set to the same value, so concurrent requests
+   * cannot disturb one another. Remove it once the server runs on a Spark release in which {@code
+   * ParserInterface.parsePlanWithParameters} binds parameters for injected parsers.
+   *
+   * @param sparkSession the Spark session
+   * @param sql the SQL to run
+   * @param parameterBindings the values bound to the named parameter markers in the SQL
+   * @return the result of the SQL
+   */
   @Nonnull
-  private Dataset<Row> runSql(
-      @Nonnull final String sql, @Nonnull final Map<String, Object> parameterBindings) {
+  static Dataset<Row> runSql(
+      @Nonnull final SparkSession sparkSession,
+      @Nonnull final String sql,
+      @Nonnull final Map<String, Object> parameterBindings) {
     if (parameterBindings.isEmpty()) {
       return sparkSession.sql(sql);
     }
+    sparkSession.conf().set(ANALYSER_PARAMETER_SUBSTITUTION, true);
     return sparkSession.sql(sql, parameterBindings);
   }
 }

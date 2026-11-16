@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.operations.sqlquery;
 
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.SelectComponent;
@@ -28,7 +27,6 @@ import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Observation;
@@ -87,10 +85,7 @@ public class SqlQueryViewDefinitionTestConfiguration {
   @Primary
   @Bean
   @Nonnull
-  public QueryableDataSource deltaLake(
-      @Nonnull final SparkSession sparkSession,
-      @Nonnull final PathlingContext pathlingContext,
-      @Nonnull final FhirEncoders fhirEncoders) {
+  public QueryableDataSource deltaLake(@Nonnull final PathlingContext pathlingContext) {
     final List<IBaseResource> resources = new ArrayList<>();
     resources.add(patientView());
     resources.add(observationView());
@@ -100,7 +95,7 @@ public class SqlQueryViewDefinitionTestConfiguration {
     resources.add(observation("o1", "p1", new BigDecimal("70.50")));
     resources.add(observation("o2", "p2", new BigDecimal("82.250")));
     resources.add(observation("o3", "p3", new BigDecimal("65")));
-    return new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, resources);
+    return new CustomObjectDataSource(pathlingContext, resources);
   }
 
   @Nonnull
