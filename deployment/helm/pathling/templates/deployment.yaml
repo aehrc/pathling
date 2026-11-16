@@ -34,7 +34,7 @@ spec:
               path: /actuator/health/liveness
               port: 8081
             periodSeconds: 5
-            failureThreshold: {{ .Values.pathling.deployment.startupProbeFailureThreshold }}
+            failureThreshold: {{ .Values.pathling.deployment.startupProbeFailureThreshold | default 36 }}
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
