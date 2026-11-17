@@ -4928,6 +4928,75 @@
           }
         }
       ]
+    },
+    {
+      "id": "44077326368",
+      "date": "2026-11-17T12:23:33Z",
+      "commit": "f5e884de565ef2cc7db34f104adf7dc51c5999dd",
+      "version": "11.0.0-SNAPSHOT",
+      "reference": "9.1.0",
+      "results": [
+        {
+          "benchmark": "PathlingBenchmark.encodeCondition",
+          "mode": "sample",
+          "params": "",
+          "score": 200.23834947368408,
+          "scoreError": 9.100112178986537,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.7716709210685369,
+            "scoreError": 0.06040153153584064
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeEncounter",
+          "mode": "sample",
+          "params": "",
+          "score": 385.8497536000001,
+          "scoreError": 23.998633859058952,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.7334318838653958,
+            "scoreError": 0.09460749981724122
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeObservation",
+          "mode": "sample",
+          "params": "",
+          "score": 1557.4213352727272,
+          "scoreError": 223.88381510683334,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.8097071019113542,
+            "scoreError": 0.1570997659067827
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodePatient",
+          "mode": "sample",
+          "params": "",
+          "score": 87.92797469767443,
+          "scoreError": 3.2182796713087987,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.7230163403725882,
+            "scoreError": 0.04250166904644164
+          }
+        },
+        {
+          "benchmark": "PathlingBenchmark.encodeQuestionnaireResponse",
+          "mode": "sample",
+          "params": "",
+          "score": 293.9308324571428,
+          "scoreError": 12.093208023606936,
+          "scoreUnit": "ms/op",
+          "relative": {
+            "score": 0.48617790494614527,
+            "scoreError": 0.07118942677079275
+          }
+        }
+      ]
     }
   ]
 }
