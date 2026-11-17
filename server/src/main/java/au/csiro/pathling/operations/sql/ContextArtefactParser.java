@@ -75,6 +75,8 @@ public class ContextArtefactParser {
    *     inadmissible kind, carries no {@code url}, or shares a {@code url} with another entry
    * @throws ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException (422) if a supplied
    *     ViewDefinition is semantically invalid
+   * @throws au.csiro.pathling.errors.AccessDeniedError if the caller may not read the resource type
+   *     a supplied ViewDefinition projects
    */
   @Nonnull
   public SuppliedArtefacts parse(@Nullable final List<IBaseResource> entries) {
@@ -94,6 +96,9 @@ public class ContextArtefactParser {
     if (entry instanceof final ViewDefinitionResource viewDefinition) {
       final String url = requireUrl(viewDefinition.getUrl(), "ViewDefinition");
       final FhirView view = viewValidator.parse(viewDefinition, CONTEXT_EXPRESSION);
+      // A supplied view reads the type it projects just as a stored one does, so it is subject to
+      // the same read check.
+      viewValidator.checkProjectedResourceReadAuthority(view);
       viewValidator.validateSemantically(view, CONTEXT_EXPRESSION);
       return SuppliedArtefact.ofView(url, viewDefinition.getVersion(), view);
     }

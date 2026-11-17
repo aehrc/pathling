@@ -80,7 +80,8 @@ import org.springframework.test.web.reactive.server.WebTestClient;
       "pathling.auth.issuer=https://fhir-issuer.example.com",
       "pathling.auth.audience=https://pathling.example.com/fhir",
       "pathling.mcp.enabled=true",
-      "pathling.mcp.auth.scopesSupported=pathling:mcp"
+      "pathling.mcp.auth.scopesSupported=pathling:mcp",
+      "pathling.mcp.resourceUrl=https://pathling.example.com/mcp"
     })
 class McpAuthIT {
 
@@ -288,14 +289,60 @@ class McpAuthIT {
     assertThat(result.json().path("rows")).hasSize(2);
   }
 
+  @Test
+  void runSqlQueryRequiresReadOnTheTypeAnInlineViewProjects() throws JOSEException {
+    // A view supplied with the query is checked like a stored one: without read on Patient, a
+    // query over a Patient view is refused, even though the operation authority is held.
+    final McpTestClient mcp =
+        clientWithAuthorities(List.of("pathling:sql-run", "pathling:read:Observation"));
+
+    final ToolResult result = mcp.callTool("run_sql_query", sqlOverPatientView());
+
+    assertThat(result.isError()).isTrue();
+    assertThat(result.text()).contains("pathling:read:Patient");
+  }
+
+  @Test
+  void runSqlQueryIsPermittedWithSqlRunAndReadOnTheProjectedType() throws JOSEException {
+    final McpTestClient mcp =
+        clientWithAuthorities(List.of("pathling:sql-run", "pathling:read:Patient"));
+
+    final ToolResult result = mcp.callTool("run_sql_query", sqlOverPatientView());
+
+    assertThat(result.isError()).isFalse();
+    assertThat(result.json().path("rows").get(0).path("n").asInt()).isEqualTo(125);
+  }
+
+  @Test
+  void forwardedHeadersCannotRedirectTheAudienceWhenTheResourceUrlIsConfigured()
+      throws JOSEException {
+    // A token issued for another MCP endpoint is refused, even when the request claims through
+    // its forwarding headers to have arrived at that endpoint.
+    final String token = token(mcpIssuer, "https://other.example.com/mcp", List.of());
+
+    webTestClient
+        .post()
+        .uri("http://localhost:" + port + "/mcp")
+        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+        .header("Accept", "application/json, text/event-stream")
+        .header("X-Forwarded-Proto", "https")
+        .header("X-Forwarded-Host", "other.example.com")
+        .headers(headers -> headers.setBearerAuth(token))
+        .bodyValue(Map.of("jsonrpc", "2.0", "id", 1, "method", "tools/list"))
+        .exchange()
+        .expectStatus()
+        .isUnauthorized();
+  }
+
   // -- Helpers --
 
+  /** The configured resource URL, which differs from the address the test server listens on. */
   private String resourceUrl() {
-    return "http://localhost:" + port + "/mcp";
+    return "https://pathling.example.com/mcp";
   }
 
   private String metadataUrl() {
-    return "http://localhost:" + port + "/.well-known/oauth-protected-resource/mcp";
+    return "https://pathling.example.com/.well-known/oauth-protected-resource/mcp";
   }
 
   private JsonNode getJson(final String path) {
@@ -338,6 +385,37 @@ class McpAuthIT {
             new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(signingKey.getKeyID()).build(), claims);
     jwt.sign(new RSASSASigner(signingKey));
     return jwt.serialize();
+  }
+
+  /** Arguments for a SQL query counting patients through an inline Patient view. */
+  private static Map<String, Object> sqlOverPatientView() {
+    final Map<String, Object> view = new LinkedHashMap<>(patientView());
+    view.put("url", "https://example.org/ViewDefinition/patients");
+    final Map<String, Object> query =
+        Map.of(
+            "resourceType",
+            "Library",
+            "status",
+            "active",
+            "type",
+            Map.of(
+                "coding",
+                List.of(
+                    Map.of(
+                        "system",
+                        "https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes",
+                        "code",
+                        "sql-query"))),
+            "relatedArtifact",
+            List.of(
+                Map.of(
+                    "type",
+                    "depends-on",
+                    "label",
+                    "pat",
+                    "resource",
+                    "https://example.org/ViewDefinition/patients")));
+    return Map.of("query", query, "sql", "SELECT COUNT(*) AS n FROM pat", "views", List.of(view));
   }
 
   private static Map<String, Object> patientView() {
