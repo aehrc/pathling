@@ -63,7 +63,12 @@ class CanonicalDecimalAgreementTest {
           "99999999999999999999999999999999.9999995",
           "1.0E32",
           "1.0E33",
-          "1.0E40");
+          "1.0E40",
+          "0E+33",
+          "0E+37",
+          "0E+38",
+          "0E+40",
+          "-0E+40");
 
   @Autowired SparkSession spark;
 

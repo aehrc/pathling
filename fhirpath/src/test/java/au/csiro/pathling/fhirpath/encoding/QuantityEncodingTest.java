@@ -25,6 +25,7 @@ import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
 import au.csiro.pathling.fhirpath.unit.UcumUnit;
 import au.csiro.pathling.schema.annotation.kinds.QuantityCanonicalKind;
 import au.csiro.pathling.sql.types.FlexiDecimal;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.stream.Collectors;
@@ -71,6 +72,29 @@ class QuantityEncodingTest {
     final Row encoded = QuantityEncoding.encode(FhirPathQuantity.parse("1.50 'mg'"));
     assertThat(encoded.get(0)).isEqualTo(new BigDecimal("1.500000"));
     assertThat(encoded.toSeq().drop(1).mkString(",")).isEqualTo("mg,mg,http://unitsofmeasure.org");
+  }
+
+  /**
+   * The value of an encoded quantity is the value the engine's System.Decimal holds for it, as the
+   * plan decodes its text: a zero with more integer digits than the type's precision has none.
+   */
+  @ParameterizedTest(name = "{0} encodes to {1}")
+  @CsvSource(
+      value = {
+        "7.25E+4, 72500.000000",
+        "1.0000005, 1.000001",
+        "0E+33, 0.000000",
+        "0E+37, 0.000000",
+        "0E+38, NULL",
+        "0E+40, NULL",
+        "1.0E33, NULL"
+      },
+      nullValues = "NULL")
+  void encodedValueIsTheValueTheSystemDecimalHolds(
+      @Nonnull final String value, @Nullable final String expected) {
+    final Row encoded =
+        QuantityEncoding.encode(FhirPathQuantity.ofUcum(new BigDecimal(value), "g"));
+    assertThat(encoded.get(0)).isEqualTo(expected == null ? null : new BigDecimal(expected));
   }
 
   /**

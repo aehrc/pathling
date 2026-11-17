@@ -104,6 +104,21 @@ def _build_spark_session(extra_configs: Optional[dict] = None) -> SparkSession:
     return builder.getOrCreate()
 
 
+def _existing_spark_session() -> Optional[SparkSession]:
+    """Returns the Spark session already created in this process, if any.
+
+    The active session is local to a thread, so on a thread other than the one
+    that created a session there is none. Building a session there would return
+    the existing one with Pathling's settings applied to it, so it is used as it
+    is instead, as the Java library uses the default session.
+
+    :return: the existing session, or ``None`` if there is none or it has been
+           stopped.
+    """
+    session = SparkSession._instantiatedSession
+    return session if session is not None and session._sc._jsc is not None else None
+
+
 class StorageType:
     MEMORY: str = "memory"
     DISK: str = "disk"
@@ -389,7 +404,12 @@ class PathlingContext:
                 )
             return _build_spark_session(extra_configs)
 
-        spark = spark or SparkSession.getActiveSession() or _new_spark_session()
+        spark = (
+            spark
+            or SparkSession.getActiveSession()
+            or _existing_spark_session()
+            or _new_spark_session()
+        )
         jvm = spark._jvm
 
         # Build an encoders configuration object from the provided parameters.

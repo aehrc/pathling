@@ -94,7 +94,8 @@ public final class DecimalNumericKind extends AnnotationKind {
   /**
    * Decodes a number known outside the plan to the value the engine's System.Decimal holds for it,
    * as {@link #decode} decodes it in the plan: rounded half up to the type's scale where it has
-   * more fractional digits, and null where its integer digits are more than the type holds.
+   * more fractional digits, and null where its integer digits are more than the type holds, or for
+   * a zero, more than the type's precision.
    *
    * <p>A value with no more fractional digits than the type holds keeps its own scale, so that the
    * value is unchanged where it does not need rounding.
@@ -112,10 +113,12 @@ public final class DecimalNumericKind extends AnnotationKind {
         number.scale() > SystemDecimal.SCALE
             ? number.setScale(SystemDecimal.SCALE, RoundingMode.HALF_UP)
             : number;
-    // Rounding may carry into a further integer digit, so the range is tested after it. Zero fits
-    // whatever its exponent.
-    return rounded.signum() != 0
-            && rounded.precision() - rounded.scale() > SystemDecimal.INTEGER_DIGITS
+    // Rounding may carry into a further integer digit, so the range is tested after it. A zero fits
+    // whatever its exponent, except that the plan's decoding of text holds nothing for a number
+    // with more integer digits than the type's precision, zero included, so neither does this.
+    final int integerDigits = rounded.precision() - rounded.scale();
+    return integerDigits > SystemDecimal.PRECISION
+            || rounded.signum() != 0 && integerDigits > SystemDecimal.INTEGER_DIGITS
         ? null
         : rounded;
   }

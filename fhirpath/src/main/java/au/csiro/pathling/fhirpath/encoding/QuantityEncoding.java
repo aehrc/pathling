@@ -38,6 +38,7 @@ import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
 import org.apache.spark.sql.Column;
@@ -47,7 +48,6 @@ import org.apache.spark.sql.api.java.UDF2;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.Decimal;
 import org.apache.spark.sql.types.StructType;
 
 /**
@@ -502,8 +502,8 @@ public final class QuantityEncoding {
               + " but got "
               + schema.simpleString());
     }
-    // The value keeps every digit of its text, not only those System.Decimal holds, as conversion
-    // and the string form work from every digit of a stored quantity's text.
+    // The value keeps every digit of its text, not only those System.Decimal holds, as the string
+    // form works from every digit of a stored quantity's text.
     return FhirPathQuantity.of(
         QuantityCanonicalKind.parseValue(row.getString(VALUE_INDEX)),
         row.getString(SYSTEM_INDEX),
@@ -590,15 +590,15 @@ public final class QuantityEncoding {
 
   /**
    * Computes the numeric value of a quantity known when the plan is built, as {@link
-   * DecimalNumericKind#decode} decodes its text: rounded half up to the scale of {@link
-   * SystemDecimal#TYPE}, and null where it does not fit.
+   * DecimalNumericKind#decode} decodes its text: the value {@link DecimalNumericKind#decodeValue}
+   * gives for it, at the scale of {@link SystemDecimal#TYPE}, and null where it does not fit.
    */
   @Nullable
   private static BigDecimal numericOf(@Nonnull final FhirPathQuantity quantity) {
-    final Decimal decimal = Decimal.apply(quantity.getValue());
-    return decimal.changePrecision(SystemDecimal.PRECISION, SystemDecimal.SCALE)
-        ? decimal.toJavaBigDecimal()
-        : null;
+    // The decoded value has no more fractional digits than the scale, so setting it is exact.
+    return Optional.ofNullable(DecimalNumericKind.decodeValue(quantity.getValue()))
+        .map(value -> value.setScale(SystemDecimal.SCALE))
+        .orElse(null);
   }
 
   /**
