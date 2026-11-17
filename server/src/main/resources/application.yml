@@ -120,7 +120,8 @@ pathling:
     enabled: false
 
     # The public URL of the MCP endpoint, as users enter it into their MCP client. When unset, it
-    # is derived from each request, honouring the Forwarded and X-Forwarded-* headers.
+    # is derived from each request's Host, Forwarded and X-Forwarded-* headers. Those headers are
+    # chosen by the caller, so set this wherever authorization is enabled.
     # resourceUrl: [MCP endpoint URL]
 
     # The largest number of resources that the search tool will return.

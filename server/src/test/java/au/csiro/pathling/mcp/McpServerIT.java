@@ -126,6 +126,27 @@ class McpServerIT {
             });
   }
 
+  @Test
+  void transportErrorsDoNotExposeStackTraces() {
+    // A request the transport refuses, here for lacking text/event-stream in Accept, is answered
+    // with an error that carries its message but none of the server's internals.
+    final String body =
+        webTestClient
+            .post()
+            .uri("http://localhost:" + port + "/mcp")
+            .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+            .header("Accept", "application/json")
+            .bodyValue(Map.of("jsonrpc", "2.0", "id", 1, "method", "tools/list"))
+            .exchange()
+            .expectStatus()
+            .isBadRequest()
+            .expectBody(String.class)
+            .returnResult()
+            .getResponseBody();
+
+    assertThat(body).contains("text/event-stream").doesNotContain("stackTrace");
+  }
+
   // -- list_resource_types --
 
   @Test

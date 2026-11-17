@@ -27,6 +27,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -62,6 +63,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
  * @see <a href="https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization">MCP
  *     authorization</a>
  */
+@Slf4j
 @Configuration
 @ConditionalOnProperty(
     prefix = "pathling",
@@ -91,6 +93,15 @@ public class McpSecurityConfiguration {
       @Nonnull final JwtAuthenticationConverter authenticationConverter)
       throws Exception {
     final McpConfiguration mcp = configuration.getMcp();
+    if (mcp.getResourceUrl().isEmpty()) {
+      // The derived URL comes from the Host and forwarding headers, which the caller controls, so
+      // the audience check would accept a token issued for any other MCP endpoint served by the
+      // same issuer.
+      log.warn(
+          "pathling.mcp.resourceUrl is not set, so the MCP endpoint derives its URL from request"
+              + " headers and will accept tokens issued for other MCP endpoints by the same"
+              + " issuer. Set it to the public URL of the endpoint.");
+    }
     final JwtDecoder decoder = decoder(configuration, oidcConfiguration, decoderBuilder);
     final AuthenticationEntryPoint entryPoint = new ChallengeEntryPoint(mcp);
 
@@ -198,11 +209,16 @@ public class McpSecurityConfiguration {
         final AuthenticationException authException)
         throws IOException {
       delegate.commence(request, response, authException);
-      final String resourceUrl = McpResourceUrl.resolve(configuration, request);
+      final String metadataUrl;
+      try {
+        metadataUrl = McpResourceUrl.metadataUrl(McpResourceUrl.resolve(configuration, request));
+      } catch (final IllegalArgumentException | IllegalStateException e) {
+        // Forwarding headers that do not form a URL leave the plain challenge in place.
+        log.debug("Unable to derive the MCP resource URL from the request", e);
+        return;
+      }
       final StringBuilder parameters =
-          new StringBuilder("resource_metadata=\"")
-              .append(McpResourceUrl.metadataUrl(resourceUrl))
-              .append('"');
+          new StringBuilder("resource_metadata=\"").append(metadataUrl).append('"');
       final List<String> scopes = configuration.getAuth().getScopesSupported();
       if (!scopes.isEmpty()) {
         parameters.append(", scope=\"").append(String.join(" ", scopes)).append('"');

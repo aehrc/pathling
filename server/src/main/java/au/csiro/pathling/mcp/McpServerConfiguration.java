@@ -18,6 +18,7 @@ package au.csiro.pathling.mcp;
 
 import au.csiro.pathling.PathlingServerVersion;
 import au.csiro.pathling.config.ServerConfiguration;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.modelcontextprotocol.json.McpJsonMapper;
 import io.modelcontextprotocol.json.jackson2.JacksonMcpJsonMapper;
@@ -110,8 +111,18 @@ public class McpServerConfiguration {
         .build();
   }
 
+  /**
+   * Creates the JSON mapper for MCP messages. The transport serialises the exception it answers a
+   * malformed request with, so the internals of an exception are left out of the response.
+   */
   @Nonnull
   private static McpJsonMapper jsonMapper() {
-    return new JacksonMcpJsonMapper(new ObjectMapper());
+    final ObjectMapper mapper = new ObjectMapper();
+    mapper.addMixIn(Throwable.class, ThrowableMixIn.class);
+    return new JacksonMcpJsonMapper(mapper);
   }
+
+  /** Leaves the stack trace, cause and suppressed exceptions out of a serialised exception. */
+  @JsonIgnoreProperties({"stackTrace", "cause", "suppressed", "localizedMessage"})
+  private abstract static class ThrowableMixIn {}
 }
