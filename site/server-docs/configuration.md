@@ -755,8 +755,10 @@ These settings control the [Model Context Protocol](./mcp) (MCP) endpoint at
   users enter it into their MCP client, e.g.
   `https://pathling.example.com/mcp`. It is advertised in the protected resource
   metadata and is the audience that access tokens must carry. When not set, it
-  is derived from each request, honouring the `Forwarded` and `X-Forwarded-*`
-  headers.
+  is derived from each request's `Host`, `Forwarded` and `X-Forwarded-*`
+  headers. Those headers are chosen by the caller, so set this wherever
+  authorization is enabled, other than for local development. See
+  [Authorization](mcp#authorization).
 - `pathling.mcp.maxSearchCount` - (default: `100`) The largest number of
   resources that the `search` tool will return.
 - `pathling.mcp.maxRows` - (default: `1000`) The largest number of rows that the

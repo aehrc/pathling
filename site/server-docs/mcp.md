@@ -91,10 +91,16 @@ An access token is accepted at the MCP endpoint when:
   ignored. A token issued for the FHIR API is therefore refused.
 
 The URL of the MCP endpoint is `pathling.mcp.resourceUrl` if it is set, or
-otherwise the URL that the request arrived at, reconstructed from the
-`Forwarded` and `X-Forwarded-*` headers when they are present. Set
-`pathling.mcp.resourceUrl` when a proxy in front of Pathling does not send
-these headers.
+otherwise the URL that the request arrived at, reconstructed from the `Host`
+header and the `Forwarded`, `X-Forwarded-Proto`, `X-Forwarded-Host` and
+`X-Forwarded-Port` headers. These headers are chosen by the caller, so a server
+that derives its URL from them will accept a token issued by the same issuer for
+any other MCP endpoint. Set `pathling.mcp.resourceUrl` wherever authorization is
+enabled, other than for local development; the server logs a warning at startup
+when it is not set. It is also required behind a proxy that serves Pathling
+under a path prefix, since `X-Forwarded-Prefix` is not honoured. Such a proxy
+must also route the protected resource metadata location, e.g.
+`/.well-known/oauth-protected-resource/pathling/mcp`, to Pathling.
 
 Each tool requires the same [authorities](authorization#authorities) as its
 equivalent operation:
@@ -106,6 +112,15 @@ equivalent operation:
 | `search`              | `pathling:search`, and `pathling:read:[resource type]`.                                  |
 | `run_view_definition` | `pathling:sql-run`, and read on the projected resource type.                             |
 | `run_sql_query`       | `pathling:sql-run`, read on every projected resource type, and read on stored artefacts. |
+
+A ViewDefinition supplied with a call is checked in the same way as a stored
+one, so a SQL query cannot read a resource type through an inline view that the
+token may not read.
+
+Claude connects to the MCP endpoint from Anthropic's servers, so CORS does not
+apply to it. An MCP client that runs in a browser additionally needs
+`Mcp-Protocol-Version` in `pathling.cors.allowedHeaders` and `WWW-Authenticate`
+in `pathling.cors.exposedHeaders`.
 
 The authorization server must support PKCE with `S256`, and must have a client
 registered for each MCP client. Claude can register itself with
