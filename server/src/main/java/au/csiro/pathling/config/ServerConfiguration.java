@@ -118,6 +118,9 @@ public class ServerConfiguration {
   /** Configuration for the admin UI. */
   @Valid @NotNull private AdminUiConfiguration adminUi = new AdminUiConfiguration();
 
+  /** Configuration for the Model Context Protocol (MCP) endpoint. */
+  @Valid @NotNull private McpConfiguration mcp = new McpConfiguration();
+
   /**
    * Logs the server configuration on startup. Each configured external table is recorded at {@code
    * INFO} so that operators can see which tables are reachable from SQL on FHIR queries; no table

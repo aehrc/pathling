@@ -106,20 +106,7 @@ public class ViewExecutionHelper {
       @Nonnull final OutputStream outputStream)
       throws IOException {
 
-    final FhirViewExecutor executor =
-        new FhirViewExecutor(fhirContext, dataSource, serverConfiguration.getQuery());
-    Dataset<Row> result;
-    try {
-      result = executor.buildQuery(view);
-    } catch (final ConstraintViolationException e) {
-      // A well-formed request carrying a semantically invalid ViewDefinition maps to 422,
-      // distinct from the 400 used for malformed requests and invalid parameters.
-      throw new UnprocessableEntityException("Invalid ViewDefinition: " + e.getMessage());
-    } catch (final UnsupportedOperationException | UnsupportedFhirPathFeatureError e) {
-      // Thrown when a FHIRPath expression is not supported, such as accessing a choice element
-      // without specifying the type via ofType().
-      throw new InvalidRequestException("Unsupported expression: " + e.getMessage());
-    }
+    Dataset<Row> result = buildQuery(view, dataSource);
 
     // Apply limit if specified.
     if (limit != null && limit.getValue() != null) {
@@ -134,6 +121,33 @@ public class ViewExecutionHelper {
       case NDJSON -> streamingHelper.streamNdjson(outputStream, iterator, schema);
       case JSON -> streamingHelper.writeJson(outputStream, iterator, schema);
       default -> streamingHelper.streamCsv(outputStream, iterator, schema, includeHeader);
+    }
+  }
+
+  /**
+   * Builds the query that evaluates a parsed view over a data source, without executing it.
+   *
+   * @param view the parsed view
+   * @param dataSource the data source to project
+   * @return the unevaluated result
+   * @throws UnprocessableEntityException (422) if the view is semantically invalid
+   * @throws InvalidRequestException (400) if the view uses an unsupported expression
+   */
+  @Nonnull
+  public Dataset<Row> buildQuery(
+      @Nonnull final FhirView view, @Nonnull final DataSource dataSource) {
+    final FhirViewExecutor executor =
+        new FhirViewExecutor(fhirContext, dataSource, serverConfiguration.getQuery());
+    try {
+      return executor.buildQuery(view);
+    } catch (final ConstraintViolationException e) {
+      // A well-formed request carrying a semantically invalid ViewDefinition maps to 422,
+      // distinct from the 400 used for malformed requests and invalid parameters.
+      throw new UnprocessableEntityException("Invalid ViewDefinition: " + e.getMessage());
+    } catch (final UnsupportedOperationException | UnsupportedFhirPathFeatureError e) {
+      // Thrown when a FHIRPath expression is not supported, such as accessing a choice element
+      // without specifying the type via ofType().
+      throw new InvalidRequestException("Unsupported expression: " + e.getMessage());
     }
   }
 

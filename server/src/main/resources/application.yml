@@ -113,6 +113,31 @@ pathling:
   # adminUi:
   #   clientId: [client ID]
 
+  # This section configures the Model Context Protocol (MCP) endpoint at /mcp, which gives AI
+  # assistants read-only access to the data through tools.
+  mcp:
+    # Enables the MCP endpoint.
+    enabled: false
+
+    # The public URL of the MCP endpoint, as users enter it into their MCP client. When unset, it
+    # is derived from each request, honouring the Forwarded and X-Forwarded-* headers.
+    # resourceUrl: [MCP endpoint URL]
+
+    # The largest number of resources that the search tool will return.
+    maxSearchCount: 100
+
+    # The largest number of rows that the view and SQL tools will return.
+    maxRows: 1000
+
+    auth:
+      # The issuer of access tokens accepted at the MCP endpoint, when authorization is enabled.
+      # Defaults to pathling.auth.issuer.
+      # issuer: [issuer]
+
+      # The scopes advertised in the protected resource metadata, which MCP clients request when
+      # they sign in.
+      scopesSupported: []
+
   # This section configures HTTP caching response headers.
   httpCaching:
     # A list of values to return within the Vary header.

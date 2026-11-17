@@ -60,6 +60,7 @@
     <pathling.awsSdkVersion>2.40.3</pathling.awsSdkVersion>
     <pathling.bulkExportVersion>1.1.0</pathling.bulkExportVersion>
     <pathling.fhirAuthVersion>1.0.0</pathling.fhirAuthVersion>
+    <pathling.mcpSdkVersion>2.2.0</pathling.mcpSdkVersion>
 
     <!-- The JVM module options required to run Pathling on Spark with Java 21.
          These open the JDK internals that Spark accesses reflectively, most
@@ -326,6 +327,18 @@
       <artifactId>wiremock-jetty12</artifactId>
       <version>3.13.1</version>
       <scope>test</scope>
+    </dependency>
+
+    <!-- Model Context Protocol -->
+    <dependency>
+      <groupId>io.modelcontextprotocol.sdk</groupId>
+      <artifactId>mcp-core</artifactId>
+      <version>${pathling.mcpSdkVersion}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.modelcontextprotocol.sdk</groupId>
+      <artifactId>mcp-json-jackson2</artifactId>
+      <version>${pathling.mcpSdkVersion}</version>
     </dependency>
 
     <!-- HAPI -->
