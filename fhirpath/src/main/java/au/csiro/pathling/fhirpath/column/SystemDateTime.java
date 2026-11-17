@@ -48,9 +48,9 @@ import org.apache.spark.sql.types.StructType;
  * (ticket 17), so a FHIR date converts to a System date as it is.
  *
  * <p>Nothing is computed as a date is traversed. An operation that needs a bound asks for it
- * through {@link #start} or {@link #end}, which reads the field where the date carries it and
- * computes it from the text otherwise, decided by Spark as it resolves the plan (design §4.3). The
- * two bounds computed from one text share one memoised parse of it (decision 145).
+ * through {@link #lowerBound} or {@link #upperBound}, which reads the field where the date carries
+ * it and computes it from the text otherwise, decided by Spark as it resolves the plan (design
+ * §4.3). The two bounds computed from one text share one memoised parse of it (decision 145).
  *
  * <p>A text outside FHIR's date grammar is not conformant, and under {@code trust} the engine's
  * behaviour on it is undefined (ticket 31).
