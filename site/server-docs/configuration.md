@@ -745,6 +745,30 @@ a particular language through the language argument of `display` or
   `PS256`, `PS384`, `PS512`, `ES256`, `ES256K`, `ES384`, `ES512` and `EdDSA` are
   permitted; any other value fails validation at startup.
 
+### Model Context Protocol
+
+These settings control the [Model Context Protocol](./mcp) (MCP) endpoint at
+`/mcp`.
+
+- `pathling.mcp.enabled` - (default: `false`) Enables the MCP endpoint.
+- `pathling.mcp.resourceUrl` - The public URL of the MCP endpoint, exactly as
+  users enter it into their MCP client, e.g.
+  `https://pathling.example.com/mcp`. It is advertised in the protected resource
+  metadata and is the audience that access tokens must carry. When not set, it
+  is derived from each request, honouring the `Forwarded` and `X-Forwarded-*`
+  headers.
+- `pathling.mcp.maxSearchCount` - (default: `100`) The largest number of
+  resources that the `search` tool will return.
+- `pathling.mcp.maxRows` - (default: `1000`) The largest number of rows that the
+  `run_view_definition` and `run_sql_query` tools will return.
+- `pathling.mcp.auth.issuer` - The issuer of access tokens accepted at the MCP
+  endpoint, when `pathling.auth.enabled` is `true`. Defaults to
+  `pathling.auth.issuer`. The issuer must provide an OpenID Connect Discovery
+  endpoint that is accessible to the Pathling server.
+- `pathling.mcp.auth.scopesSupported` - (default: `[empty]`) The scopes
+  advertised in the protected resource metadata and in the authentication
+  challenge, which MCP clients request when they sign in.
+
 ### Admin UI
 
 - `pathling.adminUi.clientId` - The OAuth client ID for the admin UI. When set,
