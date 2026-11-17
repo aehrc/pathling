@@ -30,7 +30,9 @@ import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
+import au.csiro.pathling.fhirpath.comparison.DefaultComparator;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.Function;
@@ -306,7 +308,18 @@ public class StringCollection extends Collection
   @Nonnull
   @Override
   public StringCollection asStringPath() {
-    return (StringCollection) asSingular();
+    return (StringCollection) toEngineForm().asSingular();
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>A primitive held with its id and extensions is compared by its value alone (decision 151).
+   */
+  @Override
+  @Nonnull
+  public ColumnComparator getComparator() {
+    return comparatorFor(DefaultComparator.getInstance());
   }
 
   @Override
@@ -340,7 +353,7 @@ public class StringCollection extends Collection
         .filter(FHIRDefinedType.BASE64BINARY::equals)
         .map(
             t ->
-                new DefaultRepresentation(getColumnValue())
+                new DefaultRepresentation(getOutputColumn().getValue())
                     .transform(functions::unbase64)
                     .getValue())
         .orElseGet(Materializable.super::toExternalValue);

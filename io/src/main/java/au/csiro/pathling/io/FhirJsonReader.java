@@ -47,12 +47,14 @@ import org.apache.spark.sql.types.StructType;
  * Bundles are the exception, because the resources of the type asked for are selected from them
  * before anything is inferred.
  *
+ * <p>A primitive's id and extensions are stored in its metadata group where the reader was asked to
+ * store them (FR-003), and are otherwise left out without a report (FR-016's exception 3).
+ *
  * <p>Nothing read here is pruned (decision 71). A structure whose only content was a primitive's id
- * and extensions is conformant and kept on purpose until M5: the primitive is stored as a null of
- * its declared type, so the structure is stored and later written as an empty object whatever other
- * conformant documents are read with it (decision 72). A repeating primitive keeps its positional
- * nulls, and until M5 they are written without the metadata they align with. The metadata itself is
- * not stored, and nothing reports that it is not.
+ * and extensions is conformant and kept on purpose: the primitive is stored as a null of its
+ * declared type, so the structure is stored, and where the metadata is not stored it is later
+ * written as an empty object whatever other conformant documents are read with it (decision 72). A
+ * repeating primitive keeps its positional nulls, which align with its metadata group.
  */
 public final class FhirJsonReader implements FhirFormatReader {
 

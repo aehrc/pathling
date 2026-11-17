@@ -1,0 +1,49 @@
+recordLevelFilter=false Spark 4.0.2
+    first chunk type=optional int64 __end (TIMESTAMP(MICROS,true))
+FOOTER full: 412 row groups, 1200000 rows; column _birthDate.__end has statistics: true; row groups with max >= 2000-01-01T00:00:00Z: 84 (240343 rows)
+    first chunk type=optional int64 __start (TIMESTAMP(MICROS,true))
+FOOTER full: 412 row groups, 1200000 rows; column _birthDate.__start has statistics: true; row groups with max >= 2000-01-01T00:00:00Z: 84 (240343 rows)
+ENGINE OPTIMISED PLAN: Filter element_at(transform(array(CASE WHEN isnotnull(birthDate#3) THEN named_struct(__start, _birthDate#4.__start, __end, _birthDate#4.__end) END), lambdafunction(element_at(transform([[946684800000000,978307199999999]], lambdafunction(CASE WHEN (((lambda x_1#20.__end < lambda x_2#21.__start) OR (lambda x_2#21.__end < lambda x_1#20.__start)) OR ((lambda x_2#21.__start = lambda x_1#20.__start) AND (lambda x_1#20.__end = lambda x_2#21.__end))) THEN (lambda x_1#20.__start >= lambda x_2#21.__start) END, lambda x_2#21, false)), 1, None, true), lambda x_1#20, false)), 1, None, true)
++- Relation [resourceType#0,id#1,name#2,birthDate#3,_birthDate#4] parquet
+
+== Arm 1: today, through the engine ==
+ARM engine: birthDate >= @2000         matched=227309   scanned=1200000  of 1200000  bytesRead=10236092   pushed=[]
+ARM engine: where(birthDate >= @2000).exists() matched=227309   scanned=1200000  of 1200000  bytesRead=10236092   pushed=[]
+ARM engine: birthDate.where($this>=@2000).exists() matched=227309   scanned=1200000  of 1200000  bytesRead=10236092   pushed=[]
+ARM engine: name.where(period.start>=@2000) matched=227309   scanned=1200000  of 1200000  bytesRead=11022524   pushed=[]
+ARM engine: name.period.start >= @2000 (any) matched=227309   scanned=1200000  of 1200000  bytesRead=11022524   pushed=[]
+ARM search: birthdate=ge2000 (DateMatcher) matched=239342   scanned=1200000  of 1200000  bytesRead=10236092   pushed=[]
+ARM search: birthdate=gt2000 (DateMatcher) matched=227309   scanned=1200000  of 1200000  bytesRead=10236092   pushed=[]
+== Arm 2: plain field ==
+ARM plain: _birthDate.__end >= ts      matched=239342   scanned=240343   of 1200000  bytesRead=14196924   pushed=[IsNotNull(_birthDate.__end), GreaterThanOrEqual(_birthDate.__end,2000-01-01 10:00:00.0)]
+ARM plain: _birthDate.__start >= ts    matched=239342   scanned=240343   of 1200000  bytesRead=14262460   pushed=[IsNotNull(_birthDate.__start), GreaterThanOrEqual(_birthDate.__start,2000-01-01 10:00:00.0)]
+ARM ColumnFunctions.resolveOrElse __end matched=239342   scanned=240343   of 1200000  bytesRead=14196924   pushed=[IsNotNull(_birthDate.__end), GreaterThanOrEqual(_birthDate.__end,2000-01-01 10:00:00.0)]
+ARM resolveOrElse, fallback = computed matched=239342   scanned=240343   of 1200000  bytesRead=14196924   pushed=[IsNotNull(_birthDate.__end), GreaterThanOrEqual(_birthDate.__end,2000-01-01 10:00:00.0)]
+== Arm 3: through the element struct ==
+ARM struct(value, meta).meta.__end >= ts matched=239342   scanned=240343   of 1200000  bytesRead=14196924   pushed=[IsNotNull(_birthDate.__end), GreaterThanOrEqual(_birthDate.__end,2000-01-01 10:00:00.0)]
+== Arm 4: through CASE WHEN wrapper ==
+ARM when(notNull, struct).meta.__end >= ts matched=239342   scanned=1200000  of 1200000  bytesRead=10236092   pushed=[]
+ARM when(notNull, struct(resolveOrElse)) matched=239342   scanned=1200000  of 1200000  bytesRead=10236092   pushed=[]
+== Arm 5: comparison that is empty where it cannot compare ==
+ARM CASE canCompare THEN start>=ts ELSE null matched=227309   scanned=1200000  of 1200000  bytesRead=10170556   pushed=[]
+ARM   ... AND __end >= ts              matched=227309   scanned=240343   of 1200000  bytesRead=14196924   pushed=[IsNotNull(_birthDate.__end), GreaterThanOrEqual(_birthDate.__end,2000-01-01 10:00:00.0)]
+ARM   ... AND __start >= ts            matched=227309   scanned=240343   of 1200000  bytesRead=14262460   pushed=[IsNotNull(_birthDate.__start), GreaterThanOrEqual(_birthDate.__start,2000-01-01 10:00:00.0)]
+ARM   __end>=ts AND CASE               matched=227309   scanned=240343   of 1200000  bytesRead=14196924   pushed=[IsNotNull(_birthDate.__end), GreaterThanOrEqual(_birthDate.__end,2000-01-01 10:00:00.0)]
+ARM   coalesce(CASE, false)            matched=227309   scanned=1200000  of 1200000  bytesRead=10170556   pushed=[]
+ARM CASE end notNull THEN end>=ts      matched=239342   scanned=1200000  of 1200000  bytesRead=10170556   pushed=[]
+ARM   NOT NOT CASE (not simplified?)   matched=227309   scanned=1200000  of 1200000  bytesRead=10170556   pushed=[]
+ARM   CASE as isNotNull(CASE) (exists) matched=1187967  scanned=1200000  of 1200000  bytesRead=10170556   pushed=[]
+== Extra: the Period shape of DateMatcher, a bound taken as infinity ==
+ARM coalesce(__end, MAX) >= ts         matched=239342   scanned=1200000  of 1200000  bytesRead=10170556   pushed=[]
+ARM __end >= ts OR __end IS NULL       matched=239342   scanned=240343   of 1200000  bytesRead=14196924   pushed=[Or(GreaterThanOrEqual(_birthDate.__end,2000-01-01 10:00:00.0),IsNull(_birthDate.__end))]
+ARM CASE canCompare THEN start>=ts     matched=227309   scanned=1200000  of 1200000  bytesRead=10170556   pushed=[]
+== Arms 6 and 7: storage type, grouped vs flat ==
+    first chunk type=optional int64 __end (TIMESTAMP(MICROS,true))
+FOOTER narrow_micros: 189 row groups, 1200000 rows; column _birthDate.__end has statistics: true; row groups with max >= 2000-01-01T00:00:00Z: 40 (244770 rows)
+ARM narrow_micros _birthDate.__end >= ts matched=239342   scanned=244770   of 1200000  bytesRead=3191932    pushed=[IsNotNull(_birthDate.__end), GreaterThanOrEqual(_birthDate.__end,2000-01-01 10:00:00.0)]
+FOOTER narrow_int96: 262 row groups, 1200000 rows; column _birthDate.__end has statistics: false; row groups with max >= 2000-01-01T00:00:00Z: 262 (1200000 rows)
+ARM narrow_int96 _birthDate.__end >= ts matched=239342   scanned=1200000  of 1200000  bytesRead=6644800    pushed=[IsNotNull(_birthDate.__end), GreaterThanOrEqual(_birthDate.__end,2000-01-01 10:00:00.0)]
+    first chunk type=optional int64 upper (TIMESTAMP(MICROS,true))
+FOOTER narrow_grouped: 189 row groups, 1200000 rows; column _birthDate.__bounds.upper has statistics: true; row groups with max >= 2000-01-01T00:00:00Z: 40 (244770 rows)
+ARM narrow_grouped _birthDate.__bounds.upper >= ts matched=239342   scanned=244770   of 1200000  bytesRead=3197500    pushed=[IsNotNull(_birthDate.__bounds.upper), GreaterThanOrEqual(_birthDate.__bounds.upper,2000-01-01 10:00:00.0)]
+ARM narrow_grouped _birthDate.__bounds.lower >= ts matched=239342   scanned=244770   of 1200000  bytesRead=3197500    pushed=[IsNotNull(_birthDate.__bounds.lower), GreaterThanOrEqual(_birthDate.__bounds.lower,2000-01-01 10:00:00.0)]

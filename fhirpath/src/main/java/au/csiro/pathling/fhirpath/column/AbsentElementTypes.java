@@ -36,7 +36,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * type.
  *
  * <p>A decimal takes the text it is stored as, so that every branch of the traversal yields the
- * same type. The engine decodes the text to {@code DECIMAL(32,6)} after traversal (FR-035).
+ * same type. The engine decodes the text to {@link au.csiro.pathling.utilities.SystemDecimal#TYPE}
+ * after traversal (FR-035).
  *
  * @author Piotr Szul
  */

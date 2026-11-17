@@ -21,6 +21,9 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.DateTimeComparable;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.evaluation.CrossResourceStrategy;
 import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluatorBuilder;
@@ -218,8 +221,9 @@ public class SearchColumnBuilder {
 
     // Get the Column value - for boolean expressions this should be a scalar boolean. A value is
     // returned in the form the engine computes with, so that a quantity is a System quantity, in
-    // its fixed shape, whatever the layout (FR-059).
-    return result.toEngineForm().getColumn().getValue();
+    // its fixed shape, whatever the layout (FR-059), and is given as a caller is given it, so that
+    // a date is its text.
+    return result.toEngineForm().getOutputColumn().getValue();
   }
 
   /**
@@ -328,7 +332,8 @@ public class SearchColumnBuilder {
                 final SearchFilter filter =
                     getFilterForType(
                         paramType, criterion.getModifier(), subResult.getFhirType().get());
-                return Stream.of(filter.buildFilter(subResult.getColumn(), criterion.getValues()));
+                return Stream.of(
+                    filter.buildFilter(matchedColumn(subResult), criterion.getValues()));
               })
           .reduce(Column::or)
           .orElse(lit(false));
@@ -336,7 +341,22 @@ public class SearchColumnBuilder {
 
     // Standard path: build filter directly from the evaluated column.
     final SearchFilter filter = getFilterForType(paramType, criterion.getModifier(), fhirType);
-    return filter.buildFilter(result.getColumn(), criterion.getValues());
+    return filter.buildFilter(matchedColumn(result), criterion.getValues());
+  }
+
+  /**
+   * Returns the column a search filter matches against. A decimal is matched as its number, so a
+   * stored decimal is converted to one, and a primitive held with its id and extensions is matched
+   * as its System value. Any other value is matched as it is held: a stored quantity, whose matcher
+   * reads its stored annotations, and a date, whose matcher reads only its text and bounds, so that
+   * a filter on a stored bound is pushed down to the scan, which converting it would prevent.
+   */
+  @Nonnull
+  private static ColumnRepresentation matchedColumn(@Nonnull final Collection result) {
+    final boolean converted =
+        result instanceof DecimalCollection
+            || (result.holdsPrimitiveMetadata() && !(result instanceof DateTimeComparable));
+    return converted ? result.toEngineForm().getColumn() : result.getColumn();
   }
 
   /**

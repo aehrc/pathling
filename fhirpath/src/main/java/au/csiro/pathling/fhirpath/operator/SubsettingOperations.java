@@ -59,6 +59,7 @@ public class SubsettingOperations {
     // result into empty) is correct.
     final Column indexValue =
         index
+            .withoutPrimitiveMetadata()
             .asSingular("Indexer operator requires a singular index")
             .getColumnValue()
             .try_cast(DataTypes.IntegerType);

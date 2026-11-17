@@ -41,11 +41,13 @@ import org.apache.spark.sql.types.StructType;
  * <p>Each resource is shaped into the structure FHIR XML has and written with Spark's {@code
  * to_xml}. What is written is what the previous writer wrote, which converted the JSON writer's
  * output with the FHIR parser: what XML cannot carry of what the JSON writer writes is left out,
- * namely an element that is an empty structure and the null that keeps a repeating primitive's
- * position (decision 84). A decimal is written as the text it is stored as, which for one read from
- * XML is the text it was read as (owner, 2026-10-22). A narrative is written as the XHTML it holds,
- * which a stored narrative must be: one that is not well-formed fails the write, naming the
- * resource.
+ * namely an element that is an empty structure, and a position of a repeating primitive holding
+ * neither a value nor metadata (decision 84). A position holding metadata without a value is
+ * written as an element carrying the metadata alone, so the order of the elements keeps the
+ * alignment of values and metadata that JSON keeps with positional nulls (decision 63). A decimal
+ * is written as the text it is stored as, which for one read from XML is the text it was read as
+ * (owner, 2026-10-22). A narrative is written as the XHTML it holds, which a stored narrative must
+ * be: one that is not well-formed fails the write, naming the resource.
  */
 public final class FhirXmlWriter implements FhirFormatWriter {
 

@@ -17,7 +17,13 @@
 
 package au.csiro.pathling.fhirpath.comparison;
 
+import au.csiro.pathling.encoders.ColumnFunctions;
+import au.csiro.pathling.schema.annotation.kinds.DateRangeKind;
+import au.csiro.pathling.schema.annotation.kinds.DecimalNumericKind;
+import au.csiro.pathling.schema.annotation.kinds.QuantityCanonicalKind;
 import jakarta.annotation.Nonnull;
+import java.util.List;
+import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 
 /**
@@ -39,6 +45,30 @@ public class DefaultComparator implements ColumnComparator {
   }
 
   protected DefaultComparator() {}
+
+  /**
+   * The annotation fields the engine recognises. They stay in a comparison key, because the value
+   * determines them; any other annotation field is another producer's, and is left out of it
+   * (decision 151).
+   */
+  @Nonnull
+  public static final List<String> RECOGNISED_ANNOTATIONS =
+      Stream.of(DateRangeKind.INSTANCE, DecimalNumericKind.INSTANCE, QuantityCanonicalKind.INSTANCE)
+          .flatMap(kind -> kind.getFields().stream())
+          .toList();
+
+  /**
+   * Returns the deduplication of an array by the key of each element, keeping the first element of
+   * each key, which is Spark's {@code array_distinct} where the key is the element itself (decision
+   * 151).
+   *
+   * @param array the array to deduplicate
+   * @return the deduplicated array
+   */
+  @Nonnull
+  public static Column distinctByKey(@Nonnull final Column array) {
+    return ColumnFunctions.distinctOnKey(array, RECOGNISED_ANNOTATIONS);
+  }
 
   @Nonnull
   @Override

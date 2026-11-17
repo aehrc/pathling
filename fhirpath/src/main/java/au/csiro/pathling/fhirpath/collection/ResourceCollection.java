@@ -158,6 +158,19 @@ public class ResourceCollection extends Collection {
         definition);
   }
 
+  /**
+   * Returns this collection under another definition of its resource, such as one that reads a
+   * primitive's id and extensions.
+   *
+   * @param definition the definition of the resource
+   * @return this collection, under the given definition
+   */
+  @Nonnull
+  public ResourceCollection withResourceDefinition(@Nonnull final ResourceDefinition definition) {
+    return new ResourceCollection(
+        getColumn(), getType(), getFhirType(), Optional.of(definition), definition);
+  }
+
   @Nonnull
   @Override
   public Collection copyWith(@Nonnull final ColumnRepresentation newValue) {

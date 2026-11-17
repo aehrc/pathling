@@ -25,14 +25,19 @@ import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
+import au.csiro.pathling.fhirpath.column.StoredPrimitive;
+import au.csiro.pathling.fhirpath.column.SystemDateTime;
+import au.csiro.pathling.fhirpath.definition.PrimitiveMetadata;
 import au.csiro.pathling.fhirpath.operator.CombiningLogic;
 import au.csiro.pathling.utilities.CanonicalStructure;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
+import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /** A collection representing a choice element in FHIR. */
@@ -103,16 +108,36 @@ public class ChoiceElementCollection extends MixedCollection implements Material
     } else {
       // The variants are coalesced, so they are unified first, all of them at once (FR-056). A
       // variant of a structure would be reconciled by name. The variants of one FHIRPath type are
-      // in practice all primitives, which already share their SQL type.
+      // in practice all primitives, which already share their SQL type once each is taken as its
+      // System value: a primitive held with its id and extensions is converted to one, as the
+      // result is a System value whatever FHIR type each variant has (decision 142, D8).
       final Optional<CanonicalStructure> canonical =
           CombiningLogic.canonicalStructureOf(selectedTypes[0]);
+      final UnaryOperator<Column> toSystem =
+          PrimitiveMetadata.carriedBy(Optional.of(selectedTypes[0]))
+              ? systemValueOf(fhirpathType)
+              : UnaryOperator.identity();
       return Collection.build(
           parent
               .getColumn()
               .traverseChoice(
-                  columns -> CombiningLogic.unifyColumns(columns, canonical), selectedTypes),
+                  columns ->
+                      CombiningLogic.unifyColumns(
+                          columns.stream().map(toSystem).toList(), canonical),
+                  selectedTypes),
           fhirpathType.getDefaultFhirType());
     }
+  }
+
+  /**
+   * Returns the System value of one variant of a choice held with its id and extensions: a date or
+   * dateTime keeps its stored bounds, and any other primitive is its value.
+   */
+  @Nonnull
+  private static UnaryOperator<Column> systemValueOf(@Nonnull final FhirPathType fhirpathType) {
+    return fhirpathType == FhirPathType.DATETIME || fhirpathType == FhirPathType.DATE
+        ? SystemDateTime::withoutMetadata
+        : StoredPrimitive::valueOf;
   }
 
   @Nonnull

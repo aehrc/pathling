@@ -205,17 +205,17 @@ class QuantityTypesTest {
     assertThat(projected.schema().apply("x").dataType().simpleString())
         .isEqualTo(expectedType.simpleString());
 
-    // The System quantity carries no canonical form (FR-059). It is computed from the quantity
-    // where the quantity is compared.
+    // The System quantity carries its canonical form (FR-059), computed from the stored quantity,
+    // which has no annotation.
     final Column quantity = expectedType instanceof ArrayType ? col("x").getItem(0) : col("x");
-    final Row canonical =
+    final Row canonicalRow =
         projected
             .select(
-                QuantityEncoding.canonicalValue(quantity).getField("value"),
+                QuantityEncoding.canonicalValueExact(quantity).getField("value"),
                 QuantityEncoding.canonicalCode(quantity))
             .first();
-    assertThat(canonical.<BigDecimal>getAs(0).toPlainString()).isEqualTo(expectedCanonicalValue);
-    assertThat(canonical.<String>getAs(1)).isEqualTo(expectedCanonicalCode);
+    assertThat(canonicalRow.<BigDecimal>getAs(0).toPlainString()).isEqualTo(expectedCanonicalValue);
+    assertThat(canonicalRow.<String>getAs(1)).isEqualTo(expectedCanonicalCode);
   }
 
   /**

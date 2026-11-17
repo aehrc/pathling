@@ -25,6 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
+import au.csiro.pathling.io.FhirReader;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.TestHelpers;
 import au.csiro.pathling.library.io.DivergentBatches;
@@ -35,8 +37,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -56,6 +60,18 @@ class DeltaSchemaMergingTest {
 
   private static SparkSession spark;
   private static PathlingContext context;
+
+  private static final String QUANTITY_OF_1_G =
+      """
+      {"resourceType":"Observation","id":"o1","status":"final","code":{"text":"weight"},
+       "valueQuantity":{"value":1,"unit":"g","system":"http://unitsofmeasure.org","code":"g"}}\
+      """;
+
+  private static final String QUANTITY_OF_2_KG =
+      """
+      {"resourceType":"Observation","id":"o1","status":"final","code":{"text":"weight"},
+       "valueQuantity":{"value":2,"unit":"kg","system":"http://unitsofmeasure.org","code":"kg"}}\
+      """;
 
   @TempDir Path warehouse;
 
@@ -143,21 +159,76 @@ class DeltaSchemaMergingTest {
     assertEquals(List.of("p1::Updated", "p2:Gamma:", "p3::Delta"), names(patients));
   }
 
+  /**
+   * An upsert that brings the exact canonical value of a quantity into a table that lacks it stores
+   * that value with its fields in the order of its type, so that a comparison read back from the
+   * table, which takes them by position, still works.
+   */
+  @Test
+  void upsertingAnAnnotatedBatchKeepsTheExactCanonicalValueReadable() {
+    write("Observation", observations(List.of(QUANTITY_OF_1_G), false), "overwrite");
+
+    write("Observation", observations(List.of(QUANTITY_OF_2_KG), true), "merge");
+
+    final StructType quantity =
+        (StructType) storedTable("Observation").schema().apply("valueQuantity").dataType();
+    assertEquals(
+        List.of("value", "scale"),
+        Arrays.asList(
+            ((StructType) quantity.apply("__canonical_value_exact").dataType()).fieldNames()));
+    final List<Row> heavier =
+        context
+            .read()
+            .delta(warehouse.toString())
+            .view("Observation")
+            .json(
+                """
+                {"resource":"Observation","select":[{"column":[
+                  {"name":"id","path":"id"},
+                  {"name":"heavier","path":"value.ofType(Quantity) > 1500 'g'"}]}]}\
+                """)
+            .execute()
+            .collectAsList();
+    assertEquals("[[o1,true]]", heavier.toString());
+  }
+
   private void write(@Nonnull final Dataset<Row> batch, @Nonnull final String saveMode) {
+    write(RESOURCE_TYPE, batch, saveMode);
+  }
+
+  private void write(
+      @Nonnull final String resourceType,
+      @Nonnull final Dataset<Row> batch,
+      @Nonnull final String saveMode) {
     context
         .read()
         .datasets()
-        .dataset(RESOURCE_TYPE, batch)
+        .dataset(resourceType, batch)
         .write()
         .saveMode(saveMode)
         .delta(warehouse.toString());
   }
 
   @Nonnull
+  private static Dataset<Row> observations(
+      @Nonnull final List<String> json, final boolean annotated) {
+    final Dataset<Row> observations =
+        FhirReader.of(spark, FhirDefinitionContext.of(context.getFhirContext()))
+            .json()
+            .read("Observation", spark.createDataset(json, Encoders.STRING()));
+    return annotated ? context.annotate(observations, "Observation") : observations;
+  }
+
+  @Nonnull
   private Dataset<Row> storedTable() {
+    return storedTable(RESOURCE_TYPE);
+  }
+
+  @Nonnull
+  private Dataset<Row> storedTable(@Nonnull final String resourceType) {
     return spark
         .read()
         .format("delta")
-        .load(warehouse.resolve(RESOURCE_TYPE + ".parquet").toString());
+        .load(warehouse.resolve(resourceType + ".parquet").toString());
   }
 }

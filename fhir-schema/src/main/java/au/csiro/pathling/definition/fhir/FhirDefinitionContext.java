@@ -26,6 +26,7 @@ import au.csiro.pathling.definition.DefinitionContext;
 import au.csiro.pathling.definition.ElementDefinition;
 import au.csiro.pathling.definition.ResourceDefinition;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
+import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
@@ -101,6 +102,26 @@ public class FhirDefinitionContext implements DefinitionContext {
       // HAPI reports a name it does not know as a data format error.
       return Optional.empty();
     }
+  }
+
+  /**
+   * Returns the definition of a child that every element has, its {@code id} or its {@code
+   * extension}, as the Element type declares it. A primitive has them too (FR-003), though its
+   * definition declares no children, so they are taken from the Extension type, which is an
+   * Element.
+   *
+   * @param name the name of the child, {@code id} or {@code extension}
+   * @return the definition of the child
+   * @throws IllegalArgumentException if the Element type has no child of that name
+   */
+  @Nonnull
+  public ElementDefinition findElementChild(@Nonnull final String name) {
+    final BaseRuntimeElementCompositeDefinition<?> extensionType =
+        (BaseRuntimeElementCompositeDefinition<?>)
+            fhirContext.getElementDefinition(Extension.class);
+    return Optional.ofNullable(requireNonNull(extensionType).getChildByName(name))
+        .flatMap(child -> buildElement(child, name))
+        .orElseThrow(() -> new IllegalArgumentException("Element has no child named " + name));
   }
 
   /**

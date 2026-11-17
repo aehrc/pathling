@@ -76,11 +76,11 @@ class ChoiceTypeInfoTest {
   void typeOfAQuantityVariantDoesNotTraverseTheQuantity() {
     final String plan = result("value.type().name").queryExecution().analyzed().toString();
     // No decode to the form the engine computes with, which computes the canonical form.
-    assertThat(plan).doesNotContain("canonical_quantity");
+    assertThat(plan).doesNotContain("quantity_canonical");
     // The control: a comparison does decode the quantity, so the plan text names the functions.
     final String control =
         result("value.ofType(Quantity) > 1 'g'").queryExecution().analyzed().toString();
-    assertThat(control).contains("canonical_quantity");
+    assertThat(control).contains("quantity_canonical");
   }
 
   @Nonnull

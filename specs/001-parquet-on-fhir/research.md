@@ -338,6 +338,10 @@ Delta 4.0.0 against Spark source 4.0.2, and are recorded in full in
   are untouched, so the most-used path in the engine does not change.
 - **Alternatives considered**: Eagerly pairing each primitive with its metadata
   (uniform, but changes the column representation of every primitive).
+- **Amended by decision 135**: annotations are no longer siblings. A primitive's
+  are fields of its metadata group and a complex element's are fields of its own
+  structure, so the sibling resolution serves the metadata group alone, and
+  annotations are reached through it or through the element's structure.
 
 ## R-015 Schema merging
 

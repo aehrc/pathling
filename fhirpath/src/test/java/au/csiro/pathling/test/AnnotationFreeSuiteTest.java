@@ -75,11 +75,13 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Shows that the engine test suite runs over data written with no annotations, so that a green
  * default run is the evidence SC-004 asks for and FR-022 is exercised by every test in it (T089).
  *
- * <p>Until M5 the new layout is written in one mode only: the transform in {@code io} emits no
- * annotation of any kind (decision 50). Running the suite a second time "with every annotation
- * disabled" would therefore run the same suite over the same data, and prove nothing a default run
- * does not. What a default run does not prove on its own is the premise, that the data it runs over
- * really is annotation-free. That is what this class asserts, rather than duplicating the suite:
+ * <p>The fixtures the suite runs over are read with {@code FhirReader}, which never annotates:
+ * annotations are added only by encoding or by {@code annotate}, under a {@code
+ * SchemaConfiguration}. The default run therefore already runs over data with every annotation
+ * absent, as it would be with every kind switched off, and running the suite a second time would
+ * prove nothing a default run does not. What a default run does not prove on its own is the
+ * premise, that the data it runs over really is annotation-free. That is what this class asserts,
+ * rather than duplicating the suite:
  *
  * <ul>
  *   <li>The fixtures the tests build, through {@link PofDatasets}, carry no annotation at any
@@ -104,10 +106,9 @@ import org.springframework.beans.factory.annotation.Autowired;
  *       conformance suites.
  * </ul>
  *
- * <p>At M5 each kind starts being emitted by default and becomes individually disableable (FR-021).
- * This class then changes from asserting that none is emitted to asserting that none is emitted
- * with every kind switched off, and the annotated cases are covered per kind there, with T090
- * asserting that the choice is made from the schema.
+ * <p>Annotated data, and data annotated with each kind switched off, are covered per kind by the
+ * tests of each kind, and {@code AnnotationDecidedBySchemaTest} asserts that whether an annotation
+ * is used is decided from the schema (FR-023).
  *
  * @author Piotr Szul
  */
@@ -175,26 +176,26 @@ class AnnotationFreeSuiteTest {
   /** The annotation slots beside the stored elements of the patient fixtures. */
   private static final List<String> PATIENT_SLOTS =
       List.of(
-          "meta.__lastUpdated_start",
-          "meta.__lastUpdated_end",
-          "name[].period.__start_start",
-          "name[].period.__start_end",
-          "__birthDate_start",
-          "__birthDate_end",
-          "__deceasedDateTime_start",
-          "__deceasedDateTime_end");
+          "meta._lastUpdated.__start",
+          "meta._lastUpdated.__end",
+          "name[].period._start.__start",
+          "name[].period._start.__end",
+          "_birthDate.__start",
+          "_birthDate.__end",
+          "_deceasedDateTime.__start",
+          "_deceasedDateTime.__end");
 
   /** The annotation slots beside the stored elements of the observation fixtures. */
   private static final List<String> OBSERVATION_SLOTS =
       List.of(
-          "__effectiveDateTime_start",
-          "__issued_start",
-          "__valueQuantity_canonical",
-          "__valueQuantity_canonical_exact",
-          "valueQuantity.__value_numeric",
-          "component[].__valueQuantity_canonical",
-          "component[].__valueQuantity_canonical_exact",
-          "component[].valueQuantity.__value_numeric");
+          "_effectiveDateTime.__start",
+          "_issued.__start",
+          "valueQuantity.__canonical_code",
+          "valueQuantity.__canonical_value_exact",
+          "valueQuantity._value.__numeric",
+          "component[].valueQuantity.__canonical_code",
+          "component[].valueQuantity.__canonical_value_exact",
+          "component[].valueQuantity._value.__numeric");
 
   @Autowired SparkSession spark;
 
@@ -223,12 +224,17 @@ class AnnotationFreeSuiteTest {
         arguments("Patient", PATIENTS, PATIENT_SLOTS),
         arguments("Observation", OBSERVATIONS, OBSERVATION_SLOTS),
         arguments(
-            "Condition", CONDITIONS, List.of("__onsetAge_canonical", "onsetAge.__value_numeric")),
-        arguments("ChargeItem", CHARGE_ITEMS, List.of("__factorOverride_numeric")),
+            "Condition",
+            CONDITIONS,
+            List.of(
+                "onsetAge.__canonical_code",
+                "onsetAge.__canonical_value_exact",
+                "onsetAge._value.__numeric")),
+        arguments("ChargeItem", CHARGE_ITEMS, List.of("_factorOverride.__numeric")),
         arguments(
             "RiskAssessment",
             RISK_ASSESSMENTS,
-            List.of("prediction[].__probabilityDecimal_numeric")));
+            List.of("prediction[]._probabilityDecimal.__numeric")));
   }
 
   @ParameterizedTest(name = "{0}")
@@ -304,9 +310,10 @@ class AnnotationFreeSuiteTest {
     // The corpora reach every kind, so their being free of annotations is not an accident of what
     // they happen to populate.
     assertThat(slots)
-        .anyMatch(slot -> slot.endsWith(LayoutFields.NUMERIC_SUFFIX))
-        .anyMatch(slot -> slot.endsWith(LayoutFields.START_SUFFIX))
-        .anyMatch(slot -> slot.endsWith(LayoutFields.CANONICAL_SUFFIX));
+        .anyMatch(slot -> slot.endsWith(LayoutFields.NUMERIC_ANNOTATION))
+        .anyMatch(slot -> slot.endsWith(LayoutFields.START_ANNOTATION))
+        .anyMatch(slot -> slot.endsWith(LayoutFields.CANONICAL_CODE_ANNOTATION))
+        .anyMatch(slot -> slot.endsWith(LayoutFields.CANONICAL_VALUE_EXACT_ANNOTATION));
     assertThat(annotations).isEmpty();
   }
 
@@ -314,7 +321,9 @@ class AnnotationFreeSuiteTest {
   void scanReportsAnnotationsAtTheTopAndInsideArrays() {
     final Dataset<Row> patients =
         fromJson("Patient", PATIENTS)
-            .withColumn(LayoutFields.startAnnotationName("birthDate"), functions.lit("1974-12-25"));
+            .withColumn(
+                "_birthDate",
+                functions.struct(functions.lit("1974-12-25").alias(LayoutFields.START_ANNOTATION)));
     final Dataset<Row> observations =
         fromJson("Observation", OBSERVATIONS)
             .withColumn(
@@ -323,13 +332,18 @@ class AnnotationFreeSuiteTest {
                     functions.col("component"),
                     component ->
                         component.withField(
-                            LayoutFields.canonicalAnnotationName("valueQuantity"),
-                            functions.lit("0.0005"))));
+                            "valueQuantity",
+                            component
+                                .getField("valueQuantity")
+                                .withField(
+                                    LayoutFields.CANONICAL_VALUE_EXACT_ANNOTATION,
+                                    functions.lit("0.0005")))));
     final List<String> annotations = new ArrayList<>();
     scan("Patient", patients.schema(), new ArrayList<>(), annotations);
     scan("Observation", observations.schema(), new ArrayList<>(), annotations);
     assertThat(annotations)
-        .containsExactlyInAnyOrder("__birthDate_start", "component[].__valueQuantity_canonical");
+        .containsExactlyInAnyOrder(
+            "_birthDate.__start", "component[].valueQuantity.__canonical_value_exact");
   }
 
   @Test
@@ -423,8 +437,13 @@ class AnnotationFreeSuiteTest {
       @Nonnull final List<String> slots,
       @Nonnull final List<String> annotations) {
     final List<String> storedNames = Arrays.asList(stored.fieldNames());
+    // A complex element's annotations are fields of its own structure, which is stored where this
+    // is reached, and a primitive's are fields of its metadata group.
     node.entries().stream()
         .filter(LayoutEntry::isAnnotation)
+        .forEach(entry -> slots.add(prefix + entry.getName()));
+    node.entries().stream()
+        .filter(LayoutEntry::isMetadataGroup)
         .filter(
             entry ->
                 entry
@@ -432,7 +451,16 @@ class AnnotationFreeSuiteTest {
                     .map(ElementDefinition::getElementName)
                     .filter(storedNames::contains)
                     .isPresent())
-        .forEach(entry -> slots.add(prefix + entry.getName()));
+        .forEach(
+            group ->
+                node.metadataGroup(group.getName()).orElseThrow().annotationEntries().stream()
+                    .map(
+                        annotation ->
+                            prefix
+                                + group.getName()
+                                + (group.isRepeating() ? "[]." : ".")
+                                + annotation.getName())
+                    .forEach(slots::add));
     for (final StructField field : stored.fields()) {
       final String path = prefix + field.name();
       final Optional<LayoutEntry> entry = node.entry(field.name());

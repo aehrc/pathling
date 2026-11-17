@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.search.filter;
 
+import static au.csiro.pathling.sql.SqlFunctions.let;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.exists;
 import static org.apache.spark.sql.functions.lit;
@@ -97,7 +98,13 @@ public class SearchFilter {
                             arr ->
                                 coalesce(
                                     exists(arr, elem -> matcher.match(elem, value)), lit(false)),
-                            scalar -> coalesce(matcher.match(scalar, value), lit(false)))
+                            // A scalar match is made false where it is null by a conjunction
+                            // rather than by coalesce, so that its own conjuncts stay conjuncts of
+                            // the filter, which Parquet can test (decision 144).
+                            scalar ->
+                                let(
+                                    matcher.match(scalar, value),
+                                    match -> match.isNotNull().and(match)))
                         .getValue())
             .reduce(Column::or)
             .orElseThrow(() -> new IllegalStateException("Failed to build filter expression"));

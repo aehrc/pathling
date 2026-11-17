@@ -178,15 +178,40 @@ final class XmlIngestShape {
     }
     final StructType parsed =
         entry.primitiveType().isPresent()
-            ? DataTypes.createStructType(
-                Stream.of(structure.fields())
-                    .map(StructField::name)
-                    .filter(name -> name.equals(VALUE) || name.equals(ID) || name.equals(EXTENSION))
-                    .map(XmlIngestShape::text)
-                    .toList())
+            ? parsePrimitive(node, entry, structure)
             : parseStructure(
                 node.elementStructure(entry).orElseThrow(), fhirType(entry), false, structure);
     return parsed.fields().length == 0 ? Optional.empty() : Optional.of(rewrap(observed, parsed));
+  }
+
+  /**
+   * Plans the parse type of a primitive: its value and id as text, and its extensions as the
+   * Extension type is parsed wherever it occurs, so that what they hold is typed from the
+   * definitions as any other extension's content is.
+   */
+  @Nonnull
+  private static StructType parsePrimitive(
+      @Nonnull final DefinitionCanonicalStructure node,
+      @Nonnull final LayoutEntry entry,
+      @Nonnull final StructType observed) {
+    final List<StructField> kept = new ArrayList<>();
+    for (final StructField field : observed.fields()) {
+      final String name = field.name();
+      if (name.equals(VALUE) || name.equals(ID)) {
+        kept.add(text(name));
+      } else if (name.equals(EXTENSION)
+          && elementTypeOf(field.dataType()) instanceof final StructType extension) {
+        MetadataGroups.extensionStructure(node, entry)
+            .map(
+                structure -> parseStructure(structure, FHIRDefinedType.EXTENSION, false, extension))
+            .filter(type -> type.fields().length > 0)
+            .ifPresent(
+                type ->
+                    kept.add(
+                        DataTypes.createStructField(name, rewrap(field.dataType(), type), true)));
+      }
+    }
+    return DataTypes.createStructType(kept);
   }
 
   /**
@@ -233,23 +258,39 @@ final class XmlIngestShape {
     final DataType parsedType = field.get().dataType();
     final Column column = source.apply(name);
     if (entry.primitiveType().isPresent()) {
-      return primitive(entry, parsedType, column);
+      return primitive(node, entry, parsedType, column);
     }
-    final DefinitionCanonicalStructure child = node.elementStructure(entry).orElseThrow();
-    final StructType inner = (StructType) elementTypeOf(parsedType);
-    final FHIRDefinedType childType = fhirType(entry);
     return List.of(
-        wrap(
+        structure(
+                node.elementStructure(entry).orElseThrow(),
+                fhirType(entry),
                 parsedType,
                 entry.isRepeating(),
-                column,
-                value ->
-                    functions.when(
-                        value.isNotNull(),
-                        functions.struct(
-                            fields(child, childType, false, inner, value::getField)
-                                .toArray(Column[]::new))))
+                column)
             .alias(name));
+  }
+
+  /**
+   * Returns a complex element in the JSON data model, built from its parsed form, each occurrence
+   * where it repeats.
+   */
+  @Nonnull
+  private Column structure(
+      @Nonnull final DefinitionCanonicalStructure node,
+      @Nullable final FHIRDefinedType type,
+      @Nonnull final DataType parsedType,
+      final boolean repeating,
+      @Nonnull final Column column) {
+    final StructType inner = (StructType) elementTypeOf(parsedType);
+    return wrap(
+        parsedType,
+        repeating,
+        column,
+        value ->
+            functions.when(
+                value.isNotNull(),
+                functions.struct(
+                    fields(node, type, false, inner, value::getField).toArray(Column[]::new))));
   }
 
   /**
@@ -257,7 +298,8 @@ final class XmlIngestShape {
    * present, in the JSON data model.
    */
   @Nonnull
-  private static List<Column> primitive(
+  private List<Column> primitive(
+      @Nonnull final DefinitionCanonicalStructure node,
       @Nonnull final LayoutEntry entry,
       @Nonnull final DataType parsedType,
       @Nonnull final Column column) {
@@ -277,7 +319,13 @@ final class XmlIngestShape {
           value -> {
             final Column[] fields =
                 metadata.stream()
-                    .map(name -> value.getField(name).alias(name.equals(ID) ? "id" : name))
+                    .map(
+                        name ->
+                            name.equals(ID)
+                                ? value.getField(ID).alias(LayoutFields.METADATA_GROUP_ID)
+                                : extensions(
+                                        node, entry, fieldOf(parsed, name).orElseThrow(), value)
+                                    .alias(LayoutFields.METADATA_GROUP_EXTENSION))
                     .toArray(Column[]::new);
             final Column present =
                 metadata.stream()
@@ -291,6 +339,24 @@ final class XmlIngestShape {
               .alias(LayoutFields.metadataGroupName(entry.getName())));
     }
     return columns;
+  }
+
+  /**
+   * Returns the extensions of a primitive in the JSON data model, as an array whether the primitive
+   * carries one or several, each in the shape any extension takes.
+   */
+  @Nonnull
+  private Column extensions(
+      @Nonnull final DefinitionCanonicalStructure node,
+      @Nonnull final LayoutEntry entry,
+      @Nonnull final StructField parsed,
+      @Nonnull final Column value) {
+    return structure(
+        MetadataGroups.extensionStructure(node, entry).orElseThrow(),
+        FHIRDefinedType.EXTENSION,
+        parsed.dataType(),
+        true,
+        value.getField(EXTENSION));
   }
 
   /**

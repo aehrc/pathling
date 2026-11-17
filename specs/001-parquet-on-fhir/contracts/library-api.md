@@ -19,7 +19,8 @@ Python and R.
 No public signature is removed or narrowed, with one exception (decision 87): the
 Java `encode` and `encodeBundle` overloads that return a dataset typed by a HAPI
 class are removed, since only the previous encoder can produce one. Encoding a
-streaming dataset fails until the dense schema arrives in M6.
+streaming dataset fails until the dense schema arrives, after #2367 (owner,
+2026-11-02).
 
 ## Options added
 
@@ -156,11 +157,34 @@ or XML still fails the read.
 **Behaviour change.** A `System.Quantity` that reaches a caller as a column —
 from the expression-to-column API, or a view column declared `Quantity` — has
 the fixed shape the [engine semantics](engine-semantics.md#quantities) give it:
-`id`, `value`, `comparator`, `unit`, `system` and `code`, each a string, with
-the value as the text of the decimal. It previously had the previous layout's
+`value`, `unit`, `code` and `system` (decision 150). The value is a
+`DECIMAL(38,6)`; the others are strings. It carries no `id`, `comparator` or
+`_value`, and no canonical annotations: they are used inside the engine and do
+not leave it (owner, 2026-11-10, for review in ticket 40). It previously had the previous layout's
 shape, with a fixed-scale decimal value, its `value_scale`, the
 `_value_canonicalized` and `_code_canonicalized` fields and `_fid` (FR-059).
 A quantity read from the data keeps the fitted shape of the data it came from.
+
+### A decimal is computed as DECIMAL(38,6)
+
+**Behaviour change.** The engine computes a decimal as `DECIMAL(38,6)`, its
+System.Decimal (FR-035, ticket 41). It was `DECIMAL(32,6)`. Both keep six
+fractional digits, so values are rounded as before, but a value with 27 to 32
+integer digits, which was null, now has a value: `1e14 * 1e14` gives `1e28`
+rather than an empty result. This goes in the release notes. The shape of SQL
+output as a whole is ticket 40's.
+
+How the number reaches a caller depends on the path, in Java, Python and R:
+
+- **A view column** is a string: the `DECIMAL(38,6)` value as plain text, with
+  trailing zeros trimmed, so a stored `1.50` is output as `1.5`. This holds
+  whether or not the column declares `"type": "decimal"`, and whether the
+  decimal was read from the data or computed (decision 76). Once ticket 16
+  keeps a decimal's lexical form, a stored decimal will be output as its stored
+  text instead. The column stays a string, and only values change.
+- **The expression-to-column API**, `fhirPathToColumn`, returns the value as
+  `DECIMAL(38,6)`. What it and `$fhirpath` return is to be specified by ticket
+  40.
 
 ### A Coding the engine builds has six fields
 

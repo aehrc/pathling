@@ -23,9 +23,11 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.definition.ResourceDefinition;
 import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
+import au.csiro.pathling.fhirpath.evaluation.CollectionDataset;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.io.FhirReader;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
 import au.csiro.pathling.test.layout.PofDatasets;
@@ -40,6 +42,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
@@ -230,17 +233,14 @@ class AbsentElementTest {
   }
 
   @Test
-  void nameHoldingOnlyRepeatingPrimitiveMetadataIsKept() {
+  void nameHoldingOnlyRepeatingPrimitiveMetadataIsKeptWhereTheMetadataIsNotStored() {
     // The layout keeps a name holding only `_given`, which the released encoder drops, because it
     // reads through HAPI's parser, which discards an `_given` array with no `given` array beside
-    // it, and so the name that held only it. The layout does not yet store the metadata of a
-    // primitive, so the reader drops the `_given` content, and keeps the name with `given` as a
-    // null array of the type the definitions give it.
+    // it, and so the name that held only it. Ingest stores no metadata of a primitive by default,
+    // so the reader drops the `_given` content, and keeps the name with `given` as a null array of
+    // the type the definitions give it.
     final Dataset<Row> layout =
-        PofDatasets.fromJson(
-            spark,
-            fhirContext,
-            "Patient",
+        withoutPrimitiveMetadata(
             List.of(
                 "{\"resourceType\":\"Patient\",\"id\":\"p1\","
                     + "\"name\":[{\"_given\":[{\"id\":\"a\"},{\"id\":\"b\"}]}]}"));
@@ -259,10 +259,51 @@ class AbsentElementTest {
   }
 
   @Test
-  void nameHoldingOnlySingularPrimitiveMetadataIsKept() {
+  void nameHoldingOnlySingularPrimitiveMetadataIsKeptWhereTheMetadataIsNotStored() {
     // A name holding only `_family` is kept, as HAPI's parser, and so the released encoder, keeps
     // a singular primitive that carries only its metadata. The reader drops the `_family` content,
     // as it does `_given`, and keeps the name with `family` as a typed null.
+    final Dataset<Row> layout =
+        withoutPrimitiveMetadata(
+            List.of(
+                "{\"resourceType\":\"Patient\",\"id\":\"p1\","
+                    + "\"name\":[{\"_family\":{\"id\":\"a\"}}]}"));
+    assertThat(nameElementType(layout))
+        .isEqualTo(new StructType().add("family", DataTypes.StringType));
+
+    assertThat(evaluate(layout, "Patient", "name.count()")).containsExactly("p1=1");
+    assertThat(evaluate(layout, "Patient", "name.family.count()")).containsExactly("p1=0");
+  }
+
+  @Test
+  void nameHoldingOnlyRepeatingPrimitiveMetadataCountsItsElementsWhereTheMetadataIsStored() {
+    // The same name, stored with the metadata of its primitives (decision 154): `_given` is kept
+    // beside `given`, and each of its entries is a primitive without a value but with an id, so
+    // it is an element, as fhirpath.js counts it.
+    final Dataset<Row> layout =
+        PofDatasets.fromJson(
+            spark,
+            fhirContext,
+            "Patient",
+            List.of(
+                "{\"resourceType\":\"Patient\",\"id\":\"p1\","
+                    + "\"name\":[{\"_given\":[{\"id\":\"a\"},{\"id\":\"b\"}]}]}"));
+    assertThat(nameElementType(layout))
+        .isEqualTo(
+            new StructType()
+                .add("given", DataTypes.createArrayType(DataTypes.StringType))
+                .add(
+                    "_given",
+                    DataTypes.createArrayType(new StructType().add("id", DataTypes.StringType))));
+
+    assertThat(evaluate(layout, "Patient", "name.count()")).containsExactly("p1=1");
+    assertThat(evaluate(layout, "Patient", "name.given.count()")).containsExactly("p1=2");
+  }
+
+  @Test
+  void nameHoldingOnlySingularPrimitiveMetadataCountsItsElementWhereTheMetadataIsStored() {
+    // The same name, stored with the metadata of its primitives (decision 154): `_family` is kept
+    // beside `family`, and is a primitive without a value but with an id, so it is an element.
     final Dataset<Row> layout =
         PofDatasets.fromJson(
             spark,
@@ -272,10 +313,24 @@ class AbsentElementTest {
                 "{\"resourceType\":\"Patient\",\"id\":\"p1\","
                     + "\"name\":[{\"_family\":{\"id\":\"a\"}}]}"));
     assertThat(nameElementType(layout))
-        .isEqualTo(new StructType().add("family", DataTypes.StringType));
+        .isEqualTo(
+            new StructType()
+                .add("family", DataTypes.StringType)
+                .add("_family", new StructType().add("id", DataTypes.StringType)));
 
     assertThat(evaluate(layout, "Patient", "name.count()")).containsExactly("p1=1");
-    assertThat(evaluate(layout, "Patient", "name.family.count()")).containsExactly("p1=0");
+    assertThat(evaluate(layout, "Patient", "name.family.count()")).containsExactly("p1=1");
+  }
+
+  /**
+   * Reads patients as ingest stores them by default, without the ids and extensions of their
+   * primitives, which the shared fixtures store.
+   */
+  @Nonnull
+  private Dataset<Row> withoutPrimitiveMetadata(@Nonnull final List<String> json) {
+    return FhirReader.of(spark, FhirDefinitionContext.of(fhirContext))
+        .json()
+        .read("Patient", spark.createDataset(json, Encoders.STRING()));
   }
 
   // T102: traversal to an element the definitions do not describe yields empty (FR-025, as
@@ -532,10 +587,13 @@ class AbsentElementTest {
         DatasetEvaluatorBuilder.create(ResourceType.fromCode(resourceType), fhirContext)
             .withDataset(dataset)
             .build();
-    return evaluator
-        .evaluate(PARSER.parse(expression))
-        .toCanonical()
-        .toIdValueDataset()
+    final CollectionDataset result = evaluator.evaluate(PARSER.parse(expression)).toCanonical();
+    // The value is read as a caller is given it, so that a stored decimal is its number.
+    return result
+        .getDataset()
+        .select(
+            functions.col(CollectionDataset.ID_COLUMN),
+            result.getValue().getOutputColumn().getValue())
         .collectAsList()
         .stream()
         .map(row -> row.getString(0) + "=" + Objects.toString(row.get(1)))

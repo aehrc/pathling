@@ -295,6 +295,57 @@ class MergeCastTest extends SparkSessionSupport {
     assertTrue(error.getCondition.startsWith("DATATYPE_MISMATCH"), error.getCondition)
   }
 
+  // -----------------------------------------------------------------------------------------------
+  // Decision 142, D9: annotation fields are intersected, not unioned.
+  // -----------------------------------------------------------------------------------------------
+
+  // The canonical structure of an element with an annotated child, as a Quantity is.
+  private val Annotated = TestCanonicalStructure(
+    Seq("value", "_value", "unit", "__canonical_code"),
+    Map("_value" -> TestCanonicalStructure(Seq("__numeric"))))
+
+  private def annotated: DataFrame = parquet("annotated",
+    """select array(named_struct('value', '1', '_value', named_struct('__numeric', 1),
+      |    'unit', 'g', '__canonical_code', 'g')) as full,
+      |  array(named_struct('value', '2', 'unit', 'kg')) as bare,
+      |  array(named_struct('value', '3', '_value', named_struct('__numeric', 3),
+      |    '__canonical_code', 'g')) as partial""".stripMargin)
+
+  @Test
+  def annotationsEveryOperandHasAreKeptAndTheRestAreDropped(): Unit = {
+    val Seq(full, partial) = Seq(F.col("full"), F.col("partial")).indices.map(i =>
+      ColumnFunctions.mergeCast(Seq(F.col("full"), F.col("partial")).asJava, i, Annotated))
+    val result = annotated.select(F.concat(full, partial).alias("m"))
+    // Content is unioned, as before; both annotations are on both operands, so both stay.
+    assertEquals("array<struct<value:string,_value:struct<__numeric:int>,unit:string,"
+      + "__canonical_code:string>>", typeOf(result, "m").simpleString)
+    assertEquals(Seq("[ArraySeq([1,[1],g,g], [3,[3],null,g])]"), rows(result))
+  }
+
+  @Test
+  def anAnnotationSomeOperandLacksIsLeftOutAtEveryDepth(): Unit = {
+    val operands = Seq(F.col("full"), F.col("bare"))
+    val Seq(full, bare) = operands.indices.map(i =>
+      ColumnFunctions.mergeCast(operands.asJava, i, Annotated))
+    val result = annotated.select(F.concat(full, bare).alias("m"))
+    // The bare operand lacks the root annotation and the structure of the nested one, so neither
+    // is filled with null for it; its content is still unioned. The metadata group that held only
+    // the nested annotation is left with no fields, so it is left out too.
+    assertEquals("array<struct<value:string,unit:string>>", typeOf(result, "m").simpleString)
+    assertEquals(Seq("[ArraySeq([1,g], [2,kg])]"), rows(result))
+  }
+
+  @Test
+  def aMergeThatLeavesOutAnEmptyStructureCanBeWrittenToParquet(): Unit = {
+    val operands = Seq(F.col("full"), F.col("bare"))
+    val Seq(full, bare) = operands.indices.map(i =>
+      ColumnFunctions.mergeCast(operands.asJava, i, Annotated))
+    val merged = annotated.select(F.concat(full, bare).alias("m"))
+    val path = java.nio.file.Files.createTempDirectory("merged").resolve("m").toString
+    merged.write.parquet(path)
+    assertEquals(rows(merged), rows(spark.read.parquet(path)))
+  }
+
   private def elementOf(dataType: DataType): StructType = dataType match {
     case ArrayType(struct: StructType, _) => struct
     case struct: StructType => struct

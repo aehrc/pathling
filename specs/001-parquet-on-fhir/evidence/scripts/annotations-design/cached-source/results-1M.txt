@@ -1,0 +1,80 @@
+CACHE source=json variant=plain table=Patient rows=1000000 mem_mb=432 disk_mb=0 cached_partitions=4 of 4 build_secs=3.6
+RESULT source=json variant=plain arm=bare expr=E1 median=0.04 min=0.03 max=0.04 gc_ms_total=0 out=1000000 date_range_in_plan=false scan=+- InMemoryTableScan [birthDate#29]
+RESULT source=json variant=plain arm=bare expr=E2 median=0.07 min=0.07 max=0.08 gc_ms_total=0 out=2073240 date_range_in_plan=false scan=+- InMemoryTableScan [name#37]
+CACHE source=json variant=plain table=Encounter rows=500000 mem_mb=197 disk_mb=0 cached_partitions=4 of 4 build_secs=2.8
+RESULT source=json variant=plain arm=bare expr=E3 median=0.06 min=0.06 max=0.08 gc_ms_total=15 out=296054 date_range_in_plan=false scan=+- InMemoryTableScan [location#45]
+CACHE source=json variant=plain table=Patient rows=1000000 mem_mb=432 disk_mb=0 cached_partitions=4 of 4 build_secs=2.9
+RESULT source=json variant=plain arm=A0 expr=E1 median=0.04 min=0.04 max=0.05 gc_ms_total=0 out=1000000 date_range_in_plan=false scan=+- InMemoryTableScan [birthDate#29]
+RESULT source=json variant=plain arm=A0 expr=E2 median=0.23 min=0.21 max=0.24 gc_ms_total=10 out=4146033 date_range_in_plan=false scan=+- InMemoryTableScan [name#37]
+CACHE source=json variant=plain table=Encounter rows=500000 mem_mb=197 disk_mb=0 cached_partitions=4 of 4 build_secs=2.1
+RESULT source=json variant=plain arm=A0 expr=E3 median=0.19 min=0.18 max=0.20 gc_ms_total=17 out=296054 date_range_in_plan=false scan=+- InMemoryTableScan [location#45]
+CACHE source=json variant=plain table=Patient rows=1000000 mem_mb=432 disk_mb=0 cached_partitions=4 of 4 build_secs=3.3
+RESULT source=json variant=plain arm=A1 expr=E1 median=0.09 min=0.08 max=0.10 gc_ms_total=0 out=1000000 date_range_in_plan=false scan=+- InMemoryTableScan [_birthDate#34, birthDate#29]
+RESULT source=json variant=plain arm=A1 expr=E2 median=0.34 min=0.30 max=0.40 gc_ms_total=25 out=4146033 date_range_in_plan=false scan=+- InMemoryTableScan [name#37]
+CACHE source=json variant=plain table=Patient rows=1000000 mem_mb=432 disk_mb=0 cached_partitions=4 of 4 build_secs=3.1
+RESULT source=json variant=plain arm=L1 expr=E1 median=0.07 min=0.07 max=0.07 gc_ms_total=0 out=1000000 date_range_in_plan=false scan=+- InMemoryTableScan [birthDate#29]
+RESULT source=json variant=plain arm=L1 expr=E2 median=0.09 min=0.09 max=0.11 gc_ms_total=9 out=4146033 date_range_in_plan=false scan=+- InMemoryTableScan [name#37]
+CACHE source=json variant=plain table=Encounter rows=500000 mem_mb=197 disk_mb=0 cached_partitions=4 of 4 build_secs=2.1
+RESULT source=json variant=plain arm=L1 expr=E3 median=0.12 min=0.11 max=0.13 gc_ms_total=16 out=296054 date_range_in_plan=false scan=+- InMemoryTableScan [location#45]
+CACHE source=json variant=plain table=Encounter rows=500000 mem_mb=197 disk_mb=0 cached_partitions=4 of 4 build_secs=2.2
+RESULT source=json variant=plain arm=D3a expr=E3 median=0.12 min=0.12 max=0.14 gc_ms_total=23 out=296054 date_range_in_plan=false scan=+- InMemoryTableScan [location#45]
+CACHE source=json variant=ext table=Patient rows=1000000 mem_mb=4191 disk_mb=0 cached_partitions=4 of 4 build_secs=10.8
+RESULT source=json variant=ext arm=bare expr=E1 median=0.05 min=0.04 max=0.06 gc_ms_total=17 out=1000000 date_range_in_plan=false scan=+- InMemoryTableScan [birthDate#29]
+RESULT source=json variant=ext arm=bare expr=E2 median=0.13 min=0.11 max=0.14 gc_ms_total=18 out=2073240 date_range_in_plan=false scan=+- InMemoryTableScan [name#37]
+CACHE source=json variant=ext table=Encounter rows=500000 mem_mb=2798 disk_mb=0 cached_partitions=4 of 4 build_secs=8.5
+RESULT source=json variant=ext arm=bare expr=E3 median=0.09 min=0.08 max=0.09 gc_ms_total=13 out=296054 date_range_in_plan=false scan=+- InMemoryTableScan [location#45]
+CACHE source=json variant=ext table=Patient rows=1000000 mem_mb=4191 disk_mb=0 cached_partitions=4 of 4 build_secs=13.2
+RESULT source=json variant=ext arm=A0 expr=E1 median=0.06 min=0.05 max=0.07 gc_ms_total=0 out=1000000 date_range_in_plan=false scan=+- InMemoryTableScan [birthDate#29]
+RESULT source=json variant=ext arm=A0 expr=E2 median=0.25 min=0.23 max=0.28 gc_ms_total=0 out=4146033 date_range_in_plan=false scan=+- InMemoryTableScan [name#37]
+CACHE source=json variant=ext table=Encounter rows=500000 mem_mb=2798 disk_mb=0 cached_partitions=4 of 4 build_secs=8.9
+RESULT source=json variant=ext arm=A0 expr=E3 median=0.26 min=0.23 max=0.32 gc_ms_total=0 out=296054 date_range_in_plan=false scan=+- InMemoryTableScan [location#45]
+CACHE source=json variant=ext table=Patient rows=1000000 mem_mb=4191 disk_mb=0 cached_partitions=4 of 4 build_secs=12.3
+RESULT source=json variant=ext arm=A1 expr=E1 median=0.11 min=0.10 max=0.12 gc_ms_total=0 out=1000000 date_range_in_plan=false scan=+- InMemoryTableScan [_birthDate#34, birthDate#29]
+RESULT source=json variant=ext arm=A1 expr=E2 median=0.44 min=0.34 max=0.57 gc_ms_total=21 out=4146033 date_range_in_plan=false scan=+- InMemoryTableScan [name#37]
+CACHE source=json variant=ext table=Patient rows=1000000 mem_mb=4191 disk_mb=0 cached_partitions=4 of 4 build_secs=11.8
+RESULT source=json variant=ext arm=L1 expr=E1 median=0.10 min=0.09 max=0.10 gc_ms_total=17 out=1000000 date_range_in_plan=false scan=+- InMemoryTableScan [birthDate#29]
+RESULT source=json variant=ext arm=L1 expr=E2 median=0.17 min=0.15 max=0.19 gc_ms_total=18 out=4146033 date_range_in_plan=false scan=+- InMemoryTableScan [name#37]
+CACHE source=json variant=ext table=Encounter rows=500000 mem_mb=2798 disk_mb=0 cached_partitions=4 of 4 build_secs=8.0
+RESULT source=json variant=ext arm=L1 expr=E3 median=0.14 min=0.14 max=0.18 gc_ms_total=15 out=296054 date_range_in_plan=false scan=+- InMemoryTableScan [location#45]
+CACHE source=json variant=ext table=Encounter rows=500000 mem_mb=2798 disk_mb=0 cached_partitions=4 of 4 build_secs=7.8
+RESULT source=json variant=ext arm=D3a expr=E3 median=0.14 min=0.14 max=0.15 gc_ms_total=0 out=296054 date_range_in_plan=false scan=+- InMemoryTableScan [location#45]
+CACHE source=cache variant=plain table=Patient rows=1000000 mem_mb=432 disk_mb=0 cached_partitions=4 of 4 build_secs=2.0
+RESULT source=cache variant=plain arm=bare expr=E1 median=0.04 min=0.03 max=0.04 gc_ms_total=12 out=1000000 date_range_in_plan=false scan=+- InMemoryTableScan [birthDate#3]
+RESULT source=cache variant=plain arm=bare expr=E2 median=0.06 min=0.06 max=0.07 gc_ms_total=12 out=2073240 date_range_in_plan=false scan=+- InMemoryTableScan [name#2]
+CACHE source=cache variant=plain table=Encounter rows=500000 mem_mb=197 disk_mb=0 cached_partitions=4 of 4 build_secs=1.4
+RESULT source=cache variant=plain arm=bare expr=E3 median=0.05 min=0.05 max=0.05 gc_ms_total=11 out=296054 date_range_in_plan=false scan=+- InMemoryTableScan [location#4]
+CACHE source=cache variant=plain table=Patient rows=1000000 mem_mb=432 disk_mb=0 cached_partitions=4 of 4 build_secs=2.0
+RESULT source=cache variant=plain arm=A0 expr=E1 median=0.04 min=0.04 max=0.05 gc_ms_total=12 out=1000000 date_range_in_plan=false scan=+- InMemoryTableScan [birthDate#3]
+RESULT source=cache variant=plain arm=A0 expr=E2 median=0.20 min=0.19 max=0.21 gc_ms_total=14 out=4146033 date_range_in_plan=false scan=+- InMemoryTableScan [name#2]
+CACHE source=cache variant=plain table=Encounter rows=500000 mem_mb=197 disk_mb=0 cached_partitions=4 of 4 build_secs=1.4
+RESULT source=cache variant=plain arm=A0 expr=E3 median=0.18 min=0.17 max=0.18 gc_ms_total=22 out=296054 date_range_in_plan=false scan=+- InMemoryTableScan [location#4]
+CACHE source=cache variant=plain table=Patient rows=1000000 mem_mb=432 disk_mb=0 cached_partitions=4 of 4 build_secs=2.0
+RESULT source=cache variant=plain arm=A1 expr=E1 median=0.09 min=0.08 max=0.09 gc_ms_total=12 out=1000000 date_range_in_plan=false scan=+- InMemoryTableScan [_birthDate#4, birthDate#3]
+RESULT source=cache variant=plain arm=A1 expr=E2 median=0.33 min=0.31 max=0.35 gc_ms_total=35 out=4146033 date_range_in_plan=false scan=+- InMemoryTableScan [name#2]
+CACHE source=cache variant=plain table=Patient rows=1000000 mem_mb=432 disk_mb=0 cached_partitions=4 of 4 build_secs=2.0
+RESULT source=cache variant=plain arm=L1 expr=E1 median=0.08 min=0.08 max=0.09 gc_ms_total=11 out=1000000 date_range_in_plan=false scan=+- InMemoryTableScan [birthDate#3]
+RESULT source=cache variant=plain arm=L1 expr=E2 median=0.10 min=0.09 max=0.10 gc_ms_total=16 out=4146033 date_range_in_plan=false scan=+- InMemoryTableScan [name#2]
+CACHE source=cache variant=plain table=Encounter rows=500000 mem_mb=197 disk_mb=0 cached_partitions=4 of 4 build_secs=1.4
+RESULT source=cache variant=plain arm=L1 expr=E3 median=0.10 min=0.10 max=0.12 gc_ms_total=15 out=296054 date_range_in_plan=false scan=+- InMemoryTableScan [location#4]
+CACHE source=cache variant=plain table=Encounter rows=500000 mem_mb=197 disk_mb=0 cached_partitions=4 of 4 build_secs=1.4
+RESULT source=cache variant=plain arm=D3a expr=E3 median=0.11 min=0.11 max=0.12 gc_ms_total=23 out=296054 date_range_in_plan=false scan=+- InMemoryTableScan [location#4]
+CACHE source=cache variant=ext table=Patient rows=1000000 mem_mb=4191 disk_mb=0 cached_partitions=4 of 4 build_secs=11.5
+RESULT source=cache variant=ext arm=bare expr=E1 median=0.03 min=0.03 max=0.05 gc_ms_total=15 out=1000000 date_range_in_plan=false scan=+- InMemoryTableScan [birthDate#3]
+RESULT source=cache variant=ext arm=bare expr=E2 median=0.08 min=0.08 max=0.08 gc_ms_total=15 out=2073240 date_range_in_plan=false scan=+- InMemoryTableScan [name#2]
+CACHE source=cache variant=ext table=Encounter rows=500000 mem_mb=2798 disk_mb=0 cached_partitions=4 of 4 build_secs=5.3
+RESULT source=cache variant=ext arm=bare expr=E3 median=0.07 min=0.07 max=0.08 gc_ms_total=12 out=296054 date_range_in_plan=false scan=+- InMemoryTableScan [location#4]
+CACHE source=cache variant=ext table=Patient rows=1000000 mem_mb=4191 disk_mb=0 cached_partitions=4 of 4 build_secs=8.6
+RESULT source=cache variant=ext arm=A0 expr=E1 median=0.03 min=0.03 max=0.04 gc_ms_total=0 out=1000000 date_range_in_plan=false scan=+- InMemoryTableScan [birthDate#3]
+RESULT source=cache variant=ext arm=A0 expr=E2 median=0.20 min=0.19 max=0.26 gc_ms_total=0 out=4146033 date_range_in_plan=false scan=+- InMemoryTableScan [name#2]
+CACHE source=cache variant=ext table=Encounter rows=500000 mem_mb=2798 disk_mb=0 cached_partitions=4 of 4 build_secs=5.0
+RESULT source=cache variant=ext arm=A0 expr=E3 median=0.22 min=0.20 max=0.24 gc_ms_total=16 out=296054 date_range_in_plan=false scan=+- InMemoryTableScan [location#4]
+CACHE source=cache variant=ext table=Patient rows=1000000 mem_mb=4191 disk_mb=0 cached_partitions=4 of 4 build_secs=11.9
+RESULT source=cache variant=ext arm=A1 expr=E1 median=0.09 min=0.09 max=0.11 gc_ms_total=0 out=1000000 date_range_in_plan=false scan=+- InMemoryTableScan [_birthDate#4, birthDate#3]
+RESULT source=cache variant=ext arm=A1 expr=E2 median=0.64 min=0.26 max=0.77 gc_ms_total=18 out=4146033 date_range_in_plan=false scan=+- InMemoryTableScan [name#2]
+CACHE source=cache variant=ext table=Patient rows=1000000 mem_mb=4191 disk_mb=0 cached_partitions=4 of 4 build_secs=9.1
+RESULT source=cache variant=ext arm=L1 expr=E1 median=0.09 min=0.09 max=0.10 gc_ms_total=16 out=1000000 date_range_in_plan=false scan=+- InMemoryTableScan [birthDate#3]
+RESULT source=cache variant=ext arm=L1 expr=E2 median=0.12 min=0.11 max=0.12 gc_ms_total=16 out=4146033 date_range_in_plan=false scan=+- InMemoryTableScan [name#2]
+CACHE source=cache variant=ext table=Encounter rows=500000 mem_mb=2798 disk_mb=0 cached_partitions=4 of 4 build_secs=5.5
+RESULT source=cache variant=ext arm=L1 expr=E3 median=0.16 min=0.13 max=0.17 gc_ms_total=14 out=296054 date_range_in_plan=false scan=+- InMemoryTableScan [location#4]
+CACHE source=cache variant=ext table=Encounter rows=500000 mem_mb=2798 disk_mb=0 cached_partitions=4 of 4 build_secs=5.3
+RESULT source=cache variant=ext arm=D3a expr=E3 median=0.14 min=0.13 max=0.15 gc_ms_total=16 out=296054 date_range_in_plan=false scan=+- InMemoryTableScan [location#4]

@@ -33,13 +33,14 @@ import org.junit.jupiter.api.io.TempDir;
  * Pins what M1 stores and writes where it does not prune (decision 71 and its addendum, T080c).
  *
  * <p>Conformant input leaves two kinds of emptiness in the layout, and both are kept on purpose
- * until M5 stores primitive metadata. A structure whose only content was a primitive's id and
- * extensions is an element that exists: FHIRPath counts it, and so does the released encoder, so
- * pruning it would change query answers. It is kept whatever other conformant documents are read
- * with it, because the primitive is stored as a null of the type the definitions give it (decision
- * 72); where that primitive repeats, the released encoder drops it and the layout does not. A
- * repeating primitive's null is positional, and FHIR aligns it with the metadata array. Neither is
- * written as conformant FHIR until that metadata is written beside it.
+ * where the ingest option that stores primitive metadata is off, as it is here and by default.
+ * {@code PrimitiveMetadataTransformTest} covers the option on. A structure whose only content was a
+ * primitive's id and extensions is an element that exists: FHIRPath counts it, and so does the
+ * released encoder, so pruning it would change query answers. It is kept whatever other conformant
+ * documents are read with it, because the primitive is stored as a null of the type the definitions
+ * give it (decision 72); where that primitive repeats, the released encoder drops it and the layout
+ * does not. A repeating primitive's null is positional, and FHIR aligns it with the metadata array.
+ * Neither is written as conformant FHIR unless that metadata is stored and written beside it.
  *
  * <p>No conformance suite carries most of these shapes, so a later change that pruned them would
  * pass everything else. These tests are what fails.
@@ -195,7 +196,7 @@ class DeferredPruningTest {
         "the nulls keep their positions");
     assertTrue(documents.contains("\"given\":[\"Ann\",null,\"Bee\"]"), documents);
     assertTrue(documents.contains("\"given\":[null]"), documents);
-    assertFalse(documents.contains("_given"), "the metadata they align with is not written yet");
+    assertFalse(documents.contains("_given"), "the metadata they align with is not stored");
   }
 
   /** Returns the one document written from a dataset holding one resource. */

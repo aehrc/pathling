@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.column;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
+import au.csiro.pathling.schema.LayoutFields;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
@@ -25,7 +26,9 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -202,6 +205,10 @@ public final class ResourceRepresentation extends ColumnRepresentation {
    * <p>removeNulls() filters out NULL values from arrays to match the behavior of {@link
    * DefaultRepresentation#traverse(String)}, but the result is not flattened.
    *
+   * <p>A decimal or a date is read with the annotations in its metadata group, the stored ones
+   * where the schema carries them and the computed ones otherwise, as {@link
+   * DefaultRepresentation#traverse(String)} reads one.
+   *
    * @param fieldName the name of the field to traverse to
    * @param fhirType the FHIR type of the field
    * @param fallback the type of the null that stands for the column where it is absent
@@ -213,7 +220,39 @@ public final class ResourceRepresentation extends ColumnRepresentation {
       @Nonnull final String fieldName,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final DataType fallback) {
+    if (DefaultRepresentation.isDecimal(fhirType) || DefaultRepresentation.isDate(fhirType)) {
+      // A decimal or a date is read with the annotations in its metadata group, a column beside it.
+      return traverseStored(fieldName, fhirType, fallback, false);
+    }
     return DefaultRepresentation.decodeField(getField(fieldName, fallback).removeNulls(), fhirType);
+  }
+
+  @Override
+  @Nonnull
+  public ColumnRepresentation traverseWithMetadata(
+      @Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final DataType fallback) {
+    // Every primitive is read with its id, its extensions and its annotations, from its metadata
+    // group, a column beside it.
+    return traverseStored(fieldName, fhirType, fallback, true);
+  }
+
+  @Nonnull
+  private ColumnRepresentation traverseStored(
+      @Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final DataType fallback,
+      final boolean withMetadata) {
+    return existing(
+        DefaultRepresentation.storedValues(
+            ColumnFunctions.columnOrNull(fieldName, fallback),
+            ColumnFunctions.columnOrNull(
+                LayoutFields.metadataGroupName(fieldName), DataTypes.NullType),
+            fhirType,
+            fallback instanceof ArrayType,
+            withMetadata,
+            false));
   }
 
   /**

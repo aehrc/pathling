@@ -35,6 +35,7 @@ import au.csiro.pathling.test.assertions.Assertions;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.datasource.ObjectDataSource;
+import au.csiro.pathling.test.helpers.PrimitiveValues;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -99,7 +100,7 @@ class SingleResourceFhirPathTest {
       @Nonnull final ObjectDataSource dataSource,
       @Nonnull final ResourceType subjectResource,
       @Nonnull final String fhirExpression) {
-    return evalExpression(dataSource, subjectResource, fhirExpression)
+    return PrimitiveValues.of(evalExpression(dataSource, subjectResource, fhirExpression))
         .toCanonical()
         .toIdValueDataset();
   }
@@ -276,7 +277,7 @@ class SingleResourceFhirPathTest {
 
     Assertions.assertThat(evalResult)
         .hasClass(IntegerCollection.class)
-        .toCanonicalResult()
+        .toExternalResult()
         .hasRowsUnordered(
             RowFactory.create("1", 17), RowFactory.create("2", null), RowFactory.create("3", null));
   }
@@ -353,7 +354,7 @@ class SingleResourceFhirPathTest {
 
     Assertions.assertThat(evalResult)
         .hasClass(StringCollection.class)
-        .toCanonicalResult()
+        .toExternalResult()
         .hasRowsUnordered(
             RowFactory.create("1", sql_array("MolecularSequence/1")), RowFactory.create("2", null));
   }

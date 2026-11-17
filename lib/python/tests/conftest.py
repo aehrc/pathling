@@ -82,6 +82,7 @@ def pathling_ctx(request, temp_warehouse_dir, derby_home):
         .master("local[1]")
         .config("spark.driver.memory", "4g")
         .config("spark.sql.mapKeyDedupPolicy", "LAST_WIN")
+        .config("spark.sql.parquet.outputTimestampType", "TIMESTAMP_MICROS")
         .config(
             "spark.jars.packages",
             f"au.csiro.pathling:library-runtime:{__java_version__},"

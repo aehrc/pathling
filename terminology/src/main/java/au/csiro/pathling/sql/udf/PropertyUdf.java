@@ -29,13 +29,13 @@ import static org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.DECIMAL;
 import static org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.INTEGER;
 import static org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.STRING;
 
-import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService.Property;
 import au.csiro.pathling.terminology.TerminologyService.PropertyOrDesignation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.utilities.SystemDecimal;
 import ca.uhn.fhir.model.api.annotation.DatatypeDef;
 import com.google.common.collect.ImmutableSet;
 import jakarta.annotation.Nonnull;
@@ -104,7 +104,7 @@ public class PropertyUdf implements SqlFunction, SqlFunction3<Row, String, Strin
       case STRING, CODE, DATETIME -> DataTypes.StringType;
       case INTEGER -> DataTypes.IntegerType;
       case BOOLEAN -> DataTypes.BooleanType;
-      case DECIMAL -> DecimalCustomCoder.decimalType();
+      case DECIMAL -> SystemDecimal.TYPE;
       case CODING -> CodingSchema.codingStructType();
       default -> throw new IllegalArgumentException("Cannot map FhirType: " + propertyType);
     };

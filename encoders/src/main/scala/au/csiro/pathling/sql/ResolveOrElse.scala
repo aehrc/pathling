@@ -1,0 +1,83 @@
+/*
+ * This is a modified version of the Bunsen library, originally published at
+ * https://github.com/cerner/bunsen.
+ *
+ * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
+ * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
+ *
+ * These modifications are copyright 2018-2026 Commonwealth Scientific
+ * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package au.csiro.pathling.sql
+
+import org.apache.spark.sql.catalyst.expressions.{Expression, GetArrayStructFields, GetStructField, RuntimeReplaceable}
+import org.apache.spark.sql.catalyst.trees.BinaryLike
+import org.apache.spark.sql.types.{ArrayType, StructType}
+
+/**
+ * A reference to a field of its child that resolves to the field where the child's resolved type
+ * carries it, and to a fallback expression where it does not.
+ *
+ * [[ResolveOrNull]] is this with a typed null as the fallback. This is how the engine applies an
+ * annotation kind: the stored annotation where the schema carries it, and the annotation computed
+ * from the element's value otherwise (decision 135). Presence is decided from the resolved input,
+ * once for the schema, never per row (FR-023).
+ *
+ * The child may be a structure, or an array of structures, in which case the field is extracted
+ * from every element and the fallback is expected to be an array aligned with it. Any other child
+ * type, including the bottom type an absent container resolves to, yields the fallback.
+ *
+ * @param child     the structure, or array of structures, to take the field from
+ * @param fieldName the name of the field
+ * @param fallback  the value taken when the field is absent
+ */
+case class ResolveOrElse(child: Expression, fieldName: String, fallback: Expression)
+  extends RuntimeReplaceable with BinaryLike[Expression] {
+
+  override def left: Expression = child
+
+  override def right: Expression = fallback
+
+  override lazy val replacement: Expression =
+    ResolveOrElse.extract(child, fieldName).getOrElse(fallback)
+
+  override def prettyName: String = "resolve_or_else"
+
+  override protected def withNewChildrenInternal(newLeft: Expression,
+                                                 newRight: Expression): Expression =
+    copy(child = newLeft, fallback = newRight)
+}
+
+object ResolveOrElse {
+
+  /**
+   * Extracts a field of a structure, or of every element of an array of structures, where the
+   * resolved type carries it.
+   *
+   * @param child     the structure, or array of structures, to take the field from
+   * @param fieldName the name of the field
+   * @return the field, or none where the child's type does not carry it
+   */
+  def extract(child: Expression, fieldName: String): Option[Expression] = child.dataType match {
+    case struct: StructType if struct.fieldNames.contains(fieldName) =>
+      Some(GetStructField(child, struct.fieldIndex(fieldName), Some(fieldName)))
+    case ArrayType(struct: StructType, containsNull) if struct.fieldNames.contains(fieldName) =>
+      val ordinal = struct.fieldIndex(fieldName)
+      val field = struct.fields(ordinal)
+      Some(GetArrayStructFields(child, field, ordinal, struct.length,
+        containsNull || field.nullable))
+    case _ => None
+  }
+}

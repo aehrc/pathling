@@ -32,6 +32,7 @@ import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.definition.ElementDefinition;
 import au.csiro.pathling.encoders.ColumnFunctions;
+import au.csiro.pathling.fhirpath.definition.PrimitiveMetadata;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
@@ -217,8 +218,35 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation traverse(@Nonnull final ElementDefinition definition) {
+    if (PrimitiveMetadata.carriedBy(Optional.of(definition))) {
+      return traverseWithMetadata(
+          definition.getElementName(), definition.getFhirType(), AbsentElementTypes.of(definition));
+    }
     return traverse(
         definition.getElementName(), definition.getFhirType(), AbsentElementTypes.of(definition));
+  }
+
+  /**
+   * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a
+   * primitive that is read with its id and extensions (decision 141, D14): a structure of its
+   * value, its {@code id} and {@code extension}, and its annotations, where the schema carries them
+   * (decision 152). Where the input schema does not carry the field, the result is as {@link
+   * #traverse(String, Optional, DataType)} gives it.
+   *
+   * <p>By default the primitive is traversed as it is without them, which suits a representation
+   * that holds no stored data.
+   *
+   * @param fieldName The name of the field to traverse to
+   * @param fhirType The FHIR type of the field
+   * @param fallback The type of the null that stands for the field where it is absent
+   * @return A new {@link ColumnRepresentation} representing the result of the traversal
+   */
+  @Nonnull
+  public ColumnRepresentation traverseWithMetadata(
+      @Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final DataType fallback) {
+    return traverse(fieldName, fhirType, fallback);
   }
 
   /**
@@ -561,8 +589,10 @@ public abstract class ColumnRepresentation {
     // is on and ANSI is off, null otherwise. Guarding the null array explicitly makes the result
     // independent of both flags, yielding zero under every configuration. let() binds the operand
     // once so a nondeterministic operand (e.g. a traced column) fires exactly once per row.
+    // The count is taken of an array that stands for the operand and reads less of its elements
+    // (decision 143, L2).
     return vectorize(
-        c -> let(c, x -> when(x.isNull(), lit(0)).otherwise(size(x))),
+        c -> let(c, x -> countOf(ColumnFunctions.presenceOf(x))),
         c -> when(c.isNull(), 0).otherwise(1));
   }
 
@@ -575,10 +605,21 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation isEmpty() {
     // size(null) resolves differently across both spark.sql.legacy.sizeOfNull and
     // spark.sql.ansi.enabled, so the null array is guarded explicitly to read as empty under every
-    // configuration. let() binds the operand once.
-    return vectorize(
-        c -> let(c, x -> when(x.isNull(), lit(true)).otherwise(size(x).equalTo(0))),
-        Column::isNull);
+    // configuration. let() binds the operand once, and the test is made of an array that stands for
+    // the operand and reads less of its elements (decision 143, L2).
+    return vectorize(c -> let(c, x -> isEmptyOf(ColumnFunctions.presenceOf(x))), Column::isNull);
+  }
+
+  /** The size of an array, zero where it is null. */
+  @Nonnull
+  private static Column countOf(@Nonnull final Column array) {
+    return when(array.isNull(), lit(0)).otherwise(size(array));
+  }
+
+  /** Whether an array is empty or null. */
+  @Nonnull
+  private static Column isEmptyOf(@Nonnull final Column array) {
+    return when(array.isNull(), lit(true)).otherwise(size(array).equalTo(0));
   }
 
   /**

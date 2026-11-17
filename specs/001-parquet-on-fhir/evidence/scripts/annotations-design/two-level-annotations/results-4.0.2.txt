@@ -1,0 +1,31 @@
+Spark 4.0.2
+### direct: value + start + end (shape c)
+| Layout | Reads | Bytes | Extension read | Equal to X |
+| --- | --- | --- | --- | --- |
+| X | id, timing._event[].__end, timing._event[].__start, timing.event[] | 20775 | no | yes |
+| S | id, timing.__event[].end, timing.__event[].start, timing.event[] | 20775 | no | yes |
+| P | id, timing.__event_end[], timing.__event_start[], timing.event[] | 20773 | no | yes |
+### direct: start only
+| Layout | Reads | Bytes | Extension read | Equal to X |
+| --- | --- | --- | --- | --- |
+| X | id, timing._event[].__start | 18809 | no | yes |
+| S | id, timing.__event[].start | 18809 | no | yes |
+| P | id, timing.__event_start[] | 18808 | no | yes |
+### in dosage lambda: value + start + end (shape c)
+| Layout | Reads | Bytes | Extension read | Equal to X |
+| --- | --- | --- | --- | --- |
+| X | dosage[].text, dosage[].timing._event[].__end, dosage[].timing._event[].__start, dosage[].timing._event[].extension[].url, dosage[].timing._event[].extension[].valueString, dosage[].timing._event[].id, dosage[].timing.event[], id | 322054 | **yes** | yes |
+| S | dosage[].text, dosage[].timing.__event[].end, dosage[].timing.__event[].start, dosage[].timing._event[].extension[].url, dosage[].timing._event[].extension[].valueString, dosage[].timing._event[].id, dosage[].timing.event[], id | 322054 | **yes** | yes |
+| P | dosage[].text, dosage[].timing.__event_end[], dosage[].timing.__event_start[], dosage[].timing._event[].extension[].url, dosage[].timing._event[].extension[].valueString, dosage[].timing._event[].id, dosage[].timing.event[], id | 322000 | **yes** | yes |
+### in dosage lambda: start only
+| Layout | Reads | Bytes | Extension read | Equal to X |
+| --- | --- | --- | --- | --- |
+| X | dosage[].text, dosage[].timing._event[].__end, dosage[].timing._event[].__start, dosage[].timing._event[].extension[].url, dosage[].timing._event[].extension[].valueString, dosage[].timing._event[].id, dosage[].timing.event[], id | 322054 | **yes** | yes |
+| S | dosage[].text, dosage[].timing.__event[].end, dosage[].timing.__event[].start, dosage[].timing._event[].extension[].url, dosage[].timing._event[].extension[].valueString, dosage[].timing._event[].id, dosage[].timing.event[], id | 322054 | **yes** | yes |
+| P | dosage[].text, dosage[].timing.__event_end[], dosage[].timing.__event_start[], dosage[].timing._event[].extension[].url, dosage[].timing._event[].extension[].valueString, dosage[].timing._event[].id, dosage[].timing.event[], id | 322000 | **yes** | yes |
+### in dosage lambda: value only (control)
+| Layout | Reads | Bytes | Extension read | Equal to X |
+| --- | --- | --- | --- | --- |
+| X | dosage[].text, dosage[].timing._event[].__end, dosage[].timing._event[].__start, dosage[].timing._event[].extension[].url, dosage[].timing._event[].extension[].valueString, dosage[].timing._event[].id, dosage[].timing.event[], id | 322054 | **yes** | yes |
+| S | dosage[].text, dosage[].timing.__event[].end, dosage[].timing.__event[].start, dosage[].timing._event[].extension[].url, dosage[].timing._event[].extension[].valueString, dosage[].timing._event[].id, dosage[].timing.event[], id | 322054 | **yes** | yes |
+| P | dosage[].text, dosage[].timing.__event_end[], dosage[].timing.__event_start[], dosage[].timing._event[].extension[].url, dosage[].timing._event[].extension[].valueString, dosage[].timing._event[].id, dosage[].timing.event[], id | 322000 | **yes** | yes |

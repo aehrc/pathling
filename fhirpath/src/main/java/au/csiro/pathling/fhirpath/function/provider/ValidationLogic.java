@@ -25,9 +25,11 @@ import static org.apache.spark.sql.functions.when;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.QuantityValue;
+import au.csiro.pathling.schema.annotation.kinds.DateRangeKind;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -107,7 +109,14 @@ class ValidationLogic {
     final BiFunction<FhirPathType, Column, Column> validationLogic =
         VALIDATION_REGISTRY.get(targetType);
 
-    final Column singularValue = input.getColumn().singular().getValue();
+    // A stored decimal is validated as the number it converts to, and a primitive held with its id
+    // and extensions as its System value. A stored quantity is validated as it is stored, because
+    // whether it has a System form depends on its comparator.
+    final Collection source =
+        input instanceof DecimalCollection
+            ? input.toEngineForm()
+            : input.withoutPrimitiveMetadata();
+    final Column singularValue = source.getColumn().singular().getValue();
     // Use Nothing when the type is not known to enforce default value for a non-convertible type
     final FhirPathType sourceType = input.getType().orElse(FhirPathType.NOTHING);
     final boolean isIdentity = sourceType == targetType && sourceType != FhirPathType.QUANTITY;
@@ -116,7 +125,7 @@ class ValidationLogic {
     return BooleanCollection.build(
         new DefaultRepresentation(
             // this triggers singularity check if the result is null
-            coalesce(when(singularValue.isNotNull(), result), input.getColumn().ensureSingular())
+            coalesce(when(singularValue.isNotNull(), result), source.getColumn().ensureSingular())
             // implicit null otherwise
             ));
   }
@@ -250,8 +259,9 @@ class ValidationLogic {
   Column validateConversionToDate(
       @Nonnull final FhirPathType sourceType, @Nonnull final Column value) {
     if (sourceType == FhirPathType.STRING) {
-      // String can be converted only if it matches the date format: YYYY or YYYY-MM or YYYY-MM-DD
-      return value.rlike(DATE_REGEX);
+      // String can be converted only if it matches the date format: YYYY or YYYY-MM or YYYY-MM-DD,
+      // and names a date that exists.
+      return let(value, v -> v.rlike(DATE_REGEX).and(isDate(v)));
     }
     // Other types cannot be converted.
     return lit(false);
@@ -273,10 +283,17 @@ class ValidationLogic {
     if (sourceType == FhirPathType.STRING) {
       // String can be converted only if it matches ISO 8601 datetime format.
       // Supports partial precision: YYYY, YYYY-MM, YYYY-MM-DD, YYYY-MM-DDThh, etc.
-      return value.rlike(DATETIME_REGEX);
+      // It must also name a date and time that exist.
+      return let(value, v -> v.rlike(DATETIME_REGEX).and(isDate(v)));
     }
     // Other types cannot be converted.
     return lit(false);
+  }
+
+  /** Whether a text that follows the grammar names a date, and a time, that exist. */
+  @Nonnull
+  private Column isDate(@Nonnull final Column text) {
+    return DateRangeKind.INSTANCE.startOrNull(text).isNotNull();
   }
 
   /**

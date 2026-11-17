@@ -119,6 +119,14 @@ class FhirPathNumberTest {
         // Integer notation - FHIR spec examples
         // "100" (3 sig figs) -> [99.5, 100.5)
         Arguments.of("100", "99.5", "100.5"),
+        // Close below a power of ten, which a double rounds up to it: the magnitude is that of
+        // the digits, so the half-unit is not ten times too large.
+        Arguments.of(
+            "999999999999999.999999", "999999999999999.9999985", "999999999999999.9999995"),
+        Arguments.of(
+            "99999999999999999999999999999999.99999",
+            "99999999999999999999999999999999.999985",
+            "99999999999999999999999999999999.999995"),
         Arguments.of("1", "0.5", "1.5"),
         Arguments.of("5", "4.5", "5.5"),
         Arguments.of("10", "9.5", "10.5"),

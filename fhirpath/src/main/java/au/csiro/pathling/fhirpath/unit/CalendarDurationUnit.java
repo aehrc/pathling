@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.unit;
 
+import au.csiro.pathling.schema.annotation.kinds.QuantityCanonicalKind;
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -70,7 +71,7 @@ public enum CalendarDurationUnit implements FhirPathUnit {
    * <p>Millisecond calculation: 365 * 24 * 60 * 60 * 1000 (assumes 365 days/year, does NOT account
    * for leap years; approximation per FHIRPath spec)
    */
-  YEAR("year", false, "a", new BigDecimal("31536000000")),
+  YEAR("year", "a", new BigDecimal("31536000000")),
 
   /**
    * Calendar month unit with UCUM equivalent 'mo'. This is a non-definite duration unit with
@@ -80,7 +81,7 @@ public enum CalendarDurationUnit implements FhirPathUnit {
    *
    * <p>Millisecond calculation: 30 * 24 * 60 * 60 * 1000
    */
-  MONTH("month", false, "mo", new BigDecimal("2592000000")),
+  MONTH("month", "mo", new BigDecimal("2592000000")),
 
   /**
    * Calendar week unit with UCUM equivalent 'wk'. This is a non-definite duration unit. One week
@@ -88,7 +89,7 @@ public enum CalendarDurationUnit implements FhirPathUnit {
    *
    * <p>Millisecond calculation: 7 * 24 * 60 * 60 * 1000
    */
-  WEEK("week", false, "wk", new BigDecimal("604800000")),
+  WEEK("week", "wk", new BigDecimal("604800000")),
 
   /**
    * Calendar day unit with UCUM equivalent 'd'. This is a non-definite duration unit. One day
@@ -96,7 +97,7 @@ public enum CalendarDurationUnit implements FhirPathUnit {
    *
    * <p>Millisecond calculation: 24 * 60 * 60 * 1000
    */
-  DAY("day", false, "d", new BigDecimal("86400000")),
+  DAY("day", "d", new BigDecimal("86400000")),
 
   /**
    * Calendar hour unit with UCUM equivalent 'h'. This is a non-definite duration unit. One hour
@@ -104,7 +105,7 @@ public enum CalendarDurationUnit implements FhirPathUnit {
    *
    * <p>Millisecond calculation: 60 * 60 * 1000
    */
-  HOUR("hour", false, "h", new BigDecimal("3600000")),
+  HOUR("hour", "h", new BigDecimal("3600000")),
 
   /**
    * Calendar minute unit with UCUM equivalent 'min'. This is a non-definite duration unit. One
@@ -112,7 +113,7 @@ public enum CalendarDurationUnit implements FhirPathUnit {
    *
    * <p>Millisecond calculation: 60 * 1000
    */
-  MINUTE("minute", false, "min", new BigDecimal("60000")),
+  MINUTE("minute", "min", new BigDecimal("60000")),
 
   /**
    * Calendar second unit with UCUM equivalent 's'. This is a definite duration unit with a fixed
@@ -120,7 +121,7 @@ public enum CalendarDurationUnit implements FhirPathUnit {
    *
    * <p>Millisecond calculation: 1000 ms
    */
-  SECOND("second", true, "s", new BigDecimal("1000")),
+  SECOND("second", "s", new BigDecimal("1000")),
 
   /**
    * Calendar millisecond unit with UCUM equivalent 'ms'. This is a definite duration unit with a
@@ -128,18 +129,19 @@ public enum CalendarDurationUnit implements FhirPathUnit {
    *
    * <p>Millisecond calculation: 1 ms
    */
-  MILLISECOND("millisecond", true, "ms", BigDecimal.ONE);
+  MILLISECOND("millisecond", "ms", BigDecimal.ONE);
 
   /** The system URI for FHIRPath calendar duration units (e.g. year, month, day). */
   public static final String FHIRPATH_CALENDAR_DURATION_SYSTEM_URI =
-      "https://hl7.org/fhirpath/N1/calendar-duration";
+      QuantityCanonicalKind.CALENDAR_DURATION_SYSTEM;
 
   @Nonnull private final String unit;
 
   /**
    * Indicates whether the unit is a definite duration (i.e., has a fixed length in time). For
    * example seconds, and milliseconds are definite units, while years and months are not because
-   * their lengths can vary (e.g., due to leap years or different month lengths).
+   * their lengths can vary (e.g., due to leap years or different month lengths). The canonical
+   * annotation defines which units are definite, so that the engine and the annotation agree.
    */
   @Getter private final boolean definite;
 
@@ -164,11 +166,10 @@ public enum CalendarDurationUnit implements FhirPathUnit {
 
   CalendarDurationUnit(
       @Nonnull final String code,
-      final boolean definite,
       @Nonnull final String ucumEquivalent,
       @Nonnull final BigDecimal millisecondsEquivalent) {
     this.unit = code;
-    this.definite = definite;
+    this.definite = QuantityCanonicalKind.DEFINITE_CALENDAR_DURATIONS.containsKey(code);
     this.ucumEquivalent = ucumEquivalent;
     this.millisecondsEquivalent = millisecondsEquivalent;
   }

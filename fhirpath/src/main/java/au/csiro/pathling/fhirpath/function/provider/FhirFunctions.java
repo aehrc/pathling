@@ -72,10 +72,13 @@ public class FhirFunctions {
                         c.traverse(URL_ELEMENT_NAME)
                             .filter(StringCollection.class::isInstance)
                             // Use the comparison operation to check if the URL matches the input
-                            // URL.
+                            // URL, which is compared as its System value.
                             .map(
                                 urlCollection ->
-                                    urlCollection.getElementEquality(EQUALS).apply(url))
+                                    urlCollection
+                                        .toEngineForm()
+                                        .getElementEquality(EQUALS)
+                                        .apply(url))
                             // If the URL is present, build a BooleanCollection from the result.
                             .map(BooleanCollection::build)
                             // If the URL is not present, return a false Boolean literal.

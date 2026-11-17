@@ -22,9 +22,9 @@
  */
 package au.csiro.pathling.sql
 
-import org.apache.spark.sql.catalyst.expressions.{Expression, GetArrayStructFields, GetStructField, Literal, RuntimeReplaceable}
+import org.apache.spark.sql.catalyst.expressions.{Expression, Literal, RuntimeReplaceable}
 import org.apache.spark.sql.catalyst.trees.UnaryLike
-import org.apache.spark.sql.types.{ArrayType, DataType, StructType}
+import org.apache.spark.sql.types.DataType
 
 /**
  * The tolerant traversal expression: a reference to a field of its child that resolves to the field
@@ -49,6 +49,9 @@ import org.apache.spark.sql.types.{ArrayType, DataType, StructType}
  *  - `replacement` is a `lazy val` on a case class, so that resolution produces a fresh copy;
  *  - the replacement is built only from resolved nodes, which `CheckAnalysis` requires.
  *
+ * The replacement is the one [[ResolveOrElse]] builds, with the typed null as its fallback, so the
+ * two resolve presence by one rule.
+ *
  * The optimiser replaces the expression with its replacement before any pruning rule runs, so a
  * plan using it prunes exactly as one written with a direct field reference.
  *
@@ -59,16 +62,8 @@ import org.apache.spark.sql.types.{ArrayType, DataType, StructType}
 case class ResolveOrNull(child: Expression, fieldName: String, fallback: DataType)
   extends RuntimeReplaceable with UnaryLike[Expression] {
 
-  override lazy val replacement: Expression = child.dataType match {
-    case struct: StructType if struct.fieldNames.contains(fieldName) =>
-      GetStructField(child, struct.fieldIndex(fieldName), Some(fieldName))
-    case ArrayType(struct: StructType, containsNull) if struct.fieldNames.contains(fieldName) =>
-      val ordinal = struct.fieldIndex(fieldName)
-      val field = struct.fields(ordinal)
-      GetArrayStructFields(child, field, ordinal, struct.length, containsNull || field.nullable)
-    case _ =>
-      Literal(null, fallback)
-  }
+  override lazy val replacement: Expression =
+    ResolveOrElse(child, fieldName, Literal(null, fallback)).replacement
 
   override def prettyName: String = "resolve_or_null"
 

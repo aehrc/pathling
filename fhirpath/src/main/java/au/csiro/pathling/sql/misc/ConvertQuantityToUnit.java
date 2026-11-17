@@ -33,7 +33,9 @@ import org.apache.spark.sql.types.DataType;
  * conversions.
  *
  * <p>This UDF wraps {@link FhirPathQuantity#convertToUnit(String)} for use in Spark SQL. It decodes
- * the quantity Row, delegates to the conversion logic, and encodes the result back to a Row.
+ * the quantity Row, given as {@link QuantityEncoding#asSystemText} so that a stored quantity is
+ * converted from its System.Decimal value, delegates to the conversion logic, and encodes the
+ * result as the content of a System quantity, {@link QuantityEncoding#dataType()}.
  *
  * <p>Returns null if either input is null or if the conversion fails.
  *

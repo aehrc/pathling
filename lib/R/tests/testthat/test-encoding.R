@@ -241,3 +241,16 @@ test_that("extension_support", {
     expect_false("_extension" %in% colnames(patient))
   }
 })
+
+test_that("annotate keeps an annotation Pathling does not define", {
+  def_pathling <- pathling_connect(spark_session())
+  json_resources_df <- json_resources_df(spark_session(), json_resources_dir())
+  patients <- pathling_encode(def_pathling, json_resources_df, "Patient") %>%
+    mutate(`__unknown` = "u")
+
+  # By default annotate only fills annotations that are missing, so those encode already added are
+  # kept as they are, and so is a field marked as an annotation that Pathling does not define.
+  annotated <- pathling_annotate(def_pathling, patients, "Patient")
+
+  expect_equal(colnames(annotated), colnames(patients))
+})

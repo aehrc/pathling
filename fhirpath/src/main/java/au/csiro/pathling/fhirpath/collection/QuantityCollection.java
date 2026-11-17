@@ -24,6 +24,7 @@ import au.csiro.pathling.definition.ElementDefinition;
 import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.definition.defaults.DefaultCompositeDefinition;
 import au.csiro.pathling.definition.defaults.DefaultPrimitiveDefinition;
+import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPathQuantity;
 import au.csiro.pathling.fhirpath.FhirPathType;
@@ -36,7 +37,6 @@ import au.csiro.pathling.fhirpath.column.QuantityValue;
 import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.comparison.QuantityComparator;
-import au.csiro.pathling.fhirpath.comparison.StoredQuantityComparator;
 import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.misc.QuantityToLiteral;
@@ -199,6 +199,24 @@ public class QuantityCollection extends Collection implements Comparable, String
   }
 
   /**
+   * Traverses to an element of each quantity. The elements of a stored quantity are stored values,
+   * such as a stored decimal; those of a System quantity are System values, so its value is a
+   * computed decimal (decision 147).
+   *
+   * @param childDef the child element definition
+   * @return a new {@link Collection} representing the child element
+   */
+  @Override
+  @Nonnull
+  public Collection traverseElement(@Nonnull final ElementDefinition childDef) {
+    if (isStored()) {
+      return super.traverseElement(childDef);
+    }
+    return Collection.build(
+        getColumn().traverse(childDef.getElementName()), childDef.getFhirType().orElseThrow());
+  }
+
+  /**
    * Projects a Coding structure from the coded unit of a single quantity value.
    *
    * <p>The unit name is carried across as the display, as it is the human-readable rendering of the
@@ -209,17 +227,20 @@ public class QuantityCollection extends Collection implements Comparable, String
    * <p>The result is cast to the canonical Coding schema, as the terminology UDFs decode the
    * structure using positional indices into that schema.
    *
-   * @param quantity The column containing a single quantity value
+   * @param quantity The column containing a single quantity value, stored or System
    * @return A column containing a Coding structure
    */
   @Nonnull
   private static Column toCoding(@Nonnull final Column quantity) {
     return struct(
             lit(null).cast(DataTypes.StringType).as(CodingSchema.ID_FIELD),
-            quantity.getField(QuantityEncoding.SYSTEM_COLUMN).as(CodingSchema.SYSTEM_FIELD),
+            ColumnFunctions.resolveStringOrNull(quantity, QuantityEncoding.SYSTEM_COLUMN)
+                .as(CodingSchema.SYSTEM_FIELD),
             lit(null).cast(DataTypes.StringType).as(CodingSchema.VERSION_FIELD),
-            quantity.getField(QuantityEncoding.CODE_COLUMN).as(CodingSchema.CODE_FIELD),
-            quantity.getField(QuantityEncoding.UNIT_COLUMN).as(CodingSchema.DISPLAY_FIELD),
+            ColumnFunctions.resolveStringOrNull(quantity, QuantityEncoding.CODE_COLUMN)
+                .as(CodingSchema.CODE_FIELD),
+            ColumnFunctions.resolveStringOrNull(quantity, QuantityEncoding.UNIT_COLUMN)
+                .as(CodingSchema.DISPLAY_FIELD),
             lit(null).cast(DataTypes.BooleanType).as(CodingSchema.USER_SELECTED_FIELD))
         .cast(CodingSchema.DATA_TYPE);
   }
@@ -238,8 +259,9 @@ public class QuantityCollection extends Collection implements Comparable, String
   @Nonnull
   @Override
   public Optional<TerminologyConcepts> toConcepts() {
-    final ColumnRepresentation codings =
-        toEngineForm().getColumn().transform(QuantityCollection::toCoding);
+    // The Coding is read from each quantity as it is held, so that a stored quantity that has no
+    // System form, such as a bound, still gives the Coding of its unit.
+    final ColumnRepresentation codings = getColumn().transform(QuantityCollection::toCoding);
     return Optional.of(TerminologyConcepts.set(codings, CodingCollection.build(codings)));
   }
 
@@ -250,16 +272,33 @@ public class QuantityCollection extends Collection implements Comparable, String
    */
   @Nonnull
   public StringCollection asStringCollection() {
-    return toEngineForm()
-        .map(r -> r.transformWithUdf(QuantityToLiteral.FUNCTION_NAME), StringCollection::build);
+    // A stored quantity is formatted from its stored text (see QuantityEncoding#asText).
+    return map(
+        r ->
+            r.transform(QuantityEncoding::asText).transformWithUdf(QuantityToLiteral.FUNCTION_NAME),
+        StringCollection::build);
   }
 
   @Nonnull
   @Override
   public StringCollection asStringPath() {
-    return toEngineForm()
-        .asSingular()
-        .map(r -> r.callUdf(QuantityToLiteral.FUNCTION_NAME), StringCollection::build);
+    return asSingular()
+        .map(
+            r -> r.transform(QuantityEncoding::asText).callUdf(QuantityToLiteral.FUNCTION_NAME),
+            StringCollection::build);
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>A System quantity is given to a caller as its content only, {@code {value, unit, code,
+   * system}}, without its canonical annotations (decision 150). A stored quantity is given in the
+   * fitted shape it is stored in.
+   */
+  @Nonnull
+  @Override
+  public ColumnRepresentation getOutputColumn() {
+    return isStored() ? getColumn() : getColumn().transform(QuantityEncoding::content);
   }
 
   @Override
@@ -287,7 +326,9 @@ public class QuantityCollection extends Collection implements Comparable, String
   @Override
   @Nonnull
   public ColumnComparator getComparator() {
-    return isStored() ? StoredQuantityComparator.getInstance() : QuantityComparator.getInstance();
+    // The comparator reads a quantity's canonical form, stored or System, from its annotation or
+    // else computes it from its System.Decimal value (decision 153).
+    return QuantityComparator.getInstance();
   }
 
   /**
@@ -299,9 +340,12 @@ public class QuantityCollection extends Collection implements Comparable, String
    */
   @Nonnull
   public Collection toUnit(@Nonnull final Collection targetUnit) {
-    final Column unitColumn = targetUnit.getColumn().singular().getValue();
-    return toEngineForm()
-        .map(q -> new DefaultRepresentation(QuantityValue.of(q).toUnit(unitColumn)));
+    final Column unitColumn =
+        targetUnit.withoutPrimitiveMetadata().getColumn().singular().getValue();
+    // The quantity is converted from its System.Decimal value (decision 153): a stored one reaches
+    // here already converted to a System quantity (toEngineForm), and the conversion reads the
+    // text of its decimal (QuantityEncoding.asSystemText). The result is a System quantity.
+    return build(getColumn().transform(q -> QuantityValue.of(q).toUnit(unitColumn)));
   }
 
   /**
@@ -314,9 +358,9 @@ public class QuantityCollection extends Collection implements Comparable, String
    */
   @Nonnull
   public Collection convertibleToUnit(@Nonnull final Collection targetUnit) {
-    final Column unitColumn = targetUnit.getColumn().singular().getValue();
-    final Column result =
-        QuantityValue.of(toEngineForm().getColumn()).convertibleToUnit(unitColumn);
+    final Column unitColumn =
+        targetUnit.withoutPrimitiveMetadata().getColumn().singular().getValue();
+    final Column result = QuantityValue.of(getColumn()).convertibleToUnit(unitColumn);
     return BooleanCollection.build(new DefaultRepresentation(result));
   }
 }

@@ -65,10 +65,13 @@ import org.junit.jupiter.params.provider.MethodSource;
  * independently of its JSON twin does not carry the same narrative, because whitespace inside XHTML
  * is content and pretty-printing the XML adds it, so it could not be compared with the JSON at all.
  *
- * <p>Every route admits the exclusions the JSON route does: primitive metadata until ticket 17, and
- * {@code contained} resources permanently, since the Synthea bundle's claims carry them. The XML
- * routes also admit, and count, the whitespace HAPI's XML writer collapses in a narrative while the
- * test writes its XML input; XML ingest keeps a narrative as the XML wrote it (decision 83).
+ * <p>Every route admits the exclusions the JSON route does: primitive metadata where the ingest
+ * option that stores it is off, and {@code contained} resources permanently, since the Synthea
+ * bundle's claims carry them. The routes carrying primitive metadata are run with the option on as
+ * well, so that the metadata is held to the round trip, its references resolved as any other's are
+ * (ticket 17, decision 83). The XML routes also admit, and count, the whitespace HAPI's XML writer
+ * collapses in a narrative while the test writes its XML input; XML ingest keeps a narrative as the
+ * XML wrote it (decision 83).
  */
 class IngestFormatRoundTripTest {
 
@@ -145,11 +148,63 @@ class IngestFormatRoundTripTest {
             harness(directory),
             directory);
 
-    // Only the claim carries an extension on a primitive, and that is excluded until M5.
+    // Only the claim carries an extension on a primitive, and that is excluded with the option off.
     assertEquals(
         "Claim".equals(resourceType) ? 1 : 0,
         outcome.getPrimitiveMetadata(),
         "the primitive metadata excluded is not what the corpus carries");
+  }
+
+  /**
+   * Round-trips the bundle with references between entries with the ingest option that stores
+   * primitive metadata on, in JSON and in XML, so that the reference in the extension of the
+   * claim's {@code status} is resolved by its type and comes back resolved (decision 83).
+   */
+  @ParameterizedTest
+  @MethodSource("referenceTypes")
+  void roundTripsTheResourcesOfABundleWithReferencesBetweenEntriesWithTheirPrimitiveMetadata(
+      @Nonnull final String resourceType, @TempDir @Nonnull final Path directory) {
+    for (final boolean asXml : List.of(false, true)) {
+      final Path route = directory.resolve(asXml ? "xml" : "json");
+      final RoundTripOutcome outcome =
+          roundTripBundle(
+              resourceType,
+              asXml ? xml(text(REFERENCES_JSON)) : text(REFERENCES_JSON),
+              text(REFERENCES_JSON),
+              asXml
+                  ? TransformFixtures.metadataReader().xml()
+                  : TransformFixtures.metadataReader().json(),
+              metadataHarness(route),
+              createDirectory(route));
+
+      assertEquals(
+          "Claim".equals(resourceType) ? 1 : 0,
+          outcome.getPrimitiveMetadata(),
+          "the primitive metadata round-tripped is not what the corpus carries");
+    }
+  }
+
+  /**
+   * Round-trips the structural selection of the specification's examples, written as XML from the
+   * JSON the specification publishes, with the ingest option that stores primitive metadata on. The
+   * element HAPI cannot write is removed as it is with the option off.
+   */
+  @ParameterizedTest
+  @MethodSource("specificationTypes")
+  void roundTripsResourcesReadFromXmlWithTheirPrimitiveMetadata(
+      @Nonnull final String resourceType, @TempDir @Nonnull final Path directory) {
+    final Path corpus = SpecExampleRoundTripTest.corpus(resourceType);
+    final List<String> source = lines(corpus);
+    final List<String> documents = source.stream().map(IngestFormatRoundTripTest::xml).toList();
+    final Path expected = directory.resolve("expected.ndjson");
+    write(expected, withoutUnwritable(resourceType, source));
+
+    final Dataset<Row> transformed =
+        TransformFixtures.metadataReader().xml().read(resourceType, dataset(documents));
+
+    metadataHarness(directory)
+        .collapsingNarrativeWhitespace()
+        .assertRoundTrip(resourceType, expected, transformed);
   }
 
   /**
@@ -244,6 +299,23 @@ class IngestFormatRoundTripTest {
     return RoundTripHarness.excludingPrimitiveMetadata()
         .excludingContainedResources()
         .persistingTo(directory.resolve("stored"));
+  }
+
+  /** The exclusions every route admits with the option that stores primitive metadata on. */
+  @Nonnull
+  private static RoundTripHarness metadataHarness(@Nonnull final Path directory) {
+    return RoundTripHarness.storingPrimitiveMetadata()
+        .excludingContainedResources()
+        .persistingTo(directory.resolve("stored"));
+  }
+
+  @Nonnull
+  private static Path createDirectory(@Nonnull final Path directory) {
+    try {
+      return Files.createDirectories(directory);
+    } catch (final IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
   /**

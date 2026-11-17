@@ -22,7 +22,7 @@
  */
 package au.csiro.pathling.sql
 
-import au.csiro.pathling.utilities.{CanonicalStructure, StructureMerge}
+import au.csiro.pathling.utilities.{AnnotationNames, CanonicalStructure, StructureMerge}
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult.{TypeCheckFailure, TypeCheckSuccess}
 import org.apache.spark.sql.catalyst.expressions.{ArrayTransform, CreateNamedStruct, Expression, GetStructField, If, IsNull, KnownNotNull, KnownNullable, LambdaFunction, Literal, NamedLambdaVariable, RuntimeReplaceable}
@@ -47,7 +47,9 @@ import scala.util.{Failure, Success, Try}
  *
  * The projection is by name and never a cast, because a cast between structures of equal arity
  * reorders their fields positionally and silently. A field an operand lacks becomes a null, and a
- * null structure stays null rather than becoming a structure of nulls. An operand of the bottom
+ * null structure stays null rather than becoming a structure of nulls. An annotation field, one
+ * whose name starts with `__`, is the exception: it is kept only where every operand has it
+ * (decision 142, D9), so that no operand's annotation is filled with null. An operand of the bottom
  * type, or an array of it, is how an absent element is typed (FR-055): it takes part in no merge
  * and projects to a null of the merged type, whatever its cardinality. Whether the merged type
  * repeats is decided by the present operands, and where none is present, absent operands of both
@@ -125,7 +127,9 @@ object MergeCast {
       val elements = present.map(elementType)
       val element = elements match {
         case structs if structs.forall(_.isInstanceOf[StructType]) =>
-          StructureMerge.merge(structs.map(_.asInstanceOf[StructType]).asJava, canonical)
+          commonAnnotations(
+            StructureMerge.merge(structs.map(_.asInstanceOf[StructType]).asJava, canonical),
+            structs.map(Some(_)))
         case others if others.forall(_ == others.head) =>
           others.head
         case others =>
@@ -142,6 +146,52 @@ object MergeCast {
         element
       }
     }
+  }
+
+  /**
+   * Keeps in a merged type only the annotation fields that every operand has, at every depth
+   * (decision 142, D9). The merge unions the other fields, and a field an operand lacks is null in
+   * its projection. That is safe for content, where a null means what an absent field means, but
+   * not for an annotation, because a null stored annotation is read as an absent value: the
+   * accessor would read the null rather than compute the annotation. An annotation that only some
+   * operands have is therefore left out, and the accessor computes it from the value where an
+   * operation reads it. An operand that lacks the structure an annotation is in lacks the
+   * annotation too. A structure that is left with no fields is left out as well (owner,
+   * 2026-11-11).
+   *
+   * @param merged   the merged type, or a type within it
+   * @param operands the corresponding type of each operand, empty where the operand lacks it
+   * @return the merged type without the annotations some operand lacks
+   */
+  private def commonAnnotations(merged: DataType, operands: Seq[Option[DataType]]): DataType =
+    merged match {
+      case struct: StructType =>
+        StructType(struct.fields.flatMap { field =>
+          val fields = operands.map(_.flatMap {
+            case operand: StructType => operand.fields.find(_.name == field.name).map(_.dataType)
+            case _ => None
+          })
+          val common = commonAnnotations(field.dataType, fields)
+          if (AnnotationNames.isAnnotation(field.name) && fields.exists(_.isEmpty)) {
+            None
+          } else if (isEmptyStructure(common) && !isEmptyStructure(field.dataType)) {
+            // A structure left with no fields, such as a metadata group that held only an
+            // annotation, stores nothing, and Parquet cannot write an empty structure.
+            None
+          } else {
+            Some(field.copy(dataType = common))
+          }
+        })
+      case ArrayType(element, containsNull) =>
+        ArrayType(commonAnnotations(element, operands.map(_.map(elementType))), containsNull)
+      case other => other
+    }
+
+  /** Whether a type is a structure with no fields, or an array of them. */
+  private def isEmptyStructure(dataType: DataType): Boolean = dataType match {
+    case struct: StructType => struct.isEmpty
+    case ArrayType(element, _) => isEmptyStructure(element)
+    case _ => false
   }
 
   /**

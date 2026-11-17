@@ -118,13 +118,18 @@ public class TimeCollection extends Collection
   @Nonnull
   @Override
   public StringCollection asStringPath() {
-    return map(ColumnRepresentation::asString, StringCollection::build);
+    return toEngineForm().map(ColumnRepresentation::asString, StringCollection::build);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>A primitive held with its id and extensions is compared by its value alone (decision 151).
+   */
   @Override
   @Nonnull
   public ColumnComparator getComparator() {
-    return TemporalComparator.forTime();
+    return comparatorFor(TemporalComparator.forTime());
   }
 
   @Override

@@ -22,8 +22,13 @@
  */
 package au.csiro.pathling.encoders;
 
+import au.csiro.pathling.sql.AnnotationOrElse;
+import au.csiro.pathling.sql.DistinctOnKey;
 import au.csiro.pathling.sql.ExtensionTraversal;
 import au.csiro.pathling.sql.MergeCast;
+import au.csiro.pathling.sql.PresenceOf;
+import au.csiro.pathling.sql.ResolveOrElse;
+import au.csiro.pathling.sql.ResolveOrNone;
 import au.csiro.pathling.sql.ResolveOrNull;
 import au.csiro.pathling.sql.UnresolvedMergeCombination;
 import au.csiro.pathling.sql.UnresolvedTraverseExtension;
@@ -115,6 +120,113 @@ public class ColumnFunctions {
       @Nonnull final DataType fallback) {
     return ExpressionUtils.column(
         new ResolveOrNull(ExpressionUtils.expression(child), fieldName, fallback));
+  }
+
+  /**
+   * Creates a reference to a field of a structure, or of every element of an array of structures,
+   * that resolves to a fallback value where the resolved input does not carry the field. Presence
+   * is decided once for the schema, never per row (FR-023).
+   *
+   * @param child the structure, or array of structures, to take the field from
+   * @param fieldName the name of the field
+   * @param fallback the value taken when the field is absent
+   * @return the field, or the fallback
+   */
+  @Nonnull
+  public static Column resolveOrElse(
+      @Nonnull final Column child,
+      @Nonnull final String fieldName,
+      @Nonnull final Column fallback) {
+    return ExpressionUtils.column(
+        new ResolveOrElse(
+            ExpressionUtils.expression(child), fieldName, ExpressionUtils.expression(fallback)));
+  }
+
+  /**
+   * Creates the accessor of an annotation of an engine element: the annotation field where the
+   * element's resolved type carries it, read so that Parquet can push a filter on it down, and the
+   * fallback, the annotation computed from the element's value, where it does not (design §4.3).
+   *
+   * @param element the element
+   * @param fieldName the name of the annotation field
+   * @param fallback the annotation computed from the element's value
+   * @return the annotation
+   * @see AnnotationOrElse
+   */
+  @Nonnull
+  public static Column annotationOrElse(
+      @Nonnull final Column element,
+      @Nonnull final String fieldName,
+      @Nonnull final Column fallback) {
+    return ExpressionUtils.column(
+        new AnnotationOrElse(
+            ExpressionUtils.expression(element), fieldName, ExpressionUtils.expression(fallback)));
+  }
+
+  /**
+   * Creates an array that is null exactly where an array is, and has as many elements, built so
+   * that Spark's schema pruning can narrow a test of presence or a count over it to the fields it
+   * reads (decision 143, L2).
+   *
+   * @param array the array
+   * @return the array that stands for it in a test of presence or a count
+   * @see PresenceOf
+   */
+  @Nonnull
+  public static Column presenceOf(@Nonnull final Column array) {
+    return ExpressionUtils.column(new PresenceOf(ExpressionUtils.expression(array)));
+  }
+
+  /**
+   * Creates a flat structure of some content and those of the named fields of a source that the
+   * source's resolved type carries, leaving out the fields it lacks (decisions 142 and 152). In its
+   * repeating form, the source is an array of structures and the content is arrays, paired by
+   * position.
+   *
+   * @param source the structure, or array of structures, to take the named fields from
+   * @param fieldNames the names of the fields to take, where present
+   * @param contentNames the names of the content fields, in order
+   * @param content the content fields, in the same order
+   * @param repeating whether the source and the content are arrays to be paired by position
+   * @return the structure, or the array of structures
+   * @see ResolveOrNone
+   */
+  @Nonnull
+  public static Column resolveOrNone(
+      @Nonnull final Column source,
+      @Nonnull final List<String> fieldNames,
+      @Nonnull final List<String> contentNames,
+      @Nonnull final List<Column> content,
+      final boolean repeating) {
+    return ExpressionUtils.column(
+        new ResolveOrNone(
+            ExpressionUtils.expression(source),
+            toSeq(fieldNames),
+            toSeq(content.stream().map(ExpressionUtils::expression).toList()),
+            toSeq(contentNames),
+            repeating));
+  }
+
+  /**
+   * Creates the deduplication of an array by a key that leaves out the annotation fields that are
+   * not recognised, keeping the first element of each key (decision 151). Where the element type
+   * carries none, it is Spark's {@code array_distinct}.
+   *
+   * @param array the array to deduplicate
+   * @param recognised the names of the annotation fields the engine recognises
+   * @return the deduplicated array
+   * @see DistinctOnKey
+   */
+  @Nonnull
+  public static Column distinctOnKey(
+      @Nonnull final Column array, @Nonnull final List<String> recognised) {
+    return ExpressionUtils.column(
+        new DistinctOnKey(ExpressionUtils.expression(array), toSeq(recognised)));
+  }
+
+  @Nonnull
+  private static <T> Seq<T> toSeq(@Nonnull final List<T> list) {
+    return scala.jdk.javaapi.CollectionConverters.asScala(list).toSeq();
   }
 
   /**

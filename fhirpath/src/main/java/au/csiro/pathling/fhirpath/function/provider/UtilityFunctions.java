@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.function.provider;
 
+import static au.csiro.pathling.sql.SqlFunctions.let;
 import static org.apache.spark.sql.classic.ExpressionUtils.column;
 import static org.apache.spark.sql.classic.ExpressionUtils.expression;
 
@@ -49,7 +50,8 @@ public class UtilityFunctions {
    * name} argument as the label in the log. Returns the input collection unchanged.
    *
    * <p>When a projection expression is provided, the projected value is logged instead of the input
-   * value, but the input collection is still returned unchanged.
+   * value, but the input collection is still returned unchanged. A value is logged in the form it
+   * is given to a caller, so a date is logged as its text.
    *
    * <p>When a {@link TraceCollector} is available on the evaluation context, each traced value is
    * also added to the collector with the trace label and the FHIR type of the logged expression.
@@ -83,7 +85,7 @@ public class UtilityFunctions {
       final String fhirType = projected.getFhirType().map(t -> t.toCode()).orElse("unknown");
       // Normalise the projected column so that empty arrays become null, preventing trace entries
       // for empty collections.
-      final Column projectedColumn = projected.getColumn().normaliseNull().getValue();
+      final Column projectedColumn = projected.getOutputColumn().normaliseNull().getValue();
       return input.copyWith(
           input
               .getColumn()
@@ -102,9 +104,32 @@ public class UtilityFunctions {
           input
               .getColumn()
               .call(
-                  inputCol ->
-                      column(
-                          new TraceExpression(expression(inputCol), label, fhirType, collector))));
+                  inputCol -> {
+                    if (outputOf(input, inputCol).equals(inputCol)) {
+                      return column(
+                          new TraceExpression(expression(inputCol), label, fhirType, collector));
+                    }
+                    // The value is given to a caller in another form, such as a date as its text,
+                    // so that form is logged. The value is bound once, so that a traced value
+                    // within it fires once.
+                    return let(
+                        inputCol,
+                        value ->
+                            column(
+                                new TraceProjectionExpression(
+                                    expression(value),
+                                    expression(outputOf(input, value)),
+                                    label,
+                                    fhirType,
+                                    collector)));
+                  }));
     }
+  }
+
+  /** Returns a value of a collection in the form it is given to a caller. */
+  @Nonnull
+  private static Column outputOf(
+      @Nonnull final Collection collection, @Nonnull final Column value) {
+    return collection.copyWithColumn(value).getOutputColumn().getValue();
   }
 }

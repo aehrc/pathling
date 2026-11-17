@@ -37,6 +37,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -68,9 +69,10 @@ import org.junit.jupiter.params.provider.MethodSource;
  *       stated behaviour rather than a carve-out a later ticket removes.
  *   <li>An inline resource held by an element declared as the abstract {@code Resource}, which is
  *       {@code Parameters.parameter.resource} in this corpus, is excluded permanently.
- *   <li>Primitive id and extension content is excluded until ticket 17. Unlike the Synthea corpus
- *       these examples do carry it, so the exclusion count is positive for the types that carry it
- *       and zero for the rest.
+ *   <li>Primitive id and extension content is excluded where the ingest option that stores it is
+ *       off, as it is by default (FR-016's exception 3). Unlike the Synthea corpus these examples
+ *       do carry it, so the exclusion count is positive for the types that carry it and zero for
+ *       the rest. With the option on it is not excluded, and comes back as it went in.
  * </ul>
  */
 class SpecExampleRoundTripTest {
@@ -129,6 +131,29 @@ class SpecExampleRoundTripTest {
         CARRYING_INLINE_RESOURCES.contains(resourceType),
         outcome.getInlineResources() > 0,
         "the inline resources excluded are not what was recorded for this type");
+  }
+
+  /**
+   * Round-trips every type with the ingest option that stores primitive metadata on, through
+   * Parquet, so that the metadata is held to the round trip rather than excluded from it (ticket
+   * 17). This includes {@code ActivityDefinition.timingTiming}, whose only content is {@code
+   * _event}: a repeating primitive carried only as its groups, which comes back as it went in.
+   */
+  @ParameterizedTest
+  @MethodSource("resourceTypes")
+  void roundTripsEveryResourceTypeWithItsPrimitiveMetadata(
+      @Nonnull final String resourceType, @TempDir @Nonnull final Path directory) {
+    final RoundTripOutcome outcome =
+        RoundTripHarness.storingPrimitiveMetadata()
+            .excludingContainedResources()
+            .excludingInlineResources()
+            .persistingTo(directory)
+            .assertRoundTrip(resourceType, corpus(resourceType));
+
+    assertEquals(
+        CARRYING_PRIMITIVE_METADATA.contains(resourceType),
+        outcome.getPrimitiveMetadata() > 0,
+        "the primitive id and extension content round-tripped is not what was recorded");
   }
 
   /**
