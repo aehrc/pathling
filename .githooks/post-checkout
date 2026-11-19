@@ -6,15 +6,22 @@
 # does nothing once the link exists. See docs/agents/local-and-worktrees.md.
 #
 
-git_dir=$(cd "$(git rev-parse --absolute-git-dir)" && pwd -P) || exit 0
-common_dir=$(cd "$(git rev-parse --git-common-dir)" && pwd -P) || exit 0
+# The first entry of the worktree list is the main checkout, or a bare repository, which has no
+# checkout to share .local from.
+list=$(git worktree list --porcelain) || exit 0
+[ "$(sed -n 2p <<< "$list")" = bare ] && exit 0
+main=$(cd "$(sed -n '1s/^worktree //p' <<< "$list")" && pwd -P) || exit 0
+top=$(cd "$(git rev-parse --show-toplevel)" && pwd -P) || exit 0
+[ "$top" = "$main" ] && exit 0
 
-# The main checkout keeps its own .local directory.
-[ "$git_dir" = "$common_dir" ] && exit 0
+# A branch whose .gitignore predates the link matches only a .local directory, so the link is also
+# excluded in info/exclude, which every checkout of the repository reads.
+exclude="$(git rev-parse --git-common-dir)/info/exclude"
+if ! grep -qsx '/.local' "$exclude"; then
+  mkdir -p "$(dirname "$exclude")" && echo '/.local' >> "$exclude"
+fi
 
-top=$(git rev-parse --show-toplevel) || exit 0
-[ -e "$top/.local" ] || [ -L "$top/.local" ] && exit 0
-
-main_local="$(dirname "$common_dir")/.local"
-mkdir -p "$main_local" && ln -s "$main_local" "$top/.local"
+if [ ! -e "$top/.local" ] && [ ! -L "$top/.local" ]; then
+  mkdir -p "$main/.local" && ln -s "$main/.local" "$top/.local"
+fi
 exit 0

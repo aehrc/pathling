@@ -46,11 +46,13 @@ configuration in `.private/mvn-isolated/`. Removing a worktree removes its `.pri
   `git worktree add`, so that checkout must be on a branch that has it. Without the hook, create the link from the new worktree:
 
     ```bash
-    ln -s "$(git rev-parse --path-format=absolute --git-common-dir)/../.local" .local
+    main=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+    mkdir -p "$main/.local" && ln -s "$main/.local" .local
     ```
 
     A worktree on a branch older than the hook has a `.gitignore` that matches only a `.local`
-    directory, so the link shows as untracked there. Do not commit it.
+    directory. The hook also adds `/.local` to the repository's `info/exclude`, so the link is
+    ignored there too; without the hook it shows as untracked. Do not commit it.
 
 - **Run Maven through `scripts/mvn-isolated.sh`** in a linked worktree, in place of `mvn` and with
   the same arguments. It gives the checkout its own Maven repository and Ivy cache, so an

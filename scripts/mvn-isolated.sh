@@ -16,7 +16,9 @@
 
 set -euo pipefail
 
-root=$(cd "$(dirname "$0")/.." && pwd)
+# The checkout being built is the one Maven runs in, which is not necessarily the one holding this
+# script.
+root=$(git rev-parse --show-toplevel 2> /dev/null) || root=$(cd "$(dirname "$0")/.." && pwd)
 state="$root/.private/mvn-isolated"
 conf="$state/spark-conf"
 shared_repo="${MVN_ISOLATED_SHARED_REPO:-$HOME/.m2/repository}"
@@ -31,7 +33,8 @@ esac
 
 # Replaces a file with standard input only when the content differs, by renaming, so that a
 # concurrent run in the same checkout never reads a partly written file. The temporary file is kept
-# outside the Spark configuration directory, where a concurrent run could prune it.
+# outside the Spark configuration directory, where a concurrent run could prune it. Concurrent runs
+# share that directory, so they must have the same SPARK_CONF_DIR, or each replaces the other's.
 write_if_changed() {
   local tmp="$state/.tmp.$$.${1##*/}"
   cat > "$tmp"
@@ -56,7 +59,7 @@ fi
 for f in "$conf"/*; do
   name=${f##*/}
   [[ "$name" == spark-defaults.conf ]] && continue
-  [[ -n "$user_conf" && -f "$user_conf/$name" ]] || rm -f "$f"
+  [[ -n "$user_conf" && -f "$user_conf/$name" ]] || rm -rf "$f"
 done
 if [[ -n "$user_conf" ]]; then
   for f in "$user_conf"/*; do

@@ -283,7 +283,8 @@ checks out a new worktree, once the hooks directory is enabled as described in
 worktree:
 
 ```bash
-ln -s "$(git rev-parse --path-format=absolute --git-common-dir)/../.local" .local
+main=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+mkdir -p "$main/.local" && ln -s "$main/.local" .local
 ```
 
 ## Server
