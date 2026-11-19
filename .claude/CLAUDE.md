@@ -39,10 +39,11 @@ Build:
 
 Tooling:
 
-- **Worktrees for issue work live under `.claude/worktrees/`** (e.g.
-  `.claude/worktrees/issue/<N>`), matching the `EnterWorktree` tool's own hardcoded root — that root
-  is not configurable via settings.json, so this is the only sane convention to standardise on. The
-  `implement-pathling` skill's `--worktree` flag uses this path, and it is gitignored.
+- **Untracked files and worktrees follow `docs/agents/local-and-worktrees.md`** — read it before
+  writing outside the source tree or working in a worktree. In short: per-branch scratch work goes
+  in `.local/work/<branch-name>/`, `.local` is shared by every checkout, `.private` belongs to one,
+  worktrees live under `.claude/worktrees/`, and Maven in a linked worktree runs through
+  `scripts/mvn-isolated.sh`.
 
 - **Specifications live under `specs/`**, tracked, one `NNN-short-name` directory per spec with
   `archive/` holding the implemented ones. This overrides the `ssh:spec` and `ssh:build` skills,
@@ -51,20 +52,6 @@ Tooling:
   reproductions, because requirements that exist only because a measurement ruled out the obvious
   alternative cannot be revisited once the evidence is lost. `specs/README.md` documents the
   layout. This supersedes `openspec/` for work of this kind.
-
-- **Per-branch scratch work lives under `.local/work/<branch-name>/`**, relative to the checkout
-  root — working notes, throwaway scripts, captured output and anything else that belongs to the
-  branch but not to the repository. `/.local/` is gitignored, so nothing under it can be committed
-  by accident. Keeping it keyed by branch means a worktree and the main checkout never mix one
-  issue's working files into another's.
-
-- **In a linked worktree, run Maven through `scripts/mvn-isolated.sh`** in place of `mvn`, with
-  the same arguments. It gives the checkout its own Maven repository and Ivy cache, so an `install`
-  or a Python or R test run does not affect other checkouts. Maven still falls back to the shared
-  repository for any Pathling module the checkout has not installed itself, so build with `-am`
-  (or install the upstream modules first) to avoid testing against another checkout's build.
-  Build `library-runtime` with `install` before running the Python or R tests through it. In the
-  main checkout use plain `mvn` unless asked otherwise. See CONTRIBUTING.md.
 
 Tests:
 

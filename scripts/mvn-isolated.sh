@@ -8,7 +8,7 @@
 # The checkout gets its own Maven local repository, with the shared one as a read-only fallback,
 # so that "install" does not replace the artifacts that other checkouts build and test against.
 # The Python and R tests get their own Ivy cache, and resolve Pathling only from that repository.
-# Everything is kept under .local/isolated in the checkout.
+# Everything is kept under .private/mvn-isolated in the checkout, which no other checkout shares.
 #
 # The shared repository defaults to ~/.m2/repository; set MVN_ISOLATED_SHARED_REPO to use another.
 # A SPARK_CONF_DIR of your own is carried over, with the isolated Ivy settings taking precedence.
@@ -17,7 +17,7 @@
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
-state="$root/.local/isolated"
+state="$root/.private/mvn-isolated"
 conf="$state/spark-conf"
 shared_repo="${MVN_ISOLATED_SHARED_REPO:-$HOME/.m2/repository}"
 

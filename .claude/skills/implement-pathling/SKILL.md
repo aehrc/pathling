@@ -167,8 +167,9 @@ git worktree add .claude/worktrees/issue/<N> -b issue/<N> <base>
 cd .claude/worktrees/issue/<N>
 ```
 
-In the worktree, run every Maven command through `scripts/mvn-isolated.sh` in place of `mvn`, if
-the base branch has it, so that the build does not affect other checkouts.
+In the worktree, follow `docs/agents/local-and-worktrees.md`, if the base branch has it: run every
+Maven command through `scripts/mvn-isolated.sh` in place of `mvn`, and keep working files in
+`.local/work/<branch-name>/`.
 
 ## Step 3 — Research the specification
 

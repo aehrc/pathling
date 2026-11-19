@@ -248,14 +248,14 @@ scripts/mvn-isolated.sh install -pl lib/python -am
 ```
 
 The script gives the checkout its own Maven local repository in
-`.local/isolated/m2`, with the shared repository as a read-only fallback for
+`.private/mvn-isolated/m2`, with the shared repository as a read-only fallback for
 everything the checkout has not built itself. That fallback includes Pathling
 modules, so a build of one module without `-am` may compile and test against
 another checkout's install of its upstream modules. Set
 `MVN_ISOLATED_SHARED_REPO` if your shared repository is not `~/.m2/repository`.
 The script also points `SPARK_CONF_DIR` at
 a Spark configuration that keeps the Python and R tests' Ivy cache in
-`.local/isolated/ivy` and resolves Pathling modules only from the isolated
+`.private/mvn-isolated/ivy` and resolves Pathling modules only from the isolated
 repository. Ivy checks the modification time of the jars there, for release
 versions as well as SNAPSHOTs, so a rebuilt `library-runtime` is picked up
 without clearing any cache.
@@ -265,6 +265,26 @@ installed there first, by building with `install` and `-am` as shown above.
 If you set `SPARK_CONF_DIR` yourself, the files in it are carried over to these
 test runs, and your `spark-defaults.conf` keeps its settings, except that the
 script's `spark.jars.ivy` and `spark.jars.ivySettings` take precedence.
+
+### Local files and worktrees
+
+Two gitignored directories at the root of a checkout hold files that are never
+committed:
+
+- `.local` holds anything that should be reachable at the same path from every
+  checkout of the repository, such as working notes. In a linked git worktree it
+  is a symbolic link to the main checkout's `.local`, so all worktrees share it.
+- `.private` holds state that belongs to one checkout and must not be shared,
+  such as the repository and caches of `scripts/mvn-isolated.sh`.
+
+The `post-checkout` hook in `.githooks` creates the link when `git worktree add`
+checks out a new worktree, once the hooks directory is enabled as described in
+[Formatting](#formatting). Without the hook, create it by hand from the new
+worktree:
+
+```bash
+ln -s "$(git rev-parse --path-format=absolute --git-common-dir)/../.local" .local
+```
 
 ## Server
 
@@ -466,8 +486,10 @@ This repository uses multiple code formatters:
 - [EditorConfig](https://editorconfig.org/) for all other languages
 
 A pre-commit hook is provided in the `.githooks` directory that automatically
-formats staged files before each commit. To enable it, configure git to use the
-hooks directory:
+formats staged files before each commit, alongside a post-checkout hook that
+links `.local` in new worktrees (see
+[Local files and worktrees](#local-files-and-worktrees)). To enable them,
+configure git to use the hooks directory:
 
 ```bash
 git config core.hooksPath .githooks

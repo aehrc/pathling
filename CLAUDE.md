@@ -18,3 +18,7 @@ The five default triage roles, each label string equal to its role name. See `do
 ### Domain docs
 
 Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+### Local files and worktrees
+
+Untracked files go in `.local` (shared by every checkout) or `.private` (one checkout's own), and worktrees live under `.claude/worktrees/`. See `docs/agents/local-and-worktrees.md`.

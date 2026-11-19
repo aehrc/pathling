@@ -1,0 +1,20 @@
+#!/bin/bash
+#
+# Post-checkout hook that links a linked worktree's .local directory to the main checkout's, so
+# that every checkout of the repository shares the same untracked files at the same path. Git runs
+# it when "git worktree add" checks out the new worktree, and on every later checkout, where it
+# does nothing once the link exists. See docs/agents/local-and-worktrees.md.
+#
+
+git_dir=$(cd "$(git rev-parse --absolute-git-dir)" && pwd -P) || exit 0
+common_dir=$(cd "$(git rev-parse --git-common-dir)" && pwd -P) || exit 0
+
+# The main checkout keeps its own .local directory.
+[ "$git_dir" = "$common_dir" ] && exit 0
+
+top=$(git rev-parse --show-toplevel) || exit 0
+[ -e "$top/.local" ] || [ -L "$top/.local" ] && exit 0
+
+main_local="$(dirname "$common_dir")/.local"
+mkdir -p "$main_local" && ln -s "$main_local" "$top/.local"
+exit 0
