@@ -43,8 +43,10 @@ spark-warehouse
 # Isolated worktrees used when several issues are implemented concurrently.
 /.claude/worktrees/
 
-# Per-branch scratch and working files.
-/.local/
+# Files kept out of version control. .local is shared by every checkout, and is a symlink in a
+# linked worktree, so it is matched without a trailing slash. .private belongs to one checkout.
+/.local
+/.private/
 
 #server
 server/.idea

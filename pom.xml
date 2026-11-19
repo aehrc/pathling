@@ -1199,6 +1199,7 @@
                   <exclude>**/.pytest_cache/**</exclude>
                   <exclude>**/.ruff_cache/**</exclude>
                   <exclude>**/.local/**</exclude>
+                  <exclude>**/.private/**</exclude>
                   <exclude>**/ui/dist/**</exclude>
                   <exclude>ui/**</exclude>
                   <exclude>licenses/**</exclude>

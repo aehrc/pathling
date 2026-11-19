@@ -199,7 +199,10 @@ mvn clean install -pl lib/R -am
 
 When rebuilding after making changes to upstream modules, you need to clear the
 local Ivy state before the changes will be picked up by the Python and R
-libraries.
+libraries. This is not needed when the Python and R tests run through
+`scripts/mvn-isolated.sh`, described in [Isolated builds](#isolated-builds),
+which keeps its own Ivy cache. Running pytest or the R tests directly bypasses
+it and uses the shared Ivy cache again.
 
 Spark resolves `--packages` through Ivy, which keeps two directories per Ivy
 version: `cache` (the resolved module metadata and artifacts) and `jars` (the
@@ -230,6 +233,58 @@ After clearing the cache, rebuild the libraries:
 ```bash
 mvn clean install -pl lib/python -am
 mvn clean install -pl lib/R -am
+```
+
+### Isolated builds
+
+Every checkout on a machine otherwise shares the Maven local repository
+(`~/.m2/repository`) and Spark's Ivy cache (`~/.ivy2*`), so an `install` in one
+git worktree replaces the SNAPSHOT artifacts that the others build and test
+against. To build a checkout in isolation, run Maven through the wrapper script
+in place of `mvn`:
+
+```bash
+scripts/mvn-isolated.sh install -pl lib/python -am
+```
+
+The script gives the checkout its own Maven local repository in
+`.private/mvn-isolated/m2`, with the shared repository as a read-only fallback for
+everything the checkout has not built itself. That fallback includes Pathling
+modules, so a build of one module without `-am` may compile and test against
+another checkout's install of its upstream modules. Set
+`MVN_ISOLATED_SHARED_REPO` if your shared repository is not `~/.m2/repository`.
+The script also points `SPARK_CONF_DIR` at
+a Spark configuration that keeps the Python and R tests' Ivy cache in
+`.private/mvn-isolated/ivy` and resolves Pathling modules only from the isolated
+repository. Ivy checks the modification time of the jars there, for release
+versions as well as SNAPSHOTs, so a rebuilt `library-runtime` is picked up
+without clearing any cache.
+
+The tests resolve `library-runtime` from the isolated repository, so it must be
+installed there first, by building with `install` and `-am` as shown above.
+If you set `SPARK_CONF_DIR` yourself, the files in it are carried over to these
+test runs, and your `spark-defaults.conf` keeps its settings, except that the
+script's `spark.jars.ivy` and `spark.jars.ivySettings` take precedence.
+
+### Local files and worktrees
+
+Two gitignored directories at the root of a checkout hold files that are never
+committed:
+
+- `.local` holds anything that should be reachable at the same path from every
+  checkout of the repository, such as working notes. In a linked git worktree it
+  is a symbolic link to the main checkout's `.local`, so all worktrees share it.
+- `.private` holds state that belongs to one checkout and must not be shared,
+  such as the repository and caches of `scripts/mvn-isolated.sh`.
+
+The `post-checkout` hook in `.githooks` creates the link when `git worktree add`
+checks out a new worktree, once the hooks directory is enabled as described in
+[Formatting](#formatting). Without the hook, create it by hand from the new
+worktree:
+
+```bash
+main=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+mkdir -p "$main/.local" && ln -s "$main/.local" .local
 ```
 
 ## Server
@@ -432,8 +487,10 @@ This repository uses multiple code formatters:
 - [EditorConfig](https://editorconfig.org/) for all other languages
 
 A pre-commit hook is provided in the `.githooks` directory that automatically
-formats staged files before each commit. To enable it, configure git to use the
-hooks directory:
+formats staged files before each commit, alongside a post-checkout hook that
+links `.local` in new worktrees (see
+[Local files and worktrees](#local-files-and-worktrees)). To enable them,
+configure git to use the hooks directory:
 
 ```bash
 git config core.hooksPath .githooks
