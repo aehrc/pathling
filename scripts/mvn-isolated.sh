@@ -22,8 +22,8 @@ shared_repo="${MVN_ISOLATED_SHARED_REPO:-$HOME/.m2/repository}"
 
 # The paths below go unescaped into file URLs and XML attributes.
 case "$state$shared_repo" in
-  *[[:space:]\&\<\"]*)
-    echo "mvn-isolated.sh: paths containing spaces, &, < or \" are not supported." >&2
+  *[[:space:]\&\<\"\#\?%]*)
+    echo "mvn-isolated.sh: paths containing spaces, &, <, \", #, ? or % are not supported." >&2
     exit 1
     ;;
 esac
@@ -48,15 +48,16 @@ write_if_changed "$conf/spark-defaults.conf" <<EOF
 spark.jars.ivy          $state/ivy
 spark.jars.ivySettings  $conf/ivysettings.xml
 EOF
-# The SNAPSHOT filename never changes, so the isolated repository's resolver checks the
-# modification time to pick up a rebuilt jar. Pathling modules come only from that repository, so
-# a missing install fails instead of silently using another checkout's build.
+# A rebuild keeps the jar's filename, whether the version is a SNAPSHOT or a release, so the
+# isolated repository's resolver treats every version as changing and checks the modification time
+# to pick up a rebuilt jar. Pathling modules come only from that repository, so a missing install
+# fails instead of silently using another checkout's build.
 write_if_changed "$conf/ivysettings.xml" <<EOF
 <ivysettings>
   <settings defaultResolver="chain"/>
   <resolvers>
     <ibiblio name="isolated-m2" m2compatible="true" usepoms="true"
-      root="file://$state/m2" checkmodified="true" changingPattern=".*-SNAPSHOT"/>
+      root="file://$state/m2" checkmodified="true" changingPattern=".*"/>
     <chain name="chain" returnFirst="true">
       <resolver ref="isolated-m2"/>
       <ibiblio name="shared-m2" m2compatible="true" usepoms="true" root="file://$shared_repo"/>

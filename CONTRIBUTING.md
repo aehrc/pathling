@@ -256,8 +256,9 @@ another checkout's install of its upstream modules. Set
 The script also points `SPARK_CONF_DIR` at
 a Spark configuration that keeps the Python and R tests' Ivy cache in
 `.local/isolated/ivy` and resolves Pathling modules only from the isolated
-repository. Ivy checks the modification time of the SNAPSHOT jars there, so a
-rebuilt `library-runtime` is picked up without clearing any cache.
+repository. Ivy checks the modification time of the jars there, for release
+versions as well as SNAPSHOTs, so a rebuilt `library-runtime` is picked up
+without clearing any cache.
 
 The tests resolve `library-runtime` from the isolated repository, so it must be
 installed there first, by building with `install` and `-am` as shown above.
