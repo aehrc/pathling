@@ -262,8 +262,9 @@ without clearing any cache.
 
 The tests resolve `library-runtime` from the isolated repository, so it must be
 installed there first, by building with `install` and `-am` as shown above.
-Replacing `SPARK_CONF_DIR` also means that any Spark defaults of your own do not
-apply to these test runs.
+If you set `SPARK_CONF_DIR` yourself, the files in it are carried over to these
+test runs, and your `spark-defaults.conf` keeps its settings, except that the
+script's `spark.jars.ivy` and `spark.jars.ivySettings` take precedence.
 
 ## Server
 
