@@ -17,8 +17,10 @@
 set -euo pipefail
 
 # The checkout being built is the one Maven runs in, which is not necessarily the one holding this
-# script.
-root=$(git rev-parse --show-toplevel 2> /dev/null) || root=$(cd "$(dirname "$0")/.." && pwd)
+# script. Run from a submodule, it is the checkout that contains the submodule.
+root=$(git rev-parse --show-superproject-working-tree 2> /dev/null || true)
+[[ -n "$root" ]] || root=$(git rev-parse --show-toplevel 2> /dev/null) ||
+  root=$(cd "$(dirname "$0")/.." && pwd)
 state="$root/.private/mvn-isolated"
 conf="$state/spark-conf"
 shared_repo="${MVN_ISOLATED_SHARED_REPO:-$HOME/.m2/repository}"

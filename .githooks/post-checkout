@@ -6,11 +6,12 @@
 # does nothing once the link exists. See docs/agents/local-and-worktrees.md.
 #
 
-# The first entry of the worktree list is the main checkout, or a bare repository, which has no
-# checkout to share .local from.
+# The first entry of the worktree list is the main checkout. In a bare repository, and in a
+# separate git directory on some versions of git, it is the git directory instead, which has no
+# checkout to share .local from. Git sets GIT_DIR for hooks, so it is unset to inspect that entry.
 list=$(git worktree list --porcelain) || exit 0
-[ "$(sed -n 2p <<< "$list")" = bare ] && exit 0
 main=$(cd "$(sed -n '1s/^worktree //p' <<< "$list")" && pwd -P) || exit 0
+[ "$(env -u GIT_DIR -u GIT_WORK_TREE git -C "$main" rev-parse --is-inside-work-tree 2> /dev/null)" = true ] || exit 0
 top=$(cd "$(git rev-parse --show-toplevel)" && pwd -P) || exit 0
 [ "$top" = "$main" ] && exit 0
 
