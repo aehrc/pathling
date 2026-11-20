@@ -250,6 +250,7 @@ class ValidationLogic {
    *
    * <ul>
    *   <li>STRING: Check if matches date pattern (YYYY or YYYY-MM or YYYY-MM-DD)
+   *   <li>DATETIME: Always convertible, to its date part
    * </ul>
    *
    * @param sourceType The source FHIRPath type
@@ -258,13 +259,15 @@ class ValidationLogic {
    */
   Column validateConversionToDate(
       @Nonnull final FhirPathType sourceType, @Nonnull final Column value) {
-    if (sourceType == FhirPathType.STRING) {
-      // String can be converted only if it matches the date format: YYYY or YYYY-MM or YYYY-MM-DD,
-      // and names a date that exists.
-      return let(value, v -> v.rlike(DATE_REGEX).and(isDate(v)));
-    }
-    // Other types cannot be converted.
-    return lit(false);
+    return switch (sourceType) {
+      case STRING ->
+          // String can be converted only if it matches the date format: YYYY or YYYY-MM or
+          // YYYY-MM-DD, and names a date that exists.
+          let(value, v -> v.rlike(DATE_REGEX).and(isDate(v)));
+      case DATETIME -> lit(true);
+      // Other types cannot be converted.
+      default -> lit(false);
+    };
   }
 
   /**
@@ -272,6 +275,7 @@ class ValidationLogic {
    *
    * <ul>
    *   <li>STRING: Check if matches datetime pattern (YYYY-MM-DDThh:mm:ss with optional timezone)
+   *   <li>DATE: Always convertible, to the dateTime of its precision
    * </ul>
    *
    * @param sourceType The source FHIRPath type
@@ -280,14 +284,16 @@ class ValidationLogic {
    */
   Column validateConversionToDateTime(
       @Nonnull final FhirPathType sourceType, @Nonnull final Column value) {
-    if (sourceType == FhirPathType.STRING) {
-      // String can be converted only if it matches ISO 8601 datetime format.
-      // Supports partial precision: YYYY, YYYY-MM, YYYY-MM-DD, YYYY-MM-DDThh, etc.
-      // It must also name a date and time that exist.
-      return let(value, v -> v.rlike(DATETIME_REGEX).and(isDate(v)));
-    }
-    // Other types cannot be converted.
-    return lit(false);
+    return switch (sourceType) {
+      case STRING ->
+          // String can be converted only if it matches ISO 8601 datetime format.
+          // Supports partial precision: YYYY, YYYY-MM, YYYY-MM-DD, YYYY-MM-DDThh, etc.
+          // It must also name a date and time that exist.
+          let(value, v -> v.rlike(DATETIME_REGEX).and(isDate(v)));
+      case DATE -> lit(true);
+      // Other types cannot be converted.
+      default -> lit(false);
+    };
   }
 
   /** Whether a text that follows the grammar names a date, and a time, that exist. */

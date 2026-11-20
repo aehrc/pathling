@@ -23,6 +23,8 @@ import static org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.CODEABLECONCEPT
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import java.util.stream.Stream;
+import org.hl7.fhir.r4.model.InstantType;
+import org.hl7.fhir.r4.model.Observation;
 import org.junit.jupiter.api.DynamicTest;
 
 /**
@@ -583,6 +585,52 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testError(
             "intArray.convertsToDateTime()",
             "convertsToDateTime() errors on array of non-convertible type (Integer)")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testDateAndDateTimeInterconversion() {
+    return builder()
+        .withSubject(
+            sb ->
+                sb.dateTime("dateTime", "2023-01-15T23:30:00-05:00")
+                    .dateTime("partialDateTime", "2023-01")
+                    .date("date", "2023-01-15"))
+        .group("toDate() on a DateTime takes its date part")
+        .testEquals("2020-01-01", "@2020-01-01T10:00.toDate()", "toDate() on a DateTime literal")
+        .testEquals(
+            "2020-01-01", "@2020-01-01T10:00:00Z.toDate()", "toDate() on a UTC DateTime literal")
+        .testEquals(
+            "2020-01-01",
+            "@2020-01-01T23:00:00-05:00.toDate()",
+            "toDate() does not normalise the timezone of a DateTime")
+        .testTrue("@2020-01-01T10:00.toDate() = @2020-01-01", "toDate() on a DateTime gives a Date")
+        .testEquals("2023-01-15", "dateTime.toDate()", "toDate() on a stored dateTime")
+        .testEquals("2023-01", "partialDateTime.toDate()", "toDate() on a partial stored dateTime")
+        .group("toDateTime() on a Date keeps its year, month and day")
+        .testEquals("2020-01-01", "@2020-01-01.toDateTime()", "toDateTime() on a Date literal")
+        .testEquals(
+            "2020-01", "@2020-01.toDateTime()", "toDateTime() keeps the precision of a Date")
+        .testTrue(
+            "@2020-01-01.toDateTime() = '2020-01-01'.toDateTime()",
+            "toDateTime() on a Date gives a DateTime")
+        .testEquals("2023-01-15", "date.toDateTime()", "toDateTime() on a stored date")
+        .group("convertsToDate() and convertsToDateTime() between Date and DateTime")
+        .testTrue("@2020-01-01T10:00.convertsToDate()", "a DateTime converts to a Date")
+        .testTrue("dateTime.convertsToDate()", "a stored dateTime converts to a Date")
+        .testTrue("@2020-01-01.convertsToDateTime()", "a Date converts to a DateTime")
+        .testTrue("date.convertsToDateTime()", "a stored date converts to a DateTime")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testInstantToDate() {
+    return builder()
+        .withResource(
+            new Observation().setIssuedElement(new InstantType("2023-01-15T23:30:00.000+10:00")))
+        .group("toDate() on an instant takes its date part")
+        .testEquals("2023-01-15", "issued.toDate()", "toDate() on a stored instant")
+        .testTrue("issued.convertsToDate()", "a stored instant converts to a Date")
         .build();
   }
 

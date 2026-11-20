@@ -21,6 +21,7 @@ import static au.csiro.pathling.sql.SqlFunctions.let;
 import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.substring_index;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
@@ -371,6 +372,7 @@ class ConversionLogic {
    * <ul>
    *   <li>STRING: Validates format (YYYY or YYYY-MM or YYYY-MM-DD) and returns the System date of
    *       the string value
+   *   <li>DATETIME: The date part of the dateTime, without normalising its timezone
    * </ul>
    *
    * @param sourceType The source FHIRPath type
@@ -379,12 +381,17 @@ class ConversionLogic {
    */
   @Nonnull
   Column convertToDate(@Nonnull final FhirPathType sourceType, @Nonnull final Column value) {
-    if (sourceType == FhirPathType.STRING) {
-      // Date values are stored as strings in FHIR. Validate format before accepting.
-      // Date format: YYYY or YYYY-MM or YYYY-MM-DD
-      return let(value, v -> SystemDateTime.tryFromText(when(v.rlike(DATE_REGEX), v)));
-    }
-    return SystemDateTime.empty();
+    return switch (sourceType) {
+      case STRING ->
+          // Date values are stored as strings in FHIR. Validate format before accepting.
+          // Date format: YYYY or YYYY-MM or YYYY-MM-DD
+          let(value, v -> SystemDateTime.tryFromText(when(v.rlike(DATE_REGEX), v)));
+      case DATETIME ->
+          // The date part is the text before the time, which a dateTime of a date's precision
+          // lacks.
+          SystemDateTime.fromText(substring_index(SystemDateTime.text(value), "T", 1));
+      default -> SystemDateTime.empty();
+    };
   }
 
   /**
@@ -393,6 +400,7 @@ class ConversionLogic {
    * <ul>
    *   <li>STRING: Validates format (supports partial precision) and returns the System dateTime of
    *       the string value
+   *   <li>DATE: The dateTime with the year, month and day of the date, and no time
    * </ul>
    *
    * @param sourceType The source FHIRPath type
@@ -401,12 +409,16 @@ class ConversionLogic {
    */
   @Nonnull
   Column convertToDateTime(@Nonnull final FhirPathType sourceType, @Nonnull final Column value) {
-    if (sourceType == FhirPathType.STRING) {
-      // DateTime values are stored as strings in FHIR. Validate using simplified pattern.
-      // Supports partial precision: YYYY, YYYY-MM, YYYY-MM-DD, YYYY-MM-DDThh, etc.
-      return let(value, v -> SystemDateTime.tryFromText(when(v.rlike(DATETIME_REGEX), v)));
-    }
-    return SystemDateTime.empty();
+    return switch (sourceType) {
+      case STRING ->
+          // DateTime values are stored as strings in FHIR. Validate using simplified pattern.
+          // Supports partial precision: YYYY, YYYY-MM, YYYY-MM-DD, YYYY-MM-DDThh, etc.
+          let(value, v -> SystemDateTime.tryFromText(when(v.rlike(DATETIME_REGEX), v)));
+      case DATE ->
+          // The text of a date is the text of the dateTime of its precision.
+          SystemDateTime.fromText(SystemDateTime.text(value));
+      default -> SystemDateTime.empty();
+    };
   }
 
   /**
