@@ -19,8 +19,16 @@ package au.csiro.pathling.operations.sql;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.encoders.ViewDefinitionResource;
+import au.csiro.pathling.errors.AccessDeniedError;
+import au.csiro.pathling.views.FhirView;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -147,6 +155,27 @@ class ContextArtefactParserTest {
 
     assertThat(artefacts.match(CONCEPT_MAP_URL, null)).isPresent();
     assertThat(artefacts.match(CONCEPT_MAP_URL, null).get().isConceptMap()).isTrue();
+  }
+
+  @Test
+  void checksReadAuthorityOnTheTypeASuppliedViewProjects() {
+    // A supplied ViewDefinition is a way of reading the type it projects, exactly as a stored one
+    // is, so the caller must be permitted to read that type.
+    final FhirViewValidator validator = mock(FhirViewValidator.class);
+    final FhirView view = FhirView.ofResource("Patient").build();
+    when(validator.parse(any(), anyString())).thenReturn(view);
+    doThrow(new AccessDeniedError("Missing authority: 'pathling:read:Patient'"))
+        .when(validator)
+        .checkProjectedResourceReadAuthority(view);
+    final ViewDefinitionResource viewDefinition = new ViewDefinitionResource();
+    viewDefinition.setUrl("https://example.org/ViewDefinition/patients");
+
+    final ContextArtefactParser checkingParser = new ContextArtefactParser(validator);
+
+    assertThatThrownBy(() -> checkingParser.parse(List.of(viewDefinition)))
+        .isInstanceOf(AccessDeniedError.class)
+        .hasMessageContaining("pathling:read:Patient");
+    verify(validator).checkProjectedResourceReadAuthority(view);
   }
 
   /** Asserts that the exception carries one issue whose expression names the context parameter. */

@@ -187,3 +187,12 @@ from the OIDC discovery document:
 - `grant_types_supported` (via `pathling.auth.grantTypesSupported`)
 - `code_challenge_methods_supported` (via
   `pathling.auth.codeChallengeMethodsSupported`)
+
+## Model Context Protocol
+
+The [Model Context Protocol](mcp) endpoint is authorized separately from the
+FHIR API: it accepts tokens from the MCP issuer, which may differ from the FHIR
+API's issuer, only when they were issued for the MCP endpoint itself. It also
+publishes the metadata that MCP clients use to find that issuer.
+The authorities in its tokens are applied as described above. See
+[Authorization](mcp#authorization) on the MCP page.

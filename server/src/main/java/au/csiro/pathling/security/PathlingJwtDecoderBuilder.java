@@ -142,6 +142,24 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
     return buildDecoderWithValidators(validators);
   }
 
+  /**
+   * Builds a JWT decoder that verifies tokens against the keys published at the given JWKS URI,
+   * rather than those of the server's main issuer, and applies the given validators.
+   *
+   * @param jwksUri the URI of the issuer's JSON Web Key Set
+   * @param validators the validators to apply to each verified token
+   * @return a JWT decoder
+   */
+  @Nonnull
+  public JwtDecoder build(
+      @Nonnull final String jwksUri, @Nonnull final List<OAuth2TokenValidator<Jwt>> validators) {
+    final NimbusJwtDecoder jwtDecoder =
+        new NimbusJwtDecoder(
+            processor((header, claimsSet, context) -> selectKeys(jwksUri, header, context)));
+    jwtDecoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(validators));
+    return jwtDecoder;
+  }
+
   @Nonnull
   protected AuthorizationConfiguration getAuthConfiguration(
       @Nullable final ServerConfiguration configuration) {
@@ -158,8 +176,15 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
       @Nullable final SecurityContext context)
       throws KeySourceException {
     checkArgument(claimsSet != null, "claimsSet cannot be null");
-    final String jwksUri = getJwksUri(claimsSet);
+    return selectKeys(getJwksUri(claimsSet), header, context);
+  }
 
+  @Nonnull
+  private List<? extends Key> selectKeys(
+      @Nonnull final String jwksUri,
+      @Nullable final JWSHeader header,
+      @Nullable final SecurityContext context)
+      throws KeySourceException {
     try {
       @SuppressWarnings("deprecation")
       final JWKSource<SecurityContext> jwkSource =
@@ -205,7 +230,7 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
       @Nonnull final List<OAuth2TokenValidator<Jwt>> validators) {
     final OAuth2TokenValidator<Jwt> validator = new DelegatingOAuth2TokenValidator<>(validators);
 
-    final NimbusJwtDecoder jwtDecoder = new NimbusJwtDecoder(processor());
+    final NimbusJwtDecoder jwtDecoder = new NimbusJwtDecoder(processor(this));
     jwtDecoder.setJwtValidator(validator);
     return jwtDecoder;
   }
@@ -216,9 +241,10 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
   }
 
   @Nonnull
-  private JWTProcessor<SecurityContext> processor() {
+  private static JWTProcessor<SecurityContext> processor(
+      @Nonnull final JWTClaimsSetAwareJWSKeySelector<SecurityContext> keySelector) {
     final ConfigurableJWTProcessor<SecurityContext> jwtProcessor = new DefaultJWTProcessor<>();
-    jwtProcessor.setJWTClaimsSetAwareJWSKeySelector(this);
+    jwtProcessor.setJWTClaimsSetAwareJWSKeySelector(keySelector);
     return jwtProcessor;
   }
 
