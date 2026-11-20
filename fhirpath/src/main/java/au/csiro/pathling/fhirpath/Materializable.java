@@ -38,14 +38,14 @@ public interface Materializable {
   /**
    * Converts this collection to an external value that can be used in Spark SQL operations.
    *
-   * <p>The default implementation returns the raw column value, but implementations can override
-   * this to provide custom conversion logic.
+   * <p>The default implementation returns the values as they are given to a caller (see {@link
+   * #getOutputColumn()}), but implementations can override this to provide custom conversion logic.
    *
    * @return A Spark SQL column representing the external value of this collection
    */
   @Nonnull
   default Column toExternalValue() {
-    return getColumn().getValue();
+    return getOutputColumn().getValue();
   }
 
   /**
@@ -55,6 +55,14 @@ public interface Materializable {
    */
   @Nonnull
   ColumnRepresentation getColumn();
+
+  /**
+   * Gets the values of this collection as they are given to a caller of the engine.
+   *
+   * @return the values of this collection as they are given to a caller
+   */
+  @Nonnull
+  ColumnRepresentation getOutputColumn();
 
   /**
    * Gets the external value of a collection.

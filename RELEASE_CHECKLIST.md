@@ -26,6 +26,10 @@
 - [ ] Check that the draft shows the tag as existing and pointing at the merge
       commit on `main` before publishing
 - [ ] Publish the release and verify that it succeeds
+- [ ] Add an annotation for the release to
+      `site/src/benchmarks/annotations.json` in a pull request to `main`, so
+      that it is marked on the benchmarks page (see "Benchmarks" in
+      `CONTRIBUTING.md`)
 - [ ] Submit the built R package to CRAN manually
 
 ## Updating the core library version
@@ -36,6 +40,8 @@ The version number needs to be changed in the following places:
 - `terminology/pom.xml`
 - `library-api/pom.xml`
 - `utilities/pom.xml`
+- `fhir-schema/pom.xml`
+- `io/pom.xml`
 - `encoders/pom.xml`
 - `fhirpath/pom.xml`
 - `lib/python/pom.xml`
@@ -43,6 +49,7 @@ The version number needs to be changed in the following places:
 - `site/pom.xml`
 - `library-runtime/pom.xml`
 - `benchmark/pom.xml`
+- `legacy-export/pom.xml`
 
 The following should only be updated for release versions, not snapshots:
 

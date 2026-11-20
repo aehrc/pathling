@@ -1,0 +1,6 @@
+resources written to XML by HAPI: 161 (unparsed from JSON: 0)
+L2 equal after rewrite + restore:  161 / 161
+  with a narrative rewritten:      157
+  with a contained narrative seen: 1
+JSON parity of the narrative:      113 exact, 40 differing only in whitespace, 0 other, of 153
+time, HAPI XML parse: 43 ms; rewrite + restore: 41 ms

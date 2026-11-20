@@ -17,18 +17,18 @@
 
 package au.csiro.pathling.fhirpath;
 
-import static au.csiro.pathling.encoders.ValueFunctions.nullSafeField;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.definition.ElementDefinition;
+import au.csiro.pathling.definition.NodeDefinition;
+import au.csiro.pathling.definition.defaults.DefaultCompositeDefinition;
+import au.csiro.pathling.definition.defaults.DefaultPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.fhirpath.definition.ElementDefinition;
-import au.csiro.pathling.fhirpath.definition.NodeDefinition;
-import au.csiro.pathling.fhirpath.definition.defaults.DefaultCompositeDefinition;
-import au.csiro.pathling.fhirpath.definition.defaults.DefaultPrimitiveDefinition;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
@@ -145,11 +145,19 @@ public class TypeInfo {
    * column. The mapper inspects which choice field is non-null for each row and returns the
    * corresponding TypeInfo. This enables per-row type resolution for polymorphic choice elements.
    *
+   * <p>Each choice field is tested for presence as it is stored, through the tolerant reference of
+   * the parent's representation, so a field that the input schema does not carry is taken to be
+   * unpopulated (FR-026), and a choice at the resource root is read from its table columns. The
+   * field is not traversed, because presence needs none of what a traversal adds: a decimal would
+   * otherwise be decoded only to be tested for null (T100n).
+   *
+   * @param parent the representation of the element that holds the choice
    * @param choiceTypes the list of possible child element definitions for the choice
    * @return a function that maps an element column to a TypeInfo struct column
    */
   @Nonnull
   public static UnaryOperator<Column> choiceTypeInfoMapper(
+      @Nonnull final ColumnRepresentation parent,
       @Nonnull final List<ElementDefinition> choiceTypes) {
     return elementCol -> {
       // Use a null struct matching the TypeInfo schema as the default fallback.
@@ -168,7 +176,11 @@ public class TypeInfo {
         final TypeInfo typeInfo = forFhirType(elemDef.getFhirType().orElseThrow(), false);
         result =
             when(
-                    nullSafeField(elementCol, elemDef.getElementName()).isNotNull(),
+                    parent
+                        .copyOf(elementCol)
+                        .getField(elemDef.getElementName())
+                        .getValue()
+                        .isNotNull(),
                     typeInfo.toStructColumn())
                 .otherwise(result);
       }

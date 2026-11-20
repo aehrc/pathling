@@ -81,7 +81,9 @@ case class TraceExpression(child: Expression, name: String, fhirType: String,
 
   override def dataType: DataType = child.dataType
 
-  override def nullable: Boolean = child.nullable
+  // Always nullable, so that the optimiser cannot prove the traced value non-null and fold away a
+  // check on it, which would remove the trace from the plan and lose its entries (#2594).
+  override def nullable: Boolean = true
 
   override protected def withNewChildInternal(newChild: Expression): Expression =
     copy(child = newChild)
@@ -129,7 +131,9 @@ case class TraceProjectionExpression(left: Expression, right: Expression,
 
   override def dataType: DataType = left.dataType
 
-  override def nullable: Boolean = left.nullable
+  // Always nullable, so that the optimiser cannot prove the passed-through value non-null and fold away a
+  // check on it, which would remove the trace from the plan and lose its entries (#2594).
+  override def nullable: Boolean = true
 
   override protected def withNewChildrenInternal(
       newLeft: Expression, newRight: Expression): Expression =

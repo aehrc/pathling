@@ -101,8 +101,11 @@ public class NumberMatcher implements ElementMatcher {
   /**
    * Matches integer types using exact match semantics.
    *
-   * <p>If the search value has a non-zero fractional part, no matches are possible (returns false).
-   * If the search value has no fractional part, exact match semantics are used.
+   * <p>The search value is first taken as the engine's System.Decimal holds it, rounded to six
+   * fractional digits ({@link NumericMatchingSupport#systemValue}), so that {@code eq1.0000001}
+   * finds 1 (owner, 2026-11-12, decision 153). A value outside its range matches nothing, under
+   * {@code ne} as under {@code eq}. If the rounded value has a non-zero fractional part, no matches
+   * are possible (returns false). If it has no fractional part, exact match semantics are used.
    *
    * @param element the column to match against
    * @param numberValue the numeric search value (without prefix)
@@ -114,7 +117,11 @@ public class NumberMatcher implements ElementMatcher {
       @Nonnull final Column element,
       @Nonnull final String numberValue,
       @Nonnull final SearchPrefix prefix) {
-    final FhirPathNumber searchNumber = FhirPathNumber.parse(numberValue);
+    final BigDecimal rounded = NumericMatchingSupport.systemValue(numberValue);
+    if (rounded == null) {
+      return lit(false);
+    }
+    final FhirPathNumber searchNumber = FhirPathNumber.parse(rounded.toPlainString());
     final boolean isEq = prefix == SearchPrefix.EQ;
 
     // If search value has a fractional part, no integer can match

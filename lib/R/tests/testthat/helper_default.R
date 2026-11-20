@@ -9,6 +9,7 @@ def_spark <- function() {
       "sparklyr.shell.driver-memory" = "4G",
       "sparklyr.shell.conf" = c(
         "spark.sql.mapKeyDedupPolicy=LAST_WIN",
+        "spark.sql.parquet.outputTimestampType=TIMESTAMP_MICROS",
         "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
         "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog",
         "spark.sql.catalogImplementation=hive",
@@ -42,13 +43,12 @@ def_pathling_context <- function(spark) {
 
 coding_row <- function(system, code) {
   coding <- list(
-    x0_id = NA,
-    x1_system = system,
-    x2_version = NA,
-    x3_code = code,
-    x4_display = NA,
-    x5_userSelected = NA,
-    x6__fid = NA
+    id = NA,
+    system = system,
+    version = NA,
+    code = code,
+    display = NA,
+    userSelected = NA
   )
   jsonlite::toJSON(
     as.list(coding),

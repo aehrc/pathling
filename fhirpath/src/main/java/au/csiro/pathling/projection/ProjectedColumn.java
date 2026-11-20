@@ -17,14 +17,15 @@
 
 package au.csiro.pathling.projection;
 
-import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.views.ColumnTag;
 import jakarta.annotation.Nonnull;
 import java.util.Objects;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -34,14 +35,15 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @param collection The result of evaluating the column.
  * @param requestedColumn The column that was requested to be included in the projection.
- * @author John Grimes
  */
 public record ProjectedColumn(
     @Nonnull Collection collection, @Nonnull RequestedColumn requestedColumn) {
 
   /**
    * Gets the column value from the collection and aliases it with the requested name. If a SQL type
-   * is specified in the requested column, the column value will be cast to that type.
+   * is specified in the requested column, the column value will be cast to that type. Otherwise, if
+   * a FHIR type is declared on the column, the value is cast to the SQL type of that FHIR type
+   * (FR-028), so that a column over an element absent from the input schema has the declared type.
    *
    * @return The column value with the appropriate alias
    */
@@ -84,18 +86,81 @@ public record ProjectedColumn(
               + originalMessage.substring(1);
       throw new UnsupportedOperationException(contextualMessage, e);
     }
-    // A path that navigates beyond the encoded schema has a null-typed value. Without a SQL type
-    // annotation to cast to, it is given the type that the column has when the data is present.
-    final Column typedResult =
-        requestedColumn
-            .sqlType()
-            .map(rawResult::try_cast)
-            .orElseGet(
-                () ->
-                    findSqlType()
-                        .map(type -> ValueFunctions.castIfNullType(rawResult, type))
-                        .orElse(rawResult));
-    return typedResult.alias(requestedColumn.name());
+    return requestedColumn
+        .sqlType()
+        .map(sqlType -> castToSqlType(rawResult, sqlType))
+        .or(() -> declaredOutputType().map(rawResult::try_cast))
+        .orElse(rawResult)
+        .alias(requestedColumn.name());
+  }
+
+  /**
+   * Casts a column to the SQL type requested by its tag. An instant cast to a timestamp without a
+   * time zone is cast to a timestamp first. An instant is a point in time, held as text carrying
+   * its offset (decision 81), and a direct cast from text would discard the offset, keeping the
+   * wall time instead. Through a timestamp, it gives the point in time in the session time zone.
+   * Every other value keeps the direct cast, so text of any other type keeps its wall time.
+   *
+   * @param value the column to cast
+   * @param sqlType the requested SQL type
+   * @return the cast column
+   */
+  @Nonnull
+  private Column castToSqlType(@Nonnull final Column value, @Nonnull final DataType sqlType) {
+    final boolean instant =
+        collection.getFhirType().filter(FHIRDefinedType.INSTANT::equals).isPresent();
+    final boolean withoutTimeZone =
+        DataTypes.TimestampNTZType.equals(sqlType)
+            || sqlType instanceof final ArrayType arrayType
+                && DataTypes.TimestampNTZType.equals(arrayType.elementType());
+    if (instant && withoutTimeZone) {
+      final DataType withTimeZone =
+          sqlType instanceof ArrayType
+              ? DataTypes.createArrayType(DataTypes.TimestampType)
+              : DataTypes.TimestampType;
+      return value.try_cast(withTimeZone).try_cast(sqlType);
+    }
+    return value.try_cast(sqlType);
+  }
+
+  /**
+   * Gets the SQL type that the declared FHIR type of the column gives its output, if a FHIR type is
+   * declared. The value is cast to it, so that a column over an element absent from the input
+   * schema has the declared type.
+   *
+   * @return the SQL type of the declared FHIR type, as an array for a collection column
+   */
+  @Nonnull
+  private Optional<DataType> declaredOutputType() {
+    return requestedColumn
+        .type()
+        .flatMap(
+            type ->
+                FhirPathType.forFhirType(type)
+                    .map(pathType -> outputType(pathType, Optional.of(type))))
+        .map(type -> requestedColumn.collection() ? DataTypes.createArrayType(type) : type);
+  }
+
+  /**
+   * Maps a FHIRPath type to the SQL type of the column values that {@link #getValue()} produces for
+   * it. That differs from the internal representation for a decimal, which is output as its literal
+   * text so that its precision is preserved (decision 76), and for a base64Binary value, which is
+   * output as the bytes it encodes.
+   *
+   * @param type the FHIRPath type
+   * @param fhirType the FHIR type, which distinguishes base64Binary from other string types
+   * @return the SQL type of the column values
+   */
+  @Nonnull
+  private static DataType outputType(
+      @Nonnull final FhirPathType type, @Nonnull final Optional<FHIRDefinedType> fhirType) {
+    if (FhirPathType.DECIMAL.equals(type)) {
+      return DataTypes.StringType;
+    } else if (fhirType.filter(FHIRDefinedType.BASE64BINARY::equals).isPresent()) {
+      return DataTypes.BinaryType;
+    } else {
+      return type.getSqlDataType();
+    }
   }
 
   /**
@@ -111,9 +176,8 @@ public record ProjectedColumn(
    *   <li>The resolved {@link FhirPathType} on the collection (requires {@link Materializable}).
    * </ol>
    *
-   * <p>A FHIR type is mapped to the type of the value that {@link #getValue()} produces for it,
-   * which differs from the internal FHIRPath representation for decimals (rendered as strings to
-   * preserve their precision) and base64Binary values (decoded to binary). When {@code
+   * <p>A FHIR type is mapped to the type of the value that {@link #getValue()} produces for it: a
+   * string for a decimal and binary for base64Binary (see {@link #outputType}). When {@code
    * collection()} is {@code true}, the element type is wrapped in {@link
    * DataTypes#createArrayType}.
    *
@@ -123,62 +187,39 @@ public record ProjectedColumn(
    */
   @Nonnull
   public DataType getSqlType() {
-    return findSqlType()
-        .orElseThrow(
-            () ->
-                collection instanceof Materializable
-                    ? new UnsupportedOperationException(
-                        "Cannot derive SQL type for column '"
-                            + requestedColumn.name()
-                            + "': no sqlType annotation, FHIR type annotation, or resolved"
-                            + " FhirPathType")
-                    : new UnsupportedOperationException(
+    final DataType elementType =
+        requestedColumn
+            .sqlType()
+            .or(
+                () ->
+                    requestedColumn
+                        .type()
+                        .flatMap(
+                            fhirType ->
+                                FhirPathType.forFhirType(fhirType)
+                                    .map(type -> outputType(type, Optional.of(fhirType)))))
+            .or(
+                () -> {
+                  if (!(collection instanceof Materializable)) {
+                    throw new UnsupportedOperationException(
                         "Cannot obtain value for non-primitive collection of FHIR type: "
-                            + collection.getFhirType().map(Objects::toString).orElse("unknown")));
-  }
-
-  /**
-   * Derives the Spark SQL type for this column as described in {@link #getSqlType()}, if there is
-   * enough type information to do so.
-   *
-   * @return The Spark {@link DataType} for this column, or empty if it cannot be derived
-   */
-  @Nonnull
-  private Optional<DataType> findSqlType() {
-    return requestedColumn
-        .sqlType()
-        .or(
-            () ->
-                requestedColumn
-                    .type()
-                    .flatMap(
-                        fhirType ->
-                            FhirPathType.forFhirType(fhirType)
-                                .map(type -> valueType(type, Optional.of(fhirType)))))
-        .or(
-            () ->
-                collection instanceof Materializable
-                    ? collection.getType().map(type -> valueType(type, collection.getFhirType()))
-                    : Optional.empty())
-        .map(type -> requestedColumn.collection() ? DataTypes.createArrayType(type) : type);
-  }
-
-  /**
-   * Maps a FHIRPath type to the Spark SQL type of the column values that it produces.
-   *
-   * @param type The FHIRPath type
-   * @param fhirType The FHIR type, which distinguishes base64Binary from other string types
-   * @return The Spark SQL type of the column values
-   */
-  @Nonnull
-  private static DataType valueType(
-      @Nonnull final FhirPathType type, @Nonnull final Optional<FHIRDefinedType> fhirType) {
-    if (FhirPathType.DECIMAL.equals(type)) {
-      return DataTypes.StringType;
-    } else if (fhirType.filter(FHIRDefinedType.BASE64BINARY::equals).isPresent()) {
-      return DataTypes.BinaryType;
-    } else {
-      return type.getSqlDataType();
-    }
+                            + collection.getFhirType().map(Objects::toString).orElse("unknown"));
+                  }
+                  return collection
+                      .getType()
+                      .map(type -> outputType(type, collection.getFhirType()));
+                })
+            .orElseThrow(
+                () ->
+                    new UnsupportedOperationException(
+                        "Cannot derive the SQL type of column '"
+                            + requestedColumn.name()
+                            + "' with path '"
+                            + requestedColumn.path().toExpression()
+                            + "', because the path carries no type information. Declare the"
+                            + " column's FHIR type with \"type\", or its SQL type with the '"
+                            + ColumnTag.ANSI_TYPE_TAG
+                            + "' tag."));
+    return requestedColumn.collection() ? DataTypes.createArrayType(elementType) : elementType;
   }
 }

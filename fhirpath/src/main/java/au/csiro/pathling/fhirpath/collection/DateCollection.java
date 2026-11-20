@@ -18,13 +18,14 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.annotations.UsedByReflection;
+import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.FhirPathDateTime;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import au.csiro.pathling.fhirpath.column.SystemDateTime;
 import jakarta.annotation.Nonnull;
 import java.text.ParseException;
 import java.util.Optional;
@@ -34,7 +35,8 @@ import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
- * Represents a collection of Date-typed elements.
+ * Represents a collection of Date-typed elements, each held as a structure of its text and the
+ * range annotations available without computing (see {@link SystemDateTime}).
  *
  * @author John Grimes
  */
@@ -49,15 +51,13 @@ public class DateCollection extends Collection
    * @param type the FhirPath type
    * @param fhirType the FHIR type
    * @param definition the node definition
-   * @param extensionMapColumn the extension map column
    */
   protected DateCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition,
-      @Nonnull final Optional<Column> extensionMapColumn) {
-    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(columnRepresentation, type, fhirType, definition);
   }
 
   /**
@@ -75,8 +75,7 @@ public class DateCollection extends Collection
         columnRepresentation,
         Optional.of(FhirPathType.DATE),
         Optional.of(FHIRDefinedType.DATE),
-        definition,
-        Optional.empty());
+        definition);
   }
 
   @Nonnull
@@ -93,7 +92,8 @@ public class DateCollection extends Collection
   @UsedByReflection
   @Nonnull
   public static DateCollection fromValue(@Nonnull final DateType value) {
-    return DateCollection.build(DefaultRepresentation.literal(value.getValueAsString()));
+    return DateCollection.build(
+        new DefaultRepresentation(SystemDateTime.fromValue(value.getValueAsString())));
   }
 
   /**
@@ -110,13 +110,43 @@ public class DateCollection extends Collection
     if (!FhirPathDateTime.isDateValue(dateString)) {
       throw new ParseException("Invalid dateTime literal: " + dateLiteral, 0);
     }
-    return DateCollection.build(DefaultRepresentation.literal(dateString));
+    return DateCollection.build(new DefaultRepresentation(SystemDateTime.fromLiteral(dateString)));
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>A date's System value keeps the range annotations it carries.
+   */
+  @Override
+  @Nonnull
+  protected Column systemValueOf(@Nonnull final Column primitive) {
+    return SystemDateTime.withoutMetadata(primitive);
   }
 
   @Nonnull
   @Override
   public StringCollection asStringPath() {
-    return Collection.defaultAsStringPath(this);
+    return StringCollection.build(asSingular().getOutputColumn());
+  }
+
+  /**
+   * Returns the text of each value, which is what a System date is given to a caller as.
+   *
+   * @return the text of each value
+   */
+  @Nonnull
+  @Override
+  public ColumnRepresentation getOutputColumn() {
+    // A date held with its id and extensions is given as its System value, without the elements
+    // that have no value.
+    return withoutPrimitiveMetadata().getColumn().transform(SystemDateTime::text);
+  }
+
+  @Nonnull
+  @Override
+  public Column toExternalValue() {
+    return getOutputColumn().getValue();
   }
 
   @Override

@@ -1,0 +1,13 @@
+urn:uuid references, hand-written            types=[Bundle, Observation, Patient] rows=4 same
+http full URLs and contained references      types=[Observation, Patient] rows=2 same
+  DIFFERENT KNOWN DIFFERENCE: id equal to the urn:uuid type Observation: oracle 1, prototype 1
+    oracle:    {"resourceType":"Observation","status":"final","code":{"text":"c"},"subject":{"reference":"urn:uuid:abc"}}
+    prototype: {"resourceType":"Observation","id":"def","status":"final","code":{"text":"c"},"subject":{"reference":"Patient/abc"}}
+  DIFFERENT KNOWN DIFFERENCE: id equal to the urn:uuid type Patient: oracle 1, prototype 1
+    oracle:    {"resourceType":"Patient"}
+    prototype: {"resourceType":"Patient","id":"abc"}
+KNOWN DIFFERENCE: id equal to the urn:uuid   types=[Observation, Patient] rows=2 DIFFERENT
+  (different, as expected)
+prefixed namespace                           types=[Observation, Patient] rows=2 same
+corpus bundles compared: 12 (with urn references: 6, skipped: 1)
+ALL BUNDLES SAME AS THE CURRENT TRANSFORMER

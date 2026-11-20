@@ -21,9 +21,11 @@ import static au.csiro.pathling.sql.SqlFunctions.let;
 import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.substring_index;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DateCollection;
@@ -36,6 +38,7 @@ import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.QuantityValue;
+import au.csiro.pathling.fhirpath.column.SystemDateTime;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.misc.CodingToLiteral;
 import au.csiro.pathling.sql.misc.DecimalToLiteral;
@@ -188,16 +191,24 @@ class ConversionLogic {
    * <p>The conversion function and collection builder are automatically determined from the target
    * type using internal registries.
    *
-   * @param input The input collection to convert
+   * @param source The input collection to convert
    * @param targetType The target FHIRPath type
    * @return The converted collection or EmptyCollection if conversion fails
    */
   Collection performConversion(
-      @Nonnull final Collection input, @Nonnull final FhirPathType targetType) {
+      @Nonnull final Collection source, @Nonnull final FhirPathType targetType) {
 
-    if (input instanceof EmptyCollection) {
+    if (source instanceof EmptyCollection) {
       return EmptyCollection.getInstance();
     }
+    // A stored decimal's string is its stored text (decision 147), and a stored quantity's is
+    // formatted from its stored text, which converting it first would lose.
+    if (targetType == FhirPathType.STRING && isStoredNumber(source)) {
+      return ((StringCoercible) source).asStringPath();
+    }
+    // A conversion computes with the values, so a stored value is taken as the System value it
+    // converts to.
+    final Collection input = source.toEngineForm();
 
     // Look up conversion function and builder from registries
     final BiFunction<FhirPathType, Column, Column> conversionLogic =
@@ -219,6 +230,12 @@ class ConversionLogic {
             coalesce(result, input.getColumn().ensureSingular())
             // implicit null otherwise
             ));
+  }
+
+  /** Whether a collection holds stored decimals or stored quantities, which keep their text. */
+  private boolean isStoredNumber(@Nonnull final Collection source) {
+    return source instanceof final DecimalCollection decimal && decimal.isStored()
+        || source instanceof final QuantityCollection quantity && quantity.isStored();
   }
 
   /**
@@ -310,7 +327,8 @@ class ConversionLogic {
    * Converts a value to String based on source type.
    *
    * <ul>
-   *   <li>BOOLEAN, INTEGER, DATE, DATETIME, TIME: Direct cast to String
+   *   <li>BOOLEAN, INTEGER, TIME: Direct cast to String
+   *   <li>DATE, DATETIME: The text of the System date
    *   <li>DECIMAL: Use DecimalToLiteral UDF to format with trailing zeros removed
    *   <li>QUANTITY: Use QuantityToLiteral UDF to format as FHIRPath quantity literal (null if the
    *       quantity is not representable as a System.Quantity)
@@ -324,9 +342,12 @@ class ConversionLogic {
   @Nonnull
   Column convertToString(@Nonnull final FhirPathType sourceType, @Nonnull final Column value) {
     return switch (sourceType) {
-      case BOOLEAN, INTEGER, DATE, DATETIME, TIME ->
+      case BOOLEAN, INTEGER, TIME ->
           // Primitive types can be cast to string directly.
           value.try_cast(DataTypes.StringType);
+      case DATE, DATETIME ->
+          // A date is held as a System date, and converts to its text.
+          SystemDateTime.text(value);
       case DECIMAL ->
           // Decimal: Use DecimalToLiteral UDF to strip trailing zeros.
           // E.g., 101.990000 -> 101.99, 1.0 -> 1
@@ -335,7 +356,7 @@ class ConversionLogic {
           // Quantity: Use QuantityToLiteral UDF to format as FHIRPath quantity literal.
           // E.g., {value: 1, unitCode: "wk", system: "http://unitsofmeasure.org"} -> "1 'wk'"
           // The UDF returns null for a quantity that has no System.Quantity equivalent.
-          callUDF(QuantityToLiteral.FUNCTION_NAME, value);
+          callUDF(QuantityToLiteral.FUNCTION_NAME, QuantityEncoding.asText(value));
       case CODING ->
           // Coding: Use CodingToLiteral UDF to format as Coding literal.
           // E.g., {system: "http://snomed.info/sct", code: "52101004"} ->
@@ -349,7 +370,9 @@ class ConversionLogic {
    * Converts a value to Date based on source type.
    *
    * <ul>
-   *   <li>STRING: Validates format (YYYY or YYYY-MM or YYYY-MM-DD) and returns the string value
+   *   <li>STRING: Validates format (YYYY or YYYY-MM or YYYY-MM-DD) and returns the System date of
+   *       the string value
+   *   <li>DATETIME: The date part of the dateTime, without normalising its timezone
    * </ul>
    *
    * @param sourceType The source FHIRPath type
@@ -358,19 +381,26 @@ class ConversionLogic {
    */
   @Nonnull
   Column convertToDate(@Nonnull final FhirPathType sourceType, @Nonnull final Column value) {
-    if (sourceType == FhirPathType.STRING) {
-      // Date values are stored as strings in FHIR. Validate format before accepting.
-      // Date format: YYYY or YYYY-MM or YYYY-MM-DD
-      return let(value, v -> when(v.rlike(DATE_REGEX), v));
-    }
-    return lit(null);
+    return switch (sourceType) {
+      case STRING ->
+          // Date values are stored as strings in FHIR. Validate format before accepting.
+          // Date format: YYYY or YYYY-MM or YYYY-MM-DD
+          let(value, v -> SystemDateTime.tryFromText(when(v.rlike(DATE_REGEX), v)));
+      case DATETIME ->
+          // The date part is the text before the T. A dateTime with no time has no T, and is kept
+          // whole.
+          SystemDateTime.fromText(substring_index(SystemDateTime.text(value), "T", 1));
+      default -> SystemDateTime.empty();
+    };
   }
 
   /**
    * Converts a value to DateTime based on source type.
    *
    * <ul>
-   *   <li>STRING: Validates format (supports partial precision) and returns the string value
+   *   <li>STRING: Validates format (supports partial precision) and returns the System dateTime of
+   *       the string value
+   *   <li>DATE: The dateTime with the year, month and day of the date, and no time
    * </ul>
    *
    * @param sourceType The source FHIRPath type
@@ -379,12 +409,16 @@ class ConversionLogic {
    */
   @Nonnull
   Column convertToDateTime(@Nonnull final FhirPathType sourceType, @Nonnull final Column value) {
-    if (sourceType == FhirPathType.STRING) {
-      // DateTime values are stored as strings in FHIR. Validate using simplified pattern.
-      // Supports partial precision: YYYY, YYYY-MM, YYYY-MM-DD, YYYY-MM-DDThh, etc.
-      return let(value, v -> when(v.rlike(DATETIME_REGEX), v));
-    }
-    return lit(null);
+    return switch (sourceType) {
+      case STRING ->
+          // DateTime values are stored as strings in FHIR. Validate using simplified pattern.
+          // Supports partial precision: YYYY, YYYY-MM, YYYY-MM-DD, YYYY-MM-DDThh, etc.
+          let(value, v -> SystemDateTime.tryFromText(when(v.rlike(DATETIME_REGEX), v)));
+      case DATE ->
+          // A date's text is also a valid dateTime text, of the same precision and with no time.
+          SystemDateTime.fromText(SystemDateTime.text(value));
+      default -> SystemDateTime.empty();
+    };
   }
 
   /**

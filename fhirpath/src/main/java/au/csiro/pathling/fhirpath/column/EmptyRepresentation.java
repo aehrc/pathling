@@ -23,6 +23,7 @@ import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.types.DataType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -87,24 +88,27 @@ public class EmptyRepresentation extends ColumnRepresentation {
 
   @Override
   @Nonnull
-  public ColumnRepresentation traverse(@Nonnull final String fieldName) {
-    // Traversing an empty representation returns another empty representation
-    // This avoids the Spark error of trying to get a field from a null struct
-    return this;
-  }
-
-  @Override
-  @Nonnull
   public ColumnRepresentation traverse(
-      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
-    // Traversing an empty representation returns another empty representation
+      @Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final DataType fallback) {
+    // Traversing an empty representation returns another empty representation. This avoids the
+    // Spark error of trying to get a field from a null struct.
     return this;
   }
 
   @Override
   @Nonnull
-  public ColumnRepresentation getField(@Nonnull final String fieldName) {
-    // Getting a field from an empty representation returns another empty representation
+  public ColumnRepresentation traverseExtension() {
+    // An empty representation has no extensions.
+    return this;
+  }
+
+  @Override
+  @Nonnull
+  public ColumnRepresentation getField(
+      @Nonnull final String fieldName, @Nonnull final DataType fallback) {
+    // Getting a field from an empty representation returns another empty representation.
     return this;
   }
 

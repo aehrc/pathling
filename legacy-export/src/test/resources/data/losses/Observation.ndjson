@@ -1,0 +1,4 @@
+{"resourceType":"Observation","id":"decimal-scale","status":"final","code":{"text":"weight"},"valueQuantity":{"value":70.123456789,"unit":"kg"}}
+{"resourceType":"Observation","id":"decimal-magnitude","status":"final","code":{"text":"count"},"valueQuantity":{"value":123456789012345678901234567890.5,"unit":"1"}}
+{"resourceType":"Observation","id":"instant-offset","status":"final","code":{"text":"weight"},"issued":"2020-01-01T10:00:00.123+10:00"}
+{"resourceType":"Observation","id":"instant-precision","status":"final","code":{"text":"weight"},"issued":"2020-01-01T10:00:00Z"}

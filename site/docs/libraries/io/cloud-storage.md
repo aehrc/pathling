@@ -6,7 +6,7 @@ description: Configure the Pathling library to read and write FHIR data in Amazo
 # Cloud storage
 
 Every path accepted by the Pathling read and write functions is resolved by
-Spark through the [Hadoop FileSystem](https://hadoop.apache.org/docs/r3.4.1/hadoop-project-dist/hadoop-common/filesystem/index.html)
+Spark through the [Hadoop FileSystem](https://hadoop.apache.org/docs/r3.4.2/hadoop-project-dist/hadoop-common/filesystem/index.html)
 API. This means that a cloud storage location can be used anywhere that a local
 path can, provided that the Spark session has been configured with:
 
@@ -18,8 +18,8 @@ path can, provided that the Spark session has been configured with:
 
 The configured session is then passed to `PathlingContext.create`, as described
 in [Spark configuration](../installation/spark#session-configuration). The
-connector version must match the Hadoop version bundled with Spark. Spark 4.0.x
-bundles Hadoop 3.4.1, so the examples on this page use the `3.4.1` connectors.
+connector version must match the Hadoop version bundled with Spark. Spark 4.1.x
+bundles Hadoop 3.4.2, so the examples on this page use the `3.4.2` connectors.
 
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
@@ -43,8 +43,8 @@ spark = (
     SparkSession.builder.config(
         "spark.jars.packages",
         "au.csiro.pathling:library-runtime:10.0.0,"
-        + "io.delta:delta-spark_2.13:4.0.1,"
-        + "org.apache.hadoop:hadoop-aws:3.4.1",
+        + "io.delta:delta-spark_2.13:4.2.0,"
+        + "org.apache.hadoop:hadoop-aws:3.4.2",
     )
     .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
     .config(
@@ -71,14 +71,14 @@ library(pathling)
 
 sc <- spark_connect(master = "local",
                     packages = c(paste0("au.csiro.pathling:library-runtime:", pathling_version()),
-                                 "io.delta:delta-spark_2.13:4.0.1",
-                                 "org.apache.hadoop:hadoop-aws:3.4.1"),
+                                 "io.delta:delta-spark_2.13:4.2.0",
+                                 "org.apache.hadoop:hadoop-aws:3.4.2"),
                     config = list("sparklyr.shell.conf" = c(
                             "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
                             "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog",
                             "spark.hadoop.fs.s3a.access.key=AKIA...",
                             "spark.hadoop.fs.s3a.secret.key=..."
-                    )), version = "4.0.2")
+                    )), version = "4.1.0")
 
 pc <- pathling_connect(sc)
 
@@ -95,8 +95,8 @@ import org.apache.spark.sql.SparkSession
 
 val spark = SparkSession.builder
         .config("spark.jars.packages", "au.csiro.pathling:library-runtime:10.0.0," +
-                "io.delta:delta-spark_2.13:4.0.1," +
-                "org.apache.hadoop:hadoop-aws:3.4.1")
+                "io.delta:delta-spark_2.13:4.2.0," +
+                "org.apache.hadoop:hadoop-aws:3.4.2")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.sql.catalog.spark_catalog",
             "org.apache.spark.sql.delta.catalog.DeltaCatalog")
@@ -124,8 +124,8 @@ class MyApp {
         SparkSession spark = SparkSession.builder()
                 .config("spark.jars.packages",
                         "au.csiro.pathling:library-runtime:10.0.0," +
-                                "io.delta:delta-spark_2.13:4.0.1," +
-                                "org.apache.hadoop:hadoop-aws:3.4.1")
+                                "io.delta:delta-spark_2.13:4.2.0," +
+                                "org.apache.hadoop:hadoop-aws:3.4.2")
                 .config("spark.sql.extensions",
                         "io.delta.sql.DeltaSparkSessionExtension")
                 .config("spark.sql.catalog.spark_catalog",
@@ -149,7 +149,7 @@ Avoid placing long-lived secrets in source code. Prefer the identity of the
 environment that the code runs in (an IAM role, a managed identity or a service
 account), or read the secret from an environment variable at the point where the
 session is built. Hadoop can also load any `fs.*` property from an encrypted
-[credential provider](https://hadoop.apache.org/docs/r3.4.1/hadoop-project-dist/hadoop-common/CredentialProviderAPI.html)
+[credential provider](https://hadoop.apache.org/docs/r3.4.2/hadoop-project-dist/hadoop-common/CredentialProviderAPI.html)
 file, referenced with `spark.hadoop.hadoop.security.credential.provider.path`.
 
 The [command line interface](../cli/configuration.md#spark-configuration) accepts the same
@@ -159,8 +159,8 @@ from a file.
 ## Amazon S3
 
 - URL scheme: `s3a://<bucket>/<path>`
-- Package: `org.apache.hadoop:hadoop-aws:3.4.1`
-- Reference: [Hadoop-AWS module](https://hadoop.apache.org/docs/r3.4.1/hadoop-aws/tools/hadoop-aws/index.html)
+- Package: `org.apache.hadoop:hadoop-aws:3.4.2`
+- Reference: [Hadoop-AWS module](https://hadoop.apache.org/docs/r3.4.2/hadoop-aws/tools/hadoop-aws/index.html)
 
 The `hadoop-aws` package brings in the AWS SDK bundle as a transitive
 dependency, which is several hundred megabytes and is downloaded the first time
@@ -191,14 +191,14 @@ spark.hadoop.fs.s3a.endpoint.region=ap-southeast-2
 Settings can also be scoped to a single bucket by inserting `bucket.<name>`
 after `fs.s3a.`, for example `spark.hadoop.fs.s3a.bucket.my-bucket.access.key`.
 This allows one session to use different credentials for different buckets.
-See [Per-bucket configuration](https://hadoop.apache.org/docs/r3.4.1/hadoop-aws/tools/hadoop-aws/index.html#Configuring_different_S3_buckets_with_Per-Bucket_Configuration)
+See [Per-bucket configuration](https://hadoop.apache.org/docs/r3.4.2/hadoop-aws/tools/hadoop-aws/index.html#Configuring_different_S3_buckets_with_Per-Bucket_Configuration)
 for details.
 
 ## Azure Blob Storage and Azure Data Lake Storage
 
 - URL scheme: `abfss://<container>@<account>.dfs.core.windows.net/<path>`
-- Package: `org.apache.hadoop:hadoop-azure:3.4.1`
-- Reference: [Hadoop Azure support: ABFS](https://hadoop.apache.org/docs/r3.4.1/hadoop-azure/abfs.html)
+- Package: `org.apache.hadoop:hadoop-azure:3.4.2`
+- Reference: [Hadoop Azure support: ABFS](https://hadoop.apache.org/docs/r3.4.2/hadoop-azure/abfs.html)
 
 Azure Blob Storage and Azure Data Lake Storage Gen2 are the same service: Gen2
 is a storage account with the hierarchical namespace feature enabled. Both are
@@ -245,7 +245,7 @@ spark.hadoop.fs.azure.account.oauth.provider.type.<account>.dfs.core.windows.net
 Each property is shown with an account suffix, which scopes it to one storage
 account. Drop the suffix (for example `fs.azure.account.auth.type`) to apply a
 setting to every account that the session accesses. See
-[Authentication](https://hadoop.apache.org/docs/r3.4.1/hadoop-azure/abfs.html#Authentication)
+[Authentication](https://hadoop.apache.org/docs/r3.4.2/hadoop-azure/abfs.html#Authentication)
 in the Hadoop documentation for the remaining mechanisms, including SAS tokens
 and refresh tokens.
 
@@ -305,4 +305,4 @@ spark.hadoop.fs.s3a.bucket.<bucket>.multiobjectdelete.enable=false
 The bucket is then addressed as `s3a://<bucket>/<path>`. These settings are
 taken from the "Connecting to Google Cloud Storage through the S3A connector"
 section of
-[Working with third-party S3 stores](https://hadoop.apache.org/docs/r3.4.1/hadoop-aws/tools/hadoop-aws/third_party_stores.html).
+[Working with third-party S3 stores](https://hadoop.apache.org/docs/r3.4.2/hadoop-aws/tools/hadoop-aws/third_party_stores.html).

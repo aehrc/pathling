@@ -11,8 +11,15 @@ The core of Pathling consists of the following modules, which inherit from the
 main `pom.xml` in the root of the repository:
 
 - `utilities` - Utility functions used by different components of Pathling.
+- `fhir-schema` - An abstraction over the FHIR definitions, and the derivation
+  of the Spark schemas of the stored layout from them. It may use only the Spark
+  SQL API, not internal Catalyst API.
 - `encoders` - Encoders for transforming [FHIR](https://hl7.org/fhir/) data into
   Spark Datasets.
+- `io` - Reading and writing FHIR JSON and XML, as resources or bundles, in the
+  [Parquet on FHIR](specs/001-parquet-on-fhir/spec.md) storage layout, as
+  dataset transformations. `FhirReader` and `FhirWriter` are its public
+  surface. Like `fhir-schema`, it may not use internal Catalyst API.
 - `terminology` - Terminology operations from Spark, either through
   a [FHIR terminology server](https://hl7.org/fhir/terminology-service.html)
   or a locally imported terminology store.
@@ -32,6 +39,10 @@ together with the core. They are also child modules of the main `pom.xml`.
 - `site` - A website that contains documentation for Pathling.
 - `benchmark` - A benchmark for evaluating the performance of Pathling query
   execution.
+- `legacy-export` - A component and command-line tool that converts tables in
+  the legacy layout, written by the `encoders` module, to FHIR NDJSON for
+  re-import into the Parquet on FHIR layout. It depends on `encoders` and on
+  nothing newer in the core chain, and is not part of `library-runtime`.
 
 The following modules are versioned independently and are **not** children of
 the main `pom.xml`:
@@ -48,7 +59,9 @@ the main `pom.xml`:
 ```mermaid
 graph TD
     utilities[utilities<br/>Utility functions]
+    fhir-schema[fhir-schema<br/>FHIR definitions and schemas]
     encoders[encoders<br/>FHIR data encoders]
+    io[io<br/>Parquet on FHIR layout]
     terminology[terminology<br/>FHIR terminology server]
     fhirpath[fhirpath<br/>FHIRPath engine]
     library-api[library-api<br/>Language library API]
@@ -57,19 +70,26 @@ graph TD
     r[lib/R<br/>R bindings]
     site[site<br/>Documentation website]
     benchmark[benchmark<br/>Performance benchmarks]
+    legacy-export[legacy-export<br/>Legacy layout export]
     server[server<br/>FHIR server]
     ui[ui<br/>Admin UI]
     test-data[test-data<br/>Test data generation]
 
+    fhir-schema --> utilities
     encoders --> utilities
+    io --> fhir-schema
     terminology --> utilities
     terminology --> encoders
     fhirpath --> terminology
+    fhirpath --> fhir-schema
     library-api --> utilities
     library-api --> encoders
     library-api --> terminology
     library-api --> fhirpath
+    library-api --> io
     library-runtime --> library-api
+    library-runtime --> fhir-schema
+    library-runtime --> io
     python --> library-runtime
     r --> library-runtime
     server --> library-runtime
@@ -79,6 +99,7 @@ graph TD
     site --> python
     site --> r
     benchmark --> test-data
+    legacy-export --> encoders
 ```
 
 The "public API" of Pathling is defined as the public API of the library API
@@ -90,7 +111,9 @@ The core libraries are defined as the modules that contribute to building the
 library runtime artifact. These are:
 
 - `utilities`
+- `fhir-schema`
 - `encoders`
+- `io`
 - `terminology`
 - `fhirpath`
 - `library-api`
@@ -104,7 +127,7 @@ You will need the following software to build the core libraries:
 
 - Java 21
 - Maven 3.9+
-- Python 3.9+
+- Python 3.10+
 - uv (Python package manager)
 - R 3.5+
 
@@ -149,7 +172,7 @@ data.
 
 You will need the following software to build the Python library:
 
-- Python 3.9+
+- Python 3.10+
 - uv (Python package manager)
 
 To build and install the Python library locally, run:
@@ -176,7 +199,10 @@ mvn clean install -pl lib/R -am
 
 When rebuilding after making changes to upstream modules, you need to clear the
 local Ivy state before the changes will be picked up by the Python and R
-libraries.
+libraries. This is not needed when the Python and R tests run through
+`scripts/mvn-isolated.sh`, described in [Isolated builds](#isolated-builds),
+which keeps its own Ivy cache. Running pytest or the R tests directly bypasses
+it and uses the shared Ivy cache again.
 
 Spark resolves `--packages` through Ivy, which keeps two directories per Ivy
 version: `cache` (the resolved module metadata and artifacts) and `jars` (the
@@ -209,6 +235,58 @@ mvn clean install -pl lib/python -am
 mvn clean install -pl lib/R -am
 ```
 
+### Isolated builds
+
+Every checkout on a machine otherwise shares the Maven local repository
+(`~/.m2/repository`) and Spark's Ivy cache (`~/.ivy2*`), so an `install` in one
+git worktree replaces the SNAPSHOT artifacts that the others build and test
+against. To build a checkout in isolation, run Maven through the wrapper script
+in place of `mvn`:
+
+```bash
+scripts/mvn-isolated.sh install -pl lib/python -am
+```
+
+The script gives the checkout its own Maven local repository in
+`.private/mvn-isolated/m2`, with the shared repository as a read-only fallback for
+everything the checkout has not built itself. That fallback includes Pathling
+modules, so a build of one module without `-am` may compile and test against
+another checkout's install of its upstream modules. Set
+`MVN_ISOLATED_SHARED_REPO` if your shared repository is not `~/.m2/repository`.
+The script also points `SPARK_CONF_DIR` at
+a Spark configuration that keeps the Python and R tests' Ivy cache in
+`.private/mvn-isolated/ivy` and resolves Pathling modules only from the isolated
+repository. Ivy checks the modification time of the jars there, for release
+versions as well as SNAPSHOTs, so a rebuilt `library-runtime` is picked up
+without clearing any cache.
+
+The tests resolve `library-runtime` from the isolated repository, so it must be
+installed there first, by building with `install` and `-am` as shown above.
+If you set `SPARK_CONF_DIR` yourself, the files in it are carried over to these
+test runs, and your `spark-defaults.conf` keeps its settings, except that the
+script's `spark.jars.ivy` and `spark.jars.ivySettings` take precedence.
+
+### Local files and worktrees
+
+Two gitignored directories at the root of a checkout hold files that are never
+committed:
+
+- `.local` holds anything that should be reachable at the same path from every
+  checkout of the repository, such as working notes. In a linked git worktree it
+  is a symbolic link to the main checkout's `.local`, so all worktrees share it.
+- `.private` holds state that belongs to one checkout and must not be shared,
+  such as the repository and caches of `scripts/mvn-isolated.sh`.
+
+The `post-checkout` hook in `.githooks` creates the link when `git worktree add`
+checks out a new worktree, once the hooks directory is enabled as described in
+[Formatting](#formatting). Without the hook, create it by hand from the new
+worktree:
+
+```bash
+main=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+mkdir -p "$main/.local" && ln -s "$main/.local" .local
+```
+
 ## Server
 
 The server module is a FHIR server implementation built on top of the core
@@ -225,6 +303,96 @@ The `ui` module is a React-based administration interface for managing Pathling
 FHIR servers. It is built and rolled into the server Docker image. The module
 has its own [CONTRIBUTING.md](ui/CONTRIBUTING.md) with coding conventions,
 testing guidelines, and build instructions.
+
+## Benchmarks
+
+The `benchmark` module contains JMH benchmarks. The
+[Benchmark workflow](.github/workflows/benchmark.yml) is run manually with the
+ID of a successful build, and runs `PathlingBenchmark` against that build's
+JARs. It can instead be given the version of a release on Maven Central, in
+which case the current `PathlingBenchmark` is built against that release, so
+that releases are compared on the same workload.
+
+GitHub-hosted runners differ in speed by more than a factor of two, which is
+larger than most changes in performance. Every run therefore also benchmarks a
+fixed reference release, set by `REFERENCE_VERSION` in the workflow, on the
+same runner, and scores are reported as a multiple of the reference score. The
+reference is 9.1.0, the earliest release in which every view in
+`PathlingBenchmark` gives the same results as today. Changing it makes earlier
+runs incomparable with later ones, so they would need to be run again. Releases
+before 9.1.0 ignore the `repeat` clause of the `QuestionnaireResponseFlat`
+view, so the workflow excludes the benchmarks of that view
+(`-e QuestionnaireResponseFlat`) when it runs one of them.
+
+`PathlingBenchmark` must compile against every release that is benchmarked,
+from 8.0.0 onwards, so it can only use API that all of them have. Only classes
+whose names start with `PathlingBenchmark` are built for a release.
+
+Unless `publish` is unset, the workflow then publishes the results to the
+`gh-pages` branch, under `benchmarks/data`:
+
+- `runs/<workflow run ID>.json` - the JMH JSON output of the run.
+- `runs/<workflow run ID>-reference.json` - the JMH JSON output of the
+  reference release from the same run.
+- `index.json` - every run, with the commit and version it benchmarked and a
+  summary of its results. The version is the release, or for a build the
+  version in its POM, such as `11.0.0-SNAPSHOT`. The page labels runs with it,
+  naming a release by its tag, such as `v10.0.0`.
+
+The [benchmarks page](https://pathling.csiro.au/benchmarks)
+(`site/src/pages/benchmarks.js`) reads this data in the browser, so new runs
+appear without rebuilding the site. The site deployment preserves
+`benchmarks/data` when it replaces the contents of `gh-pages`. The page shows
+each benchmark over time, the details of each run, and comparisons of two runs.
+Comparisons use a two-sided Welch's t-test on the per-iteration scores divided
+by the reference score, with a significance level of 0.05.
+
+Above the individual benchmarks, the page shows an overall combined score and
+one for each phase (`encode`, `decode`, `plan` and `execute`, taken from the
+leading word of the method name). A combined score is the geometric mean of the
+scores relative to the reference, and its error is propagated from the errors
+of those scores assuming that they are independent. Only the benchmarks present
+in every published run are combined, so adding a benchmark does not shift the
+combined score. The scores are computed by the page
+(`site/src/benchmarks/combined.js`), not stored with the results.
+
+The timelines are annotated with releases and with changes that affected
+performance, such as the switch to the ucumate UCUM library. Unlike the
+results, the annotations are part of the site source, in
+`site/src/benchmarks/annotations.json`, so a new annotation appears when the
+site is next deployed. Each annotation has a `date` (an ISO 8601 time in UTC),
+a `kind` (`release` or `change`), a short `label` shown on the charts, and an
+optional `description` and `url`. Date a release by the commit of its tag, and
+a change by its merge:
+
+```bash
+TZ=UTC git log -1 --date=format-local:%Y-%m-%dT%H:%M:%SZ --format=%cd 'v10.0.0^{commit}'
+```
+
+```json
+{
+    "date": "2025-10-27T21:20:04Z",
+    "kind": "change",
+    "label": "UCUM engine",
+    "description": "Replaced Ucum-java with ucumate for UCUM unit conversion and comparison.",
+    "url": "https://github.com/aehrc/pathling/pull/2511"
+}
+```
+
+To publish a run by hand, for example to add a run whose artifact is still
+available:
+
+```bash
+cd site
+bun scripts/publishBenchmark.js --results benchmark-abc1234567.json \
+  --reference-results benchmark-abc1234567-reference.json --reference 9.1.0 \
+  --data-dir ../gh-pages/benchmarks/data --run-id <workflow run ID> \
+  --commit <full commit SHA> --version <version> --date 2026-01-01T00:00:00Z
+```
+
+To preview the page locally, build the site, copy a data directory to
+`site/target/site/benchmarks/data`, and run `bun run serve`. The tests for the
+page's data handling and statistics run with `bun test` in the `site` directory.
 
 ## Coding conventions
 
@@ -319,8 +487,10 @@ This repository uses multiple code formatters:
 - [EditorConfig](https://editorconfig.org/) for all other languages
 
 A pre-commit hook is provided in the `.githooks` directory that automatically
-formats staged files before each commit. To enable it, configure git to use the
-hooks directory:
+formats staged files before each commit, alongside a post-checkout hook that
+links `.local` in new worktrees (see
+[Local files and worktrees](#local-files-and-worktrees)). To enable them,
+configure git to use the hooks directory:
 
 ```bash
 git config core.hooksPath .githooks

@@ -22,7 +22,6 @@ from pyspark.sql.functions import lit
 from pyspark.sql.types import (
     ArrayType,
     BooleanType,
-    IntegerType,
     Row,
     StringType,
     StructField,
@@ -63,21 +62,20 @@ CODING_TYPE = StructType(
         StructField("code", StringType(), True),
         StructField("display", StringType(), True),
         StructField("userSelected", BooleanType(), True),
-        StructField("_fid", IntegerType(), True),
     ]
 )
 
 LOINC_URI = "http://loinc.org"
 
-CodingRow = Row("id", "system", "version", "code", "display", "userSelected", "_fid")
+CodingRow = Row("id", "system", "version", "code", "display", "userSelected")
 
 
 def snomed_coding_row(code: str):
-    return CodingRow(None, SNOMED_URI, None, code, None, None, None)
+    return CodingRow(None, SNOMED_URI, None, code, None, None)
 
 
 def loinc_coding_row(code: str):
-    return CodingRow(None, LOINC_URI, None, code, None, None, None)
+    return CodingRow(None, LOINC_URI, None, code, None, None)
 
 
 Result = Row("id", "result")

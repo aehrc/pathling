@@ -17,19 +17,15 @@
 
 package au.csiro.pathling.sql;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -37,73 +33,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 class SqlFunctionsTest {
 
   @Autowired private SparkSession spark;
-
-  @Test
-  void testPruneAnnotations() {
-    // Create a schema with both regular and synthetic fields
-    final StructType structSchema =
-        new StructType()
-            .add("id", DataTypes.StringType)
-            .add("name", DataTypes.StringType)
-            .add("_type", DataTypes.StringType)
-            .add("_version", DataTypes.StringType)
-            .add("value_scale", DataTypes.IntegerType);
-
-    // Create a dataset with a struct column and primitive columns
-    final Dataset<Row> dataset =
-        spark
-            .range(0)
-            .toDF()
-            .select(
-                ValueFunctions.pruneAnnotations(functions.lit(null).cast(structSchema))
-                    .alias("pruned"));
-
-    final StructType prunedSchema = (StructType) dataset.schema().apply(0).dataType();
-    final String[] expectedFieldNames = new String[] {"id", "name"};
-    assertArrayEquals(expectedFieldNames, prunedSchema.fieldNames());
-    for (int i = 0; i < expectedFieldNames.length; i++) {
-      assertEquals(structSchema.apply(i), prunedSchema.apply(i));
-    }
-  }
-
-  @Test
-  void testPruneAnnotationsSimpleTypes() {
-    // Test that simple types are not affected by prune_annotations
-    final Dataset<Row> dataset =
-        spark
-            .range(1)
-            .toDF("id")
-            .select(
-                functions.col("id"),
-                functions.lit("test string").as("string_val"),
-                functions.lit(42).as("int_val"),
-                functions.lit(3.14).as("double_val"),
-                functions.lit(true).as("bool_val"));
-
-    // Apply prune_annotations to all columns
-    final Dataset<Row> result =
-        dataset.select(
-            ValueFunctions.pruneAnnotations(functions.col("id")).as("pruned_id"),
-            ValueFunctions.pruneAnnotations(functions.col("string_val")).as("pruned_string"),
-            ValueFunctions.pruneAnnotations(functions.col("int_val")).as("pruned_int"),
-            ValueFunctions.pruneAnnotations(functions.col("double_val")).as("pruned_double"),
-            ValueFunctions.pruneAnnotations(functions.col("bool_val")).as("pruned_bool"));
-
-    // Verify that the values are unchanged
-    final Row row = result.first();
-    assertEquals(0L, row.getLong(0));
-    assertEquals("test string", row.getString(1));
-    assertEquals(42, row.getInt(2));
-    assertEquals(3.14, row.getDouble(3), 0.0001);
-    assertTrue(row.getBoolean(4));
-
-    // Verify that the schema types are unchanged
-    assertEquals(DataTypes.LongType, result.schema().apply("pruned_id").dataType());
-    assertEquals(DataTypes.StringType, result.schema().apply("pruned_string").dataType());
-    assertEquals(DataTypes.IntegerType, result.schema().apply("pruned_int").dataType());
-    assertEquals(DataTypes.DoubleType, result.schema().apply("pruned_double").dataType());
-    assertEquals(DataTypes.BooleanType, result.schema().apply("pruned_bool").dataType());
-  }
 
   @Test
   void testToFhirInstant() {

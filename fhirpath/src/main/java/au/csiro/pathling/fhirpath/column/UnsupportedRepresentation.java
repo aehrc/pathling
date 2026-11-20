@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.function.UnaryOperator;
 import lombok.AllArgsConstructor;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.types.DataType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -65,19 +66,17 @@ public class UnsupportedRepresentation extends ColumnRepresentation {
   }
 
   @Override
-  public @Nonnull ColumnRepresentation traverse(@Nonnull final String fieldName) {
+  public @Nonnull ColumnRepresentation traverse(
+      @Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final DataType fallback) {
     throw new UnsupportedFhirPathFeatureError(
         "Traversal is not supported for this path: " + description);
   }
 
   @Override
-  public @Nonnull ColumnRepresentation traverse(
-      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
-    return traverse(fieldName);
-  }
-
-  @Override
-  public @Nonnull ColumnRepresentation getField(@Nonnull final String fieldName) {
+  public @Nonnull ColumnRepresentation getField(
+      @Nonnull final String fieldName, @Nonnull final DataType fallback) {
     throw new UnsupportedFhirPathFeatureError(
         "Field access is not supported for this path: " + description);
   }

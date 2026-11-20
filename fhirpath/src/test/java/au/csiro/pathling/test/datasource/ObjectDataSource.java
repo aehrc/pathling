@@ -22,6 +22,7 @@ import static java.util.stream.Collectors.groupingBy;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.HashMap;
@@ -31,14 +32,23 @@ import java.util.Set;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
+/**
+ * A data source over resources built as HAPI objects, held in the Parquet on FHIR layout (T036).
+ */
 public class ObjectDataSource implements DataSource {
 
   @Nonnull private final Map<String, Dataset<Row>> data = new HashMap<>();
 
+  /**
+   * Creates a data source over resources.
+   *
+   * @param spark the Spark session
+   * @param encoders the encoders, used only for the FHIR context they carry
+   * @param resources the resources, of any mix of types
+   */
   public ObjectDataSource(
       @Nonnull final SparkSession spark,
       @Nonnull final FhirEncoders encoders,
@@ -47,8 +57,8 @@ public class ObjectDataSource implements DataSource {
         resources.stream().collect(groupingBy(IBase::fhirType));
     groupedResources.forEach(
         (resourceType, resourceList) -> {
-          final ExpressionEncoder<IBaseResource> encoder = encoders.of(resourceType);
-          final Dataset<Row> dataset = spark.createDataset(resourceList, encoder).toDF();
+          final Dataset<Row> dataset =
+              PofDatasets.fromResources(spark, encoders.getContext(), resourceType, resourceList);
           data.put(resourceType, dataset);
         });
   }

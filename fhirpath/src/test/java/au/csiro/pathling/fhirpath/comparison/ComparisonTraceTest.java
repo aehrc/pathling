@@ -23,7 +23,9 @@ import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import au.csiro.pathling.fhirpath.column.SystemDateTime;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
+import au.csiro.pathling.search.filter.DateMatcher;
 import au.csiro.pathling.sql.TraceExpression;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ch.qos.logback.classic.Level;
@@ -150,15 +152,18 @@ class ComparisonTraceTest {
   }
 
   // ---------------------------------------------------------------------------
-  // TemporalComparator — left and right each referenced twice via the two
-  // callUDF() calls inside getBounds() (one for low boundary, one for high).
+  // TemporalComparator — each operand is a System date built from traced text, and its range is
+  // read for both of its bounds.
   // ---------------------------------------------------------------------------
 
   @Test
   void temporalComparator_equalsTo_leftSingleFire() {
     final int before = appender.list.size();
     final Column tracedLeft = traceColumn(col("dt"), "temp-left");
-    final Column result = TemporalComparator.forDateTime().equalsTo(tracedLeft, lit("2023-01-15"));
+    final Column result =
+        TemporalComparator.forDateTime()
+            .equalsTo(
+                SystemDateTime.fromText(tracedLeft), SystemDateTime.fromLiteral("2023-01-15"));
     datetimeDataset(1).select(result.alias("r")).collect();
     final long fires = countTraceLogs("temp-left", before);
     assertEquals(1, fires, () -> "left fired " + fires + "× (expected 1). See issue #2594.");
@@ -168,7 +173,10 @@ class ComparisonTraceTest {
   void temporalComparator_equalsTo_rightSingleFire() {
     final int before = appender.list.size();
     final Column tracedRight = traceColumn(col("dt"), "temp-right");
-    final Column result = TemporalComparator.forDateTime().equalsTo(lit("2023-01-15"), tracedRight);
+    final Column result =
+        TemporalComparator.forDateTime()
+            .equalsTo(
+                SystemDateTime.fromLiteral("2023-01-15"), SystemDateTime.fromText(tracedRight));
     datetimeDataset(1).select(result.alias("r")).collect();
     final long fires = countTraceLogs("temp-right", before);
     assertEquals(1, fires, () -> "right fired " + fires + "× (expected 1). See issue #2594.");
@@ -178,10 +186,59 @@ class ComparisonTraceTest {
   void temporalComparator_equalsTo_leftMultiRowSingleFire() {
     final int before = appender.list.size();
     final Column tracedLeft = traceColumn(col("dt"), "temp-left-n");
-    final Column result = TemporalComparator.forDateTime().equalsTo(tracedLeft, lit("2023-01-15"));
+    final Column result =
+        TemporalComparator.forDateTime()
+            .equalsTo(
+                SystemDateTime.fromText(tracedLeft), SystemDateTime.fromLiteral("2023-01-15"));
     datetimeDataset(3).select(result.alias("r")).collect();
     final long fires = countTraceLogs("temp-left-n", before);
     assertEquals(3, fires, () -> "left fired " + fires + "× for 3 rows (expected 3). See #2594.");
+  }
+
+  @Test
+  void temporalComparator_tracedSystemDateSingleFire() {
+    // A traced System date, whose bounds the comparison reads several times, each over a memoised
+    // parse: the memoisation saves the parse, not the evaluation of the date.
+    final int before = appender.list.size();
+    final Column tracedDate = traceColumn(SystemDateTime.fromText(col("dt")), "temp-date");
+    final Column result =
+        TemporalComparator.forDateTime()
+            .lessThan(tracedDate, SystemDateTime.fromLiteral("2023-01-15"));
+    datetimeDataset(1).select(result.alias("r")).collect();
+    final long fires = countTraceLogs("temp-date", before);
+    assertEquals(1, fires, () -> "date fired " + fires + "× (expected 1). See issue #2594.");
+  }
+
+  @Test
+  void dateMatcher_tracedSystemDateSingleFire() {
+    // A date search reads both bounds of a traced System date.
+    final int before = appender.list.size();
+    final Column tracedDate = traceColumn(SystemDateTime.fromText(col("dt")), "match-date");
+    final Column result = DateMatcher.forScalarDates().match(tracedDate, "eq2023-01");
+    datetimeDataset(1).select(result.alias("r")).collect();
+    final long fires = countTraceLogs("match-date", before);
+    assertEquals(1, fires, () -> "date fired " + fires + "× (expected 1). See issue #2594.");
+  }
+
+  @Test
+  void temporalComparator_tracedTimeSingleFire() {
+    // A traced time, whose two bounds the comparison computes and reads several times.
+    final int before = appender.list.size();
+    final Column tracedTime = traceColumn(col("t"), "time");
+    final Column result = TemporalComparator.forTime().lessThan(tracedTime, lit("12:00"));
+    timeDataset(3).select(result.alias("r")).collect();
+    final long fires = countTraceLogs("time", before);
+    assertEquals(3, fires, () -> "time fired " + fires + "× for 3 rows (expected 3). See #2594.");
+  }
+
+  @Test
+  void temporalComparator_tracedTimeRightSingleFire() {
+    final int before = appender.list.size();
+    final Column tracedTime = traceColumn(col("t"), "time-right");
+    final Column result = TemporalComparator.forTime().equalsTo(lit("10:30"), tracedTime);
+    timeDataset(1).select(result.alias("r")).collect();
+    final long fires = countTraceLogs("time-right", before);
+    assertEquals(1, fires, () -> "time fired " + fires + "× (expected 1). See #2594.");
   }
 
   // ---------------------------------------------------------------------------
@@ -234,6 +291,21 @@ class ComparisonTraceTest {
     return spark.createDataFrame(
         java.util.stream.IntStream.rangeClosed(1, rows)
             .mapToObj(i -> RowFactory.create(i, "2023-01-" + String.format("%02d", i)))
+            .toList(),
+        schema);
+  }
+
+  @Nonnull
+  private Dataset<Row> timeDataset(final int rows) {
+    final StructType schema =
+        new StructType(
+            new StructField[] {
+              new StructField("id", DataTypes.IntegerType, false, Metadata.empty()),
+              new StructField("t", DataTypes.StringType, false, Metadata.empty())
+            });
+    return spark.createDataFrame(
+        java.util.stream.IntStream.rangeClosed(1, rows)
+            .mapToObj(i -> RowFactory.create(i, String.format("%02d:30", 9 + i)))
             .toList(),
         schema);
   }

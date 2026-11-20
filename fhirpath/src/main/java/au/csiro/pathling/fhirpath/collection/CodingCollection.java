@@ -20,6 +20,10 @@ package au.csiro.pathling.fhirpath.collection;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 
+import au.csiro.pathling.definition.ElementDefinition;
+import au.csiro.pathling.definition.NodeDefinition;
+import au.csiro.pathling.definition.defaults.DefaultCompositeDefinition;
+import au.csiro.pathling.definition.defaults.DefaultPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.TerminologyConcepts;
@@ -27,10 +31,6 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.CodingEquality;
 import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
-import au.csiro.pathling.fhirpath.definition.ElementDefinition;
-import au.csiro.pathling.fhirpath.definition.NodeDefinition;
-import au.csiro.pathling.fhirpath.definition.defaults.DefaultCompositeDefinition;
-import au.csiro.pathling.fhirpath.definition.defaults.DefaultPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
 import au.csiro.pathling.sql.misc.CodingToLiteral;
 import jakarta.annotation.Nonnull;
@@ -79,15 +79,13 @@ public class CodingCollection extends Collection implements StringCoercible {
    * @param type the FhirPath type
    * @param fhirType the FHIR type
    * @param definition the node definition
-   * @param extensionMapColumn the extension map column
    */
   protected CodingCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition,
-      @Nonnull final Optional<Column> extensionMapColumn) {
-    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(columnRepresentation, type, fhirType, definition);
   }
 
   /**
@@ -105,8 +103,7 @@ public class CodingCollection extends Collection implements StringCoercible {
         columnRepresentation,
         Optional.of(FhirPathType.CODING),
         Optional.of(FHIRDefinedType.CODING),
-        definition,
-        Optional.empty());
+        definition);
   }
 
   /**
@@ -145,8 +142,7 @@ public class CodingCollection extends Collection implements StringCoercible {
         lit(coding.getDisplay()).cast(DataTypes.StringType).as("display"),
         lit(coding.hasUserSelected() ? coding.getUserSelected() : null)
             .cast(DataTypes.BooleanType)
-            .as("userSelected"),
-        lit(null).cast(DataTypes.IntegerType).as("_fid"));
+            .as("userSelected"));
   }
 
   @Override

@@ -31,7 +31,10 @@ jobs:
             core:
               - 'pom.xml'
               - 'utilities/**'
+              - 'fhir-schema/**'
               - 'encoders/**'
+              - 'io/**'
+              - 'legacy-export/**'
               - 'terminology/**'
               - 'fhirpath/**'
               - 'library-api/**'
@@ -87,7 +90,9 @@ jobs:
           name: jars
           path: |
             utilities/target/utilities-*.jar
+            fhir-schema/target/fhir-schema-*.jar
             encoders/target/encoders-*.jar
+            io/target/io-*.jar
             terminology/target/terminology-*.jar
             fhirpath/target/fhirpath-*.jar
             library-api/target/library-api-*.jar
@@ -107,7 +112,10 @@ jobs:
       matrix:
         module:
           - utilities
+          - fhir-schema
           - encoders
+          - io
+          - legacy-export
           - terminology
           - fhirpath
           - library-api
@@ -215,7 +223,9 @@ jobs:
 
   test-r:
     name: Test R API
-    runs-on: ubuntu-latest
+    # Pinned because the R package cache holds native libraries linked against Ubuntu 24.04, and
+    # ubuntu-latest now resolves to Ubuntu 26.04, which no longer provides libxml2.so.2.
+    runs-on: ubuntu-24.04
     needs: detect-changes
     if: needs.detect-changes.outputs.core == 'true'
     permissions:
@@ -265,7 +275,9 @@ jobs:
     needs: [detect-changes, test-core]
     # Analysis is only meaningful once every module has reported its coverage; a partial set would
     # be published as a drop in coverage.
-    if: needs.detect-changes.outputs.core == 'true' && needs.test-core.result == 'success'
+    if: |
+      needs.detect-changes.outputs.core == 'true' &&
+      needs.test-core.result == 'success'
     permissions:
       contents: read
     steps:

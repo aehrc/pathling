@@ -19,6 +19,7 @@ package au.csiro.pathling.sql;
 
 import static org.apache.spark.sql.functions.aggregate;
 import static org.apache.spark.sql.functions.array;
+import static org.apache.spark.sql.functions.array_position;
 import static org.apache.spark.sql.functions.concat;
 import static org.apache.spark.sql.functions.element_at;
 import static org.apache.spark.sql.functions.exists;
@@ -66,6 +67,12 @@ public class SqlFunctions {
    * Deduplicates an array using custom equality comparator. Implements manual deduplication with
    * aggregate() for types requiring custom equality semantics (Quantity, Coding, temporal types).
    *
+   * <p>The array is read twice, once for the type of the empty accumulator and once as the input of
+   * the aggregation, so it is bound once, even where it is deterministic. The array of a union is
+   * the combination of its operands, and in a chain of unions each operand is the array of another,
+   * so were each reading to hold its own copy, the plan would double with every union added. The
+   * binding costs no generated code, because the aggregation and the filter have none.
+   *
    * @param arrayColumn the array column to deduplicate
    * @param equalityComparator a function that compares two elements for equality
    * @return deduplicated array column
@@ -73,40 +80,61 @@ public class SqlFunctions {
   @Nonnull
   public static Column arrayDistinctWithEquality(
       @Nonnull final Column arrayColumn, @Nonnull final BinaryOperator<Column> equalityComparator) {
-    return let(
-        arrayColumn,
-        ac -> {
-          final Column emptyTypedArray = filter(ac, x -> lit(false));
-          return aggregate(
-              ac,
-              emptyTypedArray,
-              (acc, elem) ->
-                  when(
-                          not(
-                              exists(
-                                  acc, x -> ifnull(equalityComparator.apply(x, elem), lit(false)))),
-                          concat(acc, array(elem)))
-                      .otherwise(acc));
-        });
+    return element_at(
+        transform(
+            array(arrayColumn),
+            ac -> {
+              final Column emptyTypedArray = filter(ac, x -> lit(false));
+              return aggregate(
+                  ac,
+                  emptyTypedArray,
+                  (acc, elem) ->
+                      when(
+                              not(
+                                  exists(
+                                      acc,
+                                      x -> ifnull(equalityComparator.apply(x, elem), lit(false)))),
+                              concat(acc, array(elem)))
+                          .otherwise(acc));
+            }),
+        1);
   }
 
   /**
-   * Merges and deduplicates two arrays using custom equality comparator. Concatenates the arrays
-   * and then deduplicates using the provided equality function.
+   * Deduplicates an array by a key computed once for each element, keeping the first element of
+   * each key (decision 151). Two elements are duplicates where their keys are equal, and an element
+   * whose key is null is never a duplicate, as a comparison that is empty does not make one.
    *
-   * @param leftArray the left array column
-   * @param rightArray the right array column
-   * @param equalityComparator a function that compares two elements for equality
-   * @return merged and deduplicated array column
+   * <p>The keys are computed in one pass over the array, and an element is kept where the first
+   * position of its key is its own. Only Spark's native array functions run in the pass over the
+   * pairs of elements. The array and its keys are each bound once, as {@link
+   * #arrayDistinctWithEquality} binds the array, so that a chain of unions does not double the
+   * plan.
+   *
+   * @param arrayColumn the array column to deduplicate
+   * @param key the key of an element
+   * @return deduplicated array column
    */
   @Nonnull
-  public static Column arrayUnionWithEquality(
-      @Nonnull final Column leftArray,
-      @Nonnull final Column rightArray,
-      @Nonnull final BinaryOperator<Column> equalityComparator) {
-
-    final Column combined = concat(leftArray, rightArray);
-    return arrayDistinctWithEquality(combined, equalityComparator);
+  public static Column arrayDistinctByKey(
+      @Nonnull final Column arrayColumn, @Nonnull final UnaryOperator<Column> key) {
+    return element_at(
+        transform(
+            array(arrayColumn),
+            elements ->
+                element_at(
+                    transform(
+                        array(transform(elements, key::apply)),
+                        keys ->
+                            filter(
+                                elements,
+                                (each, index) -> {
+                                  final Column own = element_at(keys, index.plus(1));
+                                  return own.isNull()
+                                      .or(array_position(keys, own).equalTo(index.plus(1)));
+                                })),
+                    1)),
+        1);
   }
 
   /**

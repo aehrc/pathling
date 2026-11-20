@@ -220,16 +220,11 @@ public class FhirPathNumber {
       return 0;
     }
 
-    // Use precision and scale to compute magnitude
-    // For BigDecimal: precision is total significant digits, scale is digits after decimal
-    // magnitude = precision - scale - 1
-
-    // However, for values like "100" that are stored without trailing zeros,
-    // we need a different approach using logarithm
-
-    // Calculate floor(log10(abs(value)))
-    final double log10 = Math.log10(value.doubleValue());
-    return (int) Math.floor(log10);
+    // The magnitude is computed exactly from the digits of the unscaled value and the scale, which
+    // a logarithm of the value as a double is not: 999999999999999.999999 rounds to 1E15 as a
+    // double, which would give a magnitude one too large. "100" is 100 with scale 0, and "1e2" is 1
+    // with scale -2, so both give 2.
+    return value.precision() - value.scale() - 1;
   }
 
   /**

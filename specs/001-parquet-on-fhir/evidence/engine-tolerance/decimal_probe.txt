@@ -1,0 +1,66 @@
+valueQuantity type: struct<value:string,unit:string,system:string,code:string>
+stored: Row(value='1.5', unit='mg', system='http://unitsofmeasure.org', code='mg')
+=== stored value text '1.50'
+  select         -> '1.5'
+  exists         -> True
+  > 1            -> True
+  = 1.5          -> True
+  + 1            -> '2.5'
+  qty > 1 'mg'   -> True
+  toString       -> '1.5'
+=== stored value text '1.2.3'
+  select         -> None
+  exists         -> False
+  > 1            -> None
+  = 1.5          -> None
+  + 1            -> None
+  qty > 1 'mg'   -> None
+  toString       -> None
+=== stored value text 'abc'
+  select         -> None
+  exists         -> False
+  > 1            -> None
+  = 1.5          -> None
+  + 1            -> None
+  qty > 1 'mg'   -> None
+  toString       -> None
+=== stored value text ''
+  select         -> None
+  exists         -> False
+  > 1            -> None
+  = 1.5          -> None
+  + 1            -> None
+  qty > 1 'mg'   -> None
+  toString       -> None
+=== stored value text ' 1.5'
+  select         -> '1.5'
+  exists         -> True
+  > 1            -> True
+  = 1.5          -> True
+  + 1            -> '2.5'
+  qty > 1 'mg'   -> True
+  toString       -> '1.5'
+=== stored value text '1e400'
+  select         -> None
+  exists         -> False
+  > 1            -> None
+  = 1.5          -> None
+  + 1            -> None
+  qty > 1 'mg'   -> None
+  toString       -> None
+=== stored value text '12345678901234567890123456789.5'
+  select         -> None
+  exists         -> False
+  > 1            -> None
+  = 1.5          -> None
+  + 1            -> None
+  qty > 1 'mg'   -> True
+  toString       -> None
+=== stored value text '0.0000001'
+  select         -> '0'
+  exists         -> True
+  > 1            -> False
+  = 1.5          -> False
+  + 1            -> '1'
+  qty > 1 'mg'   -> False
+  toString       -> '0'

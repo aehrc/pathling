@@ -27,6 +27,7 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ListTraceCollector;
 import au.csiro.pathling.fhirpath.ListTraceCollector.TraceEntry;
+import au.csiro.pathling.fhirpath.TraceCollectorProxy;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.evaluation.CollectionDataset;
@@ -40,6 +41,7 @@ import au.csiro.pathling.sql.TraceExpression;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.assertions.Assertions;
 import au.csiro.pathling.test.datasource.ObjectDataSource;
+import au.csiro.pathling.test.helpers.JsonElementRenderer;
 import ca.uhn.fhir.context.FhirContext;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -53,6 +55,7 @@ import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.HumanName;
@@ -123,7 +126,7 @@ class TraceFunctionTest {
     void trace_boolean_returnsSameValues() {
       Assertions.assertThat(evaluate("Patient.active.trace('active-check')"))
           .hasClass(BooleanCollection.class)
-          .toCanonicalResult()
+          .toExternalResult()
           .hasRowsUnordered(
               RowFactory.create("1", true),
               RowFactory.create("2", false),
@@ -134,7 +137,7 @@ class TraceFunctionTest {
     void trace_string_returnsSameValues() {
       Assertions.assertThat(evaluate("Patient.gender.trace('debug')"))
           .hasClass(StringCollection.class)
-          .toCanonicalResult()
+          .toExternalResult()
           .hasRowsUnordered(
               RowFactory.create("1", "female"),
               RowFactory.create("2", "male"),
@@ -319,11 +322,15 @@ class TraceFunctionTest {
   class CollectorTests {
 
     private ListTraceCollector collector;
+    private TraceCollectorProxy proxy;
     private DatasetEvaluator collectorEvaluator;
 
     @BeforeEach
     void setUpCollector() {
       collector = new ListTraceCollector();
+      // The collector is reached through a serialisable proxy, as in production, because a query
+      // over stored data serialises the trace expression that holds it.
+      proxy = TraceCollectorProxy.create(collector);
       final ObjectDataSource dataSource =
           new ObjectDataSource(
               spark, encoders, List.of(createPatient1(), createPatient2(), createPatient3()));
@@ -332,8 +339,13 @@ class TraceFunctionTest {
           DatasetEvaluatorBuilder.create(ResourceType.PATIENT, encoders.getContext())
               .withDataset(dataset)
               .withCrossResourceStrategy(CrossResourceStrategy.EMPTY)
-              .withTraceCollector(collector)
+              .withTraceCollector(proxy)
               .build();
+    }
+
+    @AfterEach
+    void closeProxy() {
+      proxy.close();
     }
 
     private void materialize(@Nonnull final String expression) {
@@ -387,6 +399,34 @@ class TraceFunctionTest {
           entries.stream().allMatch(e -> "string".equals(e.fhirType())),
           "Expected projected FHIR type 'string', not input type 'HumanName'");
       assertTrue(entries.stream().allMatch(e -> "fam".equals(e.label())));
+    }
+
+    @Test
+    void collector_date_capturesItsText() {
+      materialize("Patient.birthDate.trace('dob')");
+
+      assertEquals(
+          List.of("1980-05-17"), collector.getEntries().stream().map(TraceEntry::value).toList());
+    }
+
+    @Test
+    void collector_withProjectionToDate_capturesItsText() {
+      materialize("Patient.trace('dob', birthDate)");
+
+      assertEquals(
+          List.of("1980-05-17"), collector.getEntries().stream().map(TraceEntry::value).toList());
+    }
+
+    @Test
+    void collector_chainedDateTrace_innerNotDoubleEvaluated() {
+      materialize("Patient.birthDate.trace('inner').trace('outer')");
+
+      final long innerCount =
+          collector.getEntries().stream().filter(e -> "inner".equals(e.label())).count();
+      final long outerCount =
+          collector.getEntries().stream().filter(e -> "outer".equals(e.label())).count();
+      assertEquals(1, innerCount);
+      assertEquals(1, outerCount);
     }
 
     @Test
@@ -445,7 +485,13 @@ class TraceFunctionTest {
     private long countTraceValues(@Nonnull final String expression, @Nonnull final String label) {
       final SingleInstanceEvaluationResult result =
           SingleInstanceEvaluator.evaluate(
-              patientDf, "Patient", fhirContext, expression, null, null);
+              patientDf,
+              "Patient",
+              fhirContext,
+              expression,
+              null,
+              null,
+              JsonElementRenderer.of(fhirContext));
       return result.getTraces().stream()
           .filter(t -> label.equals(t.getLabel()))
           .mapToLong(t -> t.getValues().size())
@@ -592,7 +638,8 @@ class TraceFunctionTest {
               fhirContext,
               "Patient.maritalStatus.coding.trace('t') | {}",
               null,
-              null);
+              null,
+              JsonElementRenderer.of(fhirContext));
       final long emptyUnionCount =
           emptyUnion.getTraces().stream()
               .filter(t -> "t".equals(t.getLabel()))
@@ -612,7 +659,8 @@ class TraceFunctionTest {
               fhirContext,
               "Patient.maritalStatus.coding.trace('t') | Patient.maritalStatus.coding",
               null,
-              null);
+              null,
+              JsonElementRenderer.of(fhirContext));
       final long twoSideCount =
           twoSideUnion.getTraces().stream()
               .filter(t -> "t".equals(t.getLabel()))
@@ -643,7 +691,8 @@ class TraceFunctionTest {
               "Patient.maritalStatus.coding.first().trace('t')"
                   + " = Patient.maritalStatus.coding.first()",
               null,
-              null);
+              null,
+              JsonElementRenderer.of(fhirContext));
 
       final long count =
           result.getTraces().stream()
@@ -691,6 +740,7 @@ class TraceFunctionTest {
     final Patient p = new Patient();
     p.setId("Patient/1");
     p.setGender(AdministrativeGender.FEMALE);
+    p.setBirthDateElement(new DateType("1980-05-17"));
     p.setActive(true);
     p.addName().setUse(HumanName.NameUse.OFFICIAL).setFamily("Smith").addGiven("Jane");
     return p;

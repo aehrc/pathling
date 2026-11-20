@@ -17,10 +17,10 @@
 
 package au.csiro.pathling.fhirpath.collection.mixed;
 
+import au.csiro.pathling.definition.ChoiceDefinition;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.UnsupportedRepresentation;
-import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
@@ -45,7 +45,6 @@ public abstract class MixedCollection extends Collection {
   protected MixedCollection(@Nonnull final String unsupportedDescription) {
     super(
         new UnsupportedRepresentation(unsupportedDescription),
-        Optional.empty(),
         Optional.empty(),
         Optional.empty(),
         Optional.empty());

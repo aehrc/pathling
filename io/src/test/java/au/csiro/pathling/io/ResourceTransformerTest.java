@@ -1,0 +1,246 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package au.csiro.pathling.io;
+
+import static au.csiro.pathling.utilities.SparkTypes.elementTypeOf;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import jakarta.annotation.Nonnull;
+import java.nio.file.Path;
+import java.util.List;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StructType;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+/**
+ * Tests that the transform writes the types, cardinality and field order the definitions give, and
+ * nothing of the schema the source happened to be read with (FR-008, FR-012).
+ *
+ * <p>The inferred schema orders its fields alphabetically and types every value from the data
+ * alone, so a transform that carried any of it across would be visible here.
+ */
+class ResourceTransformerTest {
+
+  /** The keys are deliberately out of definition order, and one of them repeats. */
+  @Nonnull
+  private static final String PATIENT =
+      "{\"resourceType\":\"Patient\",\"gender\":\"male\",\"multipleBirthInteger\":2,"
+          + "\"birthDate\":\"1980-01-01\",\"id\":\"1\",\"active\":true,"
+          + "\"name\":[{\"family\":\"Smith\",\"given\":[\"Jane\",\"Elizabeth\"]}]}";
+
+  @Test
+  void ordersFieldsAsTheDefinitionsDeclareThem(@TempDir @Nonnull final Path directory) {
+    final Dataset<Row> transformed = transform(directory);
+
+    assertEquals(
+        List.of(
+            "resourceType", "id", "active", "name", "gender", "birthDate", "multipleBirthInteger"),
+        List.of(transformed.schema().fieldNames()));
+  }
+
+  @Test
+  void takesTypesAndCardinalityFromTheDefinitions(@TempDir @Nonnull final Path directory) {
+    final Dataset<Row> transformed = transform(directory);
+    final StructType schema = transformed.schema();
+
+    assertEquals(DataTypes.BooleanType, schema.apply("active").dataType());
+    assertEquals(DataTypes.IntegerType, schema.apply("multipleBirthInteger").dataType());
+    assertEquals(DataTypes.StringType, schema.apply("gender").dataType());
+    assertEquals(
+        DataTypes.createArrayType(DataTypes.StringType, true),
+        ((StructType) ((ArrayType) schema.apply("name").dataType()).elementType())
+            .apply("given")
+            .dataType());
+
+    final Row first = transformed.first();
+    assertEquals(Boolean.TRUE, first.getAs("active"));
+    assertEquals(2, first.<Integer>getAs("multipleBirthInteger"));
+  }
+
+  // Types and cardinality come from the definitions, never from the data (T028).
+
+  @Test
+  void storesARepeatingElementCarryingOneValueAsAnArray(@TempDir @Nonnull final Path directory) {
+    final StructType schema =
+        transform(
+                directory,
+                "Patient",
+                "{\"resourceType\":\"Patient\",\"id\":\"1\","
+                    + "\"name\":[{\"given\":[\"Jane\"]}],\"identifier\":[{\"value\":\"a\"}]}")
+            .schema();
+
+    assertTrue(schema.apply("identifier").dataType() instanceof ArrayType);
+    assertTrue(schema.apply("name").dataType() instanceof ArrayType);
+    assertEquals(
+        DataTypes.createArrayType(DataTypes.StringType, true),
+        structAt(schema, "name").apply("given").dataType());
+  }
+
+  @Test
+  void storesTheTypeTheDefinitionsGiveRatherThanTheOneInferred(
+      @TempDir @Nonnull final Path directory) {
+    // Inference types the value as a double; the definitions store a decimal as text.
+    final StructType schema =
+        transform(
+                directory,
+                "Observation",
+                "{\"resourceType\":\"Observation\",\"id\":\"1\",\"status\":\"final\","
+                    + "\"valueQuantity\":{\"value\":1.5}}")
+            .schema();
+
+    assertEquals(DataTypes.StringType, structAt(schema, "valueQuantity").apply("value").dataType());
+  }
+
+  // A structure survives only where some element beneath it is stored (T029).
+
+  @Test
+  void keepsAStructureWhoseOnlyContentIsPrimitiveMetadata(@TempDir @Nonnull final Path directory) {
+    // The metadata group is not written before M5, but the primitive it belongs to is stored as a
+    // null of its declared type, so the structure holding it is not empty (decision 72).
+    final StructType schema =
+        transform(
+                directory,
+                "Patient",
+                "{\"resourceType\":\"Patient\",\"id\":\"1\","
+                    + "\"name\":[{\"_family\":{\"id\":\"f\"}}]}")
+            .schema();
+
+    assertEquals(
+        "array<struct<family:string>>",
+        schema.apply("name").dataType().simpleString(),
+        schema.treeString());
+  }
+
+  // Every structure orders its fields as the definitions declare them (T030a).
+
+  @Test
+  void ordersTheFieldsOfNestedStructuresAsTheDefinitionsDeclareThem(
+      @TempDir @Nonnull final Path directory) {
+    final StructType schema =
+        transform(
+                directory,
+                "Patient",
+                "{\"resourceType\":\"Patient\",\"id\":\"1\","
+                    + "\"name\":[{\"given\":[\"J\"],\"use\":\"official\",\"family\":\"S\","
+                    + "\"text\":\"J S\"}],"
+                    + "\"contact\":[{\"name\":{\"period\":{\"end\":\"2020\",\"start\":\"2019\"},"
+                    + "\"family\":\"T\"}}],"
+                    + "\"extension\":[{\"valueString\":\"v\",\"url\":\"http://example.org\"}]}")
+            .schema();
+
+    assertEquals(
+        List.of("use", "text", "family", "given"), List.of(structAt(schema, "name").fieldNames()));
+    assertEquals(
+        List.of("family", "period"), List.of(structAt(schema, "contact", "name").fieldNames()));
+    assertEquals(
+        List.of("start", "end"),
+        List.of(structAt(schema, "contact", "name", "period").fieldNames()));
+    assertEquals(
+        List.of("url", "valueString"), List.of(structAt(schema, "extension").fieldNames()));
+  }
+
+  /**
+   * The variants of an open choice are ordered as the specification lists the open types, at every
+   * level an extension reaches, whichever variants each row carries and in whatever order.
+   *
+   * <p>The definition library declares no order for an open choice, and the order it reports
+   * follows the identity hashes of the type classes, which differ between runs of one build. The
+   * expected orders are written out here from the list in the R4 definition of {@code
+   * Extension.value[x]}, restricted to the variants the documents carry.
+   */
+  @Test
+  void ordersTheVariantsOfAnOpenChoiceAsTheSpecificationListsThem(
+      @TempDir @Nonnull final Path directory) {
+    final StructType schema =
+        TransformFixtures.reader()
+            .read(
+                "Patient",
+                TransformFixtures.corpus(
+                    directory,
+                    "{\"resourceType\":\"Patient\",\"id\":\"1\",\"extension\":["
+                        + "{\"url\":\"a\",\"valueReference\":{\"reference\":\"Patient/2\"}},"
+                        + "{\"url\":\"b\",\"valueCoding\":{\"code\":\"c\"}},"
+                        + "{\"url\":\"c\",\"valueAddress\":{\"city\":\"Adelaide\"}}],"
+                        + "\"address\":[{\"city\":\"Perth\",\"extension\":["
+                        + "{\"url\":\"d\",\"valueDateTime\":\"2020-01-01\"},"
+                        + "{\"url\":\"e\",\"valueBoolean\":true}]}]}",
+                    "{\"resourceType\":\"Patient\",\"id\":\"2\",\"extension\":["
+                        + "{\"url\":\"f\",\"valueString\":\"s\"},"
+                        + "{\"url\":\"g\",\"valueInteger\":1},"
+                        + "{\"url\":\"h\",\"valueDecimal\":1.5},"
+                        + "{\"url\":\"i\",\"valueCode\":\"x\"},"
+                        + "{\"url\":\"j\",\"valueBoolean\":false},"
+                        + "{\"url\":\"k\",\"extension\":["
+                        + "{\"url\":\"l\",\"valueQuantity\":{\"value\":1}},"
+                        + "{\"url\":\"m\",\"valueCoding\":{\"code\":\"n\"}},"
+                        + "{\"url\":\"o\",\"valueString\":\"p\"}]}]}"))
+            .schema();
+
+    assertEquals(
+        List.of(
+            "extension",
+            "url",
+            "valueBoolean",
+            "valueCode",
+            "valueDecimal",
+            "valueInteger",
+            "valueString",
+            "valueAddress",
+            "valueCoding",
+            "valueReference"),
+        List.of(structAt(schema, "extension").fieldNames()));
+    assertEquals(
+        List.of("url", "valueString", "valueCoding", "valueQuantity"),
+        List.of(structAt(schema, "extension", "extension").fieldNames()));
+    assertEquals(
+        List.of("url", "valueBoolean", "valueDateTime"),
+        List.of(structAt(schema, "address", "extension").fieldNames()));
+  }
+
+  @Nonnull
+  private static Dataset<Row> transform(
+      @Nonnull final Path directory,
+      @Nonnull final String resourceType,
+      @Nonnull final String document) {
+    return TransformFixtures.reader()
+        .read(resourceType, TransformFixtures.corpus(directory, document));
+  }
+
+  /** Returns the structure reached by following field names, unwrapping arrays on the way. */
+  @Nonnull
+  private static StructType structAt(
+      @Nonnull final StructType schema, @Nonnull final String... path) {
+    DataType current = schema;
+    for (final String name : path) {
+      current = ((StructType) elementTypeOf(current)).apply(name).dataType();
+    }
+    return (StructType) elementTypeOf(current);
+  }
+
+  @Nonnull
+  private static Dataset<Row> transform(@Nonnull final Path directory) {
+    final String path = TransformFixtures.corpus(directory, PATIENT);
+    return TransformFixtures.reader().read("Patient", path);
+  }
+}

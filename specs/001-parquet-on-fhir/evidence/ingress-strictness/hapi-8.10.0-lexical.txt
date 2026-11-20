@@ -1,0 +1,65 @@
+# default handler: ca.uhn.fhir.parser.LenientErrorHandler
+## l-datetime-no-tz [C6]
+in:      {"resourceType":"Patient","id":"q1","deceasedDateTime":"2020-01-01T10:00:00"}
+default: OK   {"resourceType":"Patient","id":"q1","deceasedDateTime":"2020-01-01T10:00:00"}
+strict:  OK   {"resourceType":"Patient","id":"q1","deceasedDateTime":"2020-01-01T10:00:00"}
+## l-datetime-no-seconds [C6]
+in:      {"resourceType":"Patient","id":"q2","deceasedDateTime":"2020-01-01T10:00Z"}
+default: OK   {"resourceType":"Patient","id":"q2","deceasedDateTime":"2020-01-01T10:00Z"}
+strict:  OK   {"resourceType":"Patient","id":"q2","deceasedDateTime":"2020-01-01T10:00Z"}
+## l-date-no-padding [C6]
+in:      {"resourceType":"Patient","id":"q3","birthDate":"2020-1-5"}
+default: FAIL DataFormatException: HAPI-1821: [element="birthDate"] Invalid attribute value "2020-1-5": Invalid date/time format: "2020-1-5"
+         ~ invalidValue[loc=[element="birthDate"], 2020-1-5, Invalid date/time format: "2020-1-5"]
+strict:  FAIL DataFormatException: HAPI-1821: [element="birthDate"] Invalid attribute value "2020-1-5": Invalid date/time format: "2020-1-5"
+         ~ invalidValue[loc=[element="birthDate"], 2020-1-5, Invalid date/time format: "2020-1-5"]
+## l-date-with-time [C6]
+in:      {"resourceType":"Patient","id":"q4","birthDate":"2020-01-05T00:00:00Z"}
+default: OK   {"resourceType":"Patient","id":"q4","birthDate":"2020-01-05T00:00:00Z"}
+strict:  OK   {"resourceType":"Patient","id":"q4","birthDate":"2020-01-05T00:00:00Z"}
+## l-instant-date-only [C6]
+in:      {"resourceType":"Observation","id":"q5","status":"final","code":{"text":"x"},"issued":"2020-01-05"}
+default: OK   {"resourceType":"Observation","id":"q5","status":"final","code":{"text":"x"},"issued":"2020-01-05"}
+strict:  OK   {"resourceType":"Observation","id":"q5","status":"final","code":{"text":"x"},"issued":"2020-01-05"}
+## l-instant-no-tz [C6]
+in:      {"resourceType":"Observation","id":"q6","status":"final","code":{"text":"x"},"issued":"2020-01-05T10:00:00.000"}
+default: OK   {"resourceType":"Observation","id":"q6","status":"final","code":{"text":"x"},"issued":"2020-01-05T10:00:00.000"}
+strict:  OK   {"resourceType":"Observation","id":"q6","status":"final","code":{"text":"x"},"issued":"2020-01-05T10:00:00.000"}
+## l-time-bad [C6]
+in:      {"resourceType":"Observation","id":"q7","status":"final","code":{"text":"x"},"valueTime":"25:61:00"}
+default: OK   {"resourceType":"Observation","id":"q7","status":"final","code":{"text":"x"},"valueTime":"25:61:00"}
+strict:  OK   {"resourceType":"Observation","id":"q7","status":"final","code":{"text":"x"},"valueTime":"25:61:00"}
+## l-code-whitespace [C6]
+in:      {"resourceType":"Observation","id":"q8","status":"final","code":{"coding":[{"system":"http://loinc.org","code":" 1234-5  x "}]}}
+default: OK   {"resourceType":"Observation","id":"q8","status":"final","code":{"coding":[{"system":"http://loinc.org","code":" 1234-5  x "}]}}
+strict:  OK   {"resourceType":"Observation","id":"q8","status":"final","code":{"coding":[{"system":"http://loinc.org","code":" 1234-5  x "}]}}
+## l-code-required-case [C6]
+in:      {"resourceType":"Patient","id":"q9","gender":"Male"}
+default: FAIL DataFormatException: HAPI-1821: [element="gender"] Invalid attribute value "Male": Case discrepancy detected in code value 'Male' (should be 'male')
+         ~ invalidValue[loc=[element="gender"], Male, Case discrepancy detected in code value 'Male' (should be 'male')]
+strict:  FAIL DataFormatException: HAPI-1821: [element="gender"] Invalid attribute value "Male": Case discrepancy detected in code value 'Male' (should be 'male')
+         ~ invalidValue[loc=[element="gender"], Male, Case discrepancy detected in code value 'Male' (should be 'male')]
+## l-positiveint-zero [C6]
+in:      {"resourceType":"Patient","id":"q10","multipleBirthInteger":0,"photo":[{"size":-5}]}
+default: OK   {"resourceType":"Patient","id":"q10","multipleBirthInteger":0,"photo":[{"size":-5}]}
+strict:  OK   {"resourceType":"Patient","id":"q10","multipleBirthInteger":0,"photo":[{"size":-5}]}
+## l-decimal-string-bad [C6]
+in:      {"resourceType":"Observation","id":"q11","status":"final","code":{"text":"x"},"valueQuantity":{"value":"1.2.3"}}
+default: FAIL DataFormatException: HAPI-1821: [element="value"] Invalid attribute value "1.2.3": Character array contains more than one decimal point.
+         ~ invalidValue[loc=[element="value"], 1.2.3, Character array contains more than one decimal point.]
+strict:  FAIL DataFormatException: HAPI-1821: [element="value"] Invalid attribute value "1.2.3": Character array contains more than one decimal point.
+         ~ invalidValue[loc=[element="value"], 1.2.3, Character array contains more than one decimal point.]
+## l-uuid-no-prefix [C6]
+in:      {"resourceType":"Patient","id":"q12","identifier":[{"system":"urn:ietf:rfc:3986","value":"x"}],"managingOrganization":{"reference":"Organization/1","identifier":{"system":"urn:ietf:rfc:3986","value":"6f1e"}}}
+default: OK   {"resourceType":"Patient","id":"q12","identifier":[{"system":"urn:ietf:rfc:3986","value":"x"}],"managingOrganization":{"reference":"Organization/1","identifier":{"system":"urn:ietf:rfc:3986","value":"6f1e"}}}
+strict:  OK   {"resourceType":"Patient","id":"q12","identifier":[{"system":"urn:ietf:rfc:3986","value":"x"}],"managingOrganization":{"reference":"Organization/1","identifier":{"system":"urn:ietf:rfc:3986","value":"6f1e"}}}
+## l-base64-bad [C6]
+in:      {"resourceType":"Patient","id":"q13","photo":[{"data":"not base64 !!!"}]}
+default: FAIL DataFormatException: HAPI-1821: [element="data"] Invalid attribute value "not base64 !!!": 
+         ~ invalidValue[loc=[element="data"], not base64 !!!, ]
+strict:  FAIL DataFormatException: HAPI-1821: [element="data"] Invalid attribute value "not base64 !!!": 
+         ~ invalidValue[loc=[element="data"], not base64 !!!, ]
+## l-string-whitespace-only [C6]
+in:      {"resourceType":"Patient","id":"q14","name":[{"family":"   "}]}
+default: OK   {"resourceType":"Patient","id":"q14"}
+strict:  OK   {"resourceType":"Patient","id":"q14"}

@@ -32,7 +32,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>10.0.0</version>
+    <version>11.0.0-SNAPSHOT</version>
   </parent>
   <artifactId>encoders</artifactId>
   <packaging>jar</packaging>
@@ -112,17 +112,10 @@
       <artifactId>hapi-fhir-structures-r4</artifactId>
     </dependency>
 
-    <!-- UCUM -->
+    <!-- UCUM, whose version and exclusions are managed in the root POM. -->
     <dependency>
       <groupId>io.github.fhnaumann</groupId>
       <artifactId>ucumate-core</artifactId>
-      <version>1.0.8</version>
-      <exclusions>
-        <exclusion>
-          <groupId>io.github.fhnaumann</groupId>
-          <artifactId>ucumate-test-utils</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
 
     <dependency>

@@ -1,0 +1,178 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package au.csiro.pathling.fhirpath.encoding;
+
+import au.csiro.pathling.encoders.ExtensionSupport;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.StructType;
+import org.hl7.fhir.r4.model.Coding;
+
+/**
+ * Decodes a Coding from a row by field name, against the schema of the structure it is stored in
+ * (T091, FR-031).
+ *
+ * <p>A stored Coding need not have the canonical structure of {@link CodingSchema#DATA_TYPE}. A
+ * pruned schema carries only the fields the data populates, in the order of the definition, and may
+ * add an inline {@code extension}. So the position of each Coding field is resolved from the
+ * structure's field names, and an absent field decodes as null.
+ *
+ * <p>The positions are resolved once per schema, not per row. They depend on the names of the
+ * structure's fields alone, so decoders are cached by the list of those names, which bounds the
+ * cache by the ways a Coding's fields can be named and ordered rather than by every type beneath
+ * them. Every row that Spark hands a function from one column shares one schema instance, so each
+ * thread keeps the schema and decoder it last used, and reuses the decoder while the schema is the
+ * same instance; any other schema is looked up by its field names.
+ *
+ * <p>A row without a schema, as {@link org.apache.spark.sql.RowFactory} builds it, can only be read
+ * by position, so it is read as the canonical structure.
+ *
+ * @author Piotr Szul
+ */
+public final class CodingDecoder {
+
+  /**
+   * The fields a Coding structure may carry: the elements of a Coding and its inline extensions.
+   */
+  @Nonnull
+  private static final List<String> CODING_FIELDS =
+      List.of(
+          CodingSchema.ID_FIELD,
+          CodingSchema.SYSTEM_FIELD,
+          CodingSchema.VERSION_FIELD,
+          CodingSchema.CODE_FIELD,
+          CodingSchema.DISPLAY_FIELD,
+          CodingSchema.USER_SELECTED_FIELD,
+          ExtensionSupport.EXTENSION_ELEMENT_NAME());
+
+  /** The position that stands for a field the structure does not carry. */
+  private static final int ABSENT = -1;
+
+  @Nonnull
+  private static final CodingDecoder CANONICAL =
+      new CodingDecoder(Arrays.asList(CodingSchema.DATA_TYPE.fieldNames()));
+
+  @Nonnull
+  private static final Map<List<String>, CodingDecoder> BY_FIELD_NAMES = new ConcurrentHashMap<>();
+
+  /**
+   * The schema last decoded and its decoder, shared by every thread. Rows from one column arrive in
+   * runs, so this usually answers without a lookup; tasks decoding columns of other schemas at the
+   * same time replace it, which costs them a lookup by field names and nothing else.
+   */
+  @Nonnull
+  private static final AtomicReference<Entry<StructType, CodingDecoder>> LAST_USED =
+      new AtomicReference<>(new SimpleImmutableEntry<>(CodingSchema.DATA_TYPE, CANONICAL));
+
+  private final int systemIndex;
+
+  private final int versionIndex;
+
+  private final int codeIndex;
+
+  private final int displayIndex;
+
+  private final int userSelectedIndex;
+
+  private CodingDecoder(@Nonnull final List<String> fieldNames) {
+    if (fieldNames.stream().noneMatch(CODING_FIELDS::contains)) {
+      throw new IllegalArgumentException(
+          "Expected a Coding structure with at least one of the fields "
+              + CODING_FIELDS
+              + ", but the structure has the fields "
+              + fieldNames);
+    }
+    this.systemIndex = fieldNames.indexOf(CodingSchema.SYSTEM_FIELD);
+    this.versionIndex = fieldNames.indexOf(CodingSchema.VERSION_FIELD);
+    this.codeIndex = fieldNames.indexOf(CodingSchema.CODE_FIELD);
+    this.displayIndex = fieldNames.indexOf(CodingSchema.DISPLAY_FIELD);
+    this.userSelectedIndex = fieldNames.indexOf(CodingSchema.USER_SELECTED_FIELD);
+  }
+
+  /**
+   * Returns the decoder for a Coding structure, resolving the positions of its fields if they have
+   * not been resolved for that schema already.
+   *
+   * @param schema the schema of the structure, or null for a row without a schema
+   * @return the decoder for that schema
+   * @throws IllegalArgumentException if the structure carries no field a Coding may have
+   */
+  @Nonnull
+  public static CodingDecoder forSchema(@Nullable final StructType schema) {
+    if (schema == null) {
+      return CANONICAL;
+    }
+    final Entry<StructType, CodingDecoder> last = LAST_USED.get();
+    // Rows from one column share one schema instance, so an identity check suffices here, and it
+    // avoids hashing the schema for every row.
+    if (last.getKey() == schema) {
+      return last.getValue();
+    }
+    final CodingDecoder decoder =
+        BY_FIELD_NAMES.computeIfAbsent(List.of(schema.fieldNames()), CodingDecoder::new);
+    LAST_USED.set(new SimpleImmutableEntry<>(schema, decoder));
+    return decoder;
+  }
+
+  /**
+   * Decodes a Coding from a row, by the names of the fields in the row's schema.
+   *
+   * @param row the row to decode
+   * @return the Coding, or null if the row is null
+   * @throws IllegalArgumentException if the row's structure carries no field a Coding may have
+   */
+  @Nullable
+  public static Coding decodeRow(@Nullable final Row row) {
+    return row == null ? null : forSchema(row.schema()).decode(row);
+  }
+
+  /**
+   * Decodes a Coding from a row of the schema this decoder was resolved for.
+   *
+   * @param row the row to decode
+   * @return the Coding, or null if the row is null
+   */
+  @Nullable
+  public Coding decode(@Nullable final Row row) {
+    if (row == null) {
+      return null;
+    }
+    final Coding coding = new Coding();
+    coding.setSystem(stringAt(row, systemIndex));
+    coding.setVersion(stringAt(row, versionIndex));
+    coding.setCode(stringAt(row, codeIndex));
+    coding.setDisplay(stringAt(row, displayIndex));
+    if (userSelectedIndex != ABSENT && !row.isNullAt(userSelectedIndex)) {
+      coding.setUserSelected(row.getBoolean(userSelectedIndex));
+    }
+    return coding;
+  }
+
+  @Nullable
+  private static String stringAt(@Nonnull final Row row, final int index) {
+    return index == ABSENT ? null : row.getString(index);
+  }
+}

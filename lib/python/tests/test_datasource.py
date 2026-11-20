@@ -15,12 +15,15 @@
 # limitations under the License.
 #
 
+import json
 import os
 from tempfile import TemporaryDirectory
+from uuid import uuid4
 
 from flask import Response
+from py4j.protocol import Py4JJavaError
 from pyspark.sql import DataFrame, Row
-from pytest import fixture
+from pytest import fixture, mark, raises
 
 from pathling.datasource import DataSource
 
@@ -188,6 +191,42 @@ def test_datasource_parquet(parquet_test_data_dir, temp_parquet_dir, pathling_ct
     ]
 
 
+def write_divergent_parquet(spark, warehouse: str) -> str:
+    """
+    Writes two batches of Patient rows whose schemas diverge in both directions into one Parquet
+    directory, as two appends of one file each, and returns the directory's path.
+    """
+    table = os.path.join(warehouse, "Patient.parquet")
+    spark.createDataFrame([Row(id="p1", gender="male")]).coalesce(1).write.mode(
+        "overwrite"
+    ).parquet(table)
+    spark.createDataFrame([Row(id="p2", birthDate="1990-01-01")]).coalesce(
+        1
+    ).write.mode("append").parquet(table)
+    return table
+
+
+def test_datasource_parquet_merges_divergent_files(func_temp_dir, pathling_ctx):
+    write_divergent_parquet(pathling_ctx.spark, func_temp_dir)
+
+    patients = pathling_ctx.read.parquet(func_temp_dir).read("Patient")
+
+    assert {"id", "gender", "birthDate"} <= set(patients.columns)
+    assert patients.count() == 2
+
+
+def test_datasource_parquet_with_supplied_schemas(func_temp_dir, pathling_ctx):
+    table = write_divergent_parquet(pathling_ctx.spark, func_temp_dir)
+    union = pathling_ctx.spark.read.option("mergeSchema", "true").parquet(table).schema
+
+    patients = pathling_ctx.read.parquet(
+        func_temp_dir, schemas={"Patient": union}
+    ).read("Patient")
+
+    assert patients.schema == union
+    assert patients.count() == 2
+
+
 def test_datasource_delta(delta_test_data_dir, temp_delta_dir, pathling_ctx):
     pathling_ctx.read.delta(delta_test_data_dir).write.delta(temp_delta_dir)
     data_source = pathling_ctx.read.delta(temp_delta_dir)
@@ -212,6 +251,86 @@ def test_datasource_delta_merge(delta_test_data_dir, temp_delta_dir, pathling_ct
     ]
 
 
+PREVIOUS_LAYOUT_REFUSAL = (
+    "The Patient data is stored in the layout written by earlier releases of Pathling"
+)
+
+
+def write_previous_layout(pathling_ctx, kind: str, warehouse: str):
+    """
+    Writes Patients carrying the root versioned id that the layout of earlier releases stores
+    beside every resource id, through the given kind of storage, and returns a function that
+    opens a data source over them, taking the layout detection setting.
+    """
+    spark = pathling_ctx.spark
+    patients = spark.createDataFrame(
+        [Row(id="p1", id_versioned="Patient/p1/_history/1", gender="female")]
+    )
+    table = os.path.join(warehouse, "Patient.parquet")
+    if kind == "parquet":
+        patients.write.parquet(table)
+        return lambda detection: pathling_ctx.read.parquet(
+            warehouse, layout_detection=detection
+        )
+    if kind == "delta":
+        patients.write.format("delta").save(table)
+        return lambda detection: pathling_ctx.read.delta(
+            warehouse, layout_detection=detection
+        )
+    database = "previous_" + uuid4().hex
+    spark.sql(f"CREATE DATABASE {database}")
+    patients.write.format("delta").saveAsTable(f"{database}.Patient")
+    return lambda detection: pathling_ctx.read.tables(
+        schema=database, layout_detection=detection
+    )
+
+
+@mark.parametrize("kind", ["parquet", "delta", "tables"])
+def test_previous_layout_is_refused(kind, func_temp_dir, pathling_ctx):
+    open_source = write_previous_layout(pathling_ctx, kind, func_temp_dir)
+
+    with raises(Py4JJavaError) as error:
+        open_source(True).read("Patient")
+
+    assert "UnsupportedLayoutException" in str(error.value)
+    assert PREVIOUS_LAYOUT_REFUSAL in str(error.value)
+    assert "Re-import the data from its source" in str(error.value)
+
+
+@mark.parametrize("kind", ["parquet", "delta", "tables"])
+def test_layout_detection_opt_out_permits_the_read(kind, func_temp_dir, pathling_ctx):
+    open_source = write_previous_layout(pathling_ctx, kind, func_temp_dir)
+
+    patients = open_source(False).read("Patient")
+
+    assert "id_versioned" in patients.columns
+    assert patients.count() == 1
+
+
+def test_layout_detection_opt_out_is_scoped_to_one_source(func_temp_dir, pathling_ctx):
+    open_source = write_previous_layout(pathling_ctx, "parquet", func_temp_dir)
+    opted_out = open_source(False)
+
+    assert opted_out.read("Patient").count() == 1
+    with raises(Py4JJavaError):
+        pathling_ctx.read.parquet(func_temp_dir).read("Patient")
+
+
+@mark.parametrize("layout_detection", [True, False])
+def test_conforming_data_reads_alike_with_and_without_layout_detection(
+    layout_detection, parquet_test_data_dir, delta_test_data_dir, pathling_ctx
+):
+    parquet = pathling_ctx.read.parquet(
+        parquet_test_data_dir, layout_detection=layout_detection
+    )
+    delta = pathling_ctx.read.delta(
+        delta_test_data_dir, layout_detection=layout_detection
+    )
+
+    assert parquet_query(parquet).collect() == [ResultRow(71)]
+    assert delta_query(delta).collect() == [ResultRow(71)]
+
+
 def test_datasource_tables(ndjson_test_data_dir, pathling_ctx):
     pathling_ctx.read.ndjson(ndjson_test_data_dir).write.tables()
 
@@ -232,6 +351,116 @@ def test_datasource_tables_schema(ndjson_test_data_dir, pathling_ctx):
     assert result.collect() == [
         ResultRow(71),
     ]
+
+
+def write_patients(directory: str, patients: list) -> str:
+    """
+    Writes the given Patient resources to an NDJSON file in a new directory, and returns the
+    directory's path.
+    """
+    os.makedirs(directory)
+    with open(os.path.join(directory, "Patient.ndjson"), "w") as file:
+        file.writelines(
+            json.dumps({"resourceType": "Patient", **patient}) + "\n"
+            for patient in patients
+        )
+    return directory
+
+
+def new_database(spark) -> str:
+    """Creates a database of its own for one test, and returns its name."""
+    database = "tables_" + uuid4().hex
+    spark.sql(f"CREATE DATABASE {database}")
+    return database
+
+
+def table_provider(spark, table: str) -> str:
+    """Returns the format the catalog records for a table, such as "delta" or "parquet"."""
+    rows = spark.sql(f"DESCRIBE TABLE EXTENDED {table}").collect()
+    return next(row.data_type for row in rows if row.col_name == "Provider").lower()
+
+
+def test_datasource_tables_delta_format_takes_wider_append(func_temp_dir, pathling_ctx):
+    spark = pathling_ctx.spark
+    database = new_database(spark)
+    narrow = write_patients(
+        os.path.join(func_temp_dir, "narrow"), [{"id": "p1", "gender": "male"}]
+    )
+    wide = write_patients(
+        os.path.join(func_temp_dir, "wide"),
+        [{"id": "p2", "gender": "female", "birthDate": "1990-01-01"}],
+    )
+
+    pathling_ctx.read.ndjson(narrow).write.tables(schema=database, format="delta")
+    # The first batch's fitted schema lacks the element the second carries.
+    assert "birthDate" not in spark.table(f"{database}.Patient").columns
+    pathling_ctx.read.ndjson(wide).write.tables(
+        schema=database, save_mode="append", format="delta"
+    )
+
+    patients = spark.table(f"{database}.Patient")
+    assert table_provider(spark, f"{database}.Patient") == "delta"
+    assert "birthDate" in patients.columns
+    assert sorted(row.id for row in patients.collect()) == ["p1", "p2"]
+
+
+def test_datasource_tables_delta_format_takes_second_merge(func_temp_dir, pathling_ctx):
+    spark = pathling_ctx.spark
+    database = new_database(spark)
+    first = write_patients(
+        os.path.join(func_temp_dir, "first"), [{"id": "p1", "gender": "male"}]
+    )
+    second = write_patients(
+        os.path.join(func_temp_dir, "second"),
+        [
+            {"id": "p1", "gender": "female"},
+            {"id": "p2", "gender": "other", "birthDate": "1990-01-01"},
+        ],
+    )
+
+    pathling_ctx.read.ndjson(first).write.tables(
+        schema=database, save_mode="merge", format="delta"
+    )
+    pathling_ctx.read.ndjson(second).write.tables(
+        schema=database, save_mode="merge", format="delta"
+    )
+
+    patients = spark.table(f"{database}.Patient")
+    assert table_provider(spark, f"{database}.Patient") == "delta"
+    assert sorted((row.id, row.gender) for row in patients.collect()) == [
+        ("p1", "female"),
+        ("p2", "other"),
+    ]
+
+
+def test_datasource_tables_format_without_schema(func_temp_dir, pathling_ctx):
+    spark = pathling_ctx.spark
+    database = new_database(spark)
+    patients = write_patients(
+        os.path.join(func_temp_dir, "patients"), [{"id": "p1", "gender": "male"}]
+    )
+    previous = spark.catalog.currentDatabase()
+    spark.catalog.setCurrentDatabase(database)
+    try:
+        pathling_ctx.read.ndjson(patients).write.tables(format="delta")
+    finally:
+        spark.catalog.setCurrentDatabase(previous)
+
+    assert table_provider(spark, f"{database}.Patient") == "delta"
+
+
+def test_datasource_tables_default_format(func_temp_dir, pathling_ctx):
+    spark = pathling_ctx.spark
+    database = new_database(spark)
+    patients = write_patients(
+        os.path.join(func_temp_dir, "patients"), [{"id": "p1", "gender": "male"}]
+    )
+
+    pathling_ctx.read.ndjson(patients).write.tables(schema=database)
+
+    default_format = spark.conf.get("spark.sql.sources.default").lower()
+    assert table_provider(spark, f"{database}.Patient") == default_format
+    assert spark.table(f"{database}.Patient").count() == 1
 
 
 def test_datasource_bulk_with_temp_dir(pathling_ctx, bulk_server):

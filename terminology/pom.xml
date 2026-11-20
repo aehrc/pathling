@@ -26,7 +26,7 @@
   <parent>
     <artifactId>pathling</artifactId>
     <groupId>au.csiro.pathling</groupId>
-    <version>10.0.0</version>
+    <version>11.0.0-SNAPSHOT</version>
   </parent>
   <artifactId>terminology</artifactId>
   <packaging>jar</packaging>
@@ -80,10 +80,17 @@
            codec expected by Spark 4's Parquet 1.15.x. As a Spark package,
            library-runtime must never bundle its own Parquet; Spark supplies it
            on the runtime classpath. Exclude Delta Kernel's copy so the single
-           Spark-provided Parquet is used everywhere. -->
+           Spark-provided Parquet is used everywhere. Log4j is excluded for the
+           same reason: Delta 4.2 brings it in through unitycatalog-client, and
+           library-runtime would otherwise bundle a second Log4j and SLF4J
+           provider alongside the ones Spark supplies. -->
       <exclusions>
         <exclusion>
           <groupId>org.apache.parquet</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
           <artifactId>*</artifactId>
         </exclusion>
       </exclusions>

@@ -28,8 +28,6 @@ public class PathlingUdfRegistrar extends AbstractUdfRegistrar {
         .register(new CodingToLiteral())
         .register(new DecimalToLiteral())
         .register(new ToNull())
-        .register(new LowBoundaryForDateTime())
-        .register(new HighBoundaryForDateTime())
         .register(new LowBoundaryForTime())
         .register(new HighBoundaryForTime())
         .register(new QuantityToLiteral())
