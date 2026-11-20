@@ -150,7 +150,12 @@ async function mockSaveSqlQueryLibrary(page: Page): Promise<() => void> {
     title: "Inline SQL query",
   };
   let saved = false;
-  const { promise: released, resolve: release } = Promise.withResolvers<void>();
+  // The executor form rather than Promise.withResolvers, which needs Node 22
+  // and the CI runner's default Node may be older.
+  let release = () => {};
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
   await page.route(/\/Library$/, async (route) => {
     saved = true;
     await route.fulfill({
