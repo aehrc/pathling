@@ -387,8 +387,8 @@ class ConversionLogic {
           // Date format: YYYY or YYYY-MM or YYYY-MM-DD
           let(value, v -> SystemDateTime.tryFromText(when(v.rlike(DATE_REGEX), v)));
       case DATETIME ->
-          // The date part is the text before the time, which a dateTime of a date's precision
-          // lacks.
+          // The date part is the text before the T. A dateTime with no time has no T, and is kept
+          // whole.
           SystemDateTime.fromText(substring_index(SystemDateTime.text(value), "T", 1));
       default -> SystemDateTime.empty();
     };
@@ -415,7 +415,7 @@ class ConversionLogic {
           // Supports partial precision: YYYY, YYYY-MM, YYYY-MM-DD, YYYY-MM-DDThh, etc.
           let(value, v -> SystemDateTime.tryFromText(when(v.rlike(DATETIME_REGEX), v)));
       case DATE ->
-          // The text of a date is the text of the dateTime of its precision.
+          // A date's text is also a valid dateTime text, of the same precision and with no time.
           SystemDateTime.fromText(SystemDateTime.text(value));
       default -> SystemDateTime.empty();
     };

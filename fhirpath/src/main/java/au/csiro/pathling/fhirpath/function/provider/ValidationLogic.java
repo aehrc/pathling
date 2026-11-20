@@ -264,7 +264,9 @@ class ValidationLogic {
           // String can be converted only if it matches the date format: YYYY or YYYY-MM or
           // YYYY-MM-DD, and names a date that exists.
           let(value, v -> v.rlike(DATE_REGEX).and(isDate(v)));
-      case DATETIME -> lit(true);
+      case DATETIME ->
+          // Every dateTime has a date part.
+          lit(true);
       // Other types cannot be converted.
       default -> lit(false);
     };
@@ -290,7 +292,9 @@ class ValidationLogic {
           // Supports partial precision: YYYY, YYYY-MM, YYYY-MM-DD, YYYY-MM-DDThh, etc.
           // It must also name a date and time that exist.
           let(value, v -> v.rlike(DATETIME_REGEX).and(isDate(v)));
-      case DATE -> lit(true);
+      case DATE ->
+          // Every date is also a dateTime of its precision.
+          lit(true);
       // Other types cannot be converted.
       default -> lit(false);
     };
