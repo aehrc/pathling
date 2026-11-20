@@ -14,6 +14,13 @@ inputs:
     description: JDK distribution to use.
     required: false
     default: zulu
+  # With Maven 3.10.0, central-publishing-maven-plugin leaves maven-metadata-local.xml at the
+  # artifactId level of its bundle, and Central rejects the bundle as having content without a
+  # POM. See https://github.com/mavenplugins/central-publishing-maven-plugin/issues/78.
+  maven-version:
+    description: Maven version to install.
+    required: false
+    default: "3.9.16"
   enable-sonar-cache:
     description: Enable SonarQube cache.
     required: false
@@ -29,21 +36,17 @@ runs:
         distribution: ${{ inputs.distribution }}
 
     # The Maven download is cached because Maven Central rate-limits it (HTTP 429) often enough to
-    # fail jobs. setup-maven uses a copy in the tool cache when there is one. The version here must
-    # match the one below.
+    # fail jobs. setup-maven uses a copy in the tool cache when there is one.
     - name: Cache Maven
       uses: actions/cache@v4
       with:
-        path: ${{ runner.tool_cache }}/maven/3.9.16
-        key: ${{ runner.os }}-${{ runner.arch }}-maven-dist-3.9.16
+        path: ${{ runner.tool_cache }}/maven/${{ inputs.maven-version }}
+        key: ${{ runner.os }}-${{ runner.arch }}-maven-dist-${{ inputs.maven-version }}
 
-    # With Maven 3.10.0, central-publishing-maven-plugin leaves maven-metadata-local.xml at the
-    # artifactId level of its bundle, and Central rejects the bundle as having content without a
-    # POM. See https://github.com/mavenplugins/central-publishing-maven-plugin/issues/78.
     - name: Set up Maven
       uses: stCarolas/setup-maven@v5.1
       with:
-        maven-version: 3.9.16
+        maven-version: ${{ inputs.maven-version }}
 
     - name: Cache local Maven repository
       uses: actions/cache@v4

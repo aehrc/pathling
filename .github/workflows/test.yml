@@ -119,12 +119,6 @@ jobs:
           - terminology
           - fhirpath
           - library-api
-        include:
-          # Each terminology fork fills its 4 GB heap and uses more memory off-heap. Even two forks
-          # leave the 16 GB runner with little free memory and no swap, and with one fork per
-          # processor the runner has been lost mid-run.
-          - module: terminology
-            fork-count: 2
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -148,8 +142,7 @@ jobs:
       - name: Run tests
         run: |
           mvn --batch-mode verify \
-          -pl ${{ matrix.module }} \
-          -Dpathling.testForkCount=${{ matrix.fork-count || '1C' }}
+          -pl ${{ matrix.module }}
         timeout-minutes: 40
 
       # The coverage and report files are collected into a single archive so that the SonarCloud job
