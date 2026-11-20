@@ -68,13 +68,7 @@ public class ExportDataSourceBuilder {
 
     // Apply the _since filter.
     if (since != null) {
-      dataSource =
-          dataSource.map(
-              rowDataset ->
-                  rowDataset.filter(
-                      "meta.lastUpdated IS NULL OR meta.lastUpdated >= '"
-                          + since.getValueAsString()
-                          + "'"));
+      dataSource = dataSource.map(rowDataset -> LastUpdatedFilter.since(rowDataset, since));
     }
 
     // Apply the patient compartment filter if patient ids were specified.

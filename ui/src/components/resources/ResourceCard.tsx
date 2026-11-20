@@ -219,7 +219,16 @@ export function ResourceCard({ resource, fhirBaseUrl, onDelete }: ResourceCardPr
               </IconButton>
             </Tooltip>
             <ScrollArea style={{ maxHeight: 300 }}>
-              <Code size="1" style={{ display: "block", whiteSpace: "pre-wrap", padding: "6px" }}>
+              {/* Break long unbroken values (URLs, base64 data) so they cannot widen the card. */}
+              <Code
+                size="1"
+                style={{
+                  display: "block",
+                  whiteSpace: "pre-wrap",
+                  overflowWrap: "anywhere",
+                  padding: "6px",
+                }}
+              >
                 {JSON.stringify(resource, null, 2)}
               </Code>
             </ScrollArea>

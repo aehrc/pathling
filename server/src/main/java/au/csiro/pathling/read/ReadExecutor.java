@@ -17,17 +17,15 @@
 
 package au.csiro.pathling.read;
 
-import static java.util.Objects.requireNonNull;
-
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.ResourceNotFoundError;
+import au.csiro.pathling.io.ResourceEncoding;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.springframework.stereotype.Component;
 
@@ -43,18 +41,18 @@ public class ReadExecutor {
 
   @Nonnull private final DataSource dataSource;
 
-  @Nonnull private final FhirEncoders fhirEncoders;
+  @Nonnull private final PathlingContext pathlingContext;
 
   /**
    * Constructs a new ReadExecutor.
    *
    * @param dataSource the data source containing the resources to read
-   * @param fhirEncoders the encoders for converting Spark rows to FHIR resources
+   * @param pathlingContext the Pathling context, used to decode rows into FHIR resources
    */
   public ReadExecutor(
-      @Nonnull final DataSource dataSource, @Nonnull final FhirEncoders fhirEncoders) {
+      @Nonnull final DataSource dataSource, @Nonnull final PathlingContext pathlingContext) {
     this.dataSource = dataSource;
-    this.fhirEncoders = fhirEncoders;
+    this.pathlingContext = pathlingContext;
   }
 
   /**
@@ -82,12 +80,9 @@ public class ReadExecutor {
     // Filter by ID.
     final Dataset<Row> filtered = dataset.filter(dataset.col("id").equalTo(resourceId));
 
-    // Get the encoder for this resource type.
-    final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(resourceTypeCode);
-    requireNonNull(encoder, "No encoder found for resource type: " + resourceTypeCode);
-
-    // Collect results.
-    final List<IBaseResource> resources = filtered.as(encoder).collectAsList();
+    // Decode the matching rows into resources.
+    final List<IBaseResource> resources =
+        ResourceEncoding.decode(pathlingContext, resourceTypeCode, filtered);
 
     if (resources.isEmpty()) {
       throw new ResourceNotFoundError(resourceTypeCode + " with ID '" + resourceId + "' not found");

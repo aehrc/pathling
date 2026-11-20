@@ -22,8 +22,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.cache.CacheableDatabase;
-import au.csiro.pathling.config.StorageConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
@@ -69,8 +67,6 @@ class CreateProviderTest {
 
   @Autowired private PathlingContext pathlingContext;
 
-  @Autowired private FhirEncoders fhirEncoders;
-
   @Autowired private FhirContext fhirContext;
 
   @Autowired private au.csiro.pathling.config.ServerConfiguration configuration;
@@ -90,10 +86,8 @@ class CreateProviderTest {
     updateExecutor =
         new UpdateExecutor(
             pathlingContext,
-            fhirEncoders,
             tempDatabasePath.toAbsolutePath().toString(),
             cacheableDatabase,
-            new StorageConfiguration(),
             mock(QueryableDataSource.class));
 
     // Create the CreateProvider.

@@ -53,11 +53,6 @@ pathling:
     # prevents large numbers of small updates causing poor subsequent query performance.
     compactionThreshold: 10
 
-    # When enabled, Delta Lake merge operations will automatically evolve the table schema to
-    # accommodate new columns present in the incoming data. This is useful when the FHIR encoder
-    # adds new fields (e.g. synthetic columns) that are not yet present in an existing table.
-    schemaAutoMerge: false
-
   query:
     # Setting this option to true will enable additional logging relating to the query plan used to
     # execute queries.
@@ -117,6 +112,32 @@ pathling:
   # configuration response at /.well-known/smart-configuration as admin_ui_client_id.
   # adminUi:
   #   clientId: [client ID]
+
+  # This section configures the Model Context Protocol (MCP) endpoint at /mcp, which gives AI
+  # assistants read-only access to the data through tools.
+  mcp:
+    # Enables the MCP endpoint.
+    enabled: false
+
+    # The public URL of the MCP endpoint, as users enter it into their MCP client. When unset, it
+    # is derived from each request's Host, Forwarded and X-Forwarded-* headers. Those headers are
+    # chosen by the caller, so set this wherever authorization is enabled.
+    # resourceUrl: [MCP endpoint URL]
+
+    # The largest number of resources that the search tool will return.
+    maxSearchCount: 100
+
+    # The largest number of rows that the view and SQL tools will return.
+    maxRows: 1000
+
+    auth:
+      # The issuer of access tokens accepted at the MCP endpoint, when authorization is enabled.
+      # Defaults to pathling.auth.issuer.
+      # issuer: [issuer]
+
+      # The scopes advertised in the protected resource metadata, which MCP clients request when
+      # they sign in.
+      scopesSupported: []
 
   # This section configures HTTP caching response headers.
   httpCaching:

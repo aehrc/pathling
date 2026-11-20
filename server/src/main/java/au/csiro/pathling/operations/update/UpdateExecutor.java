@@ -21,24 +21,21 @@ import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.cache.CacheableDatabase;
-import au.csiro.pathling.config.StorageConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.DynamicDeltaSource;
-import au.csiro.pathling.io.SchemaDrift;
+import au.csiro.pathling.io.ResourceEncoding;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.sink.DataSinkBuilder;
+import au.csiro.pathling.library.io.source.DatasetSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
-import io.delta.tables.DeltaMergeBuilder;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
-import java.util.Collections;
 import java.util.List;
-import java.util.SortedSet;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -57,22 +54,20 @@ public class UpdateExecutor {
 
   @Nonnull private final PathlingContext pathlingContext;
 
-  @Nonnull private final FhirEncoders fhirEncoders;
-
   @Nonnull private final String databasePath;
 
   @Nonnull private final CacheableDatabase cacheableDatabase;
 
-  private final boolean schemaAutoMerge;
-
   @Nonnull private final QueryableDataSource dataSource;
 
   /**
-   * Per-resource-code locks serialising the create-new-table branch of {@link #merge(String,
-   * List)}. Without this, concurrent first-creates of the same resource type can all pass the
-   * table-existence check and race the initial write, failing every loser with a Delta concurrency
-   * error. This executor is a singleton component, so an instance-scoped map covers the whole
-   * server process; cross-process coordination is out of scope.
+   * Per-resource-code locks serialising writes that create a new table in {@link #merge(String,
+   * List)}. The library's merge creates a missing table with a write that fails if the table
+   * already exists, so without this, concurrent first-creates of the same resource type could all
+   * find the table missing and race the initial write, failing every loser with an error. Inside
+   * the lock, the loser of a race finds the table already created and merges into it instead. This
+   * executor is a singleton component, so an instance-scoped map covers the whole server process;
+   * cross-process coordination is out of scope.
    */
   @Nonnull
   private final ConcurrentMap<String, Object> tableCreationLocks = new ConcurrentHashMap<>();
@@ -80,27 +75,21 @@ public class UpdateExecutor {
   /**
    * Constructs a new UpdateExecutor.
    *
-   * @param pathlingContext the Pathling context for Spark operations
-   * @param fhirEncoders encoders for converting FHIR resources to Spark Datasets
+   * @param pathlingContext the Pathling context, used to encode and write the resources
    * @param databasePath the path to the Delta database
    * @param cacheableDatabase the cacheable database for cache invalidation
-   * @param storageConfiguration the storage configuration, used to read the {@code schemaAutoMerge}
-   *     flag
-   * @param dataSource the data source serving queries, refreshed after a schema-evolving write
+   * @param dataSource the data source serving queries, refreshed after a write that changes a
+   *     table's schema
    */
   public UpdateExecutor(
       @Nonnull final PathlingContext pathlingContext,
-      @Nonnull final FhirEncoders fhirEncoders,
       @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}") @Nonnull
           final String databasePath,
       @Nonnull final CacheableDatabase cacheableDatabase,
-      @Nonnull final StorageConfiguration storageConfiguration,
       @Nonnull final QueryableDataSource dataSource) {
     this.pathlingContext = pathlingContext;
-    this.fhirEncoders = fhirEncoders;
     this.databasePath = databasePath;
     this.cacheableDatabase = cacheableDatabase;
-    this.schemaAutoMerge = storageConfiguration.getSchemaAutoMerge();
     this.dataSource = dataSource;
   }
 
@@ -143,6 +132,10 @@ public class UpdateExecutor {
    * This method supports custom resource types like ViewDefinition that are not part of the
    * standard FHIR ResourceType enum.
    *
+   * <p>The resources are upserted on their id through the library's Delta sink, which creates the
+   * table if it is missing and widens its schema to admit elements it has not stored before. The
+   * sink refuses to write into a table in the legacy layout.
+   *
    * @param resourceCode the type code of the resources (e.g., "Patient", "ViewDefinition")
    * @param resources the resources to merge
    */
@@ -153,142 +146,48 @@ public class UpdateExecutor {
     }
 
     final SparkSession spark = pathlingContext.getSpark();
-    final Dataset<Row> updates =
-        spark.createDataset(resources, fhirEncoders.of(resourceCode)).toDF();
+    final Dataset<Row> updates = ResourceEncoding.encode(pathlingContext, resourceCode, resources);
 
     log.debug("Merging {} resource(s) of type {}", resources.size(), resourceCode);
     final String tablePath = getTablePath(resourceCode);
+    final Optional<StructType> schemaBefore = tableSchema(spark, tablePath);
 
-    if (deltaTableExists(spark, tablePath)) {
-      mergeIntoExistingTable(spark, resourceCode, tablePath, updates);
+    if (schemaBefore.isPresent()) {
+      write(resourceCode, updates);
     } else {
       // Serialise first-creates of this resource type so that concurrent requests cannot race the
-      // initial write. The existence check is repeated inside the lock: the loser of a race finds
-      // the table already created and recovers by merging into it instead of failing.
+      // initial write.
       final Object creationLock =
           tableCreationLocks.computeIfAbsent(resourceCode, key -> new Object());
       synchronized (creationLock) {
-        if (deltaTableExists(spark, tablePath)) {
-          log.debug(
-              "Delta table for resource type {} was created concurrently; merging instead",
-              resourceCode);
-          mergeIntoExistingTable(spark, resourceCode, tablePath, updates);
-        } else {
-          // Create a new table with the resources.
-          log.debug("Creating new Delta table for resource type: {}", resourceCode);
-          updates.write().format("delta").mode(SaveMode.ErrorIfExists).save(tablePath);
-        }
+        write(resourceCode, updates);
       }
     }
 
     // Invalidate the cache to ensure subsequent requests see the updated data. Use the optimised
     // single-table invalidation since we know exactly which table was modified.
     cacheableDatabase.invalidate(tablePath);
-  }
 
-  /**
-   * Merges updates into an existing Delta table, evolving the table schema first when {@code
-   * schemaAutoMerge} is enabled and the encoder output contains fields the table lacks.
-   *
-   * @param spark the Spark session
-   * @param resourceCode the type code of the resources being merged
-   * @param tablePath the path of the existing Delta table
-   * @param updates the dataset of resources to merge
-   */
-  private void mergeIntoExistingTable(
-      @Nonnull final SparkSession spark,
-      @Nonnull final String resourceCode,
-      @Nonnull final String tablePath,
-      @Nonnull final Dataset<Row> updates) {
-    DeltaTable table = DeltaTable.forPath(spark, tablePath);
-    boolean schemaEvolved = false;
-
-    final SortedSet<String> missingFields =
-        schemaAutoMerge
-            ? SchemaDrift.missingFieldPaths(updates.schema(), table.toDF().schema())
-            : Collections.emptySortedSet();
-    if (!missingFields.isEmpty()) {
-      // Delta's MERGE - even with spark.databricks.delta.schema.autoMerge.enabled=true - does
-      // not support adding new fields to nested structs inside arrays. This is the exact failure
-      // mode when the FHIR encoder gains new value-type columns (e.g. valueDecimal,
-      // valueDecimal_scale inside the extension element struct): the MERGE planner throws
-      // DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION because it cannot cast the richer source struct
-      // to the narrower target struct.
-      //
-      // A regular write with mergeSchema=true DOES support nested-struct field evolution.
-      // Writing limit(0) - zero rows, same schema as the encoder output - causes Delta to add
-      // any missing nested fields to the target table schema (with null for existing rows)
-      // without inserting any data. The MERGE that follows then sees compatible schemas and
-      // succeeds.
-      //
-      // SchemaDrift compares only field names and structural shape, ignoring nullability and
-      // column metadata. This avoids paying the warmup transaction when the schemas are
-      // semantically equivalent but differ in metadata (e.g. parquet-side annotations).
-      //
-      // After the warmup write the table snapshot has changed, so we re-resolve DeltaTable
-      // before the MERGE.
-      updates
-          .limit(0)
-          .write()
-          .format("delta")
-          .mode(SaveMode.Append)
-          .option("mergeSchema", "true")
-          .save(tablePath);
-      table = DeltaTable.forPath(spark, tablePath);
-      schemaEvolved = true;
-      log.info("Evolved schema of {} table, added fields: {}", resourceCode, missingFields);
-    }
-
-    // Perform a merge operation on the existing table, tolerating a table that is wider than the
-    // encoder output.
-    DeltaMergeBuilder merge =
-        table
-            .as("original")
-            .merge(updates.as("updates"), "original.id = updates.id")
-            .whenMatched()
-            .updateAll()
-            .whenNotMatched()
-            .insertAll();
-    if (isPurelyNarrowing(updates, table)) {
-      merge = merge.withSchemaEvolution();
-    }
-    merge.execute();
-
-    // After a schema-evolving write, refresh the dataset served for this resource type so that
-    // all in-process consumers observe the evolved schema without a server restart.
-    if (schemaEvolved && dataSource instanceof final DynamicDeltaSource dynamicDataSource) {
+    // A dataset loaded from a Delta table keeps the schema it was loaded with, so after a write
+    // that changed the table's schema, refresh the dataset served for this resource type so that
+    // in-process consumers can see the new elements. Comparing the schemas rather than tracking
+    // whether the write widened the table also covers a table created or widened by a concurrent
+    // writer.
+    if (!tableSchema(spark, tablePath).equals(schemaBefore)
+        && dataSource instanceof final DynamicDeltaSource dynamicDataSource) {
       dynamicDataSource.refresh(resourceCode);
     }
   }
 
   /**
-   * Returns true if the table carries field paths the encoder output lacks, and the encoder output
-   * carries none the table lacks.
+   * Upserts resources into the Delta table for their type, matching on id.
    *
-   * <p>Delta refuses to cast a source struct onto a target struct with a different field count
-   * unless schema evolution is enabled on the merge, so a table wider than the running encoder
-   * cannot be merged into at all without it. Enabling it makes Delta null-fill the fields the
-   * source cannot supply, which is what is wanted: the stored-only columns are preserved and
-   * written as null.
-   *
-   * <p>The same flag also lets the target schema grow to admit source fields the target lacks,
-   * which is emphatically not wanted here - that direction belongs to {@code
-   * pathling.storage.schemaAutoMerge}, settled above by the warmup write. Requiring the difference
-   * to be purely narrowing is what keeps the two apart: where a table differs in both directions at
-   * once, this returns false, the merge fails as it does today unless the flag permitted the warmup
-   * write, and after that write the remaining difference is purely narrowing and the tolerance
-   * applies. The table is re-resolved after the warmup write, so the comparison here sees the
-   * settled schema.
-   *
-   * @param updates the encoder output being merged
-   * @param table the target table, as resolved for this merge
-   * @return true if schema evolution can safely be enabled on the merge
+   * @param resourceCode the type code of the resources
+   * @param updates the encoded resources
    */
-  private static boolean isPurelyNarrowing(
-      @Nonnull final Dataset<Row> updates, @Nonnull final DeltaTable table) {
-    final StructType tableSchema = table.toDF().schema();
-    return SchemaDrift.missingFieldPaths(updates.schema(), tableSchema).isEmpty()
-        && !SchemaDrift.excessFieldPaths(updates.schema(), tableSchema).isEmpty();
+  private void write(@Nonnull final String resourceCode, @Nonnull final Dataset<Row> updates) {
+    final DatasetSource source = new DatasetSource(pathlingContext).dataset(resourceCode, updates);
+    new DataSinkBuilder(pathlingContext, source).saveMode("merge").delta(databasePath);
   }
 
   /**
@@ -328,14 +227,17 @@ public class UpdateExecutor {
   }
 
   /**
-   * Checks if a Delta table exists at the specified path.
+   * Returns the schema of the Delta table at the specified path, if one exists there.
    *
    * @param spark the Spark session
    * @param tablePath the path to check
-   * @return true if a Delta table exists at the path
+   * @return the schema of the table, or empty if there is no Delta table at the path
    */
-  private static boolean deltaTableExists(
+  @Nonnull
+  private static Optional<StructType> tableSchema(
       @Nonnull final SparkSession spark, @Nonnull final String tablePath) {
-    return DeltaTable.isDeltaTable(spark, tablePath);
+    return DeltaTable.isDeltaTable(spark, tablePath)
+        ? Optional.of(DeltaTable.forPath(spark, tablePath).toDF().schema())
+        : Optional.empty();
   }
 }

@@ -20,7 +20,6 @@ package au.csiro.pathling.read;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.library.PathlingContext;
@@ -34,7 +33,6 @@ import jakarta.annotation.Nonnull;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.HumanName;
@@ -54,11 +52,7 @@ import org.springframework.context.annotation.Import;
 @SpringBootUnitTest
 class ReadProviderTest {
 
-  @Autowired private SparkSession sparkSession;
-
   @Autowired private PathlingContext pathlingContext;
-
-  @Autowired private FhirEncoders fhirEncoders;
 
   @Autowired private FhirContext fhirContext;
 
@@ -74,9 +68,9 @@ class ReadProviderTest {
     resources.add(createPatient("patient-1", "Smith", "John", AdministrativeGender.MALE));
     resources.add(createPatient("patient-2", "Jones", "Jane", AdministrativeGender.FEMALE));
 
-    dataSource = new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, resources);
+    dataSource = new CustomObjectDataSource(pathlingContext, resources);
 
-    final ReadExecutor readExecutor = new ReadExecutor(dataSource, fhirEncoders);
+    final ReadExecutor readExecutor = new ReadExecutor(dataSource, pathlingContext);
     readProvider = new ReadProvider(configuration, readExecutor, fhirContext, Patient.class);
   }
 

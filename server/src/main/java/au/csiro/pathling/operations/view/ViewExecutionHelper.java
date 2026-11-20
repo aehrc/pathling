@@ -18,9 +18,9 @@
 package au.csiro.pathling.operations.view;
 
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess.AccessType;
 import au.csiro.pathling.security.SecurityAspect;
@@ -46,7 +46,6 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
@@ -64,11 +63,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class ViewExecutionHelper {
 
-  @Nonnull private final SparkSession sparkSession;
+  @Nonnull private final PathlingContext pathlingContext;
 
   @Nonnull private final FhirContext fhirContext;
-
-  @Nonnull private final FhirEncoders fhirEncoders;
 
   @Nonnull private final ServerConfiguration serverConfiguration;
 
@@ -79,20 +76,17 @@ public class ViewExecutionHelper {
   /**
    * Constructs a new ViewExecutionHelper.
    *
-   * @param sparkSession the Spark session
+   * @param pathlingContext the Pathling context, used to encode inline resources
    * @param fhirContext the FHIR context
-   * @param fhirEncoders the FHIR encoders
    * @param serverConfiguration the server configuration
    */
   @Autowired
   public ViewExecutionHelper(
-      @Nonnull final SparkSession sparkSession,
+      @Nonnull final PathlingContext pathlingContext,
       @Nonnull final FhirContext fhirContext,
-      @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final ServerConfiguration serverConfiguration) {
-    this.sparkSession = sparkSession;
+    this.pathlingContext = pathlingContext;
     this.fhirContext = fhirContext;
-    this.fhirEncoders = fhirEncoders;
     this.serverConfiguration = serverConfiguration;
     this.gson = ViewDefinitionGson.create();
     this.streamingHelper = new ResultStreamingHelper(gson);
@@ -112,20 +106,7 @@ public class ViewExecutionHelper {
       @Nonnull final OutputStream outputStream)
       throws IOException {
 
-    final FhirViewExecutor executor =
-        new FhirViewExecutor(fhirContext, dataSource, serverConfiguration.getQuery());
-    Dataset<Row> result;
-    try {
-      result = executor.buildQuery(view);
-    } catch (final ConstraintViolationException e) {
-      // A well-formed request carrying a semantically invalid ViewDefinition maps to 422,
-      // distinct from the 400 used for malformed requests and invalid parameters.
-      throw new UnprocessableEntityException("Invalid ViewDefinition: " + e.getMessage());
-    } catch (final UnsupportedOperationException | UnsupportedFhirPathFeatureError e) {
-      // Thrown when a FHIRPath expression is not supported, such as accessing a choice element
-      // without specifying the type via ofType().
-      throw new InvalidRequestException("Unsupported expression: " + e.getMessage());
-    }
+    Dataset<Row> result = buildQuery(view, dataSource);
 
     // Apply limit if specified.
     if (limit != null && limit.getValue() != null) {
@@ -140,6 +121,33 @@ public class ViewExecutionHelper {
       case NDJSON -> streamingHelper.streamNdjson(outputStream, iterator, schema);
       case JSON -> streamingHelper.writeJson(outputStream, iterator, schema);
       default -> streamingHelper.streamCsv(outputStream, iterator, schema, includeHeader);
+    }
+  }
+
+  /**
+   * Builds the query that evaluates a parsed view over a data source, without executing it.
+   *
+   * @param view the parsed view
+   * @param dataSource the data source to project
+   * @return the unevaluated result
+   * @throws UnprocessableEntityException (422) if the view is semantically invalid
+   * @throws InvalidRequestException (400) if the view uses an unsupported expression
+   */
+  @Nonnull
+  public Dataset<Row> buildQuery(
+      @Nonnull final FhirView view, @Nonnull final DataSource dataSource) {
+    final FhirViewExecutor executor =
+        new FhirViewExecutor(fhirContext, dataSource, serverConfiguration.getQuery());
+    try {
+      return executor.buildQuery(view);
+    } catch (final ConstraintViolationException e) {
+      // A well-formed request carrying a semantically invalid ViewDefinition maps to 422,
+      // distinct from the 400 used for malformed requests and invalid parameters.
+      throw new UnprocessableEntityException("Invalid ViewDefinition: " + e.getMessage());
+    } catch (final UnsupportedOperationException | UnsupportedFhirPathFeatureError e) {
+      // Thrown when a FHIRPath expression is not supported, such as accessing a choice element
+      // without specifying the type via ofType().
+      throw new InvalidRequestException("Unsupported expression: " + e.getMessage());
     }
   }
 
@@ -192,7 +200,7 @@ public class ViewExecutionHelper {
    */
   @Nonnull
   public DataSource inlineDataSource(@Nonnull final List<String> inlineResources) {
-    return new ObjectDataSource(sparkSession, fhirEncoders, parseInlineResources(inlineResources));
+    return new ObjectDataSource(pathlingContext, parseInlineResources(inlineResources));
   }
 
   /**

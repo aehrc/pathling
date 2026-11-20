@@ -24,14 +24,15 @@ import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
 
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.io.ResourceEncoding;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.PathlingContext;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.StringAndListParam;
@@ -46,8 +47,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.instance.model.api.IPrimitiveType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -62,7 +61,7 @@ import org.hl7.fhir.r4.model.InstantType;
 @Slf4j
 public class SearchExecutor implements IBundleProvider {
 
-  @Nonnull private final FhirEncoders fhirEncoders;
+  @Nonnull private final PathlingContext pathlingContext;
 
   @Nonnull private final String subjectResourceCode;
 
@@ -77,7 +76,7 @@ public class SearchExecutor implements IBundleProvider {
    *
    * @param fhirContext the FHIR context for FHIR model operations
    * @param dataSource the data source containing the resources to query
-   * @param fhirEncoders the encoders for converting Spark rows to FHIR resources
+   * @param pathlingContext the Pathling context, used to decode rows into FHIR resources
    * @param subjectResourceCode the type code of the resource to search (e.g., "Patient",
    *     "ViewDefinition")
    * @param standardSearchQueryString an optional query string containing standard FHIR search
@@ -88,12 +87,12 @@ public class SearchExecutor implements IBundleProvider {
   public SearchExecutor(
       @Nonnull final FhirContext fhirContext,
       @Nonnull final DataSource dataSource,
-      @Nonnull final FhirEncoders fhirEncoders,
+      @Nonnull final PathlingContext pathlingContext,
       @Nonnull final String subjectResourceCode,
       @Nullable final String standardSearchQueryString,
       @Nonnull final Optional<StringAndListParam> filters,
       final boolean cacheResults) {
-    this.fhirEncoders = fhirEncoders;
+    this.pathlingContext = pathlingContext;
     this.subjectResourceCode = subjectResourceCode;
     this.cacheResults = cacheResults;
     this.count = Optional.empty();
@@ -209,10 +208,11 @@ public class SearchExecutor implements IBundleProvider {
     // Join the flat dataset with filtered IDs to preserve the flat schema for encoding.
     final String filterIdAlias = randomAlias();
     final Dataset<Row> evaluatorDataset = evaluator.getDataset();
+    // The filter is applied before the projection, as it refers to columns the projection drops.
     final Dataset<Row> filteredIds =
         evaluatorDataset
-            .select(evaluatorDataset.col("id").alias(filterIdAlias))
-            .filter(safeFilterColumn);
+            .filter(safeFilterColumn)
+            .select(evaluatorDataset.col("id").alias(filterIdAlias));
 
     return dataset.join(filteredIds, dataset.col("id").equalTo(col(filterIdAlias)), "left_semi");
   }
@@ -229,16 +229,13 @@ public class SearchExecutor implements IBundleProvider {
   }
 
   /**
-   * Creates an empty dataset with the correct schema for the subject resource type.
+   * Creates an empty dataset for the subject resource type.
    *
    * @return an empty dataset
    */
   @Nonnull
   private Dataset<Row> createEmptyDataset() {
-    final SparkSession spark = SparkSession.active();
-    final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(subjectResourceCode);
-    requireNonNull(encoder, "No encoder found for resource type: " + subjectResourceCode);
-    return spark.emptyDataset(encoder).toDF();
+    return ResourceEncoding.empty(pathlingContext, subjectResourceCode);
   }
 
   @Override
@@ -269,11 +266,8 @@ public class SearchExecutor implements IBundleProvider {
       resources = resources.limit(theToIndex - theFromIndex);
     }
 
-    // Encode the resources into HAPI FHIR objects and collect.
-    @Nullable final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(subjectResourceCode);
-    requireNonNull(encoder);
-
-    return resources.as(encoder).collectAsList();
+    // Decode the resources into HAPI FHIR objects and collect.
+    return ResourceEncoding.decode(pathlingContext, subjectResourceCode, resources);
   }
 
   @Nullable

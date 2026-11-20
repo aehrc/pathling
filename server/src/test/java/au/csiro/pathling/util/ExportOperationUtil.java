@@ -51,7 +51,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.Resource;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -291,7 +290,7 @@ public class ExportOperationUtil {
         exportResponse.isRequiresAccessToken());
   }
 
-  public static @NotNull String kickOffRequest(
+  public static @Nonnull String kickOffRequest(
       final WebTestClient webTestClient, final String uri) {
     final String pollUrl =
         webTestClient

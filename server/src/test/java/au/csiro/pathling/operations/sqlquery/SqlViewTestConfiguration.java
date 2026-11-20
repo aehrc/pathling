@@ -20,7 +20,6 @@ package au.csiro.pathling.operations.sqlquery;
 import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.LIBRARY_TYPE_SYSTEM;
 import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.SQL_VIEW_TYPE_CODE;
 
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.SelectComponent;
@@ -149,9 +148,7 @@ public class SqlViewTestConfiguration {
   @Bean
   @Nonnull
   public QueryableDataSource deltaLake(
-      @Nonnull final SparkSession sparkSession,
-      @Nonnull final PathlingContext pathlingContext,
-      @Nonnull final FhirEncoders fhirEncoders) {
+      @Nonnull final SparkSession sparkSession, @Nonnull final PathlingContext pathlingContext) {
     final List<IBaseResource> resources = new ArrayList<>();
     resources.add(patientView());
     resources.add(
@@ -194,8 +191,7 @@ public class SqlViewTestConfiguration {
     resources.add(patient("p1", "Smith"));
     resources.add(patient("p2", "Johnson"));
     resources.add(patient("p3", "Williams"));
-    final CustomObjectDataSource source =
-        new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, resources);
+    final CustomObjectDataSource source = new CustomObjectDataSource(pathlingContext, resources);
     replacePatientsWithFileBacked(sparkSession, source);
     return source;
   }

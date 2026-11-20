@@ -18,7 +18,7 @@
 package au.csiro.pathling.search;
 
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
@@ -45,7 +45,7 @@ public class SearchProviderFactory {
 
   @Nonnull private final QueryableDataSource dataSource;
 
-  @Nonnull private final FhirEncoders fhirEncoders;
+  @Nonnull private final PathlingContext pathlingContext;
 
   /**
    * Constructs a new SearchProviderFactory.
@@ -54,19 +54,19 @@ public class SearchProviderFactory {
    * @param configuration the server configuration
    * @param fhirContext the FHIR context for FHIR operations
    * @param dataSource the data source containing the resources to query
-   * @param fhirEncoders the encoders for converting Spark rows to FHIR resources
+   * @param pathlingContext the Pathling context, used to decode rows into FHIR resources
    */
   public SearchProviderFactory(
       @Nonnull final ApplicationContext applicationContext,
       @Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final QueryableDataSource dataSource,
-      @Nonnull final FhirEncoders fhirEncoders) {
+      @Nonnull final PathlingContext pathlingContext) {
     this.applicationContext = applicationContext;
     this.configuration = configuration;
     this.fhirContext = fhirContext;
     this.dataSource = dataSource;
-    this.fhirEncoders = fhirEncoders;
+    this.pathlingContext = pathlingContext;
   }
 
   /**
@@ -85,7 +85,7 @@ public class SearchProviderFactory {
         configuration,
         fhirContext,
         dataSource,
-        fhirEncoders,
+        pathlingContext,
         resourceTypeClass);
   }
 
@@ -106,7 +106,7 @@ public class SearchProviderFactory {
         configuration,
         fhirContext,
         dataSource,
-        fhirEncoders,
+        pathlingContext,
         resourceTypeClass);
   }
 }

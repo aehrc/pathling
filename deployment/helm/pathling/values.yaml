@@ -11,6 +11,10 @@ pathling:
   deployment:
     strategy: Recreate
     imagePullPolicy: Always
+    # The number of five-second startup probe failures tolerated before the container is
+    # restarted. Raise this for the first start of a server that has to migrate a warehouse
+    # written by an earlier version.
+    startupProbeFailureThreshold: 36
   volumes: []
   volumeMounts: []
   serviceAccount: ~

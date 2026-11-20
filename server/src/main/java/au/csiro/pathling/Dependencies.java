@@ -21,13 +21,12 @@ import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.DynamicDeltaSource;
-import au.csiro.pathling.io.SchemaMigrator;
+import au.csiro.pathling.io.WarehouseMigrator;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
-import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -87,26 +86,17 @@ public class Dependencies {
         serverConfiguration.getStorage().getWarehouseUrl()
             + "/"
             + serverConfiguration.getStorage().getDatabaseName();
-    // Migrate any tables whose schemas are behind the current encoders before the delegate scans
-    // the warehouse, so its resource map is built from already-migrated tables. Types that remain
-    // drifted (flag disabled, or migration failure) are reported to the data source so requests
-    // against them fail with an actionable error.
-    final Set<String> driftedTypes =
-        new SchemaMigrator(
-                pathlingContext.getSpark(),
-                pathlingContext.getFhirEncoders(),
-                databaseLocation,
-                serverConfiguration.getStorage().getSchemaAutoMerge())
-            .migrate();
+    // Migrate any tables in the layout written by earlier releases before the delegate scans the
+    // warehouse, because the library refuses that layout. A table that cannot be migrated fails
+    // this bean, and with it startup, rather than leaving the server unable to serve its data.
+    new WarehouseMigrator(pathlingContext, databaseLocation).migrate();
     final QueryableDataSource baseSource = pathlingContext.read().delta(databaseLocation);
     return new DynamicDeltaSource(
         pathlingContext,
         baseSource,
         pathlingContext.getSpark(),
         databaseLocation,
-        pathlingContext.getFhirEncoders(),
-        serverConfiguration.getStorage(),
-        driftedTypes);
+        serverConfiguration.getStorage());
   }
 
   @Bean

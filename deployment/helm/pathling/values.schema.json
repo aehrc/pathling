@@ -71,6 +71,12 @@
               "description": "Image pull policy for the container",
               "enum": ["Always", "IfNotPresent", "Never"],
               "default": "Always"
+            },
+            "startupProbeFailureThreshold": {
+              "type": "integer",
+              "description": "Number of five-second startup probe failures tolerated before the container is restarted",
+              "minimum": 1,
+              "default": 36
             }
           }
         },

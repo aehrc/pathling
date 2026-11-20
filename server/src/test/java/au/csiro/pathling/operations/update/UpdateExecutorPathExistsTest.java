@@ -22,8 +22,6 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.cache.CacheableDatabase;
-import au.csiro.pathling.config.StorageConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -62,8 +60,6 @@ import org.springframework.context.annotation.Import;
 class UpdateExecutorPathExistsTest {
 
   @Autowired private PathlingContext pathlingContext;
-
-  @Autowired private FhirEncoders fhirEncoders;
 
   @Autowired private CacheableDatabase cacheableDatabase;
 
@@ -123,14 +119,10 @@ class UpdateExecutorPathExistsTest {
 
   @Nonnull
   private UpdateExecutor newExecutor() {
-    final StorageConfiguration storageConfiguration = new StorageConfiguration();
-    storageConfiguration.setSchemaAutoMerge(true);
     return new UpdateExecutor(
         pathlingContext,
-        fhirEncoders,
         tempDatabasePath.toAbsolutePath().toString(),
         cacheableDatabase,
-        storageConfiguration,
         mock(QueryableDataSource.class));
   }
 

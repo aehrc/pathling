@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.config.StorageConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.FileInformation;
 import au.csiro.pathling.library.io.sink.WriteDetails;
@@ -32,7 +31,6 @@ import au.csiro.pathling.util.TestDataSetup;
 import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
-import java.util.Set;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -44,7 +42,7 @@ import org.springframework.context.annotation.Import;
 
 /**
  * Unit tests for {@link DerivedSource}, the source produced by {@code map}, {@code
- * filterByResourceType} and {@code cache} on a {@link DriftGuardedSource}.
+ * filterByResourceType} and {@code cache} on a {@link DelegatingSource}.
  *
  * <p>Every test creates the resource type's table <b>after</b> the parent source is constructed,
  * because that is the case the derivation used to get wrong: a source derived eagerly over the
@@ -66,8 +64,6 @@ class DerivedSourceTest {
   @Autowired private SparkSession sparkSession;
 
   @Autowired private PathlingContext pathlingContext;
-
-  @Autowired private FhirEncoders fhirEncoders;
 
   // A source derived through map() must read a type whose table appeared after the parent was
   // constructed, and must apply the row operator to what it reads (FR-001).
@@ -136,22 +132,7 @@ class DerivedSourceTest {
     final Dataset<Row> result = parent.map((resourceType, dataset) -> dataset).read(ABSENT_TYPE);
 
     assertThat(result.count()).isZero();
-    assertThat(result.schema().fieldNames()).contains("id", "status");
-  }
-
-  // Deriving a source must not weaken the schema drift guard: a drifted, unmigrated type still
-  // fails with the actionable error through any derivation chain (FR-004).
-  @Test
-  void derivedReadOfDriftedTypeThrowsSchemaDriftError(@TempDir final Path tempDir) {
-    final DynamicDeltaSource parent = emptyWarehouseSource(tempDir, false, Set.of("Patient"));
-    createPatientTable(tempDir);
-
-    final QueryableDataSource derived =
-        parent.map((resourceType, dataset) -> dataset).filterByResourceType(resourceType -> true);
-
-    assertThatThrownBy(() -> derived.read("Patient")).isInstanceOf(SchemaDriftError.class);
-    // Constructing a view over a drifted subject fails up front, as it does on the parent.
-    assertThatThrownBy(() -> derived.view("Patient")).isInstanceOf(SchemaDriftError.class);
+    assertThat(result.schema().fieldNames()).contains("id");
   }
 
   // A derived source enumerates its parent's types minus the ones its predicates removed (FR-007).
@@ -242,26 +223,12 @@ class DerivedSourceTest {
   /** Builds a live source over an empty warehouse, so every table used is created after it. */
   @Nonnull
   private DynamicDeltaSource emptyWarehouseSource(@Nonnull final Path databaseDir) {
-    return emptyWarehouseSource(databaseDir, false, Set.of());
-  }
-
-  @Nonnull
-  private DynamicDeltaSource emptyWarehouseSource(
-      @Nonnull final Path databaseDir,
-      final boolean cacheDatasets,
-      @Nonnull final Set<String> driftedTypes) {
     final String databasePath = databaseDir.toAbsolutePath().toString();
     final StorageConfiguration storageConfiguration = new StorageConfiguration();
-    storageConfiguration.setCacheDatasets(cacheDatasets);
+    storageConfiguration.setCacheDatasets(false);
     final QueryableDataSource baseSource = pathlingContext.read().delta(databasePath);
     return new DynamicDeltaSource(
-        pathlingContext,
-        baseSource,
-        sparkSession,
-        databasePath,
-        fhirEncoders,
-        storageConfiguration,
-        driftedTypes);
+        pathlingContext, baseSource, sparkSession, databasePath, storageConfiguration);
   }
 
   /** Creates the Patient table in the warehouse, from the encoded test data. */

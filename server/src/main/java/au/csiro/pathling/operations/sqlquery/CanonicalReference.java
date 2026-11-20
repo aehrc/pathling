@@ -17,14 +17,20 @@
 
 package au.csiro.pathling.operations.sqlquery;
 
+import static org.apache.spark.sql.functions.lit;
+
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 
 /**
  * A canonical reference parsed into its {@code url} and optional {@code version}, with the
@@ -115,6 +121,31 @@ public final class CanonicalReference {
   @Nonnull
   public static String key(@Nonnull final String url, @Nullable final String version) {
     return version != null && !version.isBlank() ? url + "|" + version : url;
+  }
+
+  /**
+   * Filters stored resources to those matching this reference: their {@code url} equals this
+   * reference's url and, when this reference carries a version, their {@code version} equals it.
+   *
+   * <p>Stored datasets carry only the elements their data populates, so a dataset without a {@code
+   * url} column, or without a {@code version} column when a version is required, matches nothing.
+   *
+   * @param resources the stored resources, in the Parquet on FHIR layout
+   * @return the matching resources
+   */
+  @Nonnull
+  public Dataset<Row> match(@Nonnull final Dataset<Row> resources) {
+    final Set<String> columns = Set.of(resources.columns());
+    final Column urlMatches =
+        columns.contains("url") ? resources.col("url").equalTo(url) : lit(false);
+    final Column versionMatches;
+    if (version == null) {
+      versionMatches = lit(true);
+    } else {
+      versionMatches =
+          columns.contains("version") ? resources.col("version").equalTo(version) : lit(false);
+    }
+    return resources.filter(urlMatches.and(versionMatches));
   }
 
   /**

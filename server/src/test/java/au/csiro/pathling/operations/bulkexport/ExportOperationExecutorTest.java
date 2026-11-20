@@ -32,7 +32,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.JobDirectoryFileSystem;
 import au.csiro.pathling.io.StubFileSystem;
 import au.csiro.pathling.library.PathlingContext;
@@ -113,8 +112,6 @@ class ExportOperationExecutorTest {
   @Autowired private QueryableDataSource deltaLake;
 
   private Path uniqueTempDir;
-
-  @Autowired private FhirEncoders fhirEncoders;
 
   private IParser parser;
 
@@ -422,7 +419,7 @@ class ExportOperationExecutorTest {
 
   private ExportExecutor create_exec(final List<IBaseResource> resources) {
     final CustomObjectDataSource objectDataSource =
-        new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, resources);
+        new CustomObjectDataSource(pathlingContext, resources);
     exportExecutor = newExecutor(objectDataSource, "file://" + uniqueTempDir.toAbsolutePath());
     return exportExecutor;
   }
@@ -442,7 +439,7 @@ class ExportOperationExecutorTest {
     patient.setId("test-id");
     patient.addIdentifier().setValue("test");
     final CustomObjectDataSource objectDataSource =
-        new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, List.of(patient));
+        new CustomObjectDataSource(pathlingContext, List.of(patient));
     exportExecutor = newExecutor(objectDataSource, "stub://" + uniqueTempDir.toAbsolutePath());
 
     final ExportRequest req =
@@ -474,7 +471,7 @@ class ExportOperationExecutorTest {
     final Patient patient = new Patient();
     patient.setId("test-id");
     final CustomObjectDataSource objectDataSource =
-        new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, List.of(patient));
+        new CustomObjectDataSource(pathlingContext, List.of(patient));
     exportExecutor = newExecutor(objectDataSource, "bogus://" + uniqueTempDir.toAbsolutePath());
 
     final ExportRequest req =
@@ -504,7 +501,7 @@ class ExportOperationExecutorTest {
     final Patient patient = new Patient();
     patient.setMeta(new Meta().setLastUpdatedElement(patientLastUpdated));
     final CustomObjectDataSource objectDataSource =
-        new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, List.of(patient));
+        new CustomObjectDataSource(pathlingContext, List.of(patient));
     exportExecutor = newExecutor(objectDataSource, "file://" + uniqueTempDir.toAbsolutePath());
 
     final TestExportResponse actualExportResponse = execute(exportRequest);

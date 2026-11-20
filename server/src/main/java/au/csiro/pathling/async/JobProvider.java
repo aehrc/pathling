@@ -49,7 +49,6 @@ import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.hl7.fhir.r4.model.Parameters;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -160,7 +159,7 @@ public class JobProvider {
     return handleJobGetRequest(request, response, job);
   }
 
-  private @NotNull Job<?> getJob(@Nullable final String id) {
+  private @Nonnull Job<?> getJob(@Nullable final String id) {
     // Validate that the ID looks reasonable.
     if (id == null || !ID_PATTERN.matcher(id).matches()) {
       throw new ResourceNotFoundError("Job ID not found");
@@ -268,9 +267,9 @@ public class JobProvider {
   }
 
   private IBaseResource handleJobGetRequest(
-      @NotNull final HttpServletRequest request,
+      @Nonnull final HttpServletRequest request,
       @Nullable final HttpServletResponse response,
-      @NotNull final Job<?> job) {
+      @Nonnull final Job<?> job) {
     if (job.getResult().isCancelled()) {
       throw handleCancelledJob();
     }

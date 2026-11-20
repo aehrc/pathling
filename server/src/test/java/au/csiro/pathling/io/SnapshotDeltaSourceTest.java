@@ -18,10 +18,8 @@
 package au.csiro.pathling.io;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.config.StorageConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -29,7 +27,6 @@ import au.csiro.pathling.util.FhirServerTestConfiguration;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Set;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -59,8 +56,6 @@ class SnapshotDeltaSourceTest {
   @Autowired private SparkSession sparkSession;
 
   @Autowired private PathlingContext pathlingContext;
-
-  @Autowired private FhirEncoders fhirEncoders;
 
   // The central guarantee: a write that advances the table after the snapshot was taken is
   // invisible to the snapshot, which continues to serve the pinned version.
@@ -124,7 +119,7 @@ class SnapshotDeltaSourceTest {
     // ImmunizationEvaluation had no table at the pinned instant.
     final Dataset<Row> result = derived.read("ImmunizationEvaluation");
     assertThat(result.count()).isZero();
-    assertThat(result.schema().fieldNames()).contains("id", "status");
+    assertThat(result.schema().fieldNames()).contains("id");
   }
 
   // Every table is pinned at the same instant, so a write to a second type after snapshot creation
@@ -164,7 +159,7 @@ class SnapshotDeltaSourceTest {
   void bypassesTheMutableDatasetCache(@TempDir final Path tempDir) {
     final String databasePath = tempDir.toAbsolutePath().toString();
     writeTable(databasePath, "Patient", 2);
-    final DynamicDeltaSource live = newLiveSource(databasePath, true, Set.of());
+    final DynamicDeltaSource live = newLiveSource(databasePath, true);
     // Prime the live source's cache at the pre-write state.
     final Dataset<Row> cached = live.read("Patient");
     assertThat(cached.storageLevel()).isEqualTo(StorageLevel.MEMORY_AND_DISK());
@@ -179,44 +174,21 @@ class SnapshotDeltaSourceTest {
     }
   }
 
-  // A type marked drifted and unmigrated cannot be queried through the snapshot either; the guard
-  // is carried across so a job fails with the actionable error rather than an opaque one.
-  @Test
-  void preservesTheDriftGuard(@TempDir final Path tempDir) {
-    final String databasePath = tempDir.toAbsolutePath().toString();
-    writeTable(databasePath, "Patient", 1);
-    final DynamicDeltaSource live = newLiveSource(databasePath, false, Set.of("Patient"));
-
-    final SnapshotDeltaSource snapshot = live.snapshot();
-
-    assertThatThrownBy(() -> snapshot.read("Patient"))
-        .isInstanceOf(SchemaDriftError.class)
-        .hasMessageContaining("Patient");
-  }
-
   // ---- helpers ----
 
   @Nonnull
   private DynamicDeltaSource newLiveSource(@Nonnull final String databasePath) {
-    return newLiveSource(databasePath, false, Set.of());
+    return newLiveSource(databasePath, false);
   }
 
   @Nonnull
   private DynamicDeltaSource newLiveSource(
-      @Nonnull final String databasePath,
-      final boolean cacheDatasets,
-      @Nonnull final Set<String> driftedTypes) {
+      @Nonnull final String databasePath, final boolean cacheDatasets) {
     final StorageConfiguration storageConfiguration = new StorageConfiguration();
     storageConfiguration.setCacheDatasets(cacheDatasets);
     final QueryableDataSource baseSource = pathlingContext.read().delta(databasePath);
     return new DynamicDeltaSource(
-        pathlingContext,
-        baseSource,
-        sparkSession,
-        databasePath,
-        fhirEncoders,
-        storageConfiguration,
-        driftedTypes);
+        pathlingContext, baseSource, sparkSession, databasePath, storageConfiguration);
   }
 
   /** Writes a new single-column Delta table with the given number of rows. */

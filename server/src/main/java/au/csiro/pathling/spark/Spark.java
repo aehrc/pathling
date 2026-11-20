@@ -47,6 +47,12 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class Spark {
 
+  /** The session setting that determines the Parquet type of stored timestamps. */
+  static final String OUTPUT_TIMESTAMP_TYPE = "spark.sql.parquet.outputTimestampType";
+
+  /** The timestamp type required by the Parquet on FHIR layout. */
+  static final String TIMESTAMP_MICROS = "TIMESTAMP_MICROS";
+
   private Spark() {}
 
   /**
@@ -85,6 +91,10 @@ public class Spark {
                 "spark.sql.catalog.spark_catalog",
                 "org.apache.spark.sql.delta.catalog.DeltaCatalog")
             .getOrCreate();
+    // The Parquet on FHIR layout stores timestamps as microsecond-precision int64, and Spark takes
+    // that type from the session rather than from writer options. It is set after the session is
+    // built, so that no Spark configuration in a profile can drop it.
+    spark.conf().set(OUTPUT_TIMESTAMP_TYPE, TIMESTAMP_MICROS);
     sparkListener.ifPresent(l -> spark.sparkContext().addSparkListener(l));
 
     // Configure user defined strategy and functions.
