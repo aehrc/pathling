@@ -372,61 +372,68 @@ test.describe("Resources page", () => {
       expect(clipboardText).toContain('"id": "patient-123"');
     });
 
-    test("keeps expanded JSON with long values within the viewport", async ({
-      page,
-    }) => {
-      // A Library with values that contain no break opportunities: a long
-      // canonical URL and a large base64 attachment.
-      const longLibrary = {
-        resourceType: "Library",
-        id: "library-long",
-        url: `https://pathling.example/fhir/Library/${"a".repeat(300)}`,
-        status: "active",
-        content: [
-          { contentType: "application/sql", data: "U0VM".repeat(5000) },
-        ],
-      };
-      await mockMetadata(page);
-      await page.route(/\/Patient(\?|\/|$)/, async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/fhir+json",
-          body: JSON.stringify({
-            resourceType: "Bundle",
-            type: "searchset",
-            total: 2,
-            entry: [
-              { resource: longLibrary },
-              { resource: mockPatientBundle.entry![0].resource },
-            ],
-          }),
+    // In the two-column layout (md and up) an overflowing value widened the
+    // results column past the viewport. In the single-column layout the card
+    // kept its width and the JSON spilled out of it.
+    for (const width of [1280, 700]) {
+      test(`keeps expanded JSON with long values within its card at ${width}px`, async ({
+        page,
+      }) => {
+        // A Library with values that contain no break opportunities: a long
+        // canonical URL and a large base64 attachment.
+        const longLibrary = {
+          resourceType: "Library",
+          id: "library-long",
+          url: `https://pathling.example/fhir/Library/${"a".repeat(300)}`,
+          status: "active",
+          content: [
+            { contentType: "application/sql", data: "U0VM".repeat(5000) },
+          ],
+        };
+        await page.setViewportSize({ width, height: 720 });
+        await mockMetadata(page);
+        await page.route(/\/Patient(\?|\/|$)/, async (route) => {
+          await route.fulfill({
+            status: 200,
+            contentType: "application/fhir+json",
+            body: JSON.stringify({
+              resourceType: "Bundle",
+              type: "searchset",
+              total: 2,
+              entry: [
+                { resource: longLibrary },
+                { resource: mockPatientBundle.entry![0].resource },
+              ],
+            }),
+          });
         });
+        await page.goto("/admin/resources");
+        await page.getByRole("button", { name: "Search" }).click();
+
+        // Expand the Library card.
+        await page.getByText("library-long", { exact: true }).click();
+        const code = page.locator("code", { hasText: '"id": "library-long"' });
+        await expect(code).toBeVisible();
+
+        // Every result card, expanded or collapsed, ends within the viewport.
+        // The filter excludes the search form, which is also a card.
+        const cards = page
+          .locator(".rt-Card")
+          .filter({ hasText: /library-long|patient-123/ });
+        await expect(cards).toHaveCount(2);
+        for (const card of await cards.all()) {
+          const box = (await card.boundingBox())!;
+          expect(box.x + box.width).toBeLessThanOrEqual(width);
+        }
+
+        // The JSON ends within the expanded card.
+        const cardBox = (await cards.first().boundingBox())!;
+        const codeBox = (await code.boundingBox())!;
+        expect(codeBox.x + codeBox.width).toBeLessThanOrEqual(
+          cardBox.x + cardBox.width,
+        );
       });
-      await page.goto("/admin/resources");
-      await page.getByRole("button", { name: "Search" }).click();
-
-      // Expand the Library card.
-      await page.getByText("library-long", { exact: true }).click();
-      const code = page.locator("code", { hasText: '"id": "library-long"' });
-      await expect(code).toBeVisible();
-
-      // Every card, expanded or collapsed, ends within the viewport.
-      const viewportWidth = page.viewportSize()!.width;
-      const cards = page
-        .locator(".rt-Card")
-        .filter({ hasText: /library-long|patient-123/ });
-      await expect(cards).toHaveCount(2);
-      for (const card of await cards.all()) {
-        const box = (await card.boundingBox())!;
-        expect(box.x + box.width).toBeLessThanOrEqual(viewportWidth);
-      }
-
-      // Long values wrap rather than overflowing the code block.
-      const overflow = await code.evaluate(
-        (el) => el.scrollWidth - el.clientWidth,
-      );
-      expect(overflow).toBeLessThanOrEqual(0);
-    });
+    }
   });
 
   test.describe("Search parameters", () => {
