@@ -114,9 +114,11 @@ export interface SqlQueryLibrarySummary {
 }
 
 /**
- * Library resource conforming to the SQLQuery profile, in the shape used by
- * the API client and form state. This is a structurally-narrower view of
- * `fhir/r4`'s Library; only the slots used by the UI are typed.
+ * Library resource conforming to the SQLQuery or SQLView profile, in the
+ * shape used by the API client and form state. A SQLView is a SQLQuery
+ * without parameters, so the two share this shape. This is a
+ * structurally-narrower view of `fhir/r4`'s Library; only the slots used by
+ * the UI are typed.
  */
 export interface SqlQueryLibrary {
   resourceType: "Library";
@@ -129,7 +131,7 @@ export interface SqlQueryLibrary {
   type: {
     coding: Array<{
       system: string;
-      code: "sql-query";
+      code: "sql-query" | "sql-view";
     }>;
   };
   content: Array<{

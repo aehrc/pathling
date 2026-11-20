@@ -25,6 +25,7 @@
 import {
   SQL_QUERY_LIBRARY_PROFILE,
   SQL_QUERY_LIBRARY_TYPE_SYSTEM,
+  SQL_VIEW_LIBRARY_PROFILE,
 } from "../../api";
 import { decodeSql, encodeSql } from "../../utils";
 
@@ -62,8 +63,13 @@ export interface BuildInlineLibraryInput {
 }
 
 /**
- * Builds an inline SQLQuery Library resource from the form's authored
+ * Builds an inline SQL on FHIR Library resource from the form's authored
  * state.
+ *
+ * A query that declares one or more parameters becomes a SQLQuery; one that
+ * declares none becomes a SQLView, so that once saved it is listed with the
+ * stored views and can be used as a source by other queries. Rows with an
+ * empty name are not declarations and do not count.
  *
  * The Library carries the SQL both Base64-encoded (per the profile) and
  * as plain text via the `sql-text` extension, mirroring the canonical
@@ -74,6 +80,7 @@ export interface BuildInlineLibraryInput {
  *   POST to `/Library`.
  *
  * @example
+ * // No declared parameters, so this yields a SQLView.
  * buildInlineSqlQueryLibrary({
  *   sql: "SELECT 1",
  *   tables: [],
@@ -86,12 +93,23 @@ export function buildInlineSqlQueryLibrary(
 ): SqlQueryLibrary {
   const trimmedTitle = input.title?.trim();
   const trimmedUrl = input.url?.trim();
+  // An empty-name row is not a declaration, so it must not ride along into
+  // the saved Library - only names that would actually be bound are persisted.
+  const declared = input.parameters.filter((param) => param.name.trim() !== "");
+  const isView = declared.length === 0;
   const library: SqlQueryLibrary = {
     resourceType: "Library",
     status: "active",
-    meta: { profile: [SQL_QUERY_LIBRARY_PROFILE] },
+    meta: {
+      profile: [isView ? SQL_VIEW_LIBRARY_PROFILE : SQL_QUERY_LIBRARY_PROFILE],
+    },
     type: {
-      coding: [{ system: SQL_QUERY_LIBRARY_TYPE_SYSTEM, code: "sql-query" }],
+      coding: [
+        {
+          system: SQL_QUERY_LIBRARY_TYPE_SYSTEM,
+          code: isView ? "sql-view" : "sql-query",
+        },
+      ],
     },
     content: [
       {
@@ -123,10 +141,7 @@ export function buildInlineSqlQueryLibrary(
     }));
   }
 
-  // An empty-name row is not a declaration, so it must not ride along into
-  // the saved Library - only names that would actually be bound are persisted.
-  const declared = input.parameters.filter((param) => param.name.trim() !== "");
-  if (declared.length > 0) {
+  if (!isView) {
     library.parameter = declared.map((param) => ({
       name: param.name,
       use: "in" as const,

@@ -21,6 +21,7 @@ import { create } from "../api";
 import { config } from "../config";
 import { libraryToSummary } from "./sqlQueryHelpers";
 import { SQL_QUERY_LIBRARIES_QUERY_KEY } from "./useSqlQueryLibraries";
+import { SQL_VIEWS_QUERY_KEY } from "./useSqlViews";
 import { useAuth } from "../contexts/AuthContext";
 
 import type {
@@ -50,14 +51,14 @@ export type UseSaveSqlQueryLibraryResult = UseMutationResult<
 >;
 
 /**
- * Saves an inline SQLQuery Library to the server.
+ * Saves an inline SQLQuery or SQLView Library to the server.
  *
- * On success, the new resource is appended to the cached
- * `SQL_QUERY_LIBRARIES_QUERY_KEY` list and a background refresh is
- * triggered so other consumers see the update.
+ * On success, both the `SQL_QUERY_LIBRARIES_QUERY_KEY` and
+ * `SQL_VIEWS_QUERY_KEY` lists are invalidated, since the form saves a
+ * SQLView when no parameters are declared and a SQLQuery otherwise.
  *
  * @param options - Optional callbacks for success and error.
- * @returns Mutation result for saving SQLQuery Libraries.
+ * @returns Mutation result for saving SQLQuery and SQLView Libraries.
  */
 export function useSaveSqlQueryLibrary(
   options?: UseSaveSqlQueryLibraryOptions,
@@ -87,6 +88,7 @@ export function useSaveSqlQueryLibrary(
       void queryClient.invalidateQueries({
         queryKey: SQL_QUERY_LIBRARIES_QUERY_KEY,
       });
+      void queryClient.invalidateQueries({ queryKey: SQL_VIEWS_QUERY_KEY });
       options?.onSuccess?.(result);
     },
     onError: options?.onError,
