@@ -11,7 +11,8 @@ on:
 jobs:
   test:
     name: Build and test UI
-    runs-on: ubuntu-latest
+    # Playwright 1.57.0 cannot install browsers on ubuntu-latest (26.04).
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: ui
