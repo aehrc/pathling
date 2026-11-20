@@ -28,6 +28,15 @@ runs:
         java-version: ${{ inputs.java-version }}
         distribution: ${{ inputs.distribution }}
 
+    # The Maven download is cached because Maven Central rate-limits it (HTTP 429) often enough to
+    # fail jobs. setup-maven uses a copy in the tool cache when there is one. The version here must
+    # match the one below.
+    - name: Cache Maven
+      uses: actions/cache@v4
+      with:
+        path: ${{ runner.tool_cache }}/maven/3.9.16
+        key: ${{ runner.os }}-${{ runner.arch }}-maven-dist-3.9.16
+
     # With Maven 3.10.0, central-publishing-maven-plugin leaves maven-metadata-local.xml at the
     # artifactId level of its bundle, and Central rejects the bundle as having content without a
     # POM. See https://github.com/mavenplugins/central-publishing-maven-plugin/issues/78.

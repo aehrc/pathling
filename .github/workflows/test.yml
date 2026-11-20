@@ -119,6 +119,14 @@ jobs:
           - terminology
           - fhirpath
           - library-api
+        include:
+          # The terminology tests come close to each fork's 4 GB heap, and with one fork per
+          # processor the runner has lost contact with GitHub mid-run, consistent with it being
+          # starved of memory or CPU. Fewer forks halve that load, and the diagnostics record the
+          # runner's memory and CPU and each JVM's garbage collection, to confirm the cause.
+          - module: terminology
+            fork-count: 2
+            diagnostics: true
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -139,10 +147,19 @@ jobs:
           -pl ${{ matrix.module }} -am
         timeout-minutes: 20
 
+      # The memory and CPU samples go to the job log rather than a file, so they survive a runner that
+      # is lost before the reports are uploaded.
       - name: Run tests
         run: |
+          if [ "${{ matrix.diagnostics }}" = "true" ]; then
+            mkdir -p gc-logs
+            export JDK_JAVA_OPTIONS="-Xlog:gc,gc+cpu:file=${GITHUB_WORKSPACE}/gc-logs/gc-%p.log:uptime,pid"
+            vmstat -n -t -S M 15 | sed -u 's/^/[vmstat] /' &
+            trap 'pkill -x vmstat || true' EXIT
+          fi
           mvn --batch-mode verify \
-          -pl ${{ matrix.module }}
+          -pl ${{ matrix.module }} \
+          -Dpathling.testForkCount=${{ matrix.fork-count || '1C' }}
         timeout-minutes: 40
 
       # The coverage and report files are collected into a single archive so that the SonarCloud job
@@ -157,7 +174,8 @@ jobs:
           for path in "${{ matrix.module }}/target/jacoco.exec" \
                       "${{ matrix.module }}/target/site/jacoco" \
                       "${{ matrix.module }}/target/site/jacoco-aggregate" \
-                      "${{ matrix.module }}/target/surefire-reports"; do
+                      "${{ matrix.module }}/target/surefire-reports" \
+                      "gc-logs"; do
             if [ -e "${path}" ]; then
               paths+=("${path}")
             fi
