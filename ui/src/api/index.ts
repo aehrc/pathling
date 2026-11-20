@@ -88,5 +88,6 @@ export {
   SQL_QUERY_LIBRARY_TYPE_FILTER,
   SQL_VIEW_LIBRARY_TYPE_FILTER,
   SQL_QUERY_LIBRARY_PROFILE,
+  SQL_VIEW_LIBRARY_PROFILE,
 } from "./sqlQuery";
 export type { SqlOnFhirLibraryTypeCode } from "./sqlQuery";

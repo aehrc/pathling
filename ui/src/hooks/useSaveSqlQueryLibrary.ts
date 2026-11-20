@@ -21,6 +21,7 @@ import { create } from "../api";
 import { config } from "../config";
 import { libraryToSummary } from "./sqlQueryHelpers";
 import { SQL_QUERY_LIBRARIES_QUERY_KEY } from "./useSqlQueryLibraries";
+import { SQL_VIEWS_QUERY_KEY } from "./useSqlViews";
 import { useAuth } from "../contexts/AuthContext";
 
 import type {
@@ -50,12 +51,13 @@ export type UseSaveSqlQueryLibraryResult = UseMutationResult<
 >;
 
 /**
- * Saves an inline SQLQuery Library to the server.
+ * Saves an inline SQLQuery or SQLView Library to the server.
  *
- * On success, the summary of the created resource is added to the cached
- * `SQL_QUERY_LIBRARIES_QUERY_KEY` list before the mutation resolves, so a
- * caller can select the new query straight away, and a background refresh is
- * triggered so the list catches up with the server.
+ * On success, the summary of the created resource is added to the cached list
+ * matching its type code - `SQL_VIEWS_QUERY_KEY` for a SQLView,
+ * `SQL_QUERY_LIBRARIES_QUERY_KEY` for a SQLQuery - before the mutation
+ * resolves, so a caller can select it straight away, and a background refresh
+ * of that list is triggered so it catches up with the server.
  *
  * @param options - Optional callbacks for success and error.
  * @returns Mutation result resolving with the summary of the saved Library.
@@ -83,19 +85,21 @@ export function useSaveSqlQueryLibrary(
       }
       return summary;
     },
-    onSuccess: (summary) => {
+    onSuccess: (summary, library) => {
+      const queryKey =
+        library.type.coding[0].code === "sql-view"
+          ? SQL_VIEWS_QUERY_KEY
+          : SQL_QUERY_LIBRARIES_QUERY_KEY;
       // Replace rather than append when the list already holds this ID, so a
-      // refetch that landed first does not leave the query listed twice.
+      // refetch that landed first does not leave the Library listed twice.
       queryClient.setQueryData<SqlQueryLibrarySummary[]>(
-        SQL_QUERY_LIBRARIES_QUERY_KEY,
+        queryKey,
         (cached = []) =>
           cached.some((lib) => lib.id === summary.id)
             ? cached.map((lib) => (lib.id === summary.id ? summary : lib))
             : [...cached, summary],
       );
-      void queryClient.invalidateQueries({
-        queryKey: SQL_QUERY_LIBRARIES_QUERY_KEY,
-      });
+      void queryClient.invalidateQueries({ queryKey });
       options?.onSuccess?.(summary);
     },
     onError: options?.onError,

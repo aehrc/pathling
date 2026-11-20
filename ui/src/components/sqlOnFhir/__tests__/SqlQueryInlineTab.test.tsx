@@ -80,10 +80,13 @@ function renderTab(
   const onTablesChange = vi.fn();
   const onTerminologyChange = vi.fn();
   const onParametersChange = vi.fn();
+  const onUrlChange = vi.fn();
   render(
     <SqlQueryInlineTab
       title=""
       onTitleChange={vi.fn()}
+      url=""
+      onUrlChange={onUrlChange}
       sql=""
       onSqlChange={vi.fn()}
       tables={overrides.tables ?? []}
@@ -97,7 +100,7 @@ function renderTab(
       sqlViews={overrides.sqlViews ?? SQL_VIEWS}
     />,
   );
-  return { user, onTablesChange, onTerminologyChange, onParametersChange };
+  return { user, onTablesChange, onTerminologyChange, onParametersChange, onUrlChange };
 }
 
 /**
@@ -413,5 +416,17 @@ describe("SqlQueryInlineTab parameter rows", () => {
     });
 
     expect(screen.queryByText(/duplicate parameter name/i)).toBeNull();
+  });
+});
+
+describe("SqlQueryInlineTab canonical URL", () => {
+  // The canonical URL is what other queries bind a saved SQL view by, so the
+  // tab offers a field for it and reports what is typed.
+  it("reports the typed canonical URL", async () => {
+    const { user, onUrlChange } = renderTab();
+
+    await user.type(screen.getByRole("textbox", { name: "Library canonical URL" }), "h");
+
+    expect(onUrlChange).toHaveBeenCalledWith("h");
   });
 });
