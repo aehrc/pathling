@@ -82,6 +82,25 @@ public class SystemDslTest extends FhirPathDslTestBase {
             "2019-02-04T14:34:28+09:00",
             "@2019-02-04T14:34:28+09:00",
             "DateTime literal with time and timezone")
+        // A DateTime literal of a date's precision ends in T, which is not part of its value.
+        .testEquals("2019", "@2019T", "DateTime literal with year precision")
+        .testEquals("2019-02", "@2019-02T", "DateTime literal with month precision")
+        .testEquals("2019-02-04", "@2019-02-04T", "DateTime literal with day precision")
+        .testTrue("@2019T.is(DateTime)", "DateTime literal with year precision is a DateTime")
+        .testTrue("@2019-02T.is(DateTime)", "DateTime literal with month precision is a DateTime")
+        .testTrue("@2019-02-04T.is(DateTime)", "DateTime literal with day precision is a DateTime")
+        .testFalse("@2019-02-04T.is(Date)", "DateTime literal with day precision is not a Date")
+        .testEquals(
+            "2019-02", "@2019-02T.toString()", "DateTime literal with month precision as a String")
+        .testTrue(
+            "@2019-02-04T < @2019-02-05T", "DateTime literals with day precision are compared")
+        .testEmpty(
+            "@2019-02T < @2019-02-04T",
+            "DateTime literals with different precisions and overlapping ranges are incomparable")
+        .testTrue(
+            "@2019-02-04T.toDate() = @2019-02-04",
+            "DateTime literal with day precision converts to a Date")
+        .testError("@2019-02-30T", "DateTime literal with a day that does not exist")
         .group("Time literals")
         .testEquals("10", "@T10", "Time literal with hours only")
         .testEquals("10:10", "@T10:10", "Time literal with hours and minutes")
