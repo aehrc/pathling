@@ -88,6 +88,14 @@ class StringLiteralPathTest {
     assertEquals("Some string and it\\'s problems", result);
   }
 
+  // A backslash is escaped, so that it is not read back as the start of an escape sequence.
+  @Test
+  void escapeBackslash() {
+    final String result = escapeFhirPathString("C:\\new\\");
+    assertEquals("C:\\\\new\\\\", result);
+    assertEquals("C:\\new\\", unescapeFhirPathString(result));
+  }
+
   @Test
   void unescapeUnicode() {
     final String result = unescapeFhirPathString("P\\u0065ter");
