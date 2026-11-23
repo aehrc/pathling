@@ -812,7 +812,7 @@ public class Collection implements Equatable {
    * @return a collection with boolean values indicating type match, or empty based on emptiness
    */
   @Nonnull
-  protected static Collection testType(
+  private static Collection testType(
       @Nonnull final Collection input, @Nonnull final TypeSpecifier type) {
     // Convert to boolean singleton (enforces singular constraint), then check if filtering by type
     // produces a non-null value.

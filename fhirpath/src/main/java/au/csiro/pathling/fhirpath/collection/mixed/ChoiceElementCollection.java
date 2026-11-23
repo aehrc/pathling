@@ -161,14 +161,14 @@ public class ChoiceElementCollection extends MixedCollection implements Material
   /**
    * {@inheritDoc}
    *
-   * <p>This implementation evaluates the parent collection once, as both the singleton check and
-   * the type filter read it.
+   * <p>A choice element has no column of its own, as it reads its variants from the parent
+   * collection, so this implementation evaluates the parent once.
    */
   @Nonnull
   @Override
-  public Collection isOfType(@Nonnull final TypeSpecifier type) {
+  public Collection withColumnEvaluatedOnce(@Nonnull final UnaryOperator<Collection> body) {
     return parent.withColumnEvaluatedOnce(
-        boundParent -> testType(new ChoiceElementCollection(choiceDefinition, boundParent), type));
+        boundParent -> body.apply(new ChoiceElementCollection(choiceDefinition, boundParent)));
   }
 
   @Override

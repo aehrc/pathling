@@ -473,6 +473,10 @@ public class RepeatAllFunctionDslTest extends FhirPathDslTestBase {
             "value.repeatAll(ofType(Quantity)).count()",
             "repeatAll(ofType(Quantity)) on a choice type hits depth exhaustion because"
                 + " Quantity.ofType(Quantity) is self-referential")
+        .testEquals(
+            "mg",
+            "value.repeatAll(ofType(Quantity).unit)",
+            "repeatAll(ofType(Quantity).unit) on a choice type returns the unit of the Quantity")
         .group("repeatAll() choice type — polymorphic traversal")
         .testError(
             "polymorphic",

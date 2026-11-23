@@ -639,10 +639,12 @@ class TraceFunctionTest {
           Arguments.of(new TraceEntryCase("'abc'.trace('t').is(String)", "t", 1)),
           Arguments.of(new TraceEntryCase("'abc'.trace('t') is String", "t", 1)),
           Arguments.of(new TraceEntryCase("'abc'.trace('t').is(Integer)", "t", 1)),
-          // ChoiceElementCollection.isOfType() — the singleton check and the type filter both read
-          // the parent of the choice element.
+          // A choice element reads its variants from its parent, which is read once by the type
+          // check and the recursive traversal (ChoiceElementCollection.withColumnEvaluatedOnce()).
           Arguments.of(new TraceEntryCase("Patient.trace('t').deceased.is(Boolean)", "t", 1)),
           Arguments.of(new TraceEntryCase("Patient.trace('t').deceased.is(dateTime)", "t", 1)),
+          Arguments.of(
+              new TraceEntryCase("Patient.trace('t').deceased.repeat(ofType(Boolean))", "t", 1)),
           // A collection of one item held as an array, rather than as a single value, is read
           // again by a singularity check when a conversion or validation yields nothing.
           Arguments.of(
