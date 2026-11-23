@@ -23,6 +23,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DateTimeComparable;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
+import au.csiro.pathling.fhirpath.collection.mixed.ChoiceElementCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.evaluation.CrossResourceStrategy;
 import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator;
@@ -345,6 +346,11 @@ public class SearchColumnBuilder {
     final FhirPath fhirPath = parser.parse(expression);
     final Collection result = evaluator.evaluate(fhirPath);
 
+    // A choice element has no single type, so each of its alternatives is searched separately.
+    if (result instanceof final ChoiceElementCollection choice) {
+      return buildChoiceFilter(paramType, criterion, expression, choice, evaluator);
+    }
+
     // Get FHIR type from collection - fail if not available.
     final FHIRDefinedType fhirType =
         result
@@ -381,6 +387,57 @@ public class SearchColumnBuilder {
     // Standard path: build filter directly from the evaluated column.
     final SearchFilter filter = getFilterForType(paramType, criterion.getModifier(), fhirType);
     return filter.buildFilter(matchedColumn(result), criterion.getValues());
+  }
+
+  /**
+   * Builds a filter expression for a FHIRPath expression that resolves to a choice element, such as
+   * {@code Observation.effective}.
+   *
+   * <p>Each alternative of the choice that the search parameter type allows is selected with {@code
+   * ofType} and searched as an expression of its own, and the filter results are OR'd together so
+   * that a match on any alternative satisfies the criterion. With the {@code :not} modifier each
+   * alternative's filter is already negated, so they are AND'd instead: a resource matches only if
+   * no alternative holds a matching value. An alternative that the parameter type does not allow,
+   * such as the {@code Timing} alternative of {@code Observation.effective} for a date parameter,
+   * is skipped.
+   *
+   * @param paramType the search parameter type
+   * @param criterion the search criterion (for modifier and values)
+   * @param expression the FHIRPath expression that resolves to the choice element
+   * @param choice the evaluated choice element
+   * @param evaluator the FHIRPath evaluator
+   * @return a SparkSQL Column expression for this expression
+   * @throws InvalidSearchParameterException if the parameter type allows none of the alternatives
+   */
+  @Nonnull
+  private Column buildChoiceFilter(
+      @Nonnull final SearchParameterType paramType,
+      @Nonnull final SearchCriterion criterion,
+      @Nonnull final String expression,
+      @Nonnull final ChoiceElementCollection choice,
+      @Nonnull final SingleResourceEvaluator evaluator) {
+    final List<FHIRDefinedType> alternatives =
+        choice.getChoiceDefinition().getAllChildTypes().stream()
+            .flatMap(alternative -> alternative.getFhirType().stream())
+            .filter(paramType::isAllowedFhirType)
+            .toList();
+    if (alternatives.isEmpty()) {
+      throw new InvalidSearchParameterException(
+          String.format(
+              "No type of choice element '%s' is valid for search parameter type '%s'. "
+                  + "Allowed types: %s",
+              expression, paramType, paramType.getAllowedFhirTypes()));
+    }
+    return alternatives.stream()
+        .map(
+            alternative ->
+                buildExpressionFilter(
+                    paramType,
+                    criterion,
+                    "(" + expression + ").ofType(FHIR." + alternative.toCode() + ")",
+                    evaluator))
+        .reduce("not".equals(criterion.getModifier()) ? Column::and : Column::or)
+        .orElseThrow();
   }
 
   /**
