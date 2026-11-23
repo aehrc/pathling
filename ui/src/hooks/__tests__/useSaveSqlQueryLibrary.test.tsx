@@ -45,6 +45,7 @@ vi.mock("../../contexts/AuthContext", () => ({
 import { create } from "../../api";
 import { useSaveSqlQueryLibrary } from "../useSaveSqlQueryLibrary";
 import { SQL_QUERY_LIBRARIES_QUERY_KEY } from "../useSqlQueryLibraries";
+import { SQL_VIEWS_QUERY_KEY } from "../useSqlViews";
 
 import type { SqlQueryLibrary, SqlQueryLibrarySummary } from "../../types/sqlQuery";
 import type { Resource } from "fhir/r4";
@@ -253,5 +254,54 @@ describe("useSaveSqlQueryLibrary", () => {
     });
 
     expect(queryClient.getQueryData(SQL_QUERY_LIBRARIES_QUERY_KEY)).toEqual([existing]);
+  });
+
+  it("adds a saved SQLView to the cached SQLView list, not the SQLQuery list", async () => {
+    // The form saves a parameterless query as a SQLView, which the picker
+    // lists under SQL views and the source selector offers as a dependency.
+    const inlineView: SqlQueryLibrary = {
+      ...inlineLibrary,
+      title: "New view",
+      type: {
+        coding: [
+          {
+            system: "https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes",
+            code: "sql-view",
+          },
+        ],
+      },
+      parameter: undefined,
+    };
+    vi.mocked(create).mockResolvedValue({ ...inlineView, id: "new-view" } as unknown as Resource);
+    const { wrapper, queryClient } = createWrapperWithClient();
+    const existingQuery = existingSummary("existing-query", "Existing query");
+    const existingView = existingSummary("existing-view", "Existing view");
+    queryClient.setQueryData(SQL_QUERY_LIBRARIES_QUERY_KEY, [existingQuery]);
+    queryClient.setQueryData(SQL_VIEWS_QUERY_KEY, [existingView]);
+    const { result } = renderHook(() => useSaveSqlQueryLibrary(), { wrapper });
+
+    await act(async () => {
+      await result.current.mutateAsync(inlineView);
+    });
+
+    const views = queryClient.getQueryData<SqlQueryLibrarySummary[]>(SQL_VIEWS_QUERY_KEY);
+    expect(views?.map((summary) => summary.id)).toEqual(["existing-view", "new-view"]);
+    expect(queryClient.getQueryState(SQL_VIEWS_QUERY_KEY)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData(SQL_QUERY_LIBRARIES_QUERY_KEY)).toEqual([existingQuery]);
+  });
+
+  it("does not touch the cached SQLView list when saving a SQLQuery", async () => {
+    vi.mocked(create).mockResolvedValue(createdLibrary as unknown as Resource);
+    const { wrapper, queryClient } = createWrapperWithClient();
+    const existingView = existingSummary("existing-view", "Existing view");
+    queryClient.setQueryData(SQL_VIEWS_QUERY_KEY, [existingView]);
+    const { result } = renderHook(() => useSaveSqlQueryLibrary(), { wrapper });
+
+    await act(async () => {
+      await result.current.mutateAsync(inlineLibrary);
+    });
+
+    expect(queryClient.getQueryData(SQL_VIEWS_QUERY_KEY)).toEqual([existingView]);
+    expect(queryClient.getQueryState(SQL_VIEWS_QUERY_KEY)?.isInvalidated).toBe(false);
   });
 });

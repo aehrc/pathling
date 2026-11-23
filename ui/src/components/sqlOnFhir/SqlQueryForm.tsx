@@ -103,6 +103,7 @@ export function SqlQueryForm({
 
   // Inline-mode authoring state.
   const [title, setTitle] = useState<string>("");
+  const [url, setUrl] = useState<string>("");
   const [sql, setSql] = useState<string>("");
   const [tables, setTables] = useState<SqlQueryRelatedArtifact[]>([]);
   const [terminology, setTerminology] = useState<SqlQueryRelatedArtifact[]>([]);
@@ -138,7 +139,7 @@ export function SqlQueryForm({
     setBindings((prev) => ({ ...prev, [name]: value }));
   };
 
-  const inlineInput = { title, sql, tables, terminology, parameters };
+  const inlineInput = { title, url, sql, tables, terminology, parameters };
 
   const baseRequestOptions = () => {
     // The inline tab's rows carry their own values, so they are the source of
@@ -269,6 +270,8 @@ export function SqlQueryForm({
               <SqlQueryInlineTab
                 title={title}
                 onTitleChange={setTitle}
+                url={url}
+                onUrlChange={setUrl}
                 sql={sql}
                 onSqlChange={setSql}
                 tables={tables}

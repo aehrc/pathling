@@ -94,6 +94,10 @@ interface SqlQueryInlineTabProps {
   title: string;
   /** Callback fired when the title changes. */
   onTitleChange: (title: string) => void;
+  /** Library canonical URL (used for `Library.url` on save). */
+  url: string;
+  /** Callback fired when the canonical URL changes. */
+  onUrlChange: (url: string) => void;
   /** SQL text. */
   sql: string;
   /** Callback fired when the SQL changes. */
@@ -126,6 +130,8 @@ interface SqlQueryInlineTabProps {
  * @param props - The component props.
  * @param props.title - Library title (used for `Library.title` on save).
  * @param props.onTitleChange - Callback fired when the title changes.
+ * @param props.url - Library canonical URL (used for `Library.url` on save).
+ * @param props.onUrlChange - Callback fired when the canonical URL changes.
  * @param props.sql - SQL text.
  * @param props.onSqlChange - Callback fired when the SQL changes.
  * @param props.tables - Configured view rows (related artefacts).
@@ -143,6 +149,8 @@ interface SqlQueryInlineTabProps {
 export function SqlQueryInlineTab({
   title,
   onTitleChange,
+  url,
+  onUrlChange,
   sql,
   onSqlChange,
   tables,
@@ -230,6 +238,23 @@ export function SqlQueryInlineTab({
         />
         <FieldGuidance>
           Used as `Library.title` when saving to the server. Required to enable the Save action.
+        </FieldGuidance>
+      </Box>
+
+      <Box>
+        <FieldLabel mb="1" optional>
+          Canonical URL
+        </FieldLabel>
+        <TextField.Root
+          value={url}
+          placeholder="e.g. https://example.org/Library/patients-by-condition"
+          onChange={(e) => onUrlChange(e.target.value)}
+          disabled={disabled}
+          aria-label="Library canonical URL"
+        />
+        <FieldGuidance>
+          Used as `Library.url` when saving to the server. A query without parameters is saved as a
+          SQL view, which other queries can use as a source only if it has a canonical URL.
         </FieldGuidance>
       </Box>
 
