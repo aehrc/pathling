@@ -23,12 +23,14 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.util.function.UnaryOperator;
 
 /**
  * This class knows how to take an @link{EnumerableDataSource} and write it to a variety of
  * different targets.
+ *
+ * <p>Every argument to the methods of this builder must be non-null. A null argument is rejected
+ * with an {@link IllegalArgumentException}.
  *
  * @author John Grimes
  */
@@ -73,7 +75,7 @@ public class DataSinkBuilder {
    * @param path the directory to write the files to
    * @return Details about the performed operation.
    */
-  public WriteDetails ndjson(@Nullable final String path) {
+  public WriteDetails ndjson(@Nonnull final String path) {
     return new NdjsonSink(context, checkArgumentNotNull(path), saveMode).write(source);
   }
 
@@ -86,7 +88,7 @@ public class DataSinkBuilder {
    * @return Details about the performed operation.
    */
   public WriteDetails ndjson(
-      @Nullable final String path, @Nullable final UnaryOperator<String> fileNameMapper) {
+      @Nonnull final String path, @Nonnull final UnaryOperator<String> fileNameMapper) {
     return new NdjsonSink(
             context, checkArgumentNotNull(path), saveMode, checkArgumentNotNull(fileNameMapper))
         .write(source);
@@ -99,7 +101,7 @@ public class DataSinkBuilder {
    * @param path the directory to write the files to
    * @return Details about the performed operation.
    */
-  public WriteDetails parquet(@Nullable final String path) {
+  public WriteDetails parquet(@Nonnull final String path) {
     return new ParquetSink(context, checkArgumentNotNull(path), saveMode).write(source);
   }
 
@@ -112,7 +114,7 @@ public class DataSinkBuilder {
    * @return Details about the performed operation.
    */
   public WriteDetails parquet(
-      @Nullable final String path, @Nullable final UnaryOperator<String> fileNameMapper) {
+      @Nonnull final String path, @Nonnull final UnaryOperator<String> fileNameMapper) {
     return new ParquetSink(
             context, checkArgumentNotNull(path), saveMode, checkArgumentNotNull(fileNameMapper))
         .write(source);
@@ -124,7 +126,7 @@ public class DataSinkBuilder {
    * @param path the directory to write the files to
    * @return Details about the performed operation.
    */
-  public WriteDetails delta(@Nullable final String path) {
+  public WriteDetails delta(@Nonnull final String path) {
     return new DeltaSink(context, checkArgumentNotNull(path), saveMode).write(source);
   }
 
@@ -136,7 +138,7 @@ public class DataSinkBuilder {
    * @return Details about the performed operation.
    */
   public WriteDetails delta(
-      @Nullable final String path, @Nullable final UnaryOperator<String> fileNameMapper) {
+      @Nonnull final String path, @Nonnull final UnaryOperator<String> fileNameMapper) {
     return new DeltaSink(
             context, checkArgumentNotNull(path), saveMode, checkArgumentNotNull(fileNameMapper))
         .write(source);
@@ -159,7 +161,7 @@ public class DataSinkBuilder {
    * @param schema the schema name to write the tables to
    * @return Details about the performed operation.
    */
-  public WriteDetails tables(@Nullable final String schema) {
+  public WriteDetails tables(@Nonnull final String schema) {
     return new CatalogSink(context, saveMode, checkArgumentNotNull(schema)).write(source);
   }
 
@@ -171,7 +173,7 @@ public class DataSinkBuilder {
    * @param format the table format to use (e.g., "delta", "parquet")
    * @return Details about the performed operation.
    */
-  public WriteDetails tables(@Nullable final String schema, @Nullable final String format) {
+  public WriteDetails tables(@Nonnull final String schema, @Nonnull final String format) {
     return new CatalogSink(
             context, saveMode, checkArgumentNotNull(schema), checkArgumentNotNull(format))
         .write(source);
