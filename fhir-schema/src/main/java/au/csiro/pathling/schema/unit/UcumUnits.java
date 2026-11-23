@@ -23,6 +23,7 @@ import io.github.fhnaumann.funcs.ConverterService.ConversionResult;
 import io.github.fhnaumann.funcs.UCUMService;
 import io.github.fhnaumann.model.UCUMExpression.CanonicalTerm;
 import io.github.fhnaumann.util.PreciseDecimal;
+import io.github.fhnaumann.util.UCUMRegistry;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
@@ -43,6 +44,16 @@ public final class UcumUnits {
 
   /** The service is created once, and held here rather than captured by a function. */
   @Nonnull private static final UCUMService SERVICE = new UCUMService();
+
+  static {
+    // ucumate otherwise resolves the definition of each unit on first use, into a map that is
+    // shared by every service in the JVM and is not synchronised. Resolving them all now means
+    // that conversions running concurrently in Spark tasks only ever read it. Ucum in encoders
+    // does the same, and locks on the registry too, so the two never fill it at once.
+    synchronized (UCUMRegistry.getInstance()) {
+      UCUMRegistry.getInstance().warmup();
+    }
+  }
 
   private UcumUnits() {}
 
