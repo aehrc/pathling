@@ -181,8 +181,12 @@ fragment RAW_CODING_COMPONENT
         : ~[ '|\r\n\t(),]*
         ;
 
+// Unlike STRING, this cannot rely on a non-greedy loop to stop at the first closing quote, because
+// it is followed by further input within the CODING rule. A component that could contain an
+// unescaped quote would let CODING span several string literals, e.g. "'x').join('|" within
+// "name.where($this != 'x').join('|')".
 fragment QUOTED_CODING_COMPONENT
-        : STRING
+        : '\'' (ESC | ~['\\])* '\''
         ;
 
 // Also allows leading zeroes now (just like CQL and XSD)

@@ -45,6 +45,35 @@ class ParserTest {
         Arguments.of("Patient.name.given", "Chained resource navigation"),
         Arguments.of("Patient.name.where(use = 'official')", "Where function with equality check"),
         Arguments.of("Patient.name.first()", "First function"),
+        Arguments.of("gender.join('|')", "Pipe string literal in a join separator"),
+        Arguments.of(
+            "name.where($this != 'x').join('|')",
+            "Pipe string literal after an earlier string literal"),
+        Arguments.of(
+            "gender.join('|') + name.family.first().join('|')",
+            "Pipe string literal after an earlier pipe string literal"),
+        Arguments.of(
+            "name.where($this != 'x').join('|a')",
+            "String literal starting with a pipe and another character"),
+        Arguments.of(
+            "name.where($this != 'x').join('|a)')",
+            "String literal starting with a pipe and containing a parenthesis"),
+        Arguments.of(
+            "name.where($this != 'x').join('|a b')",
+            "String literal starting with a pipe and containing a space"),
+        Arguments.of(
+            "name.where($this != 'x').join('a|')",
+            "String literal ending with a pipe after an earlier string literal"),
+        Arguments.of("'x' = http://loinc.org|8867-4", "Coding literal after a string literal"),
+        Arguments.of(
+            "http://loinc.org|8867-4 = 'test|value'",
+            "Coding literal before a pipe-containing string literal"),
+        Arguments.of(
+            "'x' = http://loinc.org|'8867-4'||'Heart rate'",
+            "Coding literal with quoted components after a string literal"),
+        Arguments.of(
+            "'a' | 'b' | http://loinc.org|8867-4",
+            "String literals combined with a coding literal"),
         Arguments.of("name.empty()", "Empty function"),
         Arguments.of("name.count()", "Count function"),
         Arguments.of("birthDate > @2000", "Comparison with date literal"),
