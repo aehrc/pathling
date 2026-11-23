@@ -77,22 +77,26 @@ When UCUM normalization applies:
 
 #### Range Semantics for Canonical Values
 
-For `eq` and `ne` prefixes with canonical values, Pathling uses **exact equality comparison** rather than range-based semantics. This is because:
-1. Canonicalization already normalizes values to a consistent form
-2. Range semantics based on significant figures are less meaningful after unit conversion
-3. Exact comparison provides more predictable behavior
+For `eq` and `ne` prefixes with canonical values, Pathling matches the **implicit range** of the search value, as it does for a number search and for a quantity search without a UCUM system. The specification's own example gives `5.4|http://unitsofmeasure.org|mg` the range 5.4 ± 0.05 mg.
 
-**Rationale:** If a user searches for `1000|http://unitsofmeasure.org|mg`, this canonicalizes to approximately `0.001 g`. An exact match against the resource's canonical value is more intuitive than applying range semantics to the original "1000" value.
+1. The search value is rounded to the scale of the engine's System.Decimal, `DECIMAL(38,6)`, as the canonical form of a stored value is computed from its rounded value.
+2. The implicit range is taken from the significant figures of the search value, so `5.40` has the narrower range [5.395, 5.405).
+3. Both boundaries of the range are canonicalised, and the stored value's canonical value is compared with them. So `5.4|http://unitsofmeasure.org|mg`, the range [5.35, 5.45) mg, matches a stored `5.41 mg` and a stored `0.00541 g`, and `ne` matches neither.
+4. A unit whose canonical value falls as its value rises, such as `[pH]`, reverses the order of the canonical boundaries, and the range still includes the lower boundary of the search value and excludes the upper.
+
+The comparison prefixes `gt`, `ge`, `lt` and `le` compare the stored value's canonical value with the canonical form of the search value itself.
 
 #### Fallback Behavior
 
-If canonicalization fails (e.g., unknown unit, invalid code), the matcher:
+If canonicalization fails (e.g., unknown unit, invalid code), or the canonical form of the search value or of a boundary of its range has more than 38 integer digits, the matcher:
 1. Does **not** throw an error
-2. Falls back to standard value comparison with exact system/code matching
+2. Falls back to standard value comparison with exact system/code matching, which also matches the implicit range under `eq` and `ne`
 3. This ensures searches remain functional even for non-standard units
+
+The same fallback applies to each stored UCUM quantity that has no canonical form. Because both paths match the implicit range, one search no longer matches some stored quantities by a range and others exactly.
 
 ### Implementation
 
 - `QuantityMatcher.java` - Contains `tryMatchWithUcumNormalization()` method
-- Uses `Ucum.getCanonical()` for value/unit canonicalization
-- Compares against `_value_canonicalized` and `_code_canonicalized` fields in Quantity struct
+- Uses the ucumate library, through `UcumUnits.canonicalize()`, for value/unit canonicalization
+- Compares against the `__canonical_code` and `__canonical_value_exact` annotations of the stored Quantity, or computes them where the schema does not carry them

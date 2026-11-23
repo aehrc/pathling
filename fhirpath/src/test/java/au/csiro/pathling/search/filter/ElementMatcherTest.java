@@ -1060,7 +1060,42 @@ class ElementMatcherTest {
 
         // Resource has 500 mg, canonical = (0.5, "g")
         // Search for ge0.5 g -> 0.5 >= 0.5, should match
-        Arguments.of(new BigDecimal("500"), "mg", "ge0.5|http://unitsofmeasure.org|g", true));
+        Arguments.of(new BigDecimal("500"), "mg", "ge0.5|http://unitsofmeasure.org|g", true),
+
+        // ========== UCUM - eq and ne match the implicit range of the search value ==========
+        // 5.4 mg is the range [5.35, 5.45) mg, which holds its lower boundary but not its upper.
+        Arguments.of(new BigDecimal("5.41"), "mg", "5.4|http://unitsofmeasure.org|mg", true),
+        Arguments.of(new BigDecimal("5.35"), "mg", "5.4|http://unitsofmeasure.org|mg", true),
+        Arguments.of(new BigDecimal("5.45"), "mg", "5.4|http://unitsofmeasure.org|mg", false),
+        Arguments.of(new BigDecimal("5.41"), "mg", "ne5.4|http://unitsofmeasure.org|mg", false),
+        Arguments.of(new BigDecimal("5.45"), "mg", "ne5.4|http://unitsofmeasure.org|mg", true),
+        Arguments.of(new BigDecimal("5.34"), "mg", "ne5.4|http://unitsofmeasure.org|mg", true),
+
+        // The range is carried into the canonical unit, so 0.0054 g is [5.35, 5.45) mg, and 5.4 mg
+        // holds 0.00541 g.
+        Arguments.of(new BigDecimal("5.41"), "mg", "0.0054|http://unitsofmeasure.org|g", true),
+        Arguments.of(new BigDecimal("5.45"), "mg", "0.0054|http://unitsofmeasure.org|g", false),
+        Arguments.of(new BigDecimal("0.00541"), "g", "5.4|http://unitsofmeasure.org|mg", true),
+        Arguments.of(new BigDecimal("0.00541"), "g", "ne5.4|http://unitsofmeasure.org|mg", false),
+        Arguments.of(new BigDecimal("0.00545"), "g", "ne5.4|http://unitsofmeasure.org|mg", true),
+
+        // Trailing zeros are significant, so 5.40 mg is the narrower range [5.395, 5.405) mg.
+        Arguments.of(new BigDecimal("5.404"), "mg", "5.40|http://unitsofmeasure.org|mg", true),
+        Arguments.of(new BigDecimal("5.41"), "mg", "5.40|http://unitsofmeasure.org|mg", false),
+        Arguments.of(new BigDecimal("5.41"), "mg", "ne5.40|http://unitsofmeasure.org|mg", true),
+
+        // A search value beyond the range of the System.Decimal has no canonical form, and matches
+        // nothing, under ne as under eq.
+        Arguments.of(new BigDecimal("5.4"), "mg", "1e33|http://unitsofmeasure.org|mg", false),
+        Arguments.of(new BigDecimal("5.4"), "mg", "ne1e33|http://unitsofmeasure.org|mg", false),
+
+        // A pH falls as the concentration it is canonicalised to rises, so the range of 7.0 [pH],
+        // [6.95, 7.05) [pH], still holds its lower boundary but not its upper.
+        Arguments.of(new BigDecimal("6.95"), "[pH]", "7.0|http://unitsofmeasure.org|[pH]", true),
+        Arguments.of(new BigDecimal("7.04"), "[pH]", "7.0|http://unitsofmeasure.org|[pH]", true),
+        Arguments.of(new BigDecimal("7.05"), "[pH]", "7.0|http://unitsofmeasure.org|[pH]", false),
+        Arguments.of(new BigDecimal("6.95"), "[pH]", "ne7.0|http://unitsofmeasure.org|[pH]", false),
+        Arguments.of(new BigDecimal("7.05"), "[pH]", "ne7.0|http://unitsofmeasure.org|[pH]", true));
   }
 
   @ParameterizedTest(name = "QuantityMatcher UCUM: value={0}, code={1} matches \"{2}\" = {3}")

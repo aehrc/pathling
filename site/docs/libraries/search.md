@@ -574,6 +574,8 @@ Results in:
 | ------------------------------------ | ----- | ------ |
 | 3c4d5e6f-7g8h-9i0j-1k2l-3m4n5o6p7q8r | 5.4   | mmol/L |
 
+Without a prefix, or with `eq` or `ne`, a quantity search matches the implicit range of the search value, which is set by its significant figures. `5.4` is the range from 5.35 up to but not including 5.45, and `5.40` is the range from 5.395 up to but not including 5.405. Where the system is UCUM, the range is converted to the canonical unit, so `5.4|http://unitsofmeasure.org|mg` also matches a value of `0.00541 g`. The prefixes `gt`, `ge`, `lt` and `le` compare with the search value itself.
+
 ### String parameters
 
 String parameters perform case-insensitive partial matching by default. The search value matches if it appears anywhere within the target string.
