@@ -38,13 +38,15 @@ public abstract class StringLiteral {
 
   /**
    * On the way back out, we only do the minimal escaping to guarantee syntactical correctness.
+   * Backslashes are escaped along with single quotes, so that a backslash in the value is not read
+   * back as the start of an escape sequence.
    *
    * @param value the value to apply escaping to
    * @return the escaped result
    */
   @Nonnull
   public static String escapeFhirPathString(@Nonnull final String value) {
-    return value.replace("'", "\\'");
+    return value.replace("\\", "\\\\").replace("'", "\\'");
   }
 
   private static final Map<CharSequence, CharSequence> FHIR_CTRL_UNESCAPE_MAP =

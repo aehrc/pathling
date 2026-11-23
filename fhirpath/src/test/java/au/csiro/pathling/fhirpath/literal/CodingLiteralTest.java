@@ -109,6 +109,47 @@ class CodingLiteralTest {
                 .toCoding()));
   }
 
+  // A quoted component that ends in an escaped backslash is closed by the quote that follows it,
+  // as it is by the lexer.
+  @Test
+  void fromLiteralWithTrailingEscapedBackslash() {
+    assertEquals(
+        ImmutableCoding.of("http://x", "v", "C:\\", null, null),
+        parseLiteral("http://x|'C:\\\\'|v"));
+    assertEquals(
+        ImmutableCoding.of("a\\", null, "b\\\\", null, null), parseLiteral("'a\\\\'|'b\\\\\\\\'"));
+  }
+
+  // An escaped quote does not close a component, including when it follows an escaped backslash.
+  @Test
+  void fromLiteralWithEscapedQuoteAfterEscapedBackslash() {
+    assertEquals(
+        ImmutableCoding.of("system", null, "a\\'b", null, null),
+        parseLiteral("system|'a\\\\\\'b'"));
+  }
+
+  // A component that needs quoting and ends in a backslash survives a round trip.
+  @Test
+  void roundTripsTrailingBackslash() {
+    final ImmutableCoding coding = ImmutableCoding.of("system", null, "C:\\some dir\\", null, null);
+    final String literal = CodingLiteral.toLiteral(coding.toCoding());
+    assertEquals("system|'C:\\\\some dir\\\\'", literal);
+    assertEquals(coding, parseLiteral(literal));
+  }
+
+  // The lexer ends a quoted component at the first unescaped quote, so a quote within one must be
+  // escaped.
+  @Test
+  void fromLiteralWithUnescapedQuoteInComponent() {
+    assertThrows(IllegalArgumentException.class, () -> CodingLiteral.fromString("system|'it's'"));
+  }
+
+  // A component left open by an escaped closing quote is malformed.
+  @Test
+  void fromLiteralWithUnterminatedComponent() {
+    assertThrows(IllegalArgumentException.class, () -> CodingLiteral.fromString("system|'C:\\'|v"));
+  }
+
   @Test
   void fromMalformedString() {
     assertThrows(
