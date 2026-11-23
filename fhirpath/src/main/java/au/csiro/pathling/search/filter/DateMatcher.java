@@ -48,15 +48,17 @@ import org.apache.spark.sql.types.DataTypes;
  * value otherwise. For Period types, the lower bound of the start and the upper bound of the end
  * are read the same way, with null values treated as negative and positive infinity respectively.
  *
- * <p>Supported prefixes:
+ * <p>Supported prefixes, as defined in the FHIR R4 search specification:
  *
  * <ul>
- *   <li>{@code eq} (default) - ranges overlap
- *   <li>{@code ne} - ranges do not overlap
+ *   <li>{@code eq} (default) - the range of the search value fully contains the range of the
+ *       resource value
+ *   <li>{@code ne} - the range of the search value does not fully contain the range of the resource
+ *       value
  *   <li>{@code gt} - resource ends after parameter
- *   <li>{@code ge} - resource starts at or after parameter start
+ *   <li>{@code ge} - resource ends after parameter, or the parameter contains it
  *   <li>{@code lt} - resource starts before parameter
- *   <li>{@code le} - resource ends at or before parameter end
+ *   <li>{@code le} - resource starts before parameter, or the parameter contains it
  * </ul>
  *
  * <p>Examples of implicit ranges:
@@ -69,6 +71,7 @@ import org.apache.spark.sql.types.DataTypes;
  *
  * @see <a href="https://hl7.org/fhir/search.html#date">Date Search</a>
  * @see <a href="https://hl7.org/fhir/search.html#prefix">Search Prefixes</a>
+ * @author John Grimes
  */
 public class DateMatcher implements ElementMatcher {
 
@@ -181,7 +184,13 @@ public class DateMatcher implements ElementMatcher {
     return compare(prefix, resourceLow, resourceHigh, paramLow, paramHigh);
   }
 
-  /** Compares the range of an element with the range of the search value, as a prefix says. */
+  /**
+   * Compares the range of an element with the range of the search value, as a prefix says. The
+   * predicates are those of the R4 prefix table: {@code gt} and {@code lt} test whether the range
+   * above or below the search value intersects the element's range, {@code eq} tests whether the
+   * search range contains the element's range, and {@code ge} and {@code le} are the disjunction of
+   * the two, simplified.
+   */
   @Nonnull
   private static Column compare(
       @Nonnull final SearchPrefix prefix,
@@ -190,18 +199,19 @@ public class DateMatcher implements ElementMatcher {
       @Nonnull final Instant paramLow,
       @Nonnull final Instant paramHigh) {
     return switch (prefix) {
-      case EQ ->
-          resourceLow
-              .leq(lit(paramHigh))
-              .and(lit(paramLow).leq(resourceHigh)); // Overlap (current behavior).
-      case NE -> resourceLow.gt(lit(paramHigh)).or(resourceHigh.lt(lit(paramLow))); // No overlap.
+      case EQ -> resourceLow.geq(lit(paramLow)).and(resourceHigh.leq(lit(paramHigh)));
+      case NE -> resourceLow.lt(lit(paramLow)).or(resourceHigh.gt(lit(paramHigh)));
       case GT -> resourceHigh.gt(lit(paramHigh));
-      // The conjunct relies on invariant per-1, start <= end: the upper bound is at or after the
-      // lower bound, so it is at or after the parameter's start wherever the lower bound is. It is
-      // a plain conjunct on the upper bound, which Parquet can test (decision 144).
-      case GE -> resourceLow.geq(lit(paramLow)).and(resourceHigh.geq(lit(paramLow)));
+      // The conjunct relies on invariant per-1, start <= end: either disjunct puts the upper bound
+      // at or after the parameter's start. It is a plain conjunct on the upper bound, which Parquet
+      // can test (decision 144).
+      case GE ->
+          resourceHigh
+              .gt(lit(paramHigh))
+              .or(resourceLow.geq(lit(paramLow)))
+              .and(resourceHigh.geq(lit(paramLow)));
       case LT -> resourceLow.lt(lit(paramLow));
-      case LE -> resourceHigh.leq(lit(paramHigh));
+      case LE -> resourceLow.lt(lit(paramLow)).or(resourceHigh.leq(lit(paramHigh)));
     };
   }
 }
