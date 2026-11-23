@@ -30,6 +30,7 @@ import ca.uhn.fhir.context.FhirContext;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -57,6 +58,8 @@ import org.hl7.fhir.r4.model.Period;
 import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.RiskAssessment;
+import org.hl7.fhir.r4.model.SampledData;
+import org.hl7.fhir.r4.model.SimpleQuantity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -307,6 +310,124 @@ class SearchColumnBuilderTest {
 
     final Set<String> resultIds = extractIds(result);
     assertEquals(Set.of("1", "3"), resultIds);
+  }
+
+  // ========== Expressions of a type the parameter type does not allow ==========
+
+  Stream<Arguments> defaultRegistryValueQuantityCases() {
+    return Stream.of(
+        // A value and unit that the SampledData's origin and data also carry.
+        Arguments.of("value-quantity=5.4|http://unitsofmeasure.org|mmol/L", Set.of("obs1")),
+        // A value alone, matched regardless of unit.
+        Arguments.of("value-quantity=gt0", Set.of("obs1", "obs2")),
+        Arguments.of("value-quantity=7", Set.of("obs2")));
+  }
+
+  @ParameterizedTest(name = "default registry value-quantity: {0}")
+  @MethodSource("defaultRegistryValueQuantityCases")
+  void withDefaultRegistry_valueQuantity_skipsSampledDataExpression(
+      final String queryString, final Set<String> expectedIds) {
+    // The bundled value-quantity parameter is
+    // "(Observation.value as Quantity) | (Observation.value as SampledData)". The SampledData
+    // expression is of a type the quantity parameter type does not allow, so it is skipped and the
+    // search matches stored quantities only.
+    final Dataset<Row> dataset = createObservationDataSourceWithValues().read("Observation");
+    final SearchColumnBuilder defaultBuilder = SearchColumnBuilder.withDefaultRegistry(fhirContext);
+
+    final Column filterColumn =
+        defaultBuilder.fromQueryString(ResourceType.OBSERVATION, queryString);
+
+    assertEquals(expectedIds, extractIds(dataset.filter(filterColumn)));
+  }
+
+  @Test
+  void withDefaultRegistry_valueQuantity_invalidModifier_throwsException() {
+    // Skipping the SampledData expression does not stop the modifier from being validated against
+    // the Quantity expression.
+    final SearchColumnBuilder defaultBuilder = SearchColumnBuilder.withDefaultRegistry(fhirContext);
+
+    assertThrows(
+        InvalidModifierException.class,
+        () -> defaultBuilder.fromQueryString(ResourceType.OBSERVATION, "value-quantity:exact=5"));
+  }
+
+  @Test
+  void disallowedExpressionType_isSkippedWhateverItsPosition() {
+    // The disallowed expression comes first, so that the result does not depend on the order of
+    // the expressions.
+    final SearchColumnBuilder customBuilder =
+        builderWithObservationParameter(
+            List.of("Observation.value.ofType(SampledData)", "Observation.value.ofType(Quantity)"));
+    final Dataset<Row> dataset = createObservationDataSourceWithValues().read("Observation");
+
+    final Column filterColumn =
+        customBuilder.fromQueryString(ResourceType.OBSERVATION, "custom=5.4");
+
+    assertEquals(Set.of("obs1"), extractIds(dataset.filter(filterColumn)));
+  }
+
+  @Test
+  void noExpressionOfAllowedType_throwsException() {
+    // When every expression is of a type the parameter type does not allow, nothing can be
+    // searched, so the search fails rather than matching nothing.
+    final SearchColumnBuilder customBuilder =
+        builderWithObservationParameter(List.of("Observation.value.ofType(SampledData)"));
+
+    final InvalidSearchParameterException exception =
+        assertThrows(
+            InvalidSearchParameterException.class,
+            () -> customBuilder.fromQueryString(ResourceType.OBSERVATION, "custom=5.4"));
+    assertEquals(
+        "Search parameter 'custom' on Observation has no expression of a FHIR type allowed for"
+            + " search parameter type 'QUANTITY'. Types found: [SampledData]."
+            + " Allowed types: [Quantity]",
+        exception.getMessage());
+  }
+
+  private SearchColumnBuilder builderWithObservationParameter(final List<String> expressions) {
+    final SearchParameterRegistry customRegistry =
+        new SearchParameterRegistry(
+            Map.of(
+                "Observation",
+                Map.of(
+                    "custom",
+                    new SearchParameterDefinition(
+                        "custom", SearchParameterType.QUANTITY, expressions))));
+    return SearchColumnBuilder.withRegistry(fhirContext, customRegistry);
+  }
+
+  private ObjectDataSource createObservationDataSourceWithValues() {
+    // obs1: a quantity of 5.4 mmol/L.
+    final Observation obs1 = new Observation();
+    obs1.setId("obs1");
+    obs1.setValue(
+        new Quantity().setValue(5.4).setSystem("http://unitsofmeasure.org").setCode("mmol/L"));
+
+    // obs2: a quantity of 7 mmol/L.
+    final Observation obs2 = new Observation();
+    obs2.setId("obs2");
+    obs2.setValue(
+        new Quantity().setValue(7).setSystem("http://unitsofmeasure.org").setCode("mmol/L"));
+
+    // obs3: sampled data whose origin and data both hold 5.4 mmol/L.
+    final Observation obs3 = new Observation();
+    obs3.setId("obs3");
+    obs3.setValue(
+        new SampledData()
+            .setOrigin(
+                new SimpleQuantity()
+                    .setValue(5.4)
+                    .setSystem("http://unitsofmeasure.org")
+                    .setCode("mmol/L"))
+            .setPeriod(1000)
+            .setDimensions(1)
+            .setData("5.4"));
+
+    // obs4: no value.
+    final Observation obs4 = new Observation();
+    obs4.setId("obs4");
+
+    return new ObjectDataSource(spark, encoders, List.of(obs1, obs2, obs3, obs4));
   }
 
   // ========== Data source creation methods ==========

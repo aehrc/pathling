@@ -246,6 +246,8 @@ resource:
   parameters).
 - **Invalid FHIRPath expressions**: Syntax errors in FHIRPath filter
   expressions.
+- **Unsupported element types**: Using a parameter none of whose elements is of
+  a type that the parameter type supports.
 
 ## Limitations
 
@@ -259,3 +261,7 @@ The following search parameters and features are not yet supported:
 - Reverse chained parameters (`_has`).
 - Result sorting (`_sort`).
 - Include parameters (`_include`, `_revinclude`).
+- Elements of a type that the parameter type does not support. A parameter
+  that also covers elements of a supported type matches only those: for
+  example, `value-quantity` matches `Observation.value as Quantity` but not
+  `Observation.value as SampledData`.
