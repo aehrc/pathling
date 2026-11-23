@@ -217,15 +217,14 @@ public class QuantityMatcher implements ElementMatcher {
     // because the search asks for a UCUM quantity.
     final Column elementCode = resolveStringOrNull(element, CODE);
     final SearchPrefix prefix = parsedValue.getPrefix();
+    final CanonicalQuantity exact = QuantityCanonicalKind.toExact(canonical);
     final Column canonicalMatch =
         when(
             resolveStringOrNull(element, SYSTEM).equalTo(lit(UcumUnit.UCUM_SYSTEM_URI)),
             switch (prefix) {
-              case EQ, NE -> matchCanonicalRange(element, system, code, parsedValue);
+              case EQ, NE -> matchCanonicalRange(element, system, code, exact, parsedValue);
               case GT, GE, LT, LE ->
-                  matchCanonicalValue(
-                      compareCanonicalWith(element, QuantityCanonicalKind.toExact(canonical)),
-                      prefix);
+                  matchCanonicalValue(compareCanonicalWith(element, exact), prefix);
             });
 
     final Column standardMatch =
@@ -246,28 +245,41 @@ public class QuantityMatcher implements ElementMatcher {
    * g}. A unit whose canonical value falls as its value rises, such as {@code [pH]}, reverses the
    * order of the canonical boundaries, and which of them belongs to the range reverses with it.
    *
-   * <p>Where either boundary has no exact canonical form, because its canonical value has too many
-   * digits, the match is null, and the element is matched by the standard match in its own unit, as
-   * it is where the search value itself has no exact canonical form.
+   * <p>The match is null, and the element is matched by the standard match in its own unit, where
+   * the canonical range cannot stand for the range: where the search value or either boundary has
+   * no exact canonical form, because its canonical value has too many digits, or where the
+   * canonical search value does not lie strictly between the canonical boundaries. The latter
+   * happens where the canonicalisation is not monotonic, as for a unit that ucumate squares, such
+   * as {@code [m/s2/Hz^(1/2)]}, whose boundaries -0.5 and 0.5 both canonicalise to 0.25, or where
+   * it loses the difference between the boundaries, as ucumate's offset arithmetic does for a very
+   * large {@code Cel}.
    *
    * @return the match, null where the element's canonical form is not in the canonical unit of the
-   *     range or a boundary has no exact canonical form
+   *     range or the canonical range cannot stand for the range
    */
   @Nonnull
   private Column matchCanonicalRange(
       @Nonnull final Column element,
       @Nonnull final String system,
       @Nonnull final String code,
+      @Nullable final CanonicalQuantity exact,
       @Nonnull final QuantitySearchValue parsedValue) {
     // The search value has a canonical form, so it is within the range the System.Decimal holds.
     final FhirPathNumber range =
         Objects.requireNonNull(NumericMatchingSupport.implicitRange(parsedValue.getNumericValue()));
     final CanonicalQuantity lower = exactCanonicalOf(range.getLowerBoundary(), system, code);
     final CanonicalQuantity upper = exactCanonicalOf(range.getUpperBoundary(), system, code);
-    if (lower == null || upper == null) {
+    if (exact == null || lower == null || upper == null) {
       return lit(null).cast(DataTypes.BooleanType);
     }
-    final boolean rising = lower.getValue().compareTo(upper.getValue()) < 0;
+    final int toLowerSign = exact.getValue().compareTo(lower.getValue());
+    final int toUpperSign = exact.getValue().compareTo(upper.getValue());
+    // The canonical search value lies strictly between the boundaries only where the boundaries
+    // differ, and above the lower one exactly where the canonicalisation rises.
+    if (toLowerSign == 0 || toUpperSign == 0 || toLowerSign == toUpperSign) {
+      return lit(null).cast(DataTypes.BooleanType);
+    }
+    final boolean rising = toLowerSign > 0;
     final Column toLower = compareCanonicalWith(element, lower);
     final Column toUpper = compareCanonicalWith(element, upper);
     final Column within =

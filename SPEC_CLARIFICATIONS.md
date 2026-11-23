@@ -88,7 +88,7 @@ The comparison prefixes `gt`, `ge`, `lt` and `le` compare the stored value's can
 
 #### Fallback Behavior
 
-If canonicalization fails (e.g., unknown unit, invalid code), or the canonical form of the search value or of a boundary of its range has more than 38 integer digits, the matcher:
+If canonicalization fails (e.g., unknown unit, invalid code), the canonical form of the search value or of a boundary of its range has more than 38 integer digits, or the canonical search value does not lie strictly between the canonical boundaries (as for `[m/s2/Hz^(1/2)]`, which ucumate squares, so that the boundaries of `0` both canonicalise to 0.25), the matcher:
 1. Does **not** throw an error
 2. Falls back to standard value comparison with exact system/code matching, which also matches the implicit range under `eq` and `ne`
 3. This ensures searches remain functional even for non-standard units

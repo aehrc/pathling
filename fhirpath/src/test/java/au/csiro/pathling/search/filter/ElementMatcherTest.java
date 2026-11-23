@@ -1095,7 +1095,43 @@ class ElementMatcherTest {
         Arguments.of(new BigDecimal("7.04"), "[pH]", "7.0|http://unitsofmeasure.org|[pH]", true),
         Arguments.of(new BigDecimal("7.05"), "[pH]", "7.0|http://unitsofmeasure.org|[pH]", false),
         Arguments.of(new BigDecimal("6.95"), "[pH]", "ne7.0|http://unitsofmeasure.org|[pH]", false),
-        Arguments.of(new BigDecimal("7.05"), "[pH]", "ne7.0|http://unitsofmeasure.org|[pH]", true));
+        Arguments.of(new BigDecimal("7.05"), "[pH]", "ne7.0|http://unitsofmeasure.org|[pH]", true),
+
+        // Where the canonical boundaries do not enclose the canonical search value, the range is
+        // matched in the unit of the search instead. ucumate squares [m/s2/Hz^(1/2)], so the
+        // boundaries of 0, -0.5 and 0.5, both canonicalise to 0.25.
+        Arguments.of(
+            new BigDecimal("0"),
+            "[m/s2/Hz^(1/2)]",
+            "0|http://unitsofmeasure.org|[m/s2/Hz^(1/2)]",
+            true),
+        Arguments.of(
+            new BigDecimal("0.3"),
+            "[m/s2/Hz^(1/2)]",
+            "0|http://unitsofmeasure.org|[m/s2/Hz^(1/2)]",
+            true),
+        Arguments.of(
+            new BigDecimal("0"),
+            "[m/s2/Hz^(1/2)]",
+            "ne0|http://unitsofmeasure.org|[m/s2/Hz^(1/2)]",
+            false),
+        Arguments.of(
+            new BigDecimal("0.6"),
+            "[m/s2/Hz^(1/2)]",
+            "ne0|http://unitsofmeasure.org|[m/s2/Hz^(1/2)]",
+            true),
+        // ucumate adds the offset of Cel in double arithmetic, which loses the boundaries of a very
+        // large temperature.
+        Arguments.of(
+            new BigDecimal("100000000000000000000"),
+            "Cel",
+            "100000000000000000000|http://unitsofmeasure.org|Cel",
+            true),
+        Arguments.of(
+            new BigDecimal("100000000000000000000"),
+            "Cel",
+            "ne100000000000000000000|http://unitsofmeasure.org|Cel",
+            false));
   }
 
   @ParameterizedTest(name = "QuantityMatcher UCUM: value={0}, code={1} matches \"{2}\" = {3}")
