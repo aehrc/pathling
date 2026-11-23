@@ -232,7 +232,7 @@ val data = pc.read().ndjson("/usr/share/staging/ndjson")
 ```
 
 ```
-NdjsonSource data = pc.read().ndjson("/usr/share/staging/ndjson");
+QueryableDataSource data = pc.read().ndjson("/usr/share/staging/ndjson");
 ```
 
 You can also accommodate a custom naming scheme within the NDJSON files by using the [file\_name\_mapper](https://pathling.csiro.au/docs/python/pathling.html#pathling.datasource.DataSources.ndjson) argument. Here is an example of how to import the [MIMIC-IV FHIR data set](https://physionet.org/content/mimic-iv-fhir/1.0/):
@@ -269,12 +269,12 @@ data <- pc %>% pathling_read_bundles("/usr/share/staging/bundles",
 
 ```
 val data = pc.read().bundles("/usr/share/staging/bundles",
-    Set("Patient", "Condition", "Immunization").asJava, FhirMimeTypes.FHIR_JSON)
+    Set("Patient", "Condition", "Immunization").asJava, PathlingContext.FHIR_JSON)
 ```
 
 ```
-BundlesSource data = pc.read().bundles("/usr/share/staging/bundles",
-        Set.of("Patient", "Condition", "Immunization"), FhirMimeTypes.FHIR_JSON)
+QueryableDataSource data = pc.read().bundles("/usr/share/staging/bundles",
+        Set.of("Patient", "Condition", "Immunization"), PathlingContext.FHIR_JSON);
 ```
 
 ### Datasets[​](#datasets "Direct link to Datasets")

@@ -73,7 +73,7 @@ import static au.csiro.pathling.views.FhirView.columns;
 import static au.csiro.pathling.views.FhirView.forEach;
 
 import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.io.source.NdjsonSource;
+import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.views.FhirView;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -82,7 +82,7 @@ class MyApp {
 
     public static void main(String[] args) {
         PathlingContext pc = PathlingContext.create();
-        NdjsonSource data = pc.read()
+        QueryableDataSource data = pc.read()
                 .ndjson("/some/file/location");
 
         FhirView view = FhirView.ofResource("Observation")
@@ -106,13 +106,13 @@ class MyApp {
 
 ```
 import au.csiro.pathling.library.PathlingContext
-import au.csiro.pathling.library.io.source.NdjsonSource
+import au.csiro.pathling.library.io.source.QueryableDataSource
 import au.csiro.pathling.views.FhirView
 import au.csiro.pathling.views.FhirView._
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
 
 val pc = PathlingContext.create()
-val data: NdjsonSource = pc.read()
+val data: QueryableDataSource = pc.read()
         .ndjson("/some/file/location")
 
 val view: FhirView = FhirView.ofResource("Observation")
