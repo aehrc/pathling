@@ -622,6 +622,10 @@ object UnresolvedColumnOrNull {
  *  - Traversing Item → Answer → Item (type changes): depth counter does not decrement
  *  - Traversing Item → Item (same type): depth counter decrements, limiting recursion
  *
+ * '''Evaluation:''' Each level reads its node once for extraction and again within every deeper
+ * level. A non-deterministic node, such as one that traces its value, is bound to a lambda variable
+ * so that it is evaluated once. A deterministic node is read directly.
+ *
  * '''Requirements:'''
  *  - The `extractor` function must return an array type
  *  - The array type must be consistent across all traversed nodes to avoid type mismatch errors

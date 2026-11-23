@@ -158,6 +158,19 @@ public class ChoiceElementCollection extends MixedCollection implements Material
     return parent.asBooleanSingleton();
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>This implementation evaluates the parent collection once, as both the singleton check and
+   * the type filter read it.
+   */
+  @Nonnull
+  @Override
+  public Collection isOfType(@Nonnull final TypeSpecifier type) {
+    return parent.withColumnEvaluatedOnce(
+        boundParent -> testType(new ChoiceElementCollection(choiceDefinition, boundParent), type));
+  }
+
   @Override
   @Nonnull
   public Collection asSingular() {

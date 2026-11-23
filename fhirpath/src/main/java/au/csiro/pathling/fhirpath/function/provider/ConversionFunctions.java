@@ -373,21 +373,21 @@ public class ConversionFunctions {
   @Nonnull
   public Collection convertsToQuantity(
       @Nonnull final Collection input, @Nullable final Collection unit) {
-    final Collection canConvertToQuantity =
-        ValidationLogic.performValidation(input, FhirPathType.QUANTITY);
-
-    // Only evaluate if unitCode is provided
-    @Nullable
-    final Collection converted =
-        unit != null ? ConversionLogic.performConversion(input, FhirPathType.QUANTITY) : null;
-
-    if (unit != null && converted instanceof final QuantityCollection quantityCollection) {
-      final Collection canConvertToUnit =
-          quantityCollection.convertibleToUnit(requireNonNull(unit));
-      return canConvertToQuantity.mapColumn(
-          c -> functions.coalesce(canConvertToUnit.getColumnValue(), c));
-    } else {
-      return canConvertToQuantity;
+    if (unit == null) {
+      return ValidationLogic.performValidation(input, FhirPathType.QUANTITY);
     }
+    // The input is both validated and converted, so it is evaluated once.
+    return input.withColumnEvaluatedOnce(
+        bound -> {
+          final Collection canConvertToQuantity =
+              ValidationLogic.performValidation(bound, FhirPathType.QUANTITY);
+          if (ConversionLogic.performConversion(bound, FhirPathType.QUANTITY)
+              instanceof final QuantityCollection quantityCollection) {
+            final Collection canConvertToUnit = quantityCollection.convertibleToUnit(unit);
+            return canConvertToQuantity.mapColumn(
+                c -> functions.coalesce(canConvertToUnit.getColumnValue(), c));
+          }
+          return canConvertToQuantity;
+        });
   }
 }
