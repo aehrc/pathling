@@ -34,6 +34,12 @@
   <name>Pathling Terminology</name>
   <description>Interact with a FHIR terminology server from Spark.</description>
 
+  <properties>
+    <!-- Each test fork fills its 4 GB heap and uses more memory off-heap, so the fork count is
+      limited by memory rather than processors. Two forks nearly fill a 16 GB machine. -->
+    <pathling.testForkCount>2</pathling.testForkCount>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
