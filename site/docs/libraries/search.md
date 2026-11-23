@@ -484,7 +484,7 @@ Results in:
 
 Different FHIR search parameter types support different matching behaviours.
 
-Some search parameters cover elements of more than one type. Elements of a type that the parameter type does not support are not matched. For example, `value-quantity` covers both `Observation.value as Quantity` and `Observation.value as SampledData`, and matches only the `Quantity` values. A search on a parameter none of whose elements is of a supported type fails.
+Some search parameters cover elements of more than one type. Elements of a type that the parameter type does not support are not matched. For example, `value-quantity` covers both `Observation.value as Quantity` and `Observation.value as SampledData`, and matches only the `Quantity` values. Likewise, `context-quantity` matches `Quantity` values but not `Range` values. A search on a parameter none of whose elements is of a supported type fails.
 
 ### Quantity parameters
 

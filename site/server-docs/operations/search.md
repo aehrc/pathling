@@ -264,4 +264,5 @@ The following search parameters and features are not yet supported:
 - Elements of a type that the parameter type does not support. A parameter
   that also covers elements of a supported type matches only those: for
   example, `value-quantity` matches `Observation.value as Quantity` but not
-  `Observation.value as SampledData`.
+  `Observation.value as SampledData`, and `context-quantity` matches `Quantity`
+  values but not `Range` values.

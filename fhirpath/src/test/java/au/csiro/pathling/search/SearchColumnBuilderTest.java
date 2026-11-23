@@ -66,6 +66,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -356,7 +357,9 @@ class SearchColumnBuilderTest {
     // The disallowed expression comes first, so that the result does not depend on the order of
     // the expressions.
     final SearchColumnBuilder customBuilder =
-        builderWithObservationParameter(
+        builderWithCustomParameter(
+            "Observation",
+            SearchParameterType.QUANTITY,
             List.of("Observation.value.ofType(SampledData)", "Observation.value.ofType(Quantity)"));
     final Dataset<Row> dataset = createObservationDataSourceWithValues().read("Observation");
 
@@ -371,7 +374,10 @@ class SearchColumnBuilderTest {
     // When every expression is of a type the parameter type does not allow, nothing can be
     // searched, so the search fails rather than matching nothing.
     final SearchColumnBuilder customBuilder =
-        builderWithObservationParameter(List.of("Observation.value.ofType(SampledData)"));
+        builderWithCustomParameter(
+            "Observation",
+            SearchParameterType.QUANTITY,
+            List.of("Observation.value.ofType(SampledData)"));
 
     final InvalidSearchParameterException exception =
         assertThrows(
@@ -384,15 +390,13 @@ class SearchColumnBuilderTest {
         exception.getMessage());
   }
 
-  private SearchColumnBuilder builderWithObservationParameter(final List<String> expressions) {
+  private SearchColumnBuilder builderWithCustomParameter(
+      final String resourceType, final SearchParameterType type, final List<String> expressions) {
     final SearchParameterRegistry customRegistry =
         new SearchParameterRegistry(
             Map.of(
-                "Observation",
-                Map.of(
-                    "custom",
-                    new SearchParameterDefinition(
-                        "custom", SearchParameterType.QUANTITY, expressions))));
+                resourceType,
+                Map.of("custom", new SearchParameterDefinition("custom", type, expressions))));
     return SearchColumnBuilder.withRegistry(fhirContext, customRegistry);
   }
 
@@ -755,6 +759,23 @@ class SearchColumnBuilderTest {
     final Dataset<Row> result = dataset.filter(filterColumn);
 
     assertEquals(0, result.count());
+  }
+
+  @ParameterizedTest(name = "filtered name expression: {0}")
+  @CsvSource({"custom=john, 1", "custom=jane, ''"})
+  void stringSearch_filteredNameExpression_searchesOnlyFilteredNames(
+      final String queryString, final String expectedId) {
+    // The sub-fields of a HumanName are searched within the names that the expression selects, so
+    // the name of Patient 2 is excluded by the filter and does not match.
+    final SearchColumnBuilder customBuilder =
+        builderWithCustomParameter(
+            "Patient", SearchParameterType.STRING, List.of("Patient.name.where(family = 'Smith')"));
+    final Dataset<Row> dataset = createPatientDataSourceWithNames().read("Patient");
+
+    final Column filterColumn = customBuilder.fromQueryString(ResourceType.PATIENT, queryString);
+
+    final Set<String> expectedIds = expectedId.isEmpty() ? Set.of() : Set.of(expectedId);
+    assertEquals(expectedIds, extractIds(dataset.filter(filterColumn)));
   }
 
   // ========== String search on Address (complex type) tests ==========
