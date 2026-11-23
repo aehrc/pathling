@@ -78,6 +78,30 @@ public final class NumericMatchingSupport {
   }
 
   /**
+   * Returns the implicit range of a search value, which is the range of the number as the engine's
+   * System.Decimal holds it ({@link #systemValue}). A value that is rounded has the range of its
+   * rounded value, so that {@code 0.0000002} has the range of {@code 0.000000}. A value that is not
+   * rounded keeps its own text, whose form gives its significant figures, so that {@code 5.40} has
+   * the range [5.395, 5.405) rather than the range of {@code 5.4}.
+   *
+   * @param numericValue the numeric search value (without prefix)
+   * @return the number with its range, or null where it is outside the range the System.Decimal
+   *     holds
+   * @throws InvalidSearchParameterException if the value is not a number
+   */
+  @Nullable
+  public static FhirPathNumber implicitRange(@Nonnull final String numericValue) {
+    final BigDecimal value = systemValue(numericValue);
+    if (value == null) {
+      return null;
+    }
+    return FhirPathNumber.parse(
+        parseNumber(numericValue).scale() > SystemDecimal.SCALE
+            ? value.toPlainString()
+            : numericValue);
+  }
+
+  /**
    * Matches using range semantics based on significant figures.
    *
    * <p>For resource values (treated as points with infinite precision):
@@ -90,11 +114,9 @@ public final class NumericMatchingSupport {
    * <p>The range is determined by the precision of the search value. For example, searching for
    * "100" (3 significant figures) creates a range [99.5, 100.5).
    *
-   * <p>The search value is first taken as the engine's System.Decimal holds it ({@link
-   * #systemValue}), and a value that is rounded has the range of its rounded value, so that {@code
-   * eq0.0000002} searches as {@code eq0.000000}. A value outside the range the System.Decimal holds
-   * matches nothing, under {@code ne} as under {@code eq}, because a comparison with a value that
-   * is not available is not made.
+   * <p>The range is the implicit range of the search value ({@link #implicitRange}). A value
+   * outside the range the System.Decimal holds matches nothing, under {@code ne} as under {@code
+   * eq}, because a comparison with a value that is not available is not made.
    *
    * <p>The value column is a System.Decimal, so it holds only multiples of the System.Decimal's
    * smallest step. A boundary with more fractional digits than that is therefore raised to the next
@@ -112,16 +134,10 @@ public final class NumericMatchingSupport {
       @Nonnull final Column valueColumn,
       @Nonnull final String numericValue,
       @Nonnull final SearchPrefix prefix) {
-    final BigDecimal value = systemValue(numericValue);
-    if (value == null) {
+    final FhirPathNumber searchNumber = implicitRange(numericValue);
+    if (searchNumber == null) {
       return lit(false);
     }
-    // A value that is not rounded keeps its own text, whose form gives its significant figures.
-    final FhirPathNumber searchNumber =
-        FhirPathNumber.parse(
-            parseNumber(numericValue).scale() > SystemDecimal.SCALE
-                ? value.toPlainString()
-                : numericValue);
     final BigDecimal lowerBoundary = onTheSystemScale(searchNumber.getLowerBoundary());
     final BigDecimal upperBoundary = onTheSystemScale(searchNumber.getUpperBoundary());
     // A boundary beyond the range the System.Decimal holds bounds nothing, as every System.Decimal

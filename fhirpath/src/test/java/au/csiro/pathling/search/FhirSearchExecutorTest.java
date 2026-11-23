@@ -862,13 +862,23 @@ class FhirSearchExecutorTest {
             List.of("1000|http://unitsofmeasure.org|mg"),
             Set.of("1")),
 
-        // Search for 1 g -> should match obs1 (1g) directly
+        // Search for 1 g, the range [0.5, 1.5) g -> should match obs1 (1g), obs2 (500mg) and obs3
+        // (0.5g), as its one significant figure gives it a wide range.
         Arguments.of(
-            "value-quantity UCUM: 1g matches 1g",
+            "value-quantity UCUM: 1g matches the range [0.5, 1.5) g",
             ResourceType.OBSERVATION,
             (Supplier<ObjectDataSource>) this::createObservationDataSourceForUcumNormalization,
             "value-quantity",
             List.of("1|http://unitsofmeasure.org|g"),
+            Set.of("1", "2", "3")),
+
+        // Search for 1.0 g, the range [0.95, 1.05) g -> should match obs1 (1g) only
+        Arguments.of(
+            "value-quantity UCUM: 1.0g matches 1g",
+            ResourceType.OBSERVATION,
+            (Supplier<ObjectDataSource>) this::createObservationDataSourceForUcumNormalization,
+            "value-quantity",
+            List.of("1.0|http://unitsofmeasure.org|g"),
             Set.of("1")),
 
         // Search for 500 mg -> should match obs2 (500mg) and obs3 (0.5g = 500mg)
