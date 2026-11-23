@@ -323,7 +323,7 @@ data <- pc %>% pathling_read_bundles("/usr/share/staging/bundles",
 
 ```scala
 val data = pc.read().bundles("/usr/share/staging/bundles",
-    Set("Patient", "Condition", "Immunization").asJava, FhirMimeTypes.FHIR_JSON)
+    Set("Patient", "Condition", "Immunization").asJava, PathlingContext.FHIR_JSON)
 ```
 
 </TabItem>
@@ -331,7 +331,7 @@ val data = pc.read().bundles("/usr/share/staging/bundles",
 
 ```java
 QueryableDataSource data = pc.read().bundles("/usr/share/staging/bundles",
-        Set.of("Patient", "Condition", "Immunization"), FhirMimeTypes.FHIR_JSON)
+        Set.of("Patient", "Condition", "Immunization"), PathlingContext.FHIR_JSON);
 ```
 
 </TabItem>
