@@ -121,7 +121,9 @@ public class DateTimeCollection extends Collection
   }
 
   /**
-   * Returns a new instance, parsed from a FHIRPath literal.
+   * Returns a new instance, parsed from a FHIRPath literal. A literal of a date's precision ends in
+   * {@code T}, as in {@code @2020-06T}, which distinguishes it from a Date but is not part of its
+   * value, so it is held as the FHIR dateTime {@code 2020-06}.
    *
    * @param dateTimeLiteral The FHIRPath representation of the literal
    * @return A new instance of {@link DateTimeCollection}
@@ -130,7 +132,7 @@ public class DateTimeCollection extends Collection
   @Nonnull
   public static DateTimeCollection fromLiteral(@Nonnull final String dateTimeLiteral)
       throws ParseException {
-    final String dateTimeString = dateTimeLiteral.replaceFirst("^@", "");
+    final String dateTimeString = dateTimeLiteral.replaceFirst("^@", "").replaceFirst("T$", "");
     try {
       return DateTimeCollection.build(
           new DefaultRepresentation(SystemDateTime.fromLiteral(dateTimeString)));

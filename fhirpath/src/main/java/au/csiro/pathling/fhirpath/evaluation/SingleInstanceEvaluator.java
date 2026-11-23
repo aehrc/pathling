@@ -34,8 +34,12 @@ import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.Type
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.utilities.AnnotationNames;
 import ca.uhn.fhir.context.FhirContext;
+import com.google.gson.stream.JsonWriter;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -51,7 +55,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -411,13 +414,63 @@ public class SingleInstanceEvaluator {
    * carrying its definition is rendered by the layout-to-JSON transform instead, so this is reached
    * by a value that carries none, which is a value collected by {@code trace()}.
    *
+   * <p>Each structure is rendered against its own schema, not the type its parent declares for it,
+   * because the elements of a sanitised array keep different fields. {@link Row#json()} maps the
+   * fields of a nested structure by position against the declared type, so it would label an
+   * element with another element's field names. Values other than structures and arrays are
+   * rendered by Spark.
+   *
    * @param row the row to convert
    * @return a JSON string with annotations removed
    */
   @Nonnull
   static String rowToJson(@Nonnull final Row row) {
     final Row sanitised = sanitiseRow(row);
-    return sanitised.json();
+    final StringWriter json = new StringWriter();
+    try (final JsonWriter writer = new JsonWriter(json)) {
+      writeJson(writer, sanitised, sanitised.schema());
+    } catch (final IOException e) {
+      throw new UncheckedIOException(e);
+    }
+    return json.toString();
+  }
+
+  /**
+   * Writes a sanitised value as JSON, writing a structure against its own schema.
+   *
+   * @param writer the writer to write to
+   * @param value the value to write
+   * @param type the type declared for the value
+   * @throws IOException if the value cannot be written
+   */
+  private static void writeJson(
+      @Nonnull final JsonWriter writer, @Nullable final Object value, @Nonnull final DataType type)
+      throws IOException {
+    switch (value) {
+      case null -> writer.nullValue();
+      case final Row row -> {
+        writer.beginObject();
+        final StructField[] fields = row.schema().fields();
+        for (int i = 0; i < fields.length; i++) {
+          writer.name(fields[i].name());
+          writeJson(writer, row.get(i), fields[i].dataType());
+        }
+        writer.endObject();
+      }
+      case final scala.collection.Seq<?> seq when type instanceof final ArrayType arrayType -> {
+        writer.beginArray();
+        for (int i = 0; i < seq.length(); i++) {
+          writeJson(writer, seq.apply(i), arrayType.elementType());
+        }
+        writer.endArray();
+      }
+      default -> {
+        // Spark renders a row holding only the value as {"v":<value>}.
+        final String json =
+            new GenericRowWithSchema(new Object[] {value}, new StructType().add("v", type)).json();
+        writer.jsonValue(json.substring("{\"v\":".length(), json.length() - 1));
+      }
+    }
   }
 
   /**
@@ -452,13 +505,14 @@ public class SingleInstanceEvaluator {
   }
 
   /**
-   * Sanitises a single field value, appending the resulting field and value to the supplied lists.
-   * Nested rows and array-of-struct elements are recursively sanitised so that annotations and null
-   * fields are stripped at every depth.
+   * Sanitises a single field value, appending the field and the sanitised value to the supplied
+   * lists. Nested rows and array-of-struct elements are recursively sanitised so that annotations
+   * and null fields are stripped at every depth. The type declared by the field is kept as it is,
+   * as {@link #rowToJson} renders each structure against its own schema.
    *
    * @param field the original struct field
    * @param value the non-null value associated with the field
-   * @param filteredFields the list to which the (possibly updated) field is appended
+   * @param filteredFields the list to which the field is appended
    * @param filteredValues the list to which the sanitised value is appended
    */
   private static void sanitiseField(
@@ -467,9 +521,6 @@ public class SingleInstanceEvaluator {
       @Nonnull final List<StructField> filteredFields,
       @Nonnull final List<Object> filteredValues) {
     switch (value) {
-      // Recursively sanitise nested struct values, updating the parent field's dataType to match
-      // the sanitised schema. This is critical because Row.json() uses the parent's dataType (not
-      // the nested row's own schema) to map field names positionally.
       case final Row nestedRow -> {
         final Row sanitisedNested = sanitiseRow(nestedRow);
         // A structure left with no fields, such as a metadata group that held only annotations, is
@@ -477,9 +528,7 @@ public class SingleInstanceEvaluator {
         if (sanitisedNested.size() == 0) {
           return;
         }
-        filteredFields.add(
-            new StructField(
-                field.name(), sanitisedNested.schema(), field.nullable(), field.metadata()));
+        filteredFields.add(field);
         filteredValues.add(sanitisedNested);
       }
       case final scala.collection.Seq<?> seq ->
@@ -492,13 +541,12 @@ public class SingleInstanceEvaluator {
   }
 
   /**
-   * Sanitises an array field by recursively sanitising any struct elements and updating the parent
-   * field's {@link ArrayType} element type so that {@link Row#json()} positional mapping remains
-   * correct after fields are stripped from array elements.
+   * Sanitises an array field by recursively sanitising any struct elements. The elements may be
+   * left with different fields, so no single element type describes them.
    *
    * @param field the original array struct field
    * @param seq the array value
-   * @param filteredFields the list to which the (possibly updated) field is appended
+   * @param filteredFields the list to which the field is appended
    * @param filteredValues the list to which the sanitised array is appended
    */
   private static void sanitiseSeqField(
@@ -507,7 +555,6 @@ public class SingleInstanceEvaluator {
       @Nonnull final List<StructField> filteredFields,
       @Nonnull final List<Object> filteredValues) {
     final List<Object> sanitisedElements = new ArrayList<>(seq.length());
-    StructType sanitisedElementSchema = null;
     boolean emptied = false;
     for (int i = 0; i < seq.length(); i++) {
       final Object element = seq.apply(i);
@@ -520,9 +567,6 @@ public class SingleInstanceEvaluator {
           emptied = true;
         } else {
           sanitisedElements.add(sanitisedElement);
-          if (sanitisedElementSchema == null) {
-            sanitisedElementSchema = sanitisedElement.schema();
-          }
         }
       } else {
         sanitisedElements.add(element);
@@ -532,25 +576,8 @@ public class SingleInstanceEvaluator {
     if (emptied && sanitisedElements.stream().allMatch(Objects::isNull)) {
       return;
     }
-    filteredFields.add(withElementSchema(field, sanitisedElementSchema));
+    filteredFields.add(field);
     filteredValues.add(new ArraySeq.ofRef<>(sanitisedElements.toArray()));
-  }
-
-  /**
-   * Returns an array field with the schema of its sanitised elements, or the field as it is where
-   * there is no such schema or it is not an array.
-   */
-  @Nonnull
-  private static StructField withElementSchema(
-      @Nonnull final StructField field, @Nullable final StructType elementSchema) {
-    if (elementSchema != null && field.dataType() instanceof final ArrayType arrayType) {
-      return new StructField(
-          field.name(),
-          DataTypes.createArrayType(elementSchema, arrayType.containsNull()),
-          field.nullable(),
-          field.metadata());
-    }
-    return field;
   }
 
   /**

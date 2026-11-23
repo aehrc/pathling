@@ -22,7 +22,6 @@ import static au.csiro.pathling.utilities.Preconditions.checkArgumentNotNull;
 import au.csiro.fhir.export.BulkExportClient;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -44,6 +43,9 @@ import org.apache.spark.sql.types.StructType;
  * re-importing it from its source or, where there is none, by converting it to NDJSON with the
  * legacy export, the separate {@code au.csiro.pathling:legacy-export} artifact, and reading that
  * with {@link #ndjson(String)}.
+ *
+ * <p>Every argument to the methods of this builder must be non-null. A null argument is rejected
+ * with an {@link IllegalArgumentException}.
  *
  * @param context the {@link PathlingContext} to use for creating the data sources
  * @param layoutDetection whether the Parquet, Delta and catalog sources this builder creates
@@ -89,7 +91,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
    * @return the new data source
    */
   @Nonnull
-  public QueryableDataSource ndjson(@Nullable final String ndjsonDir) {
+  public QueryableDataSource ndjson(@Nonnull final String ndjsonDir) {
     return new NdjsonSource(context, checkArgumentNotNull(ndjsonDir));
   }
 
@@ -110,7 +112,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
    * @return the new data source
    */
   @Nonnull
-  public QueryableDataSource ndjson(@Nullable final String path, @Nullable final String extension) {
+  public QueryableDataSource ndjson(@Nonnull final String path, @Nonnull final String extension) {
     return new NdjsonSource(context, checkArgumentNotNull(path), checkArgumentNotNull(extension));
   }
 
@@ -128,9 +130,9 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
    */
   @Nonnull
   public QueryableDataSource ndjson(
-      @Nullable final String path,
-      @Nullable final String extension,
-      @Nullable final Function<String, Set<String>> fileNameMapper) {
+      @Nonnull final String path,
+      @Nonnull final String extension,
+      @Nonnull final Function<String, Set<String>> fileNameMapper) {
     return new NdjsonSource(
         context,
         checkArgumentNotNull(path),
@@ -155,9 +157,9 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
    */
   @Nonnull
   public QueryableDataSource bundles(
-      @Nullable final String path,
-      @Nullable final Set<String> resourceTypes,
-      @Nullable final String mimeType) {
+      @Nonnull final String path,
+      @Nonnull final Set<String> resourceTypes,
+      @Nonnull final String mimeType) {
     return new BundlesSource(
         context,
         checkArgumentNotNull(path),
@@ -185,7 +187,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
    * @return the new data source
    */
   @Nonnull
-  public QueryableDataSource parquet(@Nullable final String path) {
+  public QueryableDataSource parquet(@Nonnull final String path) {
     return new ParquetSource(
         context,
         checkArgumentNotNull(path),
@@ -204,7 +206,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
    */
   @Nonnull
   public QueryableDataSource parquet(
-      @Nullable final String path, @Nullable final Function<String, Set<String>> fileNameMapper) {
+      @Nonnull final String path, @Nonnull final Function<String, Set<String>> fileNameMapper) {
     return new ParquetSource(
         context,
         checkArgumentNotNull(path),
@@ -231,7 +233,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
    */
   @Nonnull
   public QueryableDataSource parquetWithSchemas(
-      @Nullable final String path, @Nullable final Map<String, StructType> schemas) {
+      @Nonnull final String path, @Nonnull final Map<String, StructType> schemas) {
     return new ParquetSource(
         context,
         checkArgumentNotNull(path),
@@ -247,7 +249,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
    * @return the new data source
    */
   @Nonnull
-  public QueryableDataSource delta(@Nullable final String path) {
+  public QueryableDataSource delta(@Nonnull final String path) {
     return new DeltaSource(context, checkArgumentNotNull(path), layoutDetection);
   }
 
@@ -277,7 +279,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
    * @return the new data source
    */
   @Nonnull
-  public QueryableDataSource tables(@Nullable final String schema) {
+  public QueryableDataSource tables(@Nonnull final String schema) {
     return new CatalogSource(
         context,
         Optional.of(checkArgumentNotNull(schema)),
@@ -295,7 +297,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
    * @return the new data source
    */
   @Nonnull
-  public QueryableDataSource bulk(@Nullable final BulkExportClient client) {
+  public QueryableDataSource bulk(@Nonnull final BulkExportClient client) {
     return new BulkDataSource(context, checkArgumentNotNull(client));
   }
 }

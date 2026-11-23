@@ -32,9 +32,11 @@ import java.util.List;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.ContactPoint.ContactPointSystem;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Patient.ContactComponent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -172,5 +174,35 @@ class SingleInstanceEvaluatorIntegrationTest {
     assertTrue(json.contains("Smith"));
     // Synthetic fields should not appear in the JSON output.
     assertFalse(json.contains("_fid"));
+  }
+
+  @Test
+  void evaluateTraceOnElementWithArrayElementsHoldingDifferentFields() {
+    // Tracing a contact renders its telecom array, whose elements populate different fields. Each
+    // element must be labelled with its own fields.
+    final Patient patient = new Patient();
+    patient.setId("Patient/2");
+    final ContactComponent contact = patient.addContact();
+    contact.addTelecom().setSystem(ContactPointSystem.PHONE).setValue("123");
+    contact.addTelecom().setValue("456");
+    contact.addTelecom().setRank(1);
+    final Dataset<Row> dataset =
+        new ObjectDataSource(spark, encoders, List.of(patient)).read("Patient");
+
+    final SingleInstanceEvaluationResult result =
+        SingleInstanceEvaluator.evaluate(
+            dataset,
+            "Patient",
+            fhirContext,
+            "Patient.contact.trace('c').count()",
+            null,
+            null,
+            JsonElementRenderer.of(fhirContext));
+
+    final TraceResult trace = result.getTraces().get(0);
+    assertEquals("c", trace.getLabel());
+    assertEquals(
+        "{\"telecom\":[{\"system\":\"phone\",\"value\":\"123\"},{\"value\":\"456\"},{\"rank\":1}]}",
+        trace.getValues().get(0).getValue());
   }
 }

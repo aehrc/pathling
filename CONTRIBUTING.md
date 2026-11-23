@@ -155,6 +155,12 @@ machine to itself. Raising it is counterproductive, because each fork holds its
 own Spark session: doubling the fork count makes the `fhirpath` suite around 70%
 slower. Lower it when the build has to share the machine.
 
+The `terminology` module is the exception: its POM sets the fork count to 2,
+because each of its forks fills its 4 GB heap and uses more memory off-heap, so
+memory rather than processors is the limit. Setting `pathling.testForkCount` on
+the command line overrides this too, so keep it at 2 or below for `terminology`
+on a 16 GB machine.
+
 Because forks are allocated a whole test class at a time, a module's test suite
 can never finish faster than its slowest single class. On a machine with eight or
 more processors this, rather than the total amount of work, is what sets the
