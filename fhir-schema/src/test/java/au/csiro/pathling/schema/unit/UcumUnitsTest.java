@@ -20,7 +20,15 @@ package au.csiro.pathling.schema.unit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import io.github.fhnaumann.configuration.ConfigurationRegistry;
+import io.github.fhnaumann.model.UCUMDefinition.DefinedUnit;
+import io.github.fhnaumann.util.UCUMRegistry;
+import io.github.fhnaumann.util.VersionSpecificUCUMRegistry;
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 /** Tests the canonicalisation of quantities to the base units of UCUM, and conversion of units. */
@@ -79,5 +87,28 @@ class UcumUnitsTest {
     assertNull(UcumUnits.convert(null, "mg", "g"));
     assertNull(UcumUnits.convert(BigDecimal.ONE, null, "g"));
     assertNull(UcumUnits.convert(BigDecimal.ONE, "mg", null));
+  }
+
+  @Test
+  void everyDefinedUnitIsResolvedWhenTheServiceIsCreated() throws ReflectiveOperationException {
+    // Spark runs many tasks in one JVM, and ucumate otherwise resolves the definition of a unit on
+    // first use into a shared map without synchronisation. Initialising the class, which creates
+    // the service without converting anything, must leave that map complete, so that conversions
+    // only ever read it.
+    Class.forName(UcumUnits.class.getName());
+
+    final VersionSpecificUCUMRegistry registry =
+        UCUMRegistry.getInstance()
+            .getVersionSpecificUCUMRegistry(ConfigurationRegistry.get().getUCUMVersionAsEnum());
+    final Field field =
+        VersionSpecificUCUMRegistry.class.getDeclaredField("definedUnitSourceDefinitions");
+    field.setAccessible(true);
+    final Map<?, ?> resolved = (Map<?, ?>) field.get(registry);
+    final Set<String> unresolved =
+        registry.getDefinedUnits().stream()
+            .filter(unit -> !resolved.containsKey(unit))
+            .map(DefinedUnit::code)
+            .collect(Collectors.toSet());
+    assertEquals(Set.of(), unresolved);
   }
 }
