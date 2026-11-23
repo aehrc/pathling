@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.function.provider;
 
 import static au.csiro.pathling.sql.SqlFunctions.let;
-import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
@@ -116,18 +115,22 @@ class ValidationLogic {
         input instanceof DecimalCollection
             ? input.toEngineForm()
             : input.withoutPrimitiveMetadata();
+    // Reading the singular value raises an error for more than one item. The value is bound once,
+    // so that a non-deterministic operand such as a trace is evaluated only once per row.
     final Column singularValue = source.getColumn().singular().getValue();
     // Use Nothing when the type is not known to enforce default value for a non-convertible type
     final FhirPathType sourceType = input.getType().orElse(FhirPathType.NOTHING);
     final boolean isIdentity = sourceType == targetType && sourceType != FhirPathType.QUANTITY;
-    final Column result = isIdentity ? lit(true) : validationLogic.apply(sourceType, singularValue);
 
     return BooleanCollection.build(
         new DefaultRepresentation(
-            // this triggers singularity check if the result is null
-            coalesce(when(singularValue.isNotNull(), result), source.getColumn().ensureSingular())
-            // implicit null otherwise
-            ));
+            let(
+                singularValue,
+                value ->
+                    // implicit null where the input is empty
+                    when(
+                        value.isNotNull(),
+                        isIdentity ? lit(true) : validationLogic.apply(sourceType, value)))));
   }
 
   /**

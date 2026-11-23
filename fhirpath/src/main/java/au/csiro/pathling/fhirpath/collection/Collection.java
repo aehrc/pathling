@@ -778,9 +778,14 @@ public class Collection implements Equatable {
       return EmptyCollection.getInstance();
     } else {
       // Convert to boolean singleton (enforces singular constraint), then check if
-      // filtering by type produces a non-null value
-      return asBooleanSingleton()
-          .mapColumn(c -> functions.when(c, filterByType(type).getColumnValue().isNotNull()));
+      // filtering by type produces a non-null value. A type that matches statically filters to
+      // this collection itself, whose single item the singleton check has already found. Its
+      // column is not read a second time, as that would evaluate the input twice and fire any
+      // trace within it twice per row.
+      final Collection matching = filterByType(type);
+      final Column isMatch =
+          matching == this ? functions.lit(true) : matching.getColumnValue().isNotNull();
+      return asBooleanSingleton().mapColumn(c -> functions.when(c, isMatch));
     }
   }
 
