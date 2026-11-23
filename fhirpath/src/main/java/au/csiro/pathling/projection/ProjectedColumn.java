@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.projection;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -46,6 +47,8 @@ public record ProjectedColumn(
    * (FR-028), so that a column over an element absent from the input schema has the declared type.
    *
    * @return The column value with the appropriate alias
+   * @throws InvalidUserInputError if the column declares a FHIR type that differs from the type of
+   *     its path
    */
   @Nonnull
   public Column getValue() {
@@ -59,13 +62,15 @@ public record ProjectedColumn(
                     .ifPresent(
                         actualType -> {
                           if (!requestedType.equals(actualType)) {
-                            throw new IllegalArgumentException(
-                                "Collection "
-                                    + collection
-                                    + " has type "
-                                    + actualType
-                                    + ", expected "
-                                    + requestedType);
+                            throw new InvalidUserInputError(
+                                "Column '"
+                                    + requestedColumn.name()
+                                    + "' with path '"
+                                    + requestedColumn.path().toExpression()
+                                    + "' has type "
+                                    + actualType.toCode()
+                                    + ", but the column declares type "
+                                    + requestedType.toCode());
                           }
                         }));
     final Column rawResult;
