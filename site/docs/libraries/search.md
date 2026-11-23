@@ -488,6 +488,8 @@ Different FHIR search parameter types support different matching behaviours.
 
 Where a search parameter's expression is a choice element, such as `Observation.effective[x]` for the Observation `date` parameter, each type of the choice that the parameter type supports is searched, and a resource matches if any of them does. Types that the parameter type does not support are not searched. For example, `Observation?date=2020` matches an Observation whose `effective` is a `dateTime`, `instant` or `Period` in 2020, but not one whose `effective` is a `Timing`.
 
+Some search parameters cover elements of more than one type. Elements of a type that the parameter type does not support are not matched. For example, `value-quantity` covers both `Observation.value as Quantity` and `Observation.value as SampledData`, and matches only the `Quantity` values. Likewise, `context-quantity` matches `Quantity` values but not `Range` values. A search on a parameter none of whose elements is of a supported type fails.
+
 ### Quantity parameters
 
 Quantity parameters match numeric values with units. The syntax is `[prefix]value|system|code` where the system and code identify the unit.

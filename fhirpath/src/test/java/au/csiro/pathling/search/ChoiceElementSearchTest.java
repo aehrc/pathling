@@ -196,7 +196,7 @@ class ChoiceElementSearchTest {
 
     assertThatThrownBy(() -> executor.execute(ResourceType.OBSERVATION, search))
         .isInstanceOf(InvalidSearchParameterException.class)
-        .hasMessageContaining("Observation.effective")
+        .hasMessageContaining("'effective-quantity'")
         .hasMessageContaining("QUANTITY");
   }
 
