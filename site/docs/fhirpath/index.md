@@ -107,6 +107,13 @@ Unary `+` and `-` are also supported for numeric values.
 | `in`       | Test if element is in collection                                |
 | `contains` | Test if collection contains element                             |
 
+:::note
+The `|` operator must have whitespace on both sides. Without it, the operands
+are read as a [Coding literal](./extension-functions.md#coding), so
+`'a'|'b'` is a Coding with a system of `a` and a code of `b`, not a union of two
+strings.
+:::
+
 #### Type operators
 
 | Operator | Description   |
