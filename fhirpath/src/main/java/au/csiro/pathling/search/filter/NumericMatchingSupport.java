@@ -22,6 +22,7 @@ import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPathNumber;
 import au.csiro.pathling.schema.annotation.kinds.DecimalNumericKind;
+import au.csiro.pathling.search.InvalidSearchParameterException;
 import au.csiro.pathling.utilities.SystemDecimal;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -44,6 +45,23 @@ public final class NumericMatchingSupport {
   }
 
   /**
+   * Parses the number of a number or quantity search value. Whitespace around it is stripped, as
+   * {@link FhirPathNumber#parse} strips it, so that a value parsed here is parsed there too.
+   *
+   * @param numericValue the numeric search value (without prefix)
+   * @return the number
+   * @throws InvalidSearchParameterException if the value is not a number
+   */
+  @Nonnull
+  public static BigDecimal parseNumber(@Nonnull final String numericValue) {
+    try {
+      return new BigDecimal(numericValue.strip());
+    } catch (final NumberFormatException e) {
+      throw new InvalidSearchParameterException("'" + numericValue + "' is not a number");
+    }
+  }
+
+  /**
    * Returns the number of a search value as the engine's System.Decimal holds it: rounded half up
    * to its scale where it has more fractional digits, as every number the engine computes with is
    * (owner, 2026-11-12, decision 153).
@@ -51,10 +69,11 @@ public final class NumericMatchingSupport {
    * @param numericValue the numeric search value (without prefix)
    * @return the number, or null where it is outside the range the System.Decimal holds, so that it
    *     takes no part in a match
+   * @throws InvalidSearchParameterException if the value is not a number
    */
   @Nullable
   public static BigDecimal systemValue(@Nonnull final String numericValue) {
-    final BigDecimal value = DecimalNumericKind.decodeValue(new BigDecimal(numericValue.trim()));
+    final BigDecimal value = DecimalNumericKind.decodeValue(parseNumber(numericValue));
     return value == null ? null : nonNegativeScale(value);
   }
 
@@ -100,7 +119,7 @@ public final class NumericMatchingSupport {
     // A value that is not rounded keeps its own text, whose form gives its significant figures.
     final FhirPathNumber searchNumber =
         FhirPathNumber.parse(
-            new BigDecimal(numericValue.trim()).scale() > SystemDecimal.SCALE
+            parseNumber(numericValue).scale() > SystemDecimal.SCALE
                 ? value.toPlainString()
                 : numericValue);
     final BigDecimal lowerBoundary = onTheSystemScale(searchNumber.getLowerBoundary());

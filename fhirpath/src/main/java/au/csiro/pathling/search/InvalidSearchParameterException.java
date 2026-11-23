@@ -28,6 +28,7 @@ import jakarta.annotation.Nonnull;
  * <ul>
  *   <li>The FHIR type of the element does not match the allowed types for the search parameter type
  *   <li>The FHIR type cannot be determined from the FHIRPath expression result
+ *   <li>The number in a number or quantity search value is not a number
  * </ul>
  *
  * @see <a href="https://hl7.org/fhir/search.html">FHIR Search</a>
