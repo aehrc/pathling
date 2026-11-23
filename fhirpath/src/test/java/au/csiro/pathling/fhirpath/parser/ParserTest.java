@@ -74,6 +74,20 @@ class ParserTest {
         Arguments.of(
             "'a' | 'b' | http://loinc.org|8867-4",
             "String literals combined with a coding literal"),
+        Arguments.of(
+            "http://loinc.org|8867-4||'Say \\\"hi\\\"'",
+            "Coding literal with an escaped double quote in a quoted component"),
+        Arguments.of(
+            "http://loinc.org|'C:\\dir'|v", "Coding literal with a bare backslash in a component"),
+        Arguments.of(
+            "x.matches('\\d+') and y.join('|') = 'z'",
+            "Pipe string literal after a string literal containing a backslash"),
+        Arguments.of(
+            "name.where($this != 'it\\'s').join('|')",
+            "Pipe string literal after a string literal containing an escaped quote"),
+        Arguments.of(
+            "x.replace('\\\\','|')",
+            "Pipe string literal after a string literal ending in an escaped backslash"),
         Arguments.of("name.empty()", "Empty function"),
         Arguments.of("name.count()", "Count function"),
         Arguments.of("birthDate > @2000", "Comparison with date literal"),
