@@ -297,10 +297,10 @@ class DateRangeComparisonTest {
         arguments("Patient", "birthdate=lt1600", List.of("p3")),
         // A repeating date.
         arguments("MedicationRequest", "date=ge2021", List.of("m1")),
-        arguments("MedicationRequest", "date=2020-06", List.of("m1")),
+        arguments("MedicationRequest", "date=2020", List.of("m1")),
         arguments("MedicationRequest", "date=lt2020", List.of("m2")),
         // A Period, one of whose bounds is open.
-        arguments("Encounter", "date=2020-02", List.of("e1")),
+        arguments("Encounter", "date=2020", List.of("e1")),
         arguments("Encounter", "date=ge2021", List.of("e2")),
         arguments("Encounter", "date=gt2020-12", List.of("e2")));
   }

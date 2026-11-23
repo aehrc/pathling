@@ -303,6 +303,8 @@ Search parameters support prefixes for comparisons on dates, numbers, and quanti
 
 Prefixes can be applied to date search parameters to filter based on temporal relationships.
 
+A date search value and a stored date are each treated as the range their precision implies, as described in the [FHIR search specification](https://hl7.org/fhir/R4/search.html#prefix). Without a prefix, or with `eq`, a resource matches when the search range fully contains the stored range: `birthdate=1980-06` matches a birth date of `1980-06-15`, but `birthdate=1980-06-15` does not match a birth date of `1980`. `ne` matches when the search range does not fully contain the stored range. `ge` matches when the stored range continues after the search range or is contained in it, so `birthdate=ge1980-06` matches a birth date of `1980`, and `le` matches when the stored range starts before the search range or is contained in it.
+
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
 <TabItem value="python" label="Python">

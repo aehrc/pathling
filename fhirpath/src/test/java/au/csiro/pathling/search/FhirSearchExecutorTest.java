@@ -239,12 +239,12 @@ class FhirSearchExecutorTest {
             List.of("2000-01-01"),
             Set.of()),
         Arguments.of(
-            "birthdate search with datetime value",
+            "birthdate search with finer datetime value",
             ResourceType.PATIENT,
             (Supplier<ObjectDataSource>) this::createPatientDataSourceWithBirthDates,
             "birthdate",
             List.of("1990-01-15T10:00"),
-            Set.of("1", "3")),
+            Set.of()), // a minute does not contain a day
         Arguments.of(
             "birthdate search multiple values",
             ResourceType.PATIENT,
@@ -376,46 +376,46 @@ class FhirSearchExecutorTest {
             Set.of("1", "3")),
 
         // ========== Coverage period tests (Period type date search) ==========
-        // eq - ranges overlap
+        // eq - the search range contains the period
         Arguments.of(
-            "period search within range",
+            "period search containing periods",
+            ResourceType.COVERAGE,
+            (Supplier<ObjectDataSource>) this::createCoverageDataSource,
+            "period",
+            List.of("2023"),
+            Set.of("1", "2")), // 2023 contains Coverage 1 and 2
+        Arguments.of(
+            "period search within a period",
             ResourceType.COVERAGE,
             (Supplier<ObjectDataSource>) this::createCoverageDataSource,
             "period",
             List.of("2023-03-15"),
-            Set.of("1")), // within Coverage 1's period
-        Arguments.of(
-            "period search overlapping periods",
-            ResourceType.COVERAGE,
-            (Supplier<ObjectDataSource>) this::createCoverageDataSource,
-            "period",
-            List.of("2023-06-15"),
-            Set.of("1", "2")), // overlaps both
+            Set.of()), // a day within Coverage 1 does not contain it
         Arguments.of(
             "period search month precision",
             ResourceType.COVERAGE,
             (Supplier<ObjectDataSource>) this::createCoverageDataSource,
             "period",
             List.of("2023-06"),
-            Set.of("1", "2")), // June overlaps both
+            Set.of()), // June overlaps Coverage 1 and 2, but contains neither
 
-        // ge - starts at or after parameter start
+        // ge - continues after the parameter, or is contained in it
         Arguments.of(
             "period ge prefix",
             ResourceType.COVERAGE,
             (Supplier<ObjectDataSource>) this::createCoverageDataSource,
             "period",
             List.of("ge2023-06-01"),
-            Set.of("2", "3")), // Coverage 2 and 3 start >= June 1
+            Set.of("1", "2", "3")), // Coverage 1, 2 and 3 continue after June 1
 
-        // le - ends at or before parameter end
+        // le - starts before the parameter, or is contained in it
         Arguments.of(
             "period le prefix",
             ResourceType.COVERAGE,
             (Supplier<ObjectDataSource>) this::createCoverageDataSource,
             "period",
             List.of("le2023-06-30"),
-            Set.of("1", "4")), // Coverage 1 and 4 end <= June 30
+            Set.of("1", "2", "4")), // Coverage 1, 2 and 4 start before June 30
 
         // gt - ends after parameter
         Arguments.of(
@@ -435,14 +435,14 @@ class FhirSearchExecutorTest {
             List.of("lt2023-01-01"),
             Set.of("4")), // only Coverage 4 (null start = -infinity)
 
-        // ne - no overlap
+        // ne - not contained
         Arguments.of(
             "period ne prefix",
             ResourceType.COVERAGE,
             (Supplier<ObjectDataSource>) this::createCoverageDataSource,
             "period",
             List.of("ne2023-03-15"),
-            Set.of("2", "3", "4")), // doesn't overlap with Mar 15
+            Set.of("1", "2", "3", "4")), // Mar 15 contains no period
 
         // ========== Condition recorded-date tests (dateTime type) ==========
         // eq - day precision matching dateTime
@@ -659,8 +659,8 @@ class FhirSearchExecutorTest {
             ResourceType.OBSERVATION,
             (Supplier<ObjectDataSource>) this::createObservationDataSourceWithDates,
             "date",
-            List.of("2023-06-15"),
-            Set.of("2")), // within Period obs
+            List.of("2023-06"),
+            Set.of("2")), // June contains the Period obs
         Arguments.of(
             "observation date search matching instant",
             ResourceType.OBSERVATION,
@@ -673,7 +673,7 @@ class FhirSearchExecutorTest {
             ResourceType.OBSERVATION,
             (Supplier<ObjectDataSource>) this::createObservationDataSourceWithDates,
             "date",
-            List.of("2023-03-15", "2023-06-15", "2023-09-15"),
+            List.of("2023-03-15", "2023-06", "2023-09-15"),
             Set.of("1", "2", "3")),
 
         // ge - greater or equal across types
@@ -690,7 +690,7 @@ class FhirSearchExecutorTest {
             (Supplier<ObjectDataSource>) this::createObservationDataSourceWithDates,
             "date",
             List.of("ge2023-06-01"),
-            Set.of("2", "3")), // Period starts June 1, instant is Sept
+            Set.of("2", "3")), // Period continues after June 1, instant is Sept
 
         // lt - less than across types
         Arguments.of(
@@ -701,14 +701,14 @@ class FhirSearchExecutorTest {
             List.of("lt2023-06-01"),
             Set.of("1")), // only dateTime is before June 1
 
-        // Period overlap test
+        // Period containment test
         Arguments.of(
-            "observation date Period overlap",
+            "observation date within Period",
             ResourceType.OBSERVATION,
             (Supplier<ObjectDataSource>) this::createObservationDataSourceWithDates,
             "date",
-            List.of("2023-07-01"),
-            Set.of("2")), // within Period [June 1 - Aug 31]
+            List.of("2023-06-15"),
+            Set.of()), // a day within the Period [June 1 - June 30] does not contain it
 
         // ========== Observation value-quantity tests (Quantity type) ==========
         // eq (default) - uses range semantics based on significant figures
@@ -1384,7 +1384,7 @@ class FhirSearchExecutorTest {
    * Creates a test data source with Observations having different effective types. This tests the
    * polymorphic effective[x] field with multiple expression support. - Observation 1:
    * effectiveDateTime = "2023-03-15T10:30:00Z" - Observation 2: effectivePeriod = [2023-06-01,
-   * 2023-08-31] - Observation 3: effectiveInstant = "2023-09-15T14:45:00.123Z" - Observation 4: no
+   * 2023-06-30] - Observation 3: effectiveInstant = "2023-09-15T14:45:00.123Z" - Observation 4: no
    * effective
    */
   private ObjectDataSource createObservationDataSourceWithDates() {
@@ -1396,7 +1396,7 @@ class FhirSearchExecutorTest {
     obs2.setId("2");
     final Period period = new Period();
     period.setStartElement(new DateTimeType("2023-06-01"));
-    period.setEndElement(new DateTimeType("2023-08-31"));
+    period.setEndElement(new DateTimeType("2023-06-30"));
     obs2.setEffective(period);
 
     final Observation obs3 = new Observation();

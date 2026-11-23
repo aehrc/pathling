@@ -912,8 +912,8 @@ class SearchColumnBuilderTest {
     final ObjectDataSource dataSource = createCoverageDataSource();
     final Dataset<Row> dataset = dataSource.read("Coverage");
 
-    // Search for a date that falls within the coverage period.
-    final Column filterColumn = builder.fromQueryString(ResourceType.COVERAGE, "period=2024-06-15");
+    // Search for a year that contains the coverage period.
+    final Column filterColumn = builder.fromQueryString(ResourceType.COVERAGE, "period=2024");
     final Dataset<Row> result = dataset.filter(filterColumn);
 
     final Set<String> resultIds = extractIds(result);

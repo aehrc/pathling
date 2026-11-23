@@ -458,7 +458,7 @@ An operation asks only for what it needs:
 |---|---|
 | `Patient.birthDate` (output) | `value` |
 | `Patient.birthDate > @2000` | The bounds the comparison needs: stored fields on the left, constants on the right |
-| `birthdate=ge2000` (search) | `__start` and `__end` as plain attributes, so they can be pushed down. `ge` is decided by the target's lower bound, as on main ("resource starts at or after parameter start"), with a plain conjunct on its upper bound beside it (decision 144). Whether main's `ge` matches the FHIR search specification's overlap reading is checked in ticket 31 |
+| `birthdate=ge2000` (search) | `__start` and `__end` as plain attributes, so they can be pushed down. `ge` follows the FHIR R4 prefix table: the target's upper bound is after the parameter's, or the parameter contains the target (#2915). A plain conjunct on the upper bound sits beside it (decision 144) |
 
 Unused annotations are never computed. A stored one can still be read where the plan
 stops Spark from pruning it. A plain `select` of `birthDate` reads `birthDate` only. The
