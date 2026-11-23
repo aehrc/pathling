@@ -46,6 +46,7 @@ import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import au.csiro.pathling.fhirpath.operator.CombiningLogic;
 import au.csiro.pathling.schema.PrimitiveTypes;
+import au.csiro.pathling.sql.SqlFunctions;
 import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
 import java.lang.reflect.Constructor;
@@ -53,6 +54,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import lombok.AccessLevel;
@@ -472,6 +474,25 @@ public class Collection implements Equatable {
       @Nonnull final CollectionTransform transform,
       final int maxDepth,
       final boolean allowSelfReference) {
+    // The projection may read its input more than once, so the input is evaluated once.
+    return withColumnEvaluatedOnce(
+        input -> input.traverseRecursively(transform, maxDepth, allowSelfReference));
+  }
+
+  /**
+   * Implements {@link #repeatAll(CollectionTransform, int, boolean)}, reading this collection as
+   * many times as the projection does.
+   *
+   * @param transform The collection transform representing the recursive projection expression
+   * @param maxDepth The maximum same-type recursion depth to prevent infinite traversal
+   * @param allowSelfReference If {@code true}, self-referential traversal is permitted
+   * @return A new collection containing all recursively collected results
+   */
+  @Nonnull
+  private Collection traverseRecursively(
+      @Nonnull final CollectionTransform transform,
+      final int maxDepth,
+      final boolean allowSelfReference) {
     // Static type probing: apply the transform twice to classify recursion behavior. These
     // applications build Collection objects for type inspection only — the actual column-level
     // computation is performed separately below via toColumnTransformation(). This is safe because
@@ -777,11 +798,54 @@ public class Collection implements Equatable {
     if (this instanceof EmptyCollection) {
       return EmptyCollection.getInstance();
     } else {
-      // Convert to boolean singleton (enforces singular constraint), then check if
-      // filtering by type produces a non-null value
-      return asBooleanSingleton()
-          .mapColumn(c -> functions.when(c, filterByType(type).getColumnValue().isNotNull()));
+      // The singleton check and the type filter both read the input, so it is evaluated once.
+      return withColumnEvaluatedOnce(input -> testType(input, type));
     }
+  }
+
+  /**
+   * Checks if the single item of a collection is of the specified type, as {@link
+   * #isOfType(TypeSpecifier)} does. The collection is read more than once.
+   *
+   * @param input the collection to check
+   * @param type the type specifier to check against
+   * @return a collection with boolean values indicating type match, or empty based on emptiness
+   */
+  @Nonnull
+  private static Collection testType(
+      @Nonnull final Collection input, @Nonnull final TypeSpecifier type) {
+    // Convert to boolean singleton (enforces singular constraint), then check if filtering by type
+    // produces a non-null value.
+    return input
+        .asBooleanSingleton()
+        .mapColumn(c -> functions.when(c, input.filterByType(type).getColumnValue().isNotNull()));
+  }
+
+  /**
+   * Applies a function to this collection with its column evaluated once per row, however many
+   * times the function reads it. Without this, a non-deterministic column, such as one that traces
+   * its value, would be evaluated, and its side effects repeated, once for every read.
+   *
+   * @param body the function to apply to this collection
+   * @return the result of the function
+   */
+  @Nonnull
+  public Collection withColumnEvaluatedOnce(@Nonnull final UnaryOperator<Collection> body) {
+    final Column value = getColumnValue();
+    if (SqlFunctions.isDeterministic(value)) {
+      return body.apply(this);
+    }
+    // let() applies the body exactly once, to build the column of the result. The collection it
+    // returns is kept so that the column can be given the same type and representation.
+    final AtomicReference<Collection> result = new AtomicReference<>();
+    final Column column =
+        SqlFunctions.let(
+            value,
+            bound -> {
+              result.set(body.apply(copyWithColumn(bound)));
+              return result.get().getColumnValue();
+            });
+    return result.get().copyWithColumn(column);
   }
 
   /**

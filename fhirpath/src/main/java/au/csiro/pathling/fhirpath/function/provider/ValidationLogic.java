@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.function.provider;
 
+import static au.csiro.pathling.sql.SqlFunctions.isDeterministic;
 import static au.csiro.pathling.sql.SqlFunctions.let;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
@@ -120,14 +121,23 @@ class ValidationLogic {
     // Use Nothing when the type is not known to enforce default value for a non-convertible type
     final FhirPathType sourceType = input.getType().orElse(FhirPathType.NOTHING);
     final boolean isIdentity = sourceType == targetType && sourceType != FhirPathType.QUANTITY;
-    final Column result = isIdentity ? lit(true) : validationLogic.apply(sourceType, singularValue);
+    final Column validated =
+        let(
+            singularValue,
+            value ->
+                when(
+                    value.isNotNull(),
+                    isIdentity ? lit(true) : validationLogic.apply(sourceType, value)));
 
     return BooleanCollection.build(
         new DefaultRepresentation(
-            // this triggers singularity check if the result is null
-            coalesce(when(singularValue.isNotNull(), result), source.getColumn().ensureSingular())
-            // implicit null otherwise
-            ));
+            // A deterministic value may not be read by the validation, so more than one item is
+            // checked for separately where the result is null. A non-deterministic value, such as
+            // one that is traced, is evaluated once by let(), which makes that check, and is not
+            // read again.
+            isDeterministic(singularValue)
+                ? coalesce(validated, source.getColumn().ensureSingular())
+                : validated));
   }
 
   /**

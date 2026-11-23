@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.function.provider;
 
+import static au.csiro.pathling.sql.SqlFunctions.isDeterministic;
 import static au.csiro.pathling.sql.SqlFunctions.let;
 import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.coalesce;
@@ -221,15 +222,18 @@ class ConversionLogic {
     // Use Nothing when the type is not known to enforce default value for a non-convertible type
     final FhirPathType sourceType = input.getType().orElse(FhirPathType.NOTHING);
     final boolean isIdentity = sourceType == targetType && sourceType != FhirPathType.QUANTITY;
-    final Column result =
-        isIdentity ? singularValue : conversionLogic.apply(sourceType, singularValue);
+    final Column converted =
+        let(singularValue, value -> isIdentity ? value : conversionLogic.apply(sourceType, value));
 
     return collectionBuilder.apply(
         new DefaultRepresentation(
-            // this triggers singularity check if the result is null
-            coalesce(result, input.getColumn().ensureSingular())
-            // implicit null otherwise
-            ));
+            // A deterministic value may not be read by the conversion, as for a type that cannot be
+            // converted, so more than one item is checked for separately where the result is null.
+            // A non-deterministic value, such as one that is traced, is evaluated once by let(),
+            // which makes that check, and is not read again.
+            isDeterministic(singularValue)
+                ? coalesce(converted, input.getColumn().ensureSingular())
+                : converted));
   }
 
   /** Whether a collection holds stored decimals or stored quantities, which keep their text. */

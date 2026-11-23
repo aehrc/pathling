@@ -622,6 +622,10 @@ object UnresolvedColumnOrNull {
  *  - Traversing Item → Answer → Item (type changes): depth counter does not decrement
  *  - Traversing Item → Item (same type): depth counter decrements, limiting recursion
  *
+ * '''Evaluation:''' Each level reads its node once for extraction and again within every deeper
+ * level. A non-deterministic node, such as one that traces its value, is bound to a lambda variable
+ * so that it is evaluated once. A deterministic node is read directly.
+ *
  * '''Requirements:'''
  *  - The `extractor` function must return an array type
  *  - The array type must be consistent across all traversed nodes to avoid type mismatch errors
@@ -682,17 +686,33 @@ case class UnresolvedTransformTree(node: Expression,
     if (newValue.resolved) {
       // If node is resolved we concatenate the value extracted from the node with next level
       // traversal.
-      if (level > 0 || !parentType.contains(newValue.dataType))
-        Concat(
-          Seq(safeExtractor(node)) ++
+      if (level > 0 || !parentType.contains(newValue.dataType)) {
+        val expand: Expression => Expression = current => Concat(
+          Seq(safeExtractor(current)) ++
             traversals
-              .map(t => UnresolvedTransformTree(t(node), extractor, traversals,
+              .map(t => UnresolvedTransformTree(t(current), extractor, traversals,
                 Some(newValue.dataType),
                 if (parentType.contains(newValue.dataType)) level - 1 else level,
                 errorOnDepthExhaustion,
                 expectedElementType
               ))
         )
+        if (newValue.deterministic) {
+          expand(node)
+        } else {
+          // The node is read once for extraction and again within every deeper level. A
+          // non-deterministic node, such as one that traces its value, is bound to a lambda
+          // variable so that it is evaluated once rather than once per read.
+          val bound = NamedLambdaVariable(
+            "node", newValue.dataType, newValue.nullable,
+            exprId = NamedExpression.newExprId,
+            value = new java.util.concurrent.atomic.AtomicReference[Any]()
+          )
+          ElementAt(
+            ArrayTransform(CreateArray(Seq(newValue)), LambdaFunction(expand(bound), Seq(bound))),
+            Literal(1))
+        }
+      }
       else if (errorOnDepthExhaustion)
         throw new AnalysisException(
           errorClass = "INTERNAL_ERROR",

@@ -193,7 +193,20 @@ public class SqlFunctions {
     // produce the same value, so single-fire is trivially satisfied. The HOF wrapper is reserved
     // for non-deterministic operands (e.g. TraceExpression) that fire side effects on every
     // tree reference.
-    //
+    if (isDeterministic(value)) {
+      return body.apply(value);
+    }
+    return element_at(transform(array(value), body::apply), 1);
+  }
+
+  /**
+   * Returns whether a column is deterministic, which is to say that every reference to it in an
+   * expression tree produces the same value and has no side effect.
+   *
+   * @param column the column to check
+   * @return {@code true} if the column and every expression within it are deterministic
+   */
+  public static boolean isDeterministic(@Nonnull final Column column) {
     // ColumnConversions$.MODULE$.expression() is used instead of ExpressionUtils.expression()
     // because ExpressionUtils can return a surrogate expression (e.g. when the Column wraps a
     // compound expression like concat or coalesce whose children include a Nondeterministic node)
@@ -201,9 +214,6 @@ public class SqlFunctions {
     // non-deterministic sub-expression. ColumnConversions$.MODULE$.expression() always returns the
     // real underlying Catalyst Expression, preserving the correct determinism semantics through
     // the entire tree.
-    if (ColumnConversions$.MODULE$.expression(value).deterministic()) {
-      return body.apply(value);
-    }
-    return element_at(transform(array(value), body::apply), 1);
+    return ColumnConversions$.MODULE$.expression(column).deterministic();
   }
 }

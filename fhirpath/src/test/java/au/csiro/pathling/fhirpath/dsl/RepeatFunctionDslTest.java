@@ -261,6 +261,9 @@ public class RepeatFunctionDslTest extends FhirPathDslTestBase {
             "repeat(value.ofType(Quantity)).value",
             "repeat(value.ofType(Quantity)) returns the Quantity value (level_1 empty, early"
                 + " return)")
+        .testTrue(
+            "value.repeat(ofType(Quantity)).value.exists()",
+            "repeat(ofType(Quantity)) on a choice type reaches the Quantity value")
         .build();
   }
 
