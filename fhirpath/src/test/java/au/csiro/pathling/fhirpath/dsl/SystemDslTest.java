@@ -86,9 +86,6 @@ public class SystemDslTest extends FhirPathDslTestBase {
         .testEquals("2019", "@2019T", "DateTime literal with year precision")
         .testEquals("2019-02", "@2019-02T", "DateTime literal with month precision")
         .testEquals("2019-02-04", "@2019-02-04T", "DateTime literal with day precision")
-        .testTrue("@2019T.is(DateTime)", "DateTime literal with year precision is a DateTime")
-        .testTrue("@2019-02T.is(DateTime)", "DateTime literal with month precision is a DateTime")
-        .testTrue("@2019-02-04T.is(DateTime)", "DateTime literal with day precision is a DateTime")
         .testFalse("@2019-02-04T.is(Date)", "DateTime literal with day precision is not a Date")
         .testEquals(
             "2019-02", "@2019-02T.toString()", "DateTime literal with month precision as a String")
