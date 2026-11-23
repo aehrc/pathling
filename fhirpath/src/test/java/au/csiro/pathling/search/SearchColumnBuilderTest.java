@@ -138,6 +138,67 @@ class SearchColumnBuilderTest {
         () -> builder.fromQueryString(ResourceType.PATIENT, "gender:exact=male"));
   }
 
+  /**
+   * A number or quantity search value that is not a number is rejected as invalid input when the
+   * filter is built, with a message that names the parameter and the value. The cases cover a plain
+   * and a prefixed number, a number given with others, and a quantity with no units, with a code
+   * and with a UCUM system and code.
+   */
+  @ParameterizedTest
+  @MethodSource("nonNumericSearchValues")
+  void fromQueryString_nonNumericValue_throwsInvalidSearchParameterException(
+      final ResourceType resourceType,
+      final String queryString,
+      final String parameterCode,
+      final String numericValue) {
+    final InvalidSearchParameterException exception =
+        assertThrows(
+            InvalidSearchParameterException.class,
+            () -> builder.fromQueryString(resourceType, queryString));
+
+    assertEquals(
+        "Invalid value for search parameter '"
+            + parameterCode
+            + "': '"
+            + numericValue
+            + "' is not a number",
+        exception.getMessage());
+  }
+
+  Stream<Arguments> nonNumericSearchValues() {
+    return Stream.of(
+        Arguments.of(ResourceType.RISKASSESSMENT, "probability=abc", "probability", "abc"),
+        Arguments.of(ResourceType.RISKASSESSMENT, "probability=gtabc", "probability", "abc"),
+        // Only the value that is not a number is named, not the others given with it.
+        Arguments.of(ResourceType.RISKASSESSMENT, "probability=0.5,abc", "probability", "abc"),
+        // A control character is not stripped from around a number, as it is not whitespace.
+        Arguments.of(ResourceType.RISKASSESSMENT, "probability=0.5%01", "probability", "0.5\u0001"),
+        Arguments.of(ResourceType.OBSERVATION, "value-quantity=abc", "value-quantity", "abc"),
+        Arguments.of(ResourceType.OBSERVATION, "value-quantity=leabc||mg", "value-quantity", "abc"),
+        Arguments.of(
+            ResourceType.OBSERVATION,
+            "value-quantity=abc|http://unitsofmeasure.org|mg",
+            "value-quantity",
+            "abc"),
+        // A quantity with units but no number is not a number either.
+        Arguments.of(
+            ResourceType.OBSERVATION,
+            "value-quantity=|http://unitsofmeasure.org|mg",
+            "value-quantity",
+            ""));
+  }
+
+  /**
+   * A modifier is not supported on a number or quantity parameter, which is reported as such rather
+   * than as its value not being a number.
+   */
+  @Test
+  void fromQueryString_modifierOnNumberParameter_reportsModifierBeforeValue() {
+    assertThrows(
+        InvalidModifierException.class,
+        () -> builder.fromQueryString(ResourceType.RISKASSESSMENT, "probability:missing=true"));
+  }
+
   // ========== fromSearch tests ==========
 
   @Test
@@ -993,8 +1054,8 @@ class SearchColumnBuilderTest {
     final ObjectDataSource dataSource = createCoverageDataSource();
     final Dataset<Row> dataset = dataSource.read("Coverage");
 
-    // Search for a date that falls within the coverage period.
-    final Column filterColumn = builder.fromQueryString(ResourceType.COVERAGE, "period=2024-06-15");
+    // Search for a year that contains the coverage period.
+    final Column filterColumn = builder.fromQueryString(ResourceType.COVERAGE, "period=2024");
     final Dataset<Row> result = dataset.filter(filterColumn);
 
     final Set<String> resultIds = extractIds(result);

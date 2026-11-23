@@ -103,11 +103,11 @@ class PrunedPeriodSearchTest {
     return Stream.of(
         arguments("withoutEnd", "ge2024-01-01", List.of("1")),
         arguments("withoutEnd", "gt2030-01-01", List.of("1")),
-        arguments("withoutEnd", "2025-06-01", List.of("1")),
+        arguments("withoutEnd", "ne2025-06-01", List.of("1")),
         arguments("withoutEnd", "lt2023-01-01", List.of()),
         arguments("withoutStart", "lt2022-06-01", List.of("2")),
         arguments("withoutStart", "le2022-12-31", List.of("2")),
-        arguments("withoutStart", "2000-01-01", List.of("2")),
+        arguments("withoutStart", "ne2000-01-01", List.of("2")),
         arguments("withoutStart", "gt2023-01-01", List.of()));
   }
 

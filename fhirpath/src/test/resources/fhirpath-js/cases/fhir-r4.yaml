@@ -306,21 +306,18 @@ tests:
         result:
           - true
         model: r4
-        disable: true
       - desc: '** testLiteralDateTimeMonth'
         inputfile: patient-example.json
         expression: '@2015-02T.is(DateTime)'
         result:
           - true
         model: r4
-        disable: true
       - desc: '** testLiteralDateTimeDay'
         inputfile: patient-example.json
         expression: '@2015-02-04T.is(DateTime)'
         result:
           - true
         model: r4
-        disable: true
       - desc: '** testLiteralDateTimeHour'
         inputfile: patient-example.json
         expression: '@2015-02-04T14.is(DateTime)'
