@@ -39,7 +39,6 @@ import java.util.List;
 import java.util.Map;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
-import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
@@ -378,42 +377,6 @@ class SingleInstanceEvaluatorTest {
     }
 
     @Test
-    void updatesParentSchemaForSanitisedNestedStructs() {
-      // The parent's StructField dataType for a nested struct must match the sanitised nested
-      // Row's schema, so that Row.json() positional mapping remains correct.
-      final StructType nestedSchema =
-          new StructType(
-              new StructField[] {
-                DataTypes.createStructField("id", DataTypes.StringType, true),
-                DataTypes.createStructField("start", DataTypes.StringType, true),
-                DataTypes.createStructField("end", DataTypes.StringType, true),
-              });
-
-      final StructType outerSchema =
-          new StructType(
-              new StructField[] {
-                DataTypes.createStructField("family", DataTypes.StringType, true),
-                DataTypes.createStructField("period", nestedSchema, true),
-              });
-
-      final Row nestedRow =
-          new GenericRowWithSchema(new Object[] {null, "2000", "2002"}, nestedSchema);
-      final Row outerRow = new GenericRowWithSchema(new Object[] {"Smith", nestedRow}, outerSchema);
-
-      final Row sanitised = SingleInstanceEvaluator.sanitiseRow(outerRow);
-
-      // The parent's "period" field dataType should have 2 fields (id stripped as null).
-      final StructType periodType = (StructType) sanitised.schema().apply("period").dataType();
-      assertEquals(2, periodType.fields().length);
-      assertEquals("start", periodType.fields()[0].name());
-      assertEquals("end", periodType.fields()[1].name());
-
-      // The parent's dataType should match the nested Row's own schema.
-      final Row sanitisedNested = sanitised.getAs("period");
-      assertEquals(sanitisedNested.schema(), periodType);
-    }
-
-    @Test
     void preservesFieldsWithNonNullValues() {
       // All non-null fields should be kept, even if some are null.
       final StructType schema =
@@ -457,43 +420,6 @@ class SingleInstanceEvaluatorTest {
       assertEquals("446141000124107", sanitisedCoding.get(1));
       assertEquals("Identifies as female gender", sanitisedCoding.get(2));
     }
-
-    @Test
-    void updatesParentSchemaForSanitisedArrayOfStructs() {
-      // The parent field's ArrayType elementType must be updated to the sanitised element schema so
-      // that Row.json() positional mapping remains correct.
-      final StructType elementSchema =
-          new StructType(
-              new StructField[] {
-                DataTypes.createStructField("id", DataTypes.StringType, true),
-                DataTypes.createStructField("start", DataTypes.StringType, true),
-                DataTypes.createStructField("end", DataTypes.StringType, true),
-              });
-      final StructType outerSchema =
-          new StructType(
-              new StructField[] {
-                DataTypes.createStructField(
-                    "items", DataTypes.createArrayType(elementSchema, true), true),
-              });
-
-      final Row elementRow =
-          new GenericRowWithSchema(new Object[] {null, "2020-01-01", "2021-01-01"}, elementSchema);
-      final Row outerRow =
-          new GenericRowWithSchema(new Object[] {SqlHelpers.sql_array(elementRow)}, outerSchema);
-
-      final Row sanitised = SingleInstanceEvaluator.sanitiseRow(outerRow);
-
-      // The parent ArrayType's elementType must match the sanitised element schema.
-      final ArrayType itemsType = (ArrayType) sanitised.schema().apply("items").dataType();
-      final StructType sanitisedElementSchema = (StructType) itemsType.elementType();
-      assertEquals(2, sanitisedElementSchema.fields().length);
-      assertEquals("start", sanitisedElementSchema.fields()[0].name());
-      assertEquals("end", sanitisedElementSchema.fields()[1].name());
-
-      // The element Row's own schema must also match.
-      final Seq<?> seq = sanitised.getAs("items");
-      assertEquals(sanitisedElementSchema, ((Row) seq.apply(0)).schema());
-    }
   }
 
   @Nested
@@ -523,9 +449,9 @@ class SingleInstanceEvaluatorTest {
 
     @Test
     void jsonCorrectlyMapsNestedStructFieldsAfterNullStripping() {
-      // Nested struct with null fields should produce correct field-to-value mapping in JSON.
-      // Without the fix, Row.json() uses the parent's original dataType to interpret the nested
-      // row, causing positional misalignment when null fields have been stripped.
+      // Nested struct with null fields should produce correct field-to-value mapping in JSON. The
+      // nested row must be rendered against its own sanitised schema, not the type its parent
+      // declares for it, or its fields are mislabelled by position.
       final StructType nestedSchema =
           new StructType(
               new StructField[] {
@@ -577,10 +503,9 @@ class SingleInstanceEvaluatorTest {
 
     @Test
     void jsonCorrectlyRendersArrayOfStructsWithHeterogeneousNulls() {
-      // Two Coding elements share an input schema but differ in which fields are null.
-      // After sanitisation each element has a different schema (3 vs 2 fields), so the parent
-      // ArrayType.elementType captured from the first element does not match the second. This
-      // causes Row.json() to map field names positionally against the wrong schema for element 1.
+      // Two Coding elements share an input schema but differ in which fields are null. After
+      // sanitisation each element has a different schema (3 vs 2 fields), so each must be rendered
+      // against its own schema.
       final StructType codingSchema =
           new StructType(
               new StructField[] {
@@ -638,6 +563,125 @@ class SingleInstanceEvaluatorTest {
       assertTrue(json.contains("\"system\":\"http://snomed.info/sct\""));
       assertTrue(json.contains("\"code\":\"446141000124107\""));
       assertTrue(json.contains("\"display\":\"Identifies as female gender\""));
+    }
+
+    @Test
+    void labelsEachArrayElementWithItsOwnFieldsWhenALeadingFieldIsNull() {
+      // The second name has no use, so after its null fields are stripped its first field is
+      // family. It must not be labelled with the first element's first field, use.
+      final Row row =
+          nameRow(nameElement("official", "Smith", null), nameElement(null, "Jones", null));
+
+      assertEquals(
+          "{\"name\":[{\"use\":\"official\",\"family\":\"Smith\"},{\"family\":\"Jones\"}]}",
+          SingleInstanceEvaluator.rowToJson(row));
+    }
+
+    @Test
+    void rendersArrayElementsWhoseRemainingFieldsDifferInType() {
+      // The first name keeps only family, a string, and the second only given, an array. Rendering
+      // the second against the first's schema fails with FAILED_ROW_TO_JSON.
+      final Row row =
+          nameRow(
+              nameElement(null, "Smith", null),
+              nameElement(null, null, SqlHelpers.sql_array("Ann")));
+
+      assertEquals(
+          "{\"name\":[{\"family\":\"Smith\"},{\"given\":[\"Ann\"]}]}",
+          SingleInstanceEvaluator.rowToJson(row));
+    }
+
+    @Test
+    void rendersExtensionsThatEachPopulateADifferentChoiceType() {
+      // Each extension populates a different value[x], and the extensions sit inside an element of
+      // another array, so the elements of both arrays have differing fields.
+      final StructType extensionSchema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField("url", DataTypes.StringType, true),
+                DataTypes.createStructField("valueString", DataTypes.StringType, true),
+                DataTypes.createStructField("valueBoolean", DataTypes.BooleanType, true),
+                DataTypes.createStructField("valueBase64Binary", DataTypes.BinaryType, true),
+              });
+      final StructType identifierSchema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField(
+                    "extension", DataTypes.createArrayType(extensionSchema, true), true),
+                DataTypes.createStructField("value", DataTypes.StringType, true),
+              });
+      final StructType outerSchema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField(
+                    "identifier", DataTypes.createArrayType(identifierSchema, true), true),
+              });
+      final Row identifierWithExtensions =
+          new GenericRowWithSchema(
+              new Object[] {
+                SqlHelpers.sql_array(
+                    new GenericRowWithSchema(new Object[] {"a", "x", null, null}, extensionSchema),
+                    new GenericRowWithSchema(new Object[] {"b", null, true, null}, extensionSchema),
+                    new GenericRowWithSchema(
+                        new Object[] {"c", null, null, new byte[] {1, 2, 3}}, extensionSchema)),
+                null
+              },
+              identifierSchema);
+      final Row identifierWithValue =
+          new GenericRowWithSchema(new Object[] {null, "123"}, identifierSchema);
+      final Row row =
+          new GenericRowWithSchema(
+              new Object[] {SqlHelpers.sql_array(identifierWithExtensions, identifierWithValue)},
+              outerSchema);
+
+      assertEquals(
+          "{\"identifier\":[{\"extension\":[{\"url\":\"a\",\"valueString\":\"x\"},"
+              + "{\"url\":\"b\",\"valueBoolean\":true},"
+              + "{\"url\":\"c\",\"valueBase64Binary\":\"AQID\"}]},"
+              + "{\"value\":\"123\"}]}",
+          SingleInstanceEvaluator.rowToJson(row));
+    }
+
+    @Test
+    void rendersRepeatingMetadataGroupsThatHoldDifferentFields() {
+      // The metadata groups of a repeating primitive hold different fields, and the group left with
+      // no fields stays in place as null.
+      final StructType extensionSchema =
+          new StructType(
+              new StructField[] {DataTypes.createStructField("url", DataTypes.StringType, true)});
+      final StructType groupSchema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField("id", DataTypes.StringType, true),
+                DataTypes.createStructField("__canonical", DataTypes.IntegerType, true),
+                DataTypes.createStructField(
+                    "extension", DataTypes.createArrayType(extensionSchema, true), true),
+              });
+      final StructType schema =
+          new StructType(
+              new StructField[] {
+                DataTypes.createStructField(
+                    "given", DataTypes.createArrayType(DataTypes.StringType, true), true),
+                DataTypes.createStructField(
+                    "_given", DataTypes.createArrayType(groupSchema, true), true),
+              });
+      final Row extension = new GenericRowWithSchema(new Object[] {"u"}, extensionSchema);
+      final Row row =
+          new GenericRowWithSchema(
+              new Object[] {
+                SqlHelpers.sql_array("Ann", "Bea", "Cat"),
+                SqlHelpers.sql_array(
+                    new GenericRowWithSchema(new Object[] {null, 1, null}, groupSchema),
+                    new GenericRowWithSchema(
+                        new Object[] {null, 1, SqlHelpers.sql_array(extension)}, groupSchema),
+                    new GenericRowWithSchema(new Object[] {"c", 1, null}, groupSchema))
+              },
+              schema);
+
+      assertEquals(
+          "{\"given\":[\"Ann\",\"Bea\",\"Cat\"],"
+              + "\"_given\":[null,{\"extension\":[{\"url\":\"u\"}]},{\"id\":\"c\"}]}",
+          SingleInstanceEvaluator.rowToJson(row));
     }
   }
 
@@ -890,5 +934,28 @@ class SingleInstanceEvaluatorTest {
                   : METADATA_GROUP_SCHEMA,
               true),
         });
+  }
+
+  private static final StructType HUMAN_NAME_SCHEMA =
+      new StructType(
+          new StructField[] {
+            DataTypes.createStructField("use", DataTypes.StringType, true),
+            DataTypes.createStructField("family", DataTypes.StringType, true),
+            DataTypes.createStructField(
+                "given", DataTypes.createArrayType(DataTypes.StringType, true), true),
+          });
+
+  private static Row nameElement(final String use, final String family, final Object given) {
+    return new GenericRowWithSchema(new Object[] {use, family, given}, HUMAN_NAME_SCHEMA);
+  }
+
+  private static Row nameRow(final Row... names) {
+    return new GenericRowWithSchema(
+        new Object[] {SqlHelpers.sql_array((Object[]) names)},
+        new StructType(
+            new StructField[] {
+              DataTypes.createStructField(
+                  "name", DataTypes.createArrayType(HUMAN_NAME_SCHEMA, true), true),
+            }));
   }
 }
