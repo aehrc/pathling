@@ -69,8 +69,8 @@ import org.apache.spark.sql.types.DataTypes;
  *   <li>Search "2013-01-14T10:00" (minute precision) → [2013-01-14T10:00:00, 2013-01-14T10:01:00)
  * </ul>
  *
- * @see <a href="https://hl7.org/fhir/search.html#date">Date Search</a>
- * @see <a href="https://hl7.org/fhir/search.html#prefix">Search Prefixes</a>
+ * @see <a href="https://hl7.org/fhir/R4/search.html#date">Date Search</a>
+ * @see <a href="https://hl7.org/fhir/R4/search.html#prefix">Search Prefixes</a>
  * @author John Grimes
  */
 public class DateMatcher implements ElementMatcher {
