@@ -48,6 +48,13 @@ class SqlValidatorIntegrityTest {
     assertThat(resolves(fqn)).as("FQN '%s' did not resolve on the classpath", fqn).isTrue();
   }
 
+  @ParameterizedTest(name = "aggregate function: {0}")
+  @MethodSource("aggregateFunctionFqns")
+  @DisplayName("Every allowed aggregate function FQN resolves to a class on the classpath")
+  void allowedAggregateFunctionFqnResolves(final String fqn) {
+    assertThat(resolves(fqn)).as("FQN '%s' did not resolve on the classpath", fqn).isTrue();
+  }
+
   @ParameterizedTest(name = "rejected expression: {0}")
   @MethodSource("rejectedExpressionFqns")
   @DisplayName("Every rejected expression FQN resolves to a class on the classpath")
@@ -68,6 +75,10 @@ class SqlValidatorIntegrityTest {
 
   static Stream<String> expressionFqns() {
     return SqlValidator.allowedExpressionNames().stream();
+  }
+
+  static Stream<String> aggregateFunctionFqns() {
+    return SqlValidator.allowedAggregateFunctionNames().stream();
   }
 
   static Stream<String> rejectedExpressionFqns() {
