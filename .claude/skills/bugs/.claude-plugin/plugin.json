@@ -1,0 +1,5 @@
+{
+  "name": "bugs",
+  "version": "0.1.0",
+  "description": "Bug lifecycle for Pathling: draft, triage, review and verify bug reports, and check whether a fix lets an issue close."
+}
