@@ -569,6 +569,34 @@ class SqlRunProviderIT {
   }
 
   // -------------------------------------------------------------------------
+  // Optimiser faults.
+  // -------------------------------------------------------------------------
+
+  // A correlated subquery over the output of a UNION ALL is valid SQL, but Spark's
+  // PushProjectionThroughUnion optimiser rule fails on it with a NoSuchElementException
+  // (SPARK-59042). The server's default Spark configuration excludes that rule, so the query runs.
+  @Test
+  void runsACorrelatedSubqueryOverAUnionAll() {
+    final String body =
+        postOk(
+            inlineSqlQueryRequest(
+                "WITH a AS ("
+                    + " SELECT family_name f, count(*) n FROM adh GROUP BY family_name"
+                    + " UNION ALL"
+                    + " SELECT family_name, count(*) FROM adh GROUP BY family_name"
+                    + ") SELECT a.*, EXISTS(SELECT 1 FROM adh p WHERE p.family_name = a.f) e"
+                    + " FROM a"),
+            SqlRunFormat.NDJSON);
+
+    // Each of the three family names appears once in each branch of the union, and each exists.
+    final List<String> lines = body.lines().filter(line -> !line.isBlank()).toList();
+    assertThat(lines).hasSize(6);
+    assertThat(lines)
+        .allSatisfy(line -> assertThat(line).contains("\"n\":1").contains("\"e\":true"));
+    assertThat(body).contains("Smith").contains("Johnson").contains("Williams");
+  }
+
+  // -------------------------------------------------------------------------
   // Evaluation failures.
   // -------------------------------------------------------------------------
 
