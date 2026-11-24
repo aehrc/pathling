@@ -45,7 +45,10 @@ public class ResolvedValueSet implements ResolvedDependency {
   /** Terminates each member within the hashed content description. */
   private static final char ROW_SEPARATOR = '\n';
 
-  /** Stands in for a null column value within the hashed content description. */
+  /**
+   * Stands in for a null column value within the hashed content description. Column values are
+   * encoded with {@link ContentDescriptions#escape(String)}, so no value can contain it.
+   */
   private static final String NULL_VALUE = "\u0000";
 
   /** Sorts members by their identity so that the description is independent of source order. */
@@ -84,18 +87,19 @@ public class ResolvedValueSet implements ResolvedDependency {
   }
 
   /**
-   * Renders one member as its five columns, with a sentinel for null.
+   * Renders one member as its five columns, each encoded so that no value can contain a separator,
+   * with a sentinel for null.
    *
    * @param member the member
    * @return the rendered row
    */
   @Nonnull
   private static String render(@Nonnull final ValueSetMember member) {
-    return member.getSystem()
+    return orNull(member.getSystem())
         + COLUMN_SEPARATOR
         + orNull(member.getVersion())
         + COLUMN_SEPARATOR
-        + member.getCode()
+        + orNull(member.getCode())
         + COLUMN_SEPARATOR
         + orNull(member.getDisplay())
         + COLUMN_SEPARATOR
@@ -104,14 +108,14 @@ public class ResolvedValueSet implements ResolvedDependency {
   }
 
   /**
-   * Renders a nullable column value, substituting the null sentinel.
+   * Renders a nullable column value, encoding a value and substituting the null sentinel for null.
    *
    * @param value the value
    * @return the rendered value
    */
   @Nonnull
   private static String orNull(@Nullable final Object value) {
-    return value == null ? NULL_VALUE : value.toString();
+    return value == null ? NULL_VALUE : ContentDescriptions.escape(value.toString());
   }
 
   /**

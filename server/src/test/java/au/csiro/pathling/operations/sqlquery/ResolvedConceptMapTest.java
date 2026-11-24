@@ -87,6 +87,19 @@ class ResolvedConceptMapTest {
     assertThat(resolved(MI, ASTHMA).describeContent()).isNotEqualTo(resolved(MI).describeContent());
   }
 
+  @Test
+  void describeContentDiffersWhenAValueReproducesTheColumnSeparator() {
+    // A client-supplied value containing the separator must not shift the columns, which would
+    // make a source code of "c|d" with a display of "e" indistinguishable from a source code of
+    // "c" with a display of "d|e" (aehrc/pathling#2768).
+    final ConceptMapping first =
+        new ConceptMapping(SNOMED, null, "c|d", "e", ICD10, null, "I21", null, null);
+    final ConceptMapping second =
+        new ConceptMapping(SNOMED, null, "c", "d|e", ICD10, null, "I21", null, null);
+
+    assertThat(resolved(first).describeContent()).isNotEqualTo(resolved(second).describeContent());
+  }
+
   @ParameterizedTest(name = "{0}")
   @MethodSource("variants")
   void describeContentDiffersWhenAnyColumnDiffers(

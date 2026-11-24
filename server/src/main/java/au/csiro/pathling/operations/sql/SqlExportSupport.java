@@ -17,6 +17,9 @@
 
 package au.csiro.pathling.operations.sql;
 
+import static au.csiro.pathling.operations.sqlquery.ContentDescriptions.describeMap;
+import static au.csiro.pathling.operations.sqlquery.ContentDescriptions.describeView;
+import static au.csiro.pathling.operations.sqlquery.ContentDescriptions.escape;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 
 import au.csiro.pathling.async.AsyncJobContext;
@@ -33,6 +36,7 @@ import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
 import au.csiro.pathling.operations.export.ExportFileWriter;
 import au.csiro.pathling.operations.export.ExportManifest;
 import au.csiro.pathling.operations.export.ExportManifestOutput;
+import au.csiro.pathling.operations.sqlquery.ContentDescriptions;
 import au.csiro.pathling.operations.sqlquery.PreparedSqlQuery;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
@@ -199,6 +203,10 @@ public class SqlExportSupport {
    * Computes the deterministic cache key component from the parsed request, so that identical
    * kick-offs deduplicate onto the same job while differing ones do not.
    *
+   * <p>Every client-controlled value is encoded with {@link ContentDescriptions#escape(String)}
+   * before it is concatenated, so that no value can reproduce the key's delimiters and make one
+   * request render as another.
+   *
    * @param request the parsed request
    * @return the cache key component
    */
@@ -221,18 +229,22 @@ public class SqlExportSupport {
     }
 
     if (request.clientTrackingId() != null) {
-      key.append("|clientTrackingId=").append(request.clientTrackingId());
+      key.append("|clientTrackingId=").append(escape(request.clientTrackingId()));
     }
     key.append("|format=").append(request.format());
     key.append("|header=").append(request.includeHeader());
 
     if (!request.patientIds().isEmpty()) {
       key.append("|patientIds=[")
-          .append(request.patientIds().stream().sorted().collect(Collectors.joining(",")))
+          .append(
+              request.patientIds().stream()
+                  .sorted()
+                  .map(ContentDescriptions::escape)
+                  .collect(Collectors.joining(",")))
           .append("]");
     }
     if (request.since() != null) {
-      key.append("|since=").append(request.since().getValueAsString());
+      key.append("|since=").append(escape(request.since().getValueAsString()));
     }
     return key.toString();
   }
@@ -240,7 +252,8 @@ public class SqlExportSupport {
   /**
    * Renders the resolved content of every dependency the request's subjects reached, ordered by
    * canonical key so that the same graph always renders the same way. A dependency shared by two
-   * subjects is resolved once, and is described once here.
+   * subjects is resolved once, and is described once here. Each node's content description encodes
+   * its own values, so only the canonical key needs encoding here.
    */
   @Nonnull
   private static String describeDependencies(@Nonnull final List<SubjectInput> subjects) {
@@ -257,7 +270,7 @@ public class SqlExportSupport {
       }
     }
     return contentByKey.entrySet().stream()
-        .map(entry -> entry.getKey() + '=' + entry.getValue())
+        .map(entry -> escape(entry.getKey()) + '=' + entry.getValue())
         .collect(Collectors.joining(","));
   }
 
@@ -269,18 +282,18 @@ public class SqlExportSupport {
    */
   @Nonnull
   private static String describe(@Nonnull final SubjectInput subject) {
-    final StringBuilder description = new StringBuilder(subject.name()).append(':');
+    final StringBuilder description = new StringBuilder(escape(subject.name())).append(':');
     description.append(subject.kind()).append(':');
     final PreparedSqlQuery prepared = subject.preparedQuery();
     if (prepared != null) {
       description
-          .append(prepared.getRequest().getParsedQuery().getSql())
+          .append(escape(prepared.getRequest().getParsedQuery().getSql()))
           .append(':')
-          .append(prepared.getRequest().getParameterBindings())
+          .append(describeMap(prepared.getRequest().getParameterBindings()))
           .append(':')
-          .append(prepared.getDependencyGraph().getTopLevelKeysByLabel());
+          .append(describeMap(prepared.getDependencyGraph().getTopLevelKeysByLabel()));
     } else {
-      description.append(Objects.requireNonNull(subject.view()).toString());
+      description.append(describeView(Objects.requireNonNull(subject.view())));
     }
     return description.toString();
   }

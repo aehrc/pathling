@@ -47,6 +47,6 @@ public class ResolvedViewDefinition implements ResolvedDependency {
   @Override
   @Nonnull
   public String describeContent() {
-    return "view-definition:" + view;
+    return "view-definition:" + ContentDescriptions.describeView(view);
   }
 }

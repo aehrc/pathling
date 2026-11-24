@@ -49,6 +49,9 @@ public class ResolvedSqlView implements ResolvedDependency {
   @Override
   @Nonnull
   public String describeContent() {
-    return "sql-view:" + sql + ':' + childKeysByLabel;
+    return "sql-view:"
+        + ContentDescriptions.escape(sql)
+        + ':'
+        + ContentDescriptions.describeMap(childKeysByLabel);
   }
 }
