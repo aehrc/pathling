@@ -274,6 +274,154 @@ class SqlExportSupportTest {
     assertThat(second).isNotEqualTo(first);
   }
 
+  // -------------------------------------------------------------------------
+  // Values that reproduce the key's own delimiters (aehrc/pathling#2768).
+  // -------------------------------------------------------------------------
+
+  // The worked example from aehrc/pathling#2768. The first graph is three SQLViews deep, and the
+  // second is two deep, with the top view's SQL carrying, after a line comment, a rendering of the
+  // middle view of the first graph. Rendered without escaping the two graphs produced the same
+  // dependency description, so the second kick-off was answered with the first one's rows.
+  @Test
+  void aSqlViewBodyThatForgesAnotherGraphProducesADifferentKey() {
+    final String v1 = "https://example.org/Library/v1";
+    final String v2 = "https://example.org/Library/v2";
+    final String v3 = "https://example.org/Library/v3";
+    final ResolvedSqlView leaf = new ResolvedSqlView(v3, "SELECT 1 AS n", Map.of());
+    final String honest =
+        support.computeCacheKeyComponent(
+            requestOver(
+                graph(
+                    Map.of("crit_a", v1),
+                    new ResolvedSqlView(v1, "SELECT * FROM lbl --", Map.of("lbl", v2)),
+                    new ResolvedSqlView(v2, "SELECT n * 10 AS n FROM lbl", Map.of("lbl", v3)),
+                    leaf)));
+    final String forged =
+        support.computeCacheKeyComponent(
+            requestOver(
+                graph(
+                    Map.of("crit_a", v1),
+                    new ResolvedSqlView(
+                        v1,
+                        "SELECT * FROM lbl --:{lbl="
+                            + v2
+                            + "},"
+                            + v2
+                            + "=sql-view:SELECT n * 10 AS n FROM lbl",
+                        Map.of("lbl", v3)),
+                    leaf)));
+
+    assertThat(forged).isNotEqualTo(honest);
+  }
+
+  // The subjects section has the same weakness: one subject's SQL can carry, after a line comment,
+  // the rendering of a second subject, so that one subject renders as two.
+  @Test
+  void aSubjectSqlThatForgesASecondSubjectProducesADifferentKey() {
+    final ResolvedDependencyGraph empty = graph(Map.of());
+    final String honest =
+        support.computeCacheKeyComponent(
+            requestOf(
+                sqlSubject("n1", "SELECT 1 AS n --", Map.of(), empty),
+                sqlSubject("n2", "SELECT 2 AS n", Map.of(), empty)));
+    final String forged =
+        support.computeCacheKeyComponent(
+            requestOf(
+                sqlSubject(
+                    "n1",
+                    "SELECT 1 AS n --:{}:{},n2:" + SubjectKind.SQL_QUERY + ":SELECT 2 AS n",
+                    Map.of(),
+                    empty)));
+
+    assertThat(forged).isNotEqualTo(honest);
+  }
+
+  // A string parameter value can reproduce the rendering of a second binding, so that one binding
+  // renders as two.
+  @Test
+  void aParameterValueThatForgesASecondBindingProducesADifferentKey() {
+    final Map<String, Object> two = new LinkedHashMap<>();
+    two.put("p", "1");
+    two.put("q", "2");
+    final String honest =
+        support.computeCacheKeyComponent(
+            requestOf(sqlSubject("subject", SUBJECT_SQL, two, sqlViewGraph("SELECT 1"))));
+    final String forged =
+        support.computeCacheKeyComponent(
+            requestOf(
+                sqlSubject(
+                    "subject", SUBJECT_SQL, Map.of("p", "1, q=2"), sqlViewGraph("SELECT 1"))));
+
+    assertThat(forged).isNotEqualTo(honest);
+  }
+
+  // A ViewDefinition dependency is described by its projection. A column path that reproduces the
+  // rendering of a second column must not make one column indistinguishable from two.
+  @Test
+  void aViewDefinitionDependencyThatForgesASecondColumnProducesADifferentKey() {
+    final String honest =
+        support.computeCacheKeyComponent(requestOver(viewDefinitionGraph(twoColumnView())));
+    final String forged =
+        support.computeCacheKeyComponent(requestOver(viewDefinitionGraph(forgedColumnView())));
+
+    assertThat(forged).isNotEqualTo(honest);
+  }
+
+  // A ViewDefinition subject is described by its projection in the same way as a ViewDefinition
+  // dependency, and needs the same protection.
+  @Test
+  void aViewDefinitionSubjectThatForgesASecondColumnProducesADifferentKey() {
+    final String honest =
+        support.computeCacheKeyComponent(
+            requestOf(SubjectInput.ofView("subject", twoColumnView())));
+    final String forged =
+        support.computeCacheKeyComponent(
+            requestOf(SubjectInput.ofView("subject", forgedColumnView())));
+
+    assertThat(forged).isNotEqualTo(honest);
+  }
+
+  // Escaping must not get in the way of deduplication: the same delimiter-laden values, parsed
+  // twice, still produce the same key.
+  @Test
+  void anIdenticalRequestCarryingDelimitersProducesTheSameKey() {
+    final String sql = "SELECT * FROM lbl --:{lbl=x},y=[z]|%3A";
+    final String first =
+        support.computeCacheKeyComponent(
+            requestOf(
+                sqlSubject("a:b", sql, Map.of("p", "1, q=2"), sqlViewGraph(VIEW_URL, sql)),
+                SubjectInput.ofView("c,d", forgedColumnView())));
+    final String second =
+        support.computeCacheKeyComponent(
+            requestOf(
+                sqlSubject("a:b", sql, Map.of("p", "1, q=2"), sqlViewGraph(VIEW_URL, sql)),
+                SubjectInput.ofView("c,d", forgedColumnView())));
+
+    assertThat(second).isEqualTo(first);
+  }
+
+  // ---- view builders ----
+
+  /** A Patient view with two columns, {@code v} and {@code w}. */
+  @Nonnull
+  private static FhirView twoColumnView() {
+    return FhirView.ofResource("Patient")
+        .select(FhirView.columns(FhirView.column("v", "x"), FhirView.column("w", "y")))
+        .build();
+  }
+
+  /**
+   * A Patient view with a single column whose path reproduces the rendering of the second column of
+   * {@link #twoColumnView()}.
+   */
+  @Nonnull
+  private static FhirView forgedColumnView() {
+    final String rest = ", description=null, collection=false, type=null, tag=[])";
+    return FhirView.ofResource("Patient")
+        .select(FhirView.columns(FhirView.column("v", "x" + rest + ", Column(name=w, path=y")))
+        .build();
+  }
+
   // ---- graph builders ----
 
   /** A graph whose single dependency is a SQLView carrying the given SQL, keyed by VIEW_URL. */
@@ -292,8 +440,15 @@ class SqlExportSupportTest {
   /** A graph whose single dependency is a ViewDefinition projecting the given path. */
   @Nonnull
   private static ResolvedDependencyGraph viewDefinitionGraph(@Nonnull final String path) {
-    final FhirView view =
-        FhirView.ofResource("Patient").select(FhirView.columns(FhirView.column("v", path))).build();
+    return viewDefinitionGraph(
+        FhirView.ofResource("Patient")
+            .select(FhirView.columns(FhirView.column("v", path)))
+            .build());
+  }
+
+  /** A graph whose single dependency is the given ViewDefinition. */
+  @Nonnull
+  private static ResolvedDependencyGraph viewDefinitionGraph(@Nonnull final FhirView view) {
     return graph(Map.of("crit_a", VIEW_URL), new ResolvedViewDefinition(VIEW_URL, view));
   }
 
@@ -391,14 +546,30 @@ class SqlExportSupportTest {
   /** A single-subject request whose SQL is fixed, over the given dependency graph. */
   @Nonnull
   private static SqlExportRequest requestOver(@Nonnull final ResolvedDependencyGraph graph) {
+    return requestOf(sqlSubject("subject", SUBJECT_SQL, Map.of(), graph));
+  }
+
+  /** A SQLQuery subject with the given name, SQL and bindings, over the given dependency graph. */
+  @Nonnull
+  private static SubjectInput sqlSubject(
+      @Nonnull final String name,
+      @Nonnull final String sql,
+      @Nonnull final Map<String, Object> bindings,
+      @Nonnull final ResolvedDependencyGraph graph) {
     final ParsedSqlQuery parsed =
-        new ParsedSqlQuery(SUBJECT_SQL, List.of(), List.of(), SqlLibraryParser.SQL_QUERY_TYPE_CODE);
+        new ParsedSqlQuery(sql, List.of(), List.of(), SqlLibraryParser.SQL_QUERY_TYPE_CODE);
     final PreparedSqlQuery prepared =
-        new PreparedSqlQuery(new SqlQueryRequest(parsed, null, Map.of()), graph);
+        new PreparedSqlQuery(new SqlQueryRequest(parsed, null, bindings), graph);
+    return SubjectInput.ofSql(SubjectKind.SQL_QUERY, name, prepared);
+  }
+
+  /** A request made up of the given subjects, with every other parameter fixed. */
+  @Nonnull
+  private static SqlExportRequest requestOf(@Nonnull final SubjectInput... subjects) {
     return new SqlExportRequest(
         "http://localhost/fhir/$sql-export",
         "http://localhost/fhir",
-        List.of(SubjectInput.ofSql(SubjectKind.SQL_QUERY, "subject", prepared)),
+        List.of(subjects),
         null,
         SqlExportFormat.NDJSON,
         false,

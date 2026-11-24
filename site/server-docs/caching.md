@@ -104,6 +104,9 @@ cache key from the following components:
    covers the resolved content of every dependency the job's subjects reach -
    ViewDefinitions, SQLViews and external tables alike - so two kick-offs that
    inline different definitions at the same canonical URL are not equivalent.
+   Each value taken from the request, such as SQL text or a canonical URL, is
+   percent-encoded before it is added to the key, so no value can be written to
+   make the key of one request match that of a structurally different request.
 
 If two requests produce the same cache key, they are considered equivalent and
 will share the same async job. This allows multiple clients making identical

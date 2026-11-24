@@ -45,6 +45,10 @@ public interface ResolvedDependency {
    * client inlines a different body at a canonical URL it has used before - must describe
    * themselves differently, so that a caller keying on the resolved graph can tell them apart.
    *
+   * <p>The description is embedded in a cache key, so every value in it must be encoded with {@link
+   * ContentDescriptions}, leaving the description's own delimiters as its only structural
+   * characters. Otherwise a value could reproduce the rendering of a different graph.
+   *
    * @return the content description
    */
   @Nonnull
