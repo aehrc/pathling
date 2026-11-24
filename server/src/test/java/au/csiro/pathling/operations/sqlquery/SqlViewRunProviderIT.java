@@ -251,6 +251,23 @@ class SqlViewRunProviderIT {
     assertThat(body).containsIgnoringCase("cycl");
   }
 
+  @Test
+  void runsQueryUsingFirstLastAndAnyValue() {
+    // Issue 2867: these aggregates have dedicated grammar rules, so the parser builds them as
+    // aggregate expressions rather than function calls, and the validator previously rejected them.
+    // Filtering to one patient makes the order-dependent aggregates deterministic.
+    final Library library =
+        sqlQueryLibrary(
+            "SELECT first(family_name) AS f, last(family_name) AS l,"
+                + " any_value(family_name) AS a FROM ap WHERE id = 'p1'",
+            "ap",
+            SqlViewTestConfiguration.libraryUrl(SqlViewTestConfiguration.ACTIVE_PATIENTS_ID));
+
+    final String body = postOk(parametersJson(library));
+
+    assertThat(body.trim()).isEqualTo("{\"f\":\"Smith\",\"l\":\"Smith\",\"a\":\"Smith\"}");
+  }
+
   // ---------------------------------------------------------------------------
   // Issue 2730: a column sharing a dependency label's name must not be rewritten.
   // The age-source SQLView exposes patient_key, age and age_years, so the label

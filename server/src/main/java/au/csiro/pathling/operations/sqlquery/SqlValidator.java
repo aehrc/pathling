@@ -34,6 +34,8 @@ import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.catalyst.expressions.ExpressionInfo;
 import org.apache.spark.sql.catalyst.expressions.SubqueryExpression;
 import org.apache.spark.sql.catalyst.expressions.WindowSpecDefinition;
+import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression;
+import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateFunction;
 import org.apache.spark.sql.catalyst.plans.logical.Command;
 import org.apache.spark.sql.catalyst.plans.logical.DescribeRelation;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
@@ -79,7 +81,9 @@ import scala.jdk.javaapi.CollectionConverters;
  *       single-part identifier present in the declared label set or among the CTEs defined within
  *       the query. This rejects datasource short-name file reads such as {@code
  *       parquet.`/etc/passwd`}, which would otherwise be resolved by Spark to a direct file read.
- *   <li><strong>Expression allow-list</strong> — only safe expression types are permitted.
+ *   <li><strong>Expression allow-list</strong> — only safe expression types are permitted. An
+ *       aggregate that the parser builds directly ({@code first}, {@code last}, {@code any_value})
+ *       is permitted only when its aggregate function is on a separate allow-list.
  *   <li><strong>Built-in functions only</strong> — every {@link UnresolvedFunction} in user SQL
  *       must resolve to a built-in Spark function. Pathling-registered UDFs (terminology, FHIRPath
  *       helpers, etc.) are intended for use within ViewDefinitions; the {@code $sql-run} surface
@@ -99,6 +103,7 @@ import scala.jdk.javaapi.CollectionConverters;
  * confirms the resolved target is one of the registered temp views. Every other DESCRIBE / SHOW
  * variant remains rejected.
  *
+ * @author John Grimes
  * @see <a
  *     href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/OperationDefinition-SQLQueryRun.html">SQLQueryRun</a>
  */
@@ -341,6 +346,17 @@ public class SqlValidator {
           "org.apache.spark.sql.catalyst.expressions.BitwiseOr",
           "org.apache.spark.sql.catalyst.expressions.BitwiseXor",
           "org.apache.spark.sql.catalyst.expressions.BitwiseNot");
+
+  // Fully-qualified aggregate function class names that are permitted inside an
+  // AggregateExpression. Spark's grammar has dedicated rules for first(), last() and any_value(),
+  // so the parser builds an AggregateExpression over these directly rather than an
+  // UnresolvedFunction that is checked by name. They are built-in aggregates, and are what the
+  // first_value() and last_value() functions already resolve to.
+  private static final Set<String> ALLOWED_AGGREGATE_FUNCTION_NAMES =
+      Set.of(
+          "org.apache.spark.sql.catalyst.expressions.aggregate.First",
+          "org.apache.spark.sql.catalyst.expressions.aggregate.Last",
+          "org.apache.spark.sql.catalyst.expressions.aggregate.AnyValue");
 
   // Fully-qualified expression class names that are explicitly rejected.
   private static final Set<String> REJECTED_EXPRESSION_NAMES =
@@ -775,8 +791,9 @@ public class SqlValidator {
 
   /**
    * Validates an expression. In both modes, explicitly rejected expression types and disallowed
-   * function names are caught. In strict mode, the expression allow-list is additionally enforced
-   * and {@link UnresolvedFunction}s are required to resolve to a built-in Spark function.
+   * function names are caught. In strict mode, the expression allow-list is additionally enforced,
+   * {@link UnresolvedFunction}s are required to resolve to a built-in Spark function, and {@link
+   * AggregateExpression}s are required to wrap an allowed aggregate function.
    */
   private void validateExpression(@Nonnull final Expression expr, final boolean strict) {
     final String fqn = canonicalClassName(expr);
@@ -799,9 +816,34 @@ public class SqlValidator {
       return;
     }
 
-    if (!ALLOWED_EXPRESSION_NAMES.contains(fqn)) {
+    if (expr instanceof final AggregateExpression aggregate) {
+      validateAggregateExpression(aggregate);
+      return;
+    }
+
+    if (!ALLOWED_EXPRESSION_NAMES.contains(fqn)
+        && !ALLOWED_AGGREGATE_FUNCTION_NAMES.contains(fqn)) {
       throw new InvalidRequestException(
           "SQL contains a disallowed expression: " + expr.getClass().getSimpleName());
+    }
+  }
+
+  /**
+   * Validates an {@link AggregateExpression} built directly by the parser, which happens for the
+   * aggregates that have dedicated grammar rules ({@code first}, {@code last} and {@code
+   * any_value}). The wrapped aggregate function must be on the aggregate allow-list. The rejection
+   * names the SQL function rather than the Catalyst class, as the caller has no way to relate
+   * {@code AggregateExpression} to the function they wrote. The function's arguments are validated
+   * separately as the expression walk descends into them.
+   *
+   * @param aggregate the aggregate expression to validate
+   * @throws InvalidRequestException if the wrapped aggregate function is not allowed
+   */
+  static void validateAggregateExpression(@Nonnull final AggregateExpression aggregate) {
+    final AggregateFunction function = aggregate.aggregateFunction();
+    if (!ALLOWED_AGGREGATE_FUNCTION_NAMES.contains(canonicalClassName(function))) {
+      throw new InvalidRequestException(
+          "SQL contains a disallowed aggregate function: " + function.prettyName());
     }
   }
 
@@ -888,6 +930,12 @@ public class SqlValidator {
   @Nonnull
   static Set<String> allowedExpressionNames() {
     return ALLOWED_EXPRESSION_NAMES;
+  }
+
+  /** Aggregate function allow-list entries, exposed for build-time integrity tests. */
+  @Nonnull
+  static Set<String> allowedAggregateFunctionNames() {
+    return ALLOWED_AGGREGATE_FUNCTION_NAMES;
   }
 
   /** Reject-list entries, exposed for build-time integrity tests. */
