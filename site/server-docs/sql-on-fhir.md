@@ -220,10 +220,10 @@ with a SQLSTATE in class `22`, such as a string that cannot be cast to a number
 or a division by zero. Its diagnostics carry Spark's own message, which quotes
 the value that could not be processed and the fragment of the rewritten query
 that raised it. This can only be reported as a status while no rows have been
-sent. A common cause is comparing a `decimal` column with a number: the column
-is a string under the default type mappings, so Spark casts it to an integer
-type for the comparison, and the cast fails on the first value that is not a
-whole number. Casting the column first, as in
+sent. A common cause is comparing a `decimal` column with an integer literal:
+the column is a string under the default type mappings, so Spark casts it to an
+integer type for the comparison, and the cast fails on the first value that is
+not a whole number. Casting the column first, as in
 `CAST(value AS DECIMAL(18, 6)) >= 90`, avoids this.
 
 ### Parameters
