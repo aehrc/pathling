@@ -551,8 +551,9 @@ Here are a few that you might be particularly interested in:
   comma-separated list of Spark optimiser rules to disable. The default works
   around [SPARK-59042](https://issues.apache.org/jira/browse/SPARK-59042), in
   which a SQL query with a correlated subquery over the output of a `UNION ALL`
-  fails to plan. If you set this option, include the default rule in the list
-  unless you are running a Spark version that fixes that bug.
+  fails to plan. It does not cover such a query when it is itself one branch of
+  a further `UNION` or `UNION ALL`. If you set this option, include the default
+  rule in the list unless you are running a Spark version that fixes that bug.
 
 This is the default Spark configuration:
 

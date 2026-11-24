@@ -226,7 +226,8 @@ spark:
     optimizer:
       # Works around SPARK-59042, in which this rule fails on a correlated subquery over the output
       # of a UNION ALL. Column pruning through a union is done by a separate rule, so excluding it
-      # does not stop unneeded columns from being read.
+      # does not stop unneeded columns from being read. The workaround does not cover such a query
+      # when it is itself a branch of another union, as CombineUnions makes the same faulty rewrite.
       excludedRules: org.apache.spark.sql.catalyst.optimizer.PushProjectionThroughUnion
   databricks:
     delta:
