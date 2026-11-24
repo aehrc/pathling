@@ -515,6 +515,15 @@
         <artifactId>snappy-java</artifactId>
         <version>1.1.10.12</version>
       </dependency>
+      <!-- Override the aircompressor version that Spark's ORC and Parquet dependencies bring
+           in, to fix CVE-2025-67721. Parquet uses its Java LZ4 decompressor to read LZ4_RAW
+           input to $import. Spark 4.1.0 brings in 2.0.2; the fix requires 2.0.3. Remove once
+           Spark brings in aircompressor >= 2.0.3. -->
+      <dependency>
+        <groupId>io.airlift</groupId>
+        <artifactId>aircompressor</artifactId>
+        <version>2.0.3</version>
+      </dependency>
       <!-- Override HAPI's transitive org.hl7.fhir.* core libraries to fix
            CVE-2026-33180, CVE-2026-34359, CVE-2026-45367 and CVE-2026-55471
            (XXE in XsltUtilities.saxonTransform). HAPI 8.10.0 bundles 6.9.4.1,
