@@ -35,6 +35,7 @@ import au.csiro.pathling.security.SecurityAspect;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.BufferedWriter;
@@ -283,8 +284,10 @@ public class BulkSubmitExecutor {
     // Validate file URLs against allowableSources.
     validateFileUrls(fileUrls);
 
-    // Download files to persistent storage.
+    // Download files to persistent storage, collecting outcomes for any resources whose type
+    // differs from the type declared for their file.
     jobDirectoryFileSystem.ensureJobDirectory(submission.submissionId());
+    final List<OperationOutcome> typeMismatches = new ArrayList<>();
     final List<DownloadedFile> downloadedFiles =
         downloadFilesToPersistentStorage(
             fileUrls,
@@ -292,11 +295,16 @@ public class BulkSubmitExecutor {
             manifestJob.manifestJobId(),
             manifestJob.manifestUrl(),
             fileRequestHeaders,
-            fileAccessToken);
+            fileAccessToken,
+            typeMismatches);
+    final String typeMismatchFileName =
+        writeTypeMismatchFile(
+            submission.submissionId(), manifestJob.manifestJobId(), typeMismatches);
 
     // Register and update state.
     registerSubmissionForExport(submission);
-    updateManifestJobWithDownloadedFiles(submission, manifestJob, downloadedFiles);
+    updateManifestJobWithDownloadedFiles(
+        submission, manifestJob, downloadedFiles, typeMismatchFileName);
 
     log.info(
         "Manifest job {} download completed successfully with {} files",
@@ -352,16 +360,22 @@ public class BulkSubmitExecutor {
    * @param submission The submission containing the manifest job.
    * @param manifestJob The manifest job to update.
    * @param downloadedFiles The list of downloaded files.
+   * @param typeMismatchFileName The name of the file describing resources of an unexpected type, or
+   *     null if there were none.
    */
   private void updateManifestJobWithDownloadedFiles(
       @Nonnull final Submission submission,
       @Nonnull final ManifestJob manifestJob,
-      @Nonnull final List<DownloadedFile> downloadedFiles) {
+      @Nonnull final List<DownloadedFile> downloadedFiles,
+      @Nullable final String typeMismatchFileName) {
     submissionRegistry.updateManifestJob(
         submission.submitter(),
         submission.submissionId(),
         manifestJob.manifestJobId(),
-        mj -> mj.withDownloadedFiles(downloadedFiles).withState(ManifestJobState.DOWNLOADED));
+        mj ->
+            mj.withDownloadedFiles(downloadedFiles)
+                .withTypeMismatchFileName(typeMismatchFileName)
+                .withState(ManifestJobState.DOWNLOADED));
   }
 
   /**
@@ -775,8 +789,10 @@ public class BulkSubmitExecutor {
    * @param manifestUrl The URL of the manifest from which these files are being downloaded.
    * @param fileRequestHeaders Custom HTTP headers to include when downloading files.
    * @param accessToken OAuth2 access token for authenticated downloads (may be null).
+   * @param typeMismatches The list to which outcomes describing resources of an unexpected type are
+   *     added.
    * @return List of downloaded file metadata.
-   * @throws IOException If a file cannot be downloaded.
+   * @throws IOException If a file cannot be downloaded or read back.
    */
   @Nonnull
   private List<DownloadedFile> downloadFilesToPersistentStorage(
@@ -785,7 +801,8 @@ public class BulkSubmitExecutor {
       @Nonnull final String manifestJobId,
       @Nonnull final String manifestUrl,
       @Nonnull final List<FileRequestHeader> fileRequestHeaders,
-      @Nullable final String accessToken)
+      @Nullable final String accessToken,
+      @Nonnull final List<OperationOutcome> typeMismatches)
       throws IOException {
     final List<DownloadedFile> downloadedFiles = new ArrayList<>();
     final AtomicInteger fileCounter = new AtomicInteger(0);
@@ -800,6 +817,7 @@ public class BulkSubmitExecutor {
         final String fileName = resourceType + "." + manifestJobId + "-" + fileNum + ".ndjson";
 
         downloadFile(url, submissionId, fileName, fileRequestHeaders, accessToken);
+        typeMismatches.addAll(findTypeMismatches(url, resourceType, submissionId, fileName));
 
         // The qualified Hadoop URI of the destination is what the downstream Spark importer reads.
         final String localPath =
@@ -858,6 +876,75 @@ public class BulkSubmitExecutor {
   }
 
   /**
+   * Reads back a downloaded file and describes any resources whose type differs from the type
+   * declared for the file in the manifest. These resources are skipped by the import, so each
+   * unexpected type is reported with the number of resources that will not be imported.
+   *
+   * @param url The URL the file was downloaded from.
+   * @param declaredType The resource type declared for the file in the manifest.
+   * @param submissionId The submission ID identifying the per-job directory.
+   * @param fileName The name of the downloaded file.
+   * @return One OperationOutcome for each unexpected resource type found in the file.
+   * @throws IOException If the file cannot be read.
+   */
+  @Nonnull
+  private List<OperationOutcome> findTypeMismatches(
+      @Nonnull final String url,
+      @Nonnull final String declaredType,
+      @Nonnull final String submissionId,
+      @Nonnull final String fileName)
+      throws IOException {
+    final Map<String, Long> unexpectedTypes;
+    try (final InputStream in =
+        jobDirectoryFileSystem
+            .getFileSystem()
+            .open(jobDirectoryFileSystem.resolveFile(submissionId, fileName))) {
+      unexpectedTypes = ResourceTypeScanner.countUnexpectedTypes(in, declaredType);
+    }
+
+    return unexpectedTypes.entrySet().stream()
+        .map(
+            entry -> {
+              final long count = entry.getValue();
+              final String diagnostics =
+                  "File %s declared as %s contains %d %s of type %s, which will not be imported."
+                      .formatted(
+                          url,
+                          declaredType,
+                          count,
+                          count == 1 ? "resource" : "resources",
+                          entry.getKey());
+              log.warn("{}", diagnostics);
+              return buildOperationOutcome(IssueType.INVALID, diagnostics);
+            })
+        .toList();
+  }
+
+  /**
+   * Writes the outcomes describing resources of an unexpected type to an NDJSON file.
+   *
+   * @param submissionId The submission ID.
+   * @param manifestJobId The manifest job ID.
+   * @param typeMismatches The outcomes to write.
+   * @return The name of the written file, or null if there were no outcomes to write.
+   * @throws IOException If the file cannot be written.
+   */
+  @Nullable
+  private String writeTypeMismatchFile(
+      @Nonnull final String submissionId,
+      @Nonnull final String manifestJobId,
+      @Nonnull final List<OperationOutcome> typeMismatches)
+      throws IOException {
+    if (typeMismatches.isEmpty()) {
+      return null;
+    }
+    final String fileName = "OperationOutcome." + manifestJobId + "-type-mismatch.ndjson";
+    writeOperationOutcomes(submissionId, fileName, typeMismatches);
+    log.info("Wrote type mismatch file {} for manifest job {}", fileName, manifestJobId);
+    return fileName;
+  }
+
+  /**
    * Writes an error OperationOutcome to an NDJSON file.
    *
    * @param submissionId The submission ID.
@@ -875,29 +962,52 @@ public class BulkSubmitExecutor {
     // Ensure the per-job directory exists.
     jobDirectoryFileSystem.ensureJobDirectory(submissionId);
 
-    // Build the OperationOutcome resource.
-    final OperationOutcome outcome = new OperationOutcome();
-    outcome
-        .addIssue()
-        .setCode(IssueType.EXCEPTION)
-        .setSeverity(IssueSeverity.ERROR)
-        .setDiagnostics(errorMessage);
-
-    // Serialise to JSON.
-    final String json = fhirContext.newJsonParser().encodeResourceToString(outcome);
-
-    // Write to NDJSON file (single line per resource).
     final String fileName = "OperationOutcome." + manifestJobId + "-error.ndjson";
+    writeOperationOutcomes(
+        submissionId, fileName, List.of(buildOperationOutcome(IssueType.EXCEPTION, errorMessage)));
+
+    log.info("Wrote error file {} for manifest job {}", fileName, manifestJobId);
+    return fileName;
+  }
+
+  /**
+   * Builds an OperationOutcome with a single issue of error severity.
+   *
+   * @param code The issue type.
+   * @param diagnostics The diagnostics describing the issue.
+   * @return The OperationOutcome.
+   */
+  @Nonnull
+  private static OperationOutcome buildOperationOutcome(
+      @Nonnull final IssueType code, @Nonnull final String diagnostics) {
+    final OperationOutcome outcome = new OperationOutcome();
+    outcome.addIssue().setCode(code).setSeverity(IssueSeverity.ERROR).setDiagnostics(diagnostics);
+    return outcome;
+  }
+
+  /**
+   * Writes OperationOutcome resources to an NDJSON file in the per-job directory, one per line.
+   *
+   * @param submissionId The submission ID.
+   * @param fileName The name of the file to write.
+   * @param outcomes The outcomes to write.
+   * @throws IOException If the file cannot be written.
+   */
+  private void writeOperationOutcomes(
+      @Nonnull final String submissionId,
+      @Nonnull final String fileName,
+      @Nonnull final List<OperationOutcome> outcomes)
+      throws IOException {
+    final IParser parser = fhirContext.newJsonParser();
     try (final OutputStream out =
             jobDirectoryFileSystem.openForWrite(submissionId, fileName, true);
         final BufferedWriter writer =
             new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8))) {
-      writer.write(json);
-      writer.newLine();
+      for (final OperationOutcome outcome : outcomes) {
+        writer.write(parser.encodeResourceToString(outcome));
+        writer.newLine();
+      }
     }
-
-    log.info("Wrote error file {} for manifest job {}", fileName, manifestJobId);
-    return fileName;
   }
 
   /**

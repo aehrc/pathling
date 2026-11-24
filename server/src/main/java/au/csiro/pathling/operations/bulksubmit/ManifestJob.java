@@ -41,6 +41,8 @@ import java.util.List;
  * @param errorMessage Error message if failed.
  * @param errorFileName Name of the NDJSON file containing error OperationOutcome resources.
  * @param downloadedFiles List of files downloaded from the manifest.
+ * @param typeMismatchFileName Name of the NDJSON file of OperationOutcome resources describing
+ *     resources whose type differs from the type declared for their file in the manifest.
  * @author John Grimes
  * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
  */
@@ -55,7 +57,8 @@ public record ManifestJob(
     @Nullable String completedAt,
     @Nullable String errorMessage,
     @Nullable String errorFileName,
-    @Nullable List<DownloadedFile> downloadedFiles) {
+    @Nullable List<DownloadedFile> downloadedFiles,
+    @Nullable String typeMismatchFileName) {
 
   private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_INSTANT;
 
@@ -95,6 +98,7 @@ public record ManifestJob(
         null,
         null,
         null,
+        null,
         null);
   }
 
@@ -118,7 +122,8 @@ public record ManifestJob(
         newCompletedAt,
         errorMessage,
         errorFileName,
-        downloadedFiles);
+        downloadedFiles,
+        typeMismatchFileName);
   }
 
   /**
@@ -140,7 +145,8 @@ public record ManifestJob(
         completedAt,
         errorMessage,
         errorFileName,
-        downloadedFiles);
+        downloadedFiles,
+        typeMismatchFileName);
   }
 
   /**
@@ -164,7 +170,8 @@ public record ManifestJob(
         now(),
         errorMessage,
         errorFileName,
-        downloadedFiles);
+        downloadedFiles,
+        typeMismatchFileName);
   }
 
   /**
@@ -186,7 +193,33 @@ public record ManifestJob(
         completedAt,
         errorMessage,
         errorFileName,
-        downloadedFiles);
+        downloadedFiles,
+        typeMismatchFileName);
+  }
+
+  /**
+   * Creates a copy of this manifest job that refers to a file describing resources of an unexpected
+   * type. The state is unchanged, because the resources of the declared type are still imported.
+   *
+   * @param typeMismatchFileName The name of the NDJSON file of OperationOutcome resources, or null
+   *     if no resources of an unexpected type were found.
+   * @return A new manifest job with the type mismatch file name set.
+   */
+  @Nonnull
+  public ManifestJob withTypeMismatchFileName(@Nullable final String typeMismatchFileName) {
+    return new ManifestJob(
+        manifestJobId,
+        manifestUrl,
+        fhirBaseUrl,
+        oauthMetadataUrl,
+        state,
+        jobId,
+        createdAt,
+        completedAt,
+        errorMessage,
+        errorFileName,
+        downloadedFiles,
+        typeMismatchFileName);
   }
 
   /**

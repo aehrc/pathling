@@ -113,29 +113,49 @@ public class BulkSubmitResultBuilder {
       }
     }
 
-    // Build error parameters from failed manifest jobs that have error files.
+    // Build error parameters from the error files of each manifest job. Resources of an unexpected
+    // type are reported whatever the state of the job, as they are skipped even when the rest of
+    // the manifest is imported successfully.
     for (final ManifestJob job : submission.manifestJobs()) {
+      if (job.typeMismatchFileName() != null) {
+        addErrorParameter(parameters, submission, job, job.typeMismatchFileName(), fhirServerBase);
+      }
       if (job.state() == ManifestJobState.FAILED && job.errorFileName() != null) {
-        final ParametersParameterComponent errorParam = parameters.addParameter();
-        errorParam.setName("error");
-        errorParam.addPart().setName("type").setValue(new CodeType("OperationOutcome"));
-        errorParam
-            .addPart()
-            .setName("url")
-            .setValue(
-                new UriType(
-                    buildResultUrl(
-                        fhirServerBase, submission.submissionId(), job.errorFileName())));
-
-        // Add manifestUrl extension per spec.
-        final ParametersParameterComponent extPart = errorParam.addPart();
-        extPart.setName(EXTENSION);
-        extPart.addPart().setName("url").setValue(new UriType("manifestUrl"));
-        extPart.addPart().setName("valueUrl").setValue(new UriType(job.manifestUrl()));
+        addErrorParameter(parameters, submission, job, job.errorFileName(), fhirServerBase);
       }
     }
 
     return parameters;
+  }
+
+  /**
+   * Adds an error parameter that refers to a file of OperationOutcome resources.
+   *
+   * @param parameters The manifest to add the parameter to.
+   * @param submission The submission.
+   * @param job The manifest job that the file relates to.
+   * @param fileName The name of the file of OperationOutcome resources.
+   * @param fhirServerBase The FHIR server base URL.
+   */
+  private static void addErrorParameter(
+      @Nonnull final Parameters parameters,
+      @Nonnull final Submission submission,
+      @Nonnull final ManifestJob job,
+      @Nonnull final String fileName,
+      @Nonnull final String fhirServerBase) {
+    final ParametersParameterComponent errorParam = parameters.addParameter();
+    errorParam.setName("error");
+    errorParam.addPart().setName("type").setValue(new CodeType("OperationOutcome"));
+    errorParam
+        .addPart()
+        .setName("url")
+        .setValue(new UriType(buildResultUrl(fhirServerBase, submission.submissionId(), fileName)));
+
+    // Add manifestUrl extension per spec.
+    final ParametersParameterComponent extPart = errorParam.addPart();
+    extPart.setName(EXTENSION);
+    extPart.addPart().setName("url").setValue(new UriType("manifestUrl"));
+    extPart.addPart().setName("valueUrl").setValue(new UriType(job.manifestUrl()));
   }
 
   /**
