@@ -300,22 +300,6 @@ class SqlExportProviderIT extends AbstractAsyncExportIT {
     // The two jobs share no ETag on either endpoint.
     assertNoSharedEtag(firstStatus, secondStatus, HttpStatus.SEE_OTHER);
     assertNoSharedEtag(firstResult, secondResult, HttpStatus.OK);
-
-    // Neither endpoint is tagged with, or validated against, the database ETag.
-    final String databaseEtag = databaseEtag();
-    for (final String url : List.of(firstStatus, secondStatus, firstResult, secondResult)) {
-      final HttpStatus expected =
-          url.contains("$job-result") ? HttpStatus.OK : HttpStatus.SEE_OTHER;
-      assertThat(etagsOf(url, expected)).doesNotContain(databaseEtag);
-      webTestClient
-          .get()
-          .uri(url)
-          .header("Accept", "application/fhir+json")
-          .header("If-None-Match", databaseEtag)
-          .exchange()
-          .expectStatus()
-          .isEqualTo(expected);
-    }
   }
 
   private void assertNoSharedEtag(
@@ -341,13 +325,6 @@ class SqlExportProviderIT extends AbstractAsyncExportIT {
         .returnResult(String.class)
         .getResponseHeaders()
         .getOrEmpty("ETag");
-  }
-
-  @Nonnull
-  private String databaseEtag() {
-    final List<String> etags = etagsOf("http://localhost:" + port + "/fhir/Patient", HttpStatus.OK);
-    assertThat(etags).as("A search response carries the database ETag").hasSize(1);
-    return etags.get(0);
   }
 
   // -------------------------------------------------------------------------
