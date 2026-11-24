@@ -18,6 +18,7 @@
 package au.csiro.pathling.operations.sql;
 
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.security.PathlingAuthority;
@@ -107,7 +108,8 @@ public class FhirViewValidator {
    * @throws ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException (422) if the view is
    *     semantically invalid
    * @throws ca.uhn.fhir.rest.server.exceptions.InvalidRequestException (400) if the view uses an
-   *     expression this server does not support
+   *     expression this server does not support, or is otherwise invalid, such as a column that
+   *     declares a type that differs from the type of its path
    */
   public void validateSemantically(@Nonnull final FhirView view, @Nonnull final String expression) {
     try {
@@ -121,6 +123,11 @@ public class FhirViewValidator {
           expression,
           "A '%s' ViewDefinition uses an unsupported expression: %s"
               .formatted(expression, e.getMessage()));
+    } catch (final InvalidUserInputError e) {
+      throw SqlOperationError.badRequest(
+          IssueType.INVALID,
+          expression,
+          "A '%s' ViewDefinition is invalid: %s".formatted(expression, e.getMessage()));
     }
   }
 
