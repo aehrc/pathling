@@ -68,12 +68,13 @@ public final class ResourceTypeScanner {
   }
 
   /**
-   * Reads the top-level {@code resourceType} of a single NDJSON line. The line is parsed as a
-   * stream so that only the fields preceding {@code resourceType} are read, which in FHIR JSON is
-   * usually none.
+   * Reads the top-level {@code resourceType} of a single NDJSON line. The whole line is parsed as a
+   * stream of tokens, without building a tree, so that a line that is not valid JSON is not
+   * reported.
    *
    * @param line the NDJSON line
-   * @return the resource type, or empty if the line is not a JSON object with a string resourceType
+   * @return the resource type, or empty if the line is not a single valid JSON object with a string
+   *     resourceType
    */
   @Nonnull
   private static Optional<String> readResourceType(@Nonnull final String line) {
@@ -81,15 +82,17 @@ public final class ResourceTypeScanner {
       if (parser.nextToken() != JsonToken.START_OBJECT) {
         return Optional.empty();
       }
+      String resourceType = null;
       while (parser.nextToken() == JsonToken.FIELD_NAME) {
         final String fieldName = parser.currentName();
         final JsonToken value = parser.nextToken();
-        if (RESOURCE_TYPE.equals(fieldName)) {
-          return value == JsonToken.VALUE_STRING ? Optional.of(parser.getText()) : Optional.empty();
+        if (RESOURCE_TYPE.equals(fieldName) && value == JsonToken.VALUE_STRING) {
+          resourceType = parser.getText();
         }
         parser.skipChildren();
       }
-      return Optional.empty();
+      // Anything after the closing brace of the object makes the line invalid.
+      return parser.nextToken() == null ? Optional.ofNullable(resourceType) : Optional.empty();
     } catch (final IOException e) {
       // Lines that are not valid JSON are left for the import to handle.
       return Optional.empty();

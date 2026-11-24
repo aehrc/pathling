@@ -126,6 +126,20 @@ class ResourceTypeScannerTest {
   }
 
   @Test
+  void ignoresTruncatedLinesEvenWhenResourceTypeIsComplete() throws IOException {
+    // The resourceType can be read before the point at which the line is cut off, but the line is
+    // still not valid JSON, so it is left for the import to handle.
+    final String ndjson =
+        """
+        {"resourceType":"Condition","id":"c1"
+        {"resourceType":"Condition","id":"c2"}}
+        {"resourceType":"Condition"} trailing
+        """;
+
+    assertThat(scan(ndjson, "Patient")).isEmpty();
+  }
+
+  @Test
   void ignoresLinesWithoutResourceType() throws IOException {
     final String ndjson =
         """
