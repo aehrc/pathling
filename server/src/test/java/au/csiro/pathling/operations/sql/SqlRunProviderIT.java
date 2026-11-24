@@ -107,6 +107,12 @@ class SqlRunProviderIT {
   /** A canonical URL that is not stored on the server, so it must be satisfied by context. */
   private static final String AD_HOC_VIEW_URL = "https://pathling.csiro.au/test/ViewDefinition/Adh";
 
+  /**
+   * The error for a column over {@code meta.profile}, which is a canonical, that declares string.
+   */
+  private static final String TYPE_MISMATCH_MESSAGE =
+      "Column 'profile' with path '$this' has type canonical, but the column declares type string";
+
   @LocalServerPort int port;
 
   @Autowired WebTestClient webTestClient;
@@ -422,6 +428,51 @@ class SqlRunProviderIT {
     getExpectStatus(
         PATH + "?subjectCanonical=" + SqlRunTestConfiguration.PATIENT_VIEW_URL + "&_format=fhir",
         400);
+  }
+
+  // -------------------------------------------------------------------------
+  // A column whose declared type differs from the type of its path.
+  // -------------------------------------------------------------------------
+
+  // A declared type that differs from the type of the column's path is a fault in the
+  // ViewDefinition, and is reported as a 400. It used to surface as an opaque 500 (issue 2865).
+  @Test
+  void reportsAColumnTypeMismatchInTheSubjectAsABadRequest() {
+    final Map<String, Object> parameters = new LinkedHashMap<>();
+    parameters.put("resourceType", "Parameters");
+    parameters.put(
+        "parameter",
+        List.of(
+            resourceParameter("subjectResource", typeMismatchViewJson()),
+            stringParameter("_format", SqlRunFormat.NDJSON.getCode())));
+
+    final String body = postExpectStatus(GSON.toJson(parameters), 400, "application/fhir+json");
+
+    assertThat(body).contains("Invalid ViewDefinition: " + TYPE_MISMATCH_MESSAGE);
+  }
+
+  @Test
+  void reportsAColumnTypeMismatchInAContextViewAgainstTheContextParameter() {
+    // The subject is valid; the fault is in the ViewDefinition supplied as context, so the outcome
+    // names the context parameter rather than the subject.
+    final Map<String, Object> parameters = new LinkedHashMap<>();
+    parameters.put("resourceType", "Parameters");
+    parameters.put(
+        "parameter",
+        List.of(
+            resourceParameter(
+                "subjectResource",
+                jsonParser.encodeResourceToString(
+                    sqlQueryLibrary("SELECT profile FROM adh", "adh", AD_HOC_VIEW_URL))),
+            resourceParameter("context", typeMismatchViewJson()),
+            stringParameter("_format", SqlRunFormat.NDJSON.getCode())));
+
+    final String body = postExpectStatus(GSON.toJson(parameters), 400, "application/fhir+json");
+
+    assertThat(body)
+        .contains("\"code\":\"invalid\"")
+        .contains("\"expression\":[\"context\"]")
+        .contains("A 'context' ViewDefinition is invalid: " + TYPE_MISMATCH_MESSAGE);
   }
 
   // -------------------------------------------------------------------------
@@ -888,6 +939,29 @@ class SqlRunProviderIT {
                 List.of(
                     Map.of("name", "id", "path", "id"),
                     Map.of("name", "family_name", "path", "name.first().family")))));
+    return GSON.toJson(view);
+  }
+
+  /**
+   * Serialises a ViewDefinition at the ad-hoc canonical whose column declares string over {@code
+   * meta.profile}, which is a canonical.
+   */
+  @Nonnull
+  private static String typeMismatchViewJson() {
+    final Map<String, Object> view = new LinkedHashMap<>();
+    view.put("resourceType", "ViewDefinition");
+    view.put("url", AD_HOC_VIEW_URL);
+    view.put("name", "type_mismatch_view");
+    view.put("status", "active");
+    view.put("resource", "Patient");
+    view.put(
+        "select",
+        List.of(
+            Map.of(
+                "forEachOrNull",
+                "meta.profile",
+                "column",
+                List.of(Map.of("name", "profile", "path", "$this", "type", "string")))));
     return GSON.toJson(view);
   }
 

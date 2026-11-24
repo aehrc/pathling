@@ -24,12 +24,14 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.io.DynamicDeltaSource;
 import au.csiro.pathling.io.SnapshotDeltaSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
@@ -38,8 +40,11 @@ import au.csiro.pathling.operations.export.ExportFileWriter;
 import au.csiro.pathling.operations.export.ExportManifestOutput;
 import au.csiro.pathling.operations.sqlquery.PreparedSqlQuery;
 import au.csiro.pathling.operations.sqlquery.SqlQueryPipeline;
+import au.csiro.pathling.views.FhirView;
+import au.csiro.pathling.views.FhirViewExecutor;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -57,6 +62,7 @@ import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedConstruction;
 import scala.Option;
 
 /**
@@ -67,7 +73,8 @@ import scala.Option;
  *
  * <p>The SQL engine and the file writer are mocked, so these tests exercise the executor's own
  * orchestration. The ViewDefinition path builds its query plan against a live Spark session and is
- * covered by {@link SqlExportProviderIT} instead.
+ * covered by {@link SqlExportProviderIT} instead, apart from its translation of a view fault, which
+ * is tested here with the view executor mocked.
  *
  * @author John Grimes
  */
@@ -288,6 +295,42 @@ class SqlExportExecutorTest {
     assertThatThrownBy(() -> executor.execute(request(sqlSubject("only")), JOB_ID))
         .isSameAs(failure)
         .isNotInstanceOf(BaseServerResponseException.class);
+  }
+
+  // A ViewDefinition subject is validated at kick-off, so a fault in it normally never reaches the
+  // executor. If one does, a fault the library attributes to the caller, such as a column whose
+  // declared type differs from the type of its path, is reported as a 400 naming the subject rather
+  // than an opaque 500.
+  @Test
+  void reportsAnInvalidViewAgainstTheSubject() {
+    final String message =
+        "Column 'profile' with path '$this' has type canonical, but the column declares type "
+            + "string";
+    try (final MockedConstruction<FhirViewExecutor> ignored =
+        mockConstruction(
+            FhirViewExecutor.class,
+            (viewExecutor, context) ->
+                when(viewExecutor.buildQuery(any()))
+                    .thenThrow(new InvalidUserInputError(message)))) {
+      assertThatThrownBy(
+              () ->
+                  executor.execute(
+                      request(SubjectInput.ofView("profiles", new FhirView())), JOB_ID))
+          .isInstanceOf(InvalidRequestException.class)
+          .satisfies(
+              thrown -> {
+                final BaseServerResponseException e = (BaseServerResponseException) thrown;
+                assertThat(e.getStatusCode()).isEqualTo(400);
+                final OperationOutcome outcome = (OperationOutcome) e.getOperationOutcome();
+                assertThat(outcome).isNotNull();
+                assertThat(outcome.getIssueFirstRep().getCode()).isEqualTo(IssueType.INVALID);
+                assertThat(outcome.getIssueFirstRep().getExpression())
+                    .extracting(StringType::getValue)
+                    .containsExactly(SubjectResolver.SUBJECT_EXPRESSION);
+                assertThat(outcome.getIssueFirstRep().getDiagnostics())
+                    .isEqualTo("The subject 'profiles' is invalid: " + message);
+              });
+    }
   }
 
   /**
