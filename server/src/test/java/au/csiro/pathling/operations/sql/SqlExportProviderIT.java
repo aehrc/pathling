@@ -34,6 +34,7 @@ import org.junit.jupiter.api.parallel.ResourceAccessMode;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -346,6 +347,54 @@ class SqlExportProviderIT extends AbstractAsyncExportIT {
 
     final String listing = new String(body == null ? new byte[0] : body, StandardCharsets.UTF_8);
     assertThat(listing).contains("sql-export");
+  }
+
+  // -------------------------------------------------------------------------
+  // Caching of job status and result responses.
+  // -------------------------------------------------------------------------
+
+  // A job's status and result belong to that job alone, so they must not carry the database-wide
+  // ETag. When $job-result did, the results of every job shared one ETag, and a cache revalidating
+  // a stored response with it was answered 304 Not Modified for as long as the data was unchanged,
+  // serving the stored response in place of the current one (aehrc/pathling#2529).
+  @Test
+  void jobStatusAndResultResponsesDoNotShareAnEtagAcrossJobs() throws InterruptedException {
+    final Map<String, Object> csvJob = mixedJob(null);
+    addParam(csvJob, simpleParam("_format", "valueString", "csv"));
+    final String firstStatus = contentLocationOf(systemLevelUri(), mixedJob(null));
+    final String secondStatus = contentLocationOf(systemLevelUri(), csvJob);
+    assertThat(firstStatus).isNotEqualTo(secondStatus);
+    final String firstResult = awaitResultLocation(firstStatus);
+    final String secondResult = awaitResultLocation(secondStatus);
+
+    // The two jobs share no ETag on either endpoint.
+    assertNoSharedEtag(firstStatus, secondStatus, HttpStatus.SEE_OTHER);
+    assertNoSharedEtag(firstResult, secondResult, HttpStatus.OK);
+  }
+
+  private void assertNoSharedEtag(
+      @Nonnull final String firstUrl,
+      @Nonnull final String secondUrl,
+      @Nonnull final HttpStatus expected) {
+    final List<String> secondEtags = etagsOf(secondUrl, expected);
+    assertThat(etagsOf(firstUrl, expected))
+        .as("ETags shared by %s and %s", firstUrl, secondUrl)
+        .filteredOn(secondEtags::contains)
+        .isEmpty();
+  }
+
+  @Nonnull
+  private List<String> etagsOf(@Nonnull final String url, @Nonnull final HttpStatus expected) {
+    return webTestClient
+        .get()
+        .uri(url)
+        .header("Accept", "application/fhir+json")
+        .exchange()
+        .expectStatus()
+        .isEqualTo(expected)
+        .returnResult(String.class)
+        .getResponseHeaders()
+        .getOrEmpty("ETag");
   }
 
   // -------------------------------------------------------------------------
