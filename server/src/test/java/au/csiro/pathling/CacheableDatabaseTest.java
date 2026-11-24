@@ -114,9 +114,11 @@ class CacheableDatabaseTest {
     // Call invalidate - this triggers an async refresh.
     cacheableDatabase.invalidate();
 
-    // Wait for the executor to process the task.
+    // Wait for the executor to process the task. The refresh scans the history of every table,
+    // which
+    // can take several seconds on a loaded CI runner.
     Awaitility.await()
-        .atMost(5, TimeUnit.SECONDS)
+        .atMost(30, TimeUnit.SECONDS)
         .pollInterval(100, TimeUnit.MILLISECONDS)
         .until(() -> executor.getThreadPoolExecutor().getCompletedTaskCount() >= 1);
 
