@@ -31,6 +31,7 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
@@ -58,6 +59,17 @@ public class EntityTagInterceptor {
   @Nonnull private final ServerInstanceId serverInstanceId;
 
   public static final String DEFAULT_ETAG = "0";
+
+  /**
+   * Operations that report on the state of an async job, or of the job registry, rather than on the
+   * state of the database. Their responses differ from job to job while the database is unchanged,
+   * so they must not be tagged with or validated against the database ETag: a cache would be told
+   * that one job's stored response is still valid for another, or that a job's status has not
+   * changed when it has. They use TTL-based caching instead.
+   */
+  private static final Set<String> ASYNC_ENDPOINTS =
+      Set.of("$job", "$job-result", "$jobs", "$result");
+
   private static final Pattern ETAG_HEADER_PATTERN = Pattern.compile("^W/\"([^\"]+)\"$");
 
   /**
@@ -113,12 +125,9 @@ public class EntityTagInterceptor {
         return;
       }
 
-      // Skip ETag validation for async endpoints - they use TTL-based caching instead. The $jobs
-      // list is a live snapshot of registry state, not data state, so it must not be validated
-      // against the database ETag (which would serve a stale 304 when jobs change but data does
-      // not).
+      // Skip ETag validation for async endpoints - they use TTL-based caching instead.
       final String operation = requestDetails.getOperation();
-      if ("$job".equals(operation) || "$jobs".equals(operation) || "$result".equals(operation)) {
+      if (operation != null && ASYNC_ENDPOINTS.contains(operation)) {
         log.debug("Async endpoint {}, skipping ETag validation", operation);
         setMissResponseHeaders(response);
         return;

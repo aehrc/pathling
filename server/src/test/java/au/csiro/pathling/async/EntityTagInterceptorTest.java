@@ -18,9 +18,11 @@
 package au.csiro.pathling.async;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -41,6 +43,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * @author John Grimes
@@ -235,44 +239,23 @@ class EntityTagInterceptorTest {
     verifyMissResponseHeaders();
   }
 
-  @Test
-  void jobEndpointSkipsEtagValidation() {
-    // $job requests should not use ETag-based revalidation. They use TTL-based caching instead.
-    setupCacheableRequest("GET", TAG, "$job");
-
-    // Should NOT throw NotModifiedException - let JobProvider handle caching.
-    interceptor.checkIncomingTag(request, requestDetails, response);
-
-    // Should not check database cache key for $job.
-    verify(database, org.mockito.Mockito.never())
-        .cacheKeyMatches(org.mockito.ArgumentMatchers.anyString());
-    verifyCacheableResponseHeaders();
-    verify(response).setHeader(eq("Cache-Control"), eq("must-revalidate,max-age=1"));
-  }
-
-  @Test
-  void resultEndpointSkipsEtagValidation() {
-    // $result requests should not use ETag-based revalidation. They use TTL-based caching instead.
-    setupCacheableRequest("GET", TAG, "$result");
+  @ParameterizedTest
+  @ValueSource(strings = {"$job", "$job-result", "$jobs", "$result"})
+  void asyncEndpointSkipsEtagValidation(@Nonnull final String operation) {
+    // Async endpoints report on the state of a particular job (or the job registry), not on the
+    // state of the database, so they use TTL-based caching instead of the database ETag. Even when
+    // the supplied tag matches the database, the request must not be answered with a 304, and the
+    // response must not carry the database ETag, which would be shared across every job
+    // (aehrc/pathling#2529).
+    setupCacheableRequest("GET", TAG, operation);
+    when(database.cacheKeyMatches(eq(TAG))).thenReturn(true);
+    when(database.getCacheKey()).thenReturn(Optional.of(TAG));
 
     interceptor.checkIncomingTag(request, requestDetails, response);
 
-    verify(database, org.mockito.Mockito.never())
-        .cacheKeyMatches(org.mockito.ArgumentMatchers.anyString());
-    verifyCacheableResponseHeaders();
-    verify(response).setHeader(eq("Cache-Control"), eq("must-revalidate,max-age=1"));
-  }
-
-  @Test
-  void jobsListEndpointSkipsEtagValidation() {
-    // $jobs is a live snapshot of registry state, not data state, so it must not be validated
-    // against the database ETag (which would serve a stale 304 when jobs change but data does not).
-    setupCacheableRequest("GET", TAG, "$jobs");
-
-    interceptor.checkIncomingTag(request, requestDetails, response);
-
-    verify(database, org.mockito.Mockito.never())
-        .cacheKeyMatches(org.mockito.ArgumentMatchers.anyString());
+    verify(database, never()).cacheKeyMatches(anyString());
+    verify(database, never()).getCacheKey();
+    verify(response, never()).setHeader(eq("ETag"), anyString());
     verifyCacheableResponseHeaders();
     verify(response).setHeader(eq("Cache-Control"), eq("must-revalidate,max-age=1"));
   }

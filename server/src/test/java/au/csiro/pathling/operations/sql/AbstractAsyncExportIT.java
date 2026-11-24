@@ -108,8 +108,13 @@ abstract class AbstractAsyncExportIT {
   protected String resultLocationOf(
       @Nonnull final String uri, @Nonnull final Map<String, Object> body)
       throws InterruptedException {
-    final String contentLocation = contentLocationOf(uri, body);
+    return awaitResultLocation(contentLocationOf(uri, body));
+  }
 
+  /** Polls a job's status URL to completion and returns the result URL from the 303. */
+  @Nonnull
+  protected String awaitResultLocation(@Nonnull final String contentLocation)
+      throws InterruptedException {
     String resultLocation = null;
     for (int attempt = 0; attempt < 60 && resultLocation == null; attempt++) {
       final var poll =

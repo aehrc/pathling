@@ -79,14 +79,24 @@ A [Helm chart](https://artifacthub.io/packages/helm/pathling/pathling-cache) is 
 
 ## Asynchronous endpoint caching
 
-The `$job` and `$result` endpoints use a different caching strategy from other
-Pathling endpoints. Instead of ETag-based revalidation, these endpoints use
-simple TTL-based caching with `Cache-Control: max-age=X`.
+The `$job`, `$job-result` and `$result` endpoints use a different caching
+strategy from other Pathling endpoints. Instead of ETag-based revalidation,
+these endpoints use simple TTL-based caching with `Cache-Control: max-age=X`.
+The `$jobs` endpoint is not cached at all, and returns `Cache-Control: no-cache`.
+
+Responses from these endpoints do not carry an `ETag` header, and an
+`If-None-Match` header sent to them is ignored. The ETag used elsewhere in
+Pathling describes the state of the whole database, which does not change while
+a job runs, and is the same for every job. Validating a stored job status or
+result against it would allow a cache to serve a stale status, or one job's
+response in place of another's.
 
 This approach ensures that:
 
 - Polling the `$job` endpoint returns fresh job status without stale cached
   responses from previous jobs
+- A result from `$job-result` is never validated against an ETag shared with
+  other jobs
 - Download URLs from `$result` remain cacheable for an appropriate duration
 
 ### How async operations determine request equivalence

@@ -137,10 +137,11 @@ and rejects all `$import-pnp` requests.
   which should be excluded from determining that asynchronous requests are
   equivalent and can be routed to the same asynchronous job.
 - `pathling.async.cacheMaxAge` - (default: `1`) The max-age value (in seconds)
-  for `Cache-Control` headers on async endpoint responses (`$job` and
-  `$result`). This value should be configured to match your strategy for
-  cleaning up job result files, such as an S3 bucket lifecycle policy. For
-  example, if job files are retained for 24 hours, set this to `86400`.
+  for `Cache-Control` headers on async endpoint responses (`$job`,
+  `$job-result` and `$result`). This value should be configured to match your
+  strategy for cleaning up job result files, such as an S3 bucket lifecycle
+  policy. For example, if job files are retained for 24 hours, set this to
+  `86400`.
 
 ### Operations
 
