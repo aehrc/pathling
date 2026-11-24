@@ -239,6 +239,42 @@ This operation retrieves the processing status and results for a submission.
 | 200    | Processing complete. Response body contains the status manifest.                                |
 | 4XX    | Error. Response body contains an OperationOutcome.                                              |
 
+### Status manifest
+
+The status manifest is a `Parameters` resource. Each downloaded file is listed
+in an `output` parameter, with a `url` that downloads the file through the
+`$result` operation.
+
+Problems with a submitted manifest are listed in `error` parameters. Each one
+has a `url` pointing to an NDJSON file of `OperationOutcome` resources, and a
+`manifestUrl` extension identifying the manifest that the problem relates to.
+Errors are reported in the following cases:
+
+- **The manifest could not be processed** - for example, the manifest or one
+  of its files could not be downloaded, or the import failed. Nothing from the
+  manifest is imported.
+- **A file contains resources of an unexpected type** - every resource in a
+  file must be of the type declared for that file in the manifest. Resources of
+  any other type are not imported, and the file reports one `OperationOutcome`
+  for each unexpected type, with the number of resources skipped. The rest of
+  the file is imported as normal. This error is reported as soon as the
+  manifest has been downloaded.
+
+An example of an `OperationOutcome` describing resources of an unexpected type:
+
+```json
+{
+    "resourceType": "OperationOutcome",
+    "issue": [
+        {
+            "severity": "error",
+            "code": "invalid",
+            "diagnostics": "File https://source-server.example.com/export/AllergyIntolerance.ndjson declared as AllergyIntolerance contains 1 resource of type Patient, which will not be imported."
+        }
+    ]
+}
+```
+
 ### Response headers
 
 | Header             | Description                                                               |
