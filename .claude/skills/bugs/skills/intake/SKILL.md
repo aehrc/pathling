@@ -84,8 +84,9 @@ resource named (`gh issue list --state all --search "<text>"`, `gh pr list --sta
 status as `bugs:verify-fix` step 3 defines it.
 
 An exact duplicate (same call and same error, or the same symptom when no error was quoted) cuts
-steps 3 to 6 short: run one confirming candidate on the latest release and one on the release
-branch, then go to step 7.
+steps 3 to 6 short. Take the confirming candidate from the existing issue's snippet, run it on
+the latest release and on the release branch (when replaying, on the base versions only), then go
+to step 7.
 
 **Done when** each search term has been searched and every match is classified as duplicate,
 related or unrelated.
@@ -115,11 +116,15 @@ was searched.
 
 ### Step 4: Reproduce on the latest public release
 
-Install the latest release from PyPI (or each base version, when replaying) in a throwaway
-`uv venv` and record its version, with the Python, Java and Spark versions that ran. When the
-reporter named an older version, install that too. An older release may need an older Python, Java
-or Spark; install what its `pyproject.toml` or release notes require, and record it. Turn the top readings into runnable **candidates** and run them, most likely first, at most
-eight.
+Install the latest release (or each base version, when replaying), and the reporter's version when
+they named an older one, as [../../references/pathling-build.md](../../references/pathling-build.md)
+describes, and record the Pathling, Python, Java and Spark versions that ran.
+
+Turn the readings into runnable **candidates**, at most eight, and run them most likely first.
+Once one reproduces, run the candidates for the report's scope claims (step 3) that are still
+within the cap, so the report can say which of them hold; drop the remaining readings of the
+gaps. With more than eight readings, keep the most likely of each gap before a second reading of
+any gap.
 
 A candidate **reproduces** when it gives the reported exception type and message (values may
 differ) or, for a wrong result, the reported wrong output. When the report quotes no error, the
@@ -131,8 +136,8 @@ on the library first. Run the server only when a clue points to it (an HTTP stat
 with no Python around it); otherwise list the server reading as not run, and say whether it
 shares the failing code.
 
-When a candidate reproduces and the call reaches another component (a terminology server, Spark,
-a proxy), check whether the failure belongs to it before going on: run the same call without the
+**Isolate.** When a candidate reproduces and the call reaches another component (a terminology
+server, Spark, a proxy), check whether the failure belongs to it before going on: run the same call without the
 component or with another one, or find the component's own behaviour in its documentation. A
 failure that persists in the component alone is **upstream**.
 
@@ -147,9 +152,12 @@ failure that persists in the component alone is **upstream**.
 A configuration switch in Pathling that makes the failure go away (retry off, cache off) does not
 place it in the component; it is a clue to the cause in Pathling.
 
-**Done when** a candidate reproduces, or all candidates have run, and a reproducing candidate that
-reaches another component has been isolated or marked "Not investigated". Record each candidate
-and its result either way; the request for information needs them.
+**Done when** both hold:
+
+- A candidate reproduces, or all candidates have run. Each is recorded with its result either way;
+  the request for information needs them.
+- A reproducing candidate that reaches another component is placed in Pathling, upstream (with the
+  run that shows it), or marked "Not investigated".
 
 ### Step 5: Ground the expected behaviour
 
@@ -190,9 +198,10 @@ Pick exactly one **outcome** and draft its files in `.private/intake/<N>/` (when
 | `AS_SPECIFIED`     | step 5 found the reproducing behaviour follows the specification                 | `comment.md`              |
 | `NEEDS_INFO`       | no candidate reproduces                                                          | `comment.md`              |
 
-When more than one row fits, the first in this order wins: `DUPLICATE` (when the existing issue
-already meets the report standard; otherwise the row the runs give, linking the duplicate),
-`FIXED_IN_RELEASE`, `FIXED_UNRELEASED`, `UPSTREAM`, `AS_SPECIFIED`, `REPRODUCED`.
+When more than one row fits, the first in this order wins: `DUPLICATE`, `FIXED_IN_RELEASE`,
+`FIXED_UNRELEASED`, `UPSTREAM`, `AS_SPECIFIED`, `REPRODUCED`. A duplicate whose existing issue
+falls short of the report standard is `REPRODUCED` (or `FIXED_UNRELEASED`, when the release
+branch passes), with `report.md` linking the existing issue.
 
 **`report.md`** follows `bugs:standard`, with one addition: each fact carries its source.
 **Reported** is what the reporter said and we could not run (their environment, their data).
@@ -220,11 +229,14 @@ jargon:
     - Make each question cheap to answer. Turn a reading into a yes/no ("Is this close to what you
       ran?" with our best candidate). Ask for the artefact, not a description: the full error text
       pasted in a code block. Give the command that produces it
-      (`python -c "import importlib.metadata as m; print(m.version('pathling'))"`).
+      (the installed-version command in
+      [../../references/pathling-build.md](../../references/pathling-build.md)).
     - Say why each answer is needed, in one clause.
 
 **Done when** the outcome is chosen, its files exist, every fact in `report.md` is marked reported,
-observed or inferred, and `comment.md` asks no question the reporter already answered.
+observed or inferred, `bugs:review-report` returns `VERDICT: PASS` on `report.md` (rerun after each
+round of fixes; after two failing rounds, list the open failures under "For you to decide"), and
+`comment.md` asks no question the reporter already answered.
 
 ## 4. Required output format
 
