@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.operations.sqlquery;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -28,9 +29,14 @@ import java.util.Set;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.catalyst.expressions.Expression;
+import org.apache.spark.sql.catalyst.expressions.Literal;
+import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression;
+import org.apache.spark.sql.catalyst.expressions.aggregate.Max;
 import org.apache.spark.sql.catalyst.parser.ParseException;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.catalyst.plans.logical.WithWindowDefinition;
+import org.apache.spark.sql.types.DataTypes;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -420,6 +426,109 @@ class SqlValidatorTest {
                     "SELECT numerator_value || ' ' || numerator_unit || '/' || denominator_value"
                         + " || ' ' || denominator_unit AS strength FROM t",
                     "t"))
+        .doesNotThrowAnyException();
+  }
+
+  // -------------------------------------------------------------------------
+  // first(), last() and any_value(). Spark's grammar has dedicated rules for
+  // these three aggregates, so AstBuilder builds an AggregateExpression
+  // wrapping a First, Last or AnyValue directly, rather than an
+  // UnresolvedFunction that is checked by name. They are built-in aggregates,
+  // so they must be accepted like any other (issue 2867).
+  // -------------------------------------------------------------------------
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "first(gender)",
+        "last(gender)",
+        "any_value(gender)",
+        "first(gender IGNORE NULLS)",
+        "first(gender) IGNORE NULLS",
+        "last(gender) IGNORE NULLS",
+        "any_value(gender) IGNORE NULLS"
+      })
+  void acceptsFirstLastAndAnyValueInEverySpelling(final String call) {
+    // An IGNORE NULLS inside the parentheses uses the dedicated grammar rule, while a trailing one
+    // parses as an ordinary function call. Both spellings must be accepted.
+    assertThatCode(() -> validate("SELECT " + call + " AS g FROM t", "t"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsFirstAndLastWithGroupBy() {
+    assertThatCode(
+            () ->
+                validate(
+                    "SELECT id, first(gender) AS f, last(gender) AS l FROM t GROUP BY id", "t"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void runsFirstLastAndAnyValueThroughBothValidationModes() {
+    // The values within each group are identical, so the result is deterministic despite first(),
+    // last() and any_value() being order-dependent.
+    sparkSession
+        .sql("SELECT * FROM VALUES (1, 'female'), (1, 'female'), (2, 'male') AS v(id, gender)")
+        .createOrReplaceTempView(VIEW_NAME);
+    final String sql =
+        "SELECT id, first(gender) AS f, last(gender) AS l, any_value(gender) AS a FROM "
+            + VIEW_NAME
+            + " GROUP BY id ORDER BY id";
+
+    validate(sql, VIEW_NAME);
+    final Dataset<Row> result = sparkSession.sql(sql);
+    sqlValidator.validateAnalyzed(result.queryExecution().analyzed(), Set.of(VIEW_NAME));
+
+    assertThat(result.collectAsList())
+        .extracting(Row::toString)
+        .containsExactly("[1,female,female,female]", "[2,male,male,male]");
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"first", "last", "any_value"})
+  void rejectsDisallowedFunctionInsideAggregateArgument(final String aggregate) {
+    // The argument of the aggregate is still walked, so a dangerous call cannot hide inside it.
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "SELECT " + aggregate + "(reflect('java.lang.Runtime', 'getRuntime')) FROM t",
+                    "t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed function: reflect");
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"first", "last", "any_value"})
+  void rejectsNonBuiltInFunctionInsideAggregateArgument(final String aggregate) {
+    assertThatThrownBy(
+            () -> validate("SELECT " + aggregate + "(string_to_quantity(value)) FROM t", "t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("non-built-in function: string_to_quantity");
+  }
+
+  @Test
+  void rejectsAggregateExpressionOverAnUnlistedFunctionNamingTheSqlFunction() {
+    // No grammar rule currently builds an AggregateExpression over any other function, but if one
+    // appears it must be rejected, and the message must name the SQL function rather than the
+    // Catalyst class.
+    final AggregateExpression aggregate =
+        new Max(Literal.create(1, DataTypes.IntegerType)).toAggregateExpression();
+
+    assertThatThrownBy(() -> SqlValidator.validateAggregateExpression(aggregate))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessage("SQL contains a disallowed aggregate function: max");
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"first", "last", "any_value"})
+  void acceptsAggregateExpressionOverAllowedFunction(final String aggregate) throws ParseException {
+    // The parser's own output for each function passes the aggregate check directly.
+    final Expression parsed =
+        sparkSession.sessionState().sqlParser().parseExpression(aggregate + "(x)");
+
+    assertThat(parsed).isInstanceOf(AggregateExpression.class);
+    assertThatCode(() -> SqlValidator.validateAggregateExpression((AggregateExpression) parsed))
         .doesNotThrowAnyException();
   }
 

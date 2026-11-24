@@ -18,6 +18,7 @@
 package au.csiro.pathling.operations.view;
 
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
@@ -131,7 +132,9 @@ public class ViewExecutionHelper {
    * @param dataSource the data source to project
    * @return the unevaluated result
    * @throws UnprocessableEntityException (422) if the view is semantically invalid
-   * @throws InvalidRequestException (400) if the view uses an unsupported expression
+   * @throws InvalidRequestException (400) if the view uses an unsupported expression, or is
+   *     otherwise invalid, such as a column that declares a type that differs from the type of its
+   *     path
    */
   @Nonnull
   public Dataset<Row> buildQuery(
@@ -148,6 +151,10 @@ public class ViewExecutionHelper {
       // Thrown when a FHIRPath expression is not supported, such as accessing a choice element
       // without specifying the type via ofType().
       throw new InvalidRequestException("Unsupported expression: " + e.getMessage());
+    } catch (final InvalidUserInputError e) {
+      // Thrown for other faults in the view, such as a column that declares a type that differs
+      // from the type of its path.
+      throw new InvalidRequestException("Invalid ViewDefinition: " + e.getMessage());
     }
   }
 

@@ -60,6 +60,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.UnaryOperator;
 import org.apache.spark.SparkContext;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -443,6 +446,80 @@ class BulkSubmitExecutorTest {
                       .resolve(updatedJob.errorFileName());
               assertThat(Files.exists(errorPath)).isTrue();
             });
+  }
+
+  @Test
+  @DisplayName("downloadManifestJob reports resources whose type differs from the declared type")
+  void downloadManifestJobReportsResourcesOfUnexpectedType() throws Exception {
+    // Given: a manifest whose files contain resources of types other than those declared.
+    final Submission submission = createTestSubmission();
+    final ManifestJob manifestJob = createTestManifestJob();
+    setupManifestWithTypeMismatchStubs();
+    final String baseUrl = "http://localhost:" + wireMockServer.port();
+
+    // When: downloading the manifest job.
+    executor
+        .downloadManifestJob(submission, manifestJob, List.of(), FHIR_SERVER_BASE)
+        .get(30, TimeUnit.SECONDS);
+
+    // Then: the job is still downloaded, and records a file describing the mismatches.
+    final ManifestJob updatedJob = finalManifestJobUpdate(manifestJob);
+    assertThat(updatedJob.state()).isEqualTo(ManifestJobState.DOWNLOADED);
+    assertThat(updatedJob.downloadedFiles()).hasSize(2);
+    assertThat(updatedJob.errorFileName()).isNull();
+    assertThat(updatedJob.typeMismatchFileName())
+        .isEqualTo("OperationOutcome." + MANIFEST_JOB_ID + "-type-mismatch.ndjson");
+
+    // And: the file holds one OperationOutcome per file and unexpected type.
+    final List<OperationOutcome> outcomes = readOutcomes(updatedJob.typeMismatchFileName());
+    assertThat(outcomes)
+        .allSatisfy(
+            outcome -> {
+              assertThat(outcome.getIssue()).hasSize(1);
+              assertThat(outcome.getIssueFirstRep().getSeverity()).isEqualTo(IssueSeverity.ERROR);
+              assertThat(outcome.getIssueFirstRep().getCode()).isEqualTo(IssueType.INVALID);
+            });
+    assertThat(outcomes)
+        .extracting(outcome -> outcome.getIssueFirstRep().getDiagnostics())
+        .containsExactlyInAnyOrder(
+            "File "
+                + baseUrl
+                + "/data/AllergyIntolerance.ndjson declared as AllergyIntolerance contains 1"
+                + " resource of type Condition, which will not be imported.",
+            "File "
+                + baseUrl
+                + "/data/AllergyIntolerance.ndjson declared as AllergyIntolerance contains 2"
+                + " resources of type Patient, which will not be imported.",
+            "File "
+                + baseUrl
+                + "/data/Observation.ndjson declared as Observation contains 1 resource of type"
+                + " Patient, which will not be imported.");
+  }
+
+  @Test
+  @DisplayName("downloadManifestJob records no type mismatch file when all types match")
+  void downloadManifestJobRecordsNoTypeMismatchFileWhenTypesMatch() throws Exception {
+    // Given: a manifest whose file contains only resources of the declared type.
+    final Submission submission = createTestSubmission();
+    final ManifestJob manifestJob = createTestManifestJob();
+    setupSuccessfulManifestStubs();
+
+    // When: downloading the manifest job.
+    executor
+        .downloadManifestJob(submission, manifestJob, List.of(), FHIR_SERVER_BASE)
+        .get(30, TimeUnit.SECONDS);
+
+    // Then: no type mismatch file is recorded or written.
+    final ManifestJob updatedJob = finalManifestJobUpdate(manifestJob);
+    assertThat(updatedJob.state()).isEqualTo(ManifestJobState.DOWNLOADED);
+    assertThat(updatedJob.typeMismatchFileName()).isNull();
+    assertThat(
+            Files.exists(
+                tempDir
+                    .resolve("jobs")
+                    .resolve(SUBMISSION_ID)
+                    .resolve("OperationOutcome." + MANIFEST_JOB_ID + "-type-mismatch.ndjson")))
+        .isFalse();
   }
 
   @Test
@@ -1280,6 +1357,91 @@ class BulkSubmitExecutorTest {
                     .withStatus(200)
                     .withHeader("Content-Type", "application/fhir+ndjson")
                     .withBody(patientNdjson)));
+  }
+
+  /**
+   * Returns the manifest job produced by the last of the three updates made during a download,
+   * which records the outcome of the download.
+   */
+  private ManifestJob finalManifestJobUpdate(final ManifestJob manifestJob) {
+    @SuppressWarnings("unchecked")
+    final ArgumentCaptor<UnaryOperator<ManifestJob>> updateCaptor =
+        ArgumentCaptor.forClass(UnaryOperator.class);
+    verify(submissionRegistry, times(3))
+        .updateManifestJob(
+            eq(submitterIdentifier),
+            eq(SUBMISSION_ID),
+            eq(MANIFEST_JOB_ID),
+            updateCaptor.capture());
+    return updateCaptor.getAllValues().get(2).apply(manifestJob);
+  }
+
+  /** Reads the OperationOutcome resources from an NDJSON file in the submission directory. */
+  private List<OperationOutcome> readOutcomes(final String fileName) throws IOException {
+    final Path path = tempDir.resolve("jobs").resolve(SUBMISSION_ID).resolve(fileName);
+    return Files.readAllLines(path).stream()
+        .filter(line -> !line.isBlank())
+        .map(line -> fhirContext.newJsonParser().parseResource(OperationOutcome.class, line))
+        .toList();
+  }
+
+  /**
+   * Stubs a manifest with two files, each containing resources of types other than the one declared
+   * for the file.
+   */
+  private void setupManifestWithTypeMismatchStubs() {
+    final String baseUrl = "http://localhost:" + wireMockServer.port();
+    final String manifest =
+        String.format(
+            """
+            {
+              "transactionTime": "2025-11-28T00:00:00Z",
+              "request": "%s/fhir/$export",
+              "requiresAccessToken": false,
+              "output": [
+                {"type": "AllergyIntolerance", "url": "%s/data/AllergyIntolerance.ndjson"},
+                {"type": "Observation", "url": "%s/data/Observation.ndjson"}
+              ],
+              "error": []
+            }
+            """,
+            baseUrl, baseUrl, baseUrl);
+    wireMockServer.stubFor(
+        get(urlEqualTo("/manifest.json"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(manifest)));
+
+    final String allergyNdjson =
+        """
+        {"resourceType":"AllergyIntolerance","id":"a1"}
+        {"resourceType":"Patient","id":"p1"}
+        {"resourceType":"AllergyIntolerance","id":"a2"}
+        {"resourceType":"Condition","id":"c1"}
+        {"resourceType":"Patient","id":"p2"}
+        """;
+    wireMockServer.stubFor(
+        get(urlEqualTo("/data/AllergyIntolerance.ndjson"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/fhir+ndjson")
+                    .withBody(allergyNdjson)));
+
+    final String observationNdjson =
+        """
+        {"resourceType":"Observation","id":"o1"}
+        {"resourceType":"Patient","id":"p3"}
+        """;
+    wireMockServer.stubFor(
+        get(urlEqualTo("/data/Observation.ndjson"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/fhir+ndjson")
+                    .withBody(observationNdjson)));
   }
 
   private void setupManifestWithRequiresAccessToken() {

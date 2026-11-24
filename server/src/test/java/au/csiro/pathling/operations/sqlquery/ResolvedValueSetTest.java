@@ -125,6 +125,17 @@ class ResolvedValueSetTest {
   }
 
   @Test
+  void describeContentDiffersWhenAValueReproducesTheColumnSeparator() {
+    // A client-supplied value containing the separator must not shift the columns, which would
+    // make a code of "c|d" with a display of "e" indistinguishable from a code of "c" with a
+    // display of "d|e" (aehrc/pathling#2768).
+    final ValueSetMember first = new ValueSetMember(SNOMED, "1", "c|d", "e", null);
+    final ValueSetMember second = new ValueSetMember(SNOMED, "1", "c", "d|e", null);
+
+    assertThat(resolved(first).describeContent()).isNotEqualTo(resolved(second).describeContent());
+  }
+
+  @Test
   void describeContentDoesNotDependOnProvenance() {
     // Provenance is logged, not keyed on: the same membership from two expansions with different
     // identifiers and timestamps produces the same rows.

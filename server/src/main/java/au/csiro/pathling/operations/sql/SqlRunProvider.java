@@ -270,6 +270,15 @@ public class SqlRunProvider {
       if (analysisFailure != null) {
         throw analysisFailure;
       }
+      // A data exception, such as a failing cast, is raised by the streaming consumer as rows are
+      // evaluated. Each batch is evaluated before any of it is written, so while the response is
+      // uncommitted the status is still free to report it as a fault in the subject's SQL.
+      @Nullable
+      final UnprocessableEntityException dataFailure =
+          response.isCommitted() ? null : SqlOperationError.asDataException(e);
+      if (dataFailure != null) {
+        throw dataFailure;
+      }
       // Precise rethrow: execute() declares no checked exception, so this needs no throws clause,
       // and every other failure reaches ErrorHandlingInterceptor exactly as it did before - which
       // matters, since that is where a SparkException is unwrapped and its cause converted.

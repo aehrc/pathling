@@ -19,7 +19,9 @@ package au.csiro.pathling.operations.sql;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import au.csiro.pathling.operations.sqlquery.SqlLibraryParser;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
@@ -159,6 +161,74 @@ class SqlExportProviderIT extends AbstractAsyncExportIT {
     final String firstContent =
         downloadAll(outputNamed(paramsByName(firstManifest, "output"), "ad_hoc"));
     assertThat(firstContent).contains("Smith").contains("Johnson").contains("Williams");
+  }
+
+  // The worked example from aehrc/pathling#2768. The second request's top SQLView carries, after a
+  // line comment, a rendering of the first request's middle SQLView. Before the cache key encoded
+  // its values, the two rendered the same key, so the second kick-off was handed the first one's
+  // job and its rows: n = 10 where its own SQL produces n = 1.
+  @Test
+  void aSqlViewForgingAnotherGraphsCacheKeyIsExecutedAsItsOwnJob() throws InterruptedException {
+    final String v1 = "https://example.org/Library/v1";
+    final String v2 = "https://example.org/Library/v2";
+    final String v3 = "https://example.org/Library/v3";
+    final Map<String, Object> subject =
+        subject(
+            nameOf("forged"),
+            resourcePart(
+                "subjectResource",
+                sqlLibrary(
+                    SqlLibraryParser.SQL_QUERY_TYPE_CODE, null, "SELECT * FROM a", "a", v1)));
+    final Map<String, Object> leaf =
+        resourcePart(
+            "context",
+            sqlLibrary(SqlLibraryParser.SQL_VIEW_TYPE_CODE, v3, "SELECT 1 AS n", null, null));
+    final Map<String, Object> threeDeep =
+        parameters(
+            subject,
+            resourcePart(
+                "context",
+                sqlLibrary(
+                    SqlLibraryParser.SQL_VIEW_TYPE_CODE, v1, "SELECT * FROM lbl --", "lbl", v2)),
+            resourcePart(
+                "context",
+                sqlLibrary(
+                    SqlLibraryParser.SQL_VIEW_TYPE_CODE,
+                    v2,
+                    "SELECT n * 10 AS n FROM lbl",
+                    "lbl",
+                    v3)),
+            leaf);
+    final Map<String, Object> forged =
+        parameters(
+            subject,
+            resourcePart(
+                "context",
+                sqlLibrary(
+                    SqlLibraryParser.SQL_VIEW_TYPE_CODE,
+                    v1,
+                    "SELECT * FROM lbl --:{lbl="
+                        + v2
+                        + "},"
+                        + v2
+                        + "=sql-view:SELECT n * 10 AS n FROM lbl",
+                    "lbl",
+                    v3)),
+            leaf);
+
+    final String firstStatusUrl = contentLocationOf(systemLevelUri(), threeDeep);
+    final String secondStatusUrl = contentLocationOf(systemLevelUri(), forged);
+    assertThat(secondStatusUrl)
+        .as("A kick-off forging another graph's cache key must get its own job")
+        .isNotEqualTo(firstStatusUrl);
+
+    final Map<String, Object> firstManifest = exportToCompletion(systemLevelUri(), threeDeep);
+    assertThat(downloadAll(outputNamed(paramsByName(firstManifest, "output"), "forged")))
+        .contains("\"n\":10");
+    final Map<String, Object> secondManifest = exportToCompletion(systemLevelUri(), forged);
+    assertThat(downloadAll(outputNamed(paramsByName(secondManifest, "output"), "forged")))
+        .contains("\"n\":1")
+        .doesNotContain("\"n\":10");
   }
 
   // An analysis failure cannot be caught at kick-off, since analysing the SQL needs the dependency
@@ -583,34 +653,51 @@ class SqlExportProviderIT extends AbstractAsyncExportIT {
   /** An inline SQLQuery carrying the given SQL over the ad-hoc view above. */
   @Nonnull
   private Map<String, Object> inlineQueryOverAdHocView(@Nonnull final String query) {
-    final String sql =
-        java.util.Base64.getEncoder()
-            .encodeToString(query.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-    return Map.of(
-        "resourceType",
-        "Library",
-        "status",
-        "active",
+    return sqlLibrary(
+        SqlLibraryParser.SQL_QUERY_TYPE_CODE,
+        null,
+        query,
+        "adh",
+        "https://pathling.csiro.au/test/ViewDefinition/ExportAdHoc");
+  }
+
+  /**
+   * A SQLQuery or SQLView Library carrying the given SQL, with an optional url and an optional
+   * single dependency declared under the given label.
+   */
+  @Nonnull
+  private static Map<String, Object> sqlLibrary(
+      @Nonnull final String typeCode,
+      @Nullable final String url,
+      @Nonnull final String query,
+      @Nullable final String label,
+      @Nullable final String dependency) {
+    final Map<String, Object> library = new LinkedHashMap<>();
+    library.put("resourceType", "Library");
+    if (url != null) {
+      library.put("url", url);
+    }
+    library.put("status", "active");
+    library.put(
         "type",
         Map.of(
             "coding",
-            List.of(
-                Map.of(
-                    "system",
-                    au.csiro.pathling.operations.sqlquery.SqlLibraryParser.LIBRARY_TYPE_SYSTEM,
-                    "code",
-                    au.csiro.pathling.operations.sqlquery.SqlLibraryParser.SQL_QUERY_TYPE_CODE))),
-        "relatedArtifact",
+            List.of(Map.of("system", SqlLibraryParser.LIBRARY_TYPE_SYSTEM, "code", typeCode))));
+    if (label != null) {
+      library.put(
+          "relatedArtifact",
+          List.of(Map.of("type", "depends-on", "label", label, "resource", dependency)));
+    }
+    library.put(
+        "content",
         List.of(
             Map.of(
-                "type",
-                "depends-on",
-                "label",
-                "adh",
-                "resource",
-                "https://pathling.csiro.au/test/ViewDefinition/ExportAdHoc")),
-        "content",
-        List.of(Map.of("contentType", "application/sql", "data", sql)));
+                "contentType",
+                "application/sql",
+                "data",
+                java.util.Base64.getEncoder()
+                    .encodeToString(query.getBytes(StandardCharsets.UTF_8)))));
+    return library;
   }
 
   @Nonnull

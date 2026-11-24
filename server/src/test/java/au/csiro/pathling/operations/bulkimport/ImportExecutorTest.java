@@ -998,6 +998,25 @@ class ImportExecutorTest {
     assertThat(summarise(warehouseTable(response))).isEqualTo(summarise(updated));
   }
 
+  /**
+   * Parquet compressed with LZ4_RAW is decompressed by aircompressor, which the server pins to a
+   * patched version (CVE-2025-67721). The import must still read it back intact.
+   */
+  @Test
+  void lz4RawCompressedParquetIsImported() {
+    // Given - Parquet on FHIR input compressed with the LZ4_RAW codec.
+    final List<Patient> patients = patientsFromNdjson();
+    final String patientUrl =
+        writeParquet(
+            "Patient", ResourceEncoding.encode(pathlingContext, "Patient", patients), "lz4_raw");
+
+    // When
+    final ImportResponse response = importExecutor.execute(parquetRequest(patientUrl), JOB_ID);
+
+    // Then - every patient is in the warehouse table as written.
+    assertThat(summarise(warehouseTable(response))).isEqualTo(summarise(patients));
+  }
+
   // ========================================
   // Helper Methods
   // ========================================
@@ -1029,9 +1048,18 @@ class ImportExecutorTest {
   @Nonnull
   private String writeParquet(
       @Nonnull final String resourceType, @Nonnull final Dataset<Row> data) {
+    return writeParquet(resourceType, data, "snappy");
+  }
+
+  /** Writes a dataset as Parquet with the given compression codec, returning its URL. */
+  @Nonnull
+  private String writeParquet(
+      @Nonnull final String resourceType,
+      @Nonnull final Dataset<Row> data,
+      @Nonnull final String compression) {
     final Path path =
         tempDir.resolve("input-" + UUID.randomUUID()).resolve(resourceType + ".parquet");
-    data.write().parquet(path.toString());
+    data.write().option("compression", compression).parquet(path.toString());
     return "file://" + path.toAbsolutePath();
   }
 

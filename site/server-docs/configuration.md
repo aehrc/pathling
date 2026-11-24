@@ -547,6 +547,14 @@ Here are a few that you might be particularly interested in:
   number of data partitions used to distribute data between child tasks. This
   can be tuned to higher numbers for larger data sets. It also controls the
   granularity of requests made to the configured terminology service.
+- `spark.sql.optimizer.excludedRules` - (default:
+  `org.apache.spark.sql.catalyst.optimizer.PushProjectionThroughUnion`) A
+  comma-separated list of Spark optimiser rules to disable. The default works
+  around [SPARK-59042](https://issues.apache.org/jira/browse/SPARK-59042), in
+  which a SQL query with a correlated subquery over the output of a `UNION ALL`
+  fails to plan. It does not cover such a query when it is itself one branch of
+  a further `UNION` or `UNION ALL`. If you set this option, include the default
+  rule in the list unless you are running a Spark version that fixes that bug.
 
 This is the default Spark configuration:
 
@@ -561,6 +569,8 @@ spark:
         extensions: io.delta.sql.DeltaSparkSessionExtension
         catalog:
             spark_catalog: org.apache.spark.sql.delta.catalog.DeltaCatalog
+        optimizer:
+            excludedRules: org.apache.spark.sql.catalyst.optimizer.PushProjectionThroughUnion
     databricks:
         delta:
             schema:

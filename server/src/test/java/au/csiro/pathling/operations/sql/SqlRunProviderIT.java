@@ -107,6 +107,12 @@ class SqlRunProviderIT {
   /** A canonical URL that is not stored on the server, so it must be satisfied by context. */
   private static final String AD_HOC_VIEW_URL = "https://pathling.csiro.au/test/ViewDefinition/Adh";
 
+  /**
+   * The error for a column over {@code meta.profile}, which is a canonical, that declares string.
+   */
+  private static final String TYPE_MISMATCH_MESSAGE =
+      "Column 'profile' with path '$this' has type canonical, but the column declares type string";
+
   @LocalServerPort int port;
 
   @Autowired WebTestClient webTestClient;
@@ -425,6 +431,51 @@ class SqlRunProviderIT {
   }
 
   // -------------------------------------------------------------------------
+  // A column whose declared type differs from the type of its path.
+  // -------------------------------------------------------------------------
+
+  // A declared type that differs from the type of the column's path is a fault in the
+  // ViewDefinition, and is reported as a 400. It used to surface as an opaque 500 (issue 2865).
+  @Test
+  void reportsAColumnTypeMismatchInTheSubjectAsABadRequest() {
+    final Map<String, Object> parameters = new LinkedHashMap<>();
+    parameters.put("resourceType", "Parameters");
+    parameters.put(
+        "parameter",
+        List.of(
+            resourceParameter("subjectResource", typeMismatchViewJson()),
+            stringParameter("_format", SqlRunFormat.NDJSON.getCode())));
+
+    final String body = postExpectStatus(GSON.toJson(parameters), 400, "application/fhir+json");
+
+    assertThat(body).contains("Invalid ViewDefinition: " + TYPE_MISMATCH_MESSAGE);
+  }
+
+  @Test
+  void reportsAColumnTypeMismatchInAContextViewAgainstTheContextParameter() {
+    // The subject is valid; the fault is in the ViewDefinition supplied as context, so the outcome
+    // names the context parameter rather than the subject.
+    final Map<String, Object> parameters = new LinkedHashMap<>();
+    parameters.put("resourceType", "Parameters");
+    parameters.put(
+        "parameter",
+        List.of(
+            resourceParameter(
+                "subjectResource",
+                jsonParser.encodeResourceToString(
+                    sqlQueryLibrary("SELECT profile FROM adh", "adh", AD_HOC_VIEW_URL))),
+            resourceParameter("context", typeMismatchViewJson()),
+            stringParameter("_format", SqlRunFormat.NDJSON.getCode())));
+
+    final String body = postExpectStatus(GSON.toJson(parameters), 400, "application/fhir+json");
+
+    assertThat(body)
+        .contains("\"code\":\"invalid\"")
+        .contains("\"expression\":[\"context\"]")
+        .contains("A 'context' ViewDefinition is invalid: " + TYPE_MISMATCH_MESSAGE);
+  }
+
+  // -------------------------------------------------------------------------
   // Columns Spark materialises as java.time values.
   // -------------------------------------------------------------------------
 
@@ -569,6 +620,34 @@ class SqlRunProviderIT {
   }
 
   // -------------------------------------------------------------------------
+  // Optimiser faults.
+  // -------------------------------------------------------------------------
+
+  // A correlated subquery over the output of a UNION ALL is valid SQL, but Spark's
+  // PushProjectionThroughUnion optimiser rule fails on it with a NoSuchElementException
+  // (SPARK-59042). The server's default Spark configuration excludes that rule, so the query runs.
+  @Test
+  void runsACorrelatedSubqueryOverAUnionAll() {
+    final String body =
+        postOk(
+            inlineSqlQueryRequest(
+                "WITH a AS ("
+                    + " SELECT family_name f, count(*) n FROM adh GROUP BY family_name"
+                    + " UNION ALL"
+                    + " SELECT family_name, count(*) FROM adh GROUP BY family_name"
+                    + ") SELECT a.*, EXISTS(SELECT 1 FROM adh p WHERE p.family_name = a.f) e"
+                    + " FROM a"),
+            SqlRunFormat.NDJSON);
+
+    // Each of the three family names appears once in each branch of the union, and each exists.
+    final List<String> lines = body.lines().filter(line -> !line.isBlank()).toList();
+    assertThat(lines).hasSize(6);
+    assertThat(lines)
+        .allSatisfy(line -> assertThat(line).contains("\"n\":1").contains("\"e\":true"));
+    assertThat(body).contains("Smith").contains("Johnson").contains("Williams");
+  }
+
+  // -------------------------------------------------------------------------
   // Evaluation failures.
   // -------------------------------------------------------------------------
 
@@ -614,6 +693,56 @@ class SqlRunProviderIT {
             "application/fhir+json");
 
     assertThat(body).contains("OperationOutcome").contains("evaluation failed");
+  }
+
+  // The scenario in the report: comparing a string column with a number makes Spark cast the string
+  // to BIGINT, which fails on the first value that is not an integer. That is a data exception in
+  // the caller's own SQL, raised while the aggregate is computed and before anything is written, so
+  // it is a 422 naming the subject and carrying Spark's message rather than an opaque 500.
+  @Test
+  void reportsADataExceptionInAnAggregateAsAnUnprocessableSubject() {
+    final String body =
+        postExpectStatus(
+            inlineSqlQueryRequest(
+                "SELECT COUNT(*) AS n FROM adh WHERE family_name >= 90",
+                SqlRunFormat.CSV.getCode()),
+            422,
+            "application/fhir+json");
+
+    assertThat(body)
+        .contains("\"code\":\"invalid\"")
+        .contains("\"subject\"")
+        .contains("CAST_INVALID_INPUT")
+        .contains("BIGINT");
+    // The message is Spark's own, not the wrapper that names the failed stage and task.
+    assertThat(body).doesNotContain("Unexpected error occurred").doesNotContain("stage failure");
+  }
+
+  // A data exception raised while the first batch of rows is evaluated is reported the same way in
+  // every streamed format, since nothing has been written when it is raised.
+  @ParameterizedTest
+  @ValueSource(strings = {"csv", "ndjson", "json", "fhir"})
+  void reportsADataExceptionBeforeTheFirstRowAsAnUnprocessableSubject(final String format) {
+    final String body =
+        postExpectStatus(
+            inlineSqlQueryRequest("SELECT id, CAST(family_name AS INT) AS n FROM adh", format),
+            422,
+            "application/fhir+json");
+
+    assertThat(body).contains("\"subject\"").contains("CAST_INVALID_INPUT");
+  }
+
+  // Division by zero under ANSI mode is another data exception, from a different SQLSTATE in the
+  // same class, and is reported the same way.
+  @Test
+  void reportsADivisionByZeroAsAnUnprocessableSubject() {
+    final String body =
+        postExpectStatus(
+            inlineSqlQueryRequest("SELECT id, 1 / (LENGTH(id) - LENGTH(id)) AS q FROM adh"),
+            422,
+            "application/fhir+json");
+
+    assertThat(body).contains("\"subject\"").contains("DIVIDE_BY_ZERO");
   }
 
   // Without a limit, rows are fetched one partition at a time, so a failure in a later partition
@@ -888,6 +1017,29 @@ class SqlRunProviderIT {
                 List.of(
                     Map.of("name", "id", "path", "id"),
                     Map.of("name", "family_name", "path", "name.first().family")))));
+    return GSON.toJson(view);
+  }
+
+  /**
+   * Serialises a ViewDefinition at the ad-hoc canonical whose column declares string over {@code
+   * meta.profile}, which is a canonical.
+   */
+  @Nonnull
+  private static String typeMismatchViewJson() {
+    final Map<String, Object> view = new LinkedHashMap<>();
+    view.put("resourceType", "ViewDefinition");
+    view.put("url", AD_HOC_VIEW_URL);
+    view.put("name", "type_mismatch_view");
+    view.put("status", "active");
+    view.put("resource", "Patient");
+    view.put(
+        "select",
+        List.of(
+            Map.of(
+                "forEachOrNull",
+                "meta.profile",
+                "column",
+                List.of(Map.of("name", "profile", "path", "$this", "type", "string")))));
     return GSON.toJson(view);
   }
 

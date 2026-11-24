@@ -48,6 +48,9 @@ public class ResolvedExternalTable implements ResolvedDependency {
   @Override
   @Nonnull
   public String describeContent() {
-    return "external-table:" + format + ':' + path;
+    return "external-table:"
+        + ContentDescriptions.escape(format)
+        + ':'
+        + ContentDescriptions.escape(path);
   }
 }
