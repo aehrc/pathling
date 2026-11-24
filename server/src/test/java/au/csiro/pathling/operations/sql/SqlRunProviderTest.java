@@ -48,7 +48,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import org.apache.spark.QueryContext;
+import org.apache.spark.SparkArithmeticException;
 import org.apache.spark.SparkException;
+import org.apache.spark.SparkNumberFormatException;
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -570,6 +573,87 @@ class SqlRunProviderTest {
     assertThat(diagnosticsOf(exception)).isEqualTo("x".repeat(1023) + "...");
   }
 
+  // ---------------------------------------------------------------------------
+  // Data exceptions.
+  // ---------------------------------------------------------------------------
+
+  // A data exception - SQLSTATE class 22, such as a failing cast or a division by zero - is raised
+  // while Spark evaluates rows, and reaches the provider wrapped in the SparkException that reports
+  // the failed job. While nothing has been written it is reported like an analysis failure: a 422
+  // naming the subject, carrying the message of the data exception rather than of its wrapper.
+  @Test
+  void reportsAWrappedDataExceptionAgainstTheSubject() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    final SparkNumberFormatException dataException = castInvalidInput("0.53991");
+    stubExecuteToThrow(
+        new SparkException(
+            "Job aborted due to stage failure: Task 0 in stage 3.0 failed 1 times", dataException));
+
+    final BaseServerResponseException exception = catchServerException(() -> run(builder()));
+
+    assertThat(exception).isInstanceOf(UnprocessableEntityException.class);
+    assertThat(exception.getStatusCode()).isEqualTo(422);
+    assertIssue(exception, IssueType.INVALID, "subject");
+    assertThat(diagnosticsOf(exception))
+        .isEqualTo(dataException.getMessage())
+        .startsWith("[CAST_INVALID_INPUT] The value '0.53991'")
+        .doesNotContain("stage failure");
+  }
+
+  // A data exception that arrives without a wrapper is reported the same way.
+  @Test
+  void reportsAnUnwrappedDataExceptionAgainstTheSubject() {
+    stubSubject(SubjectKind.SQL_VIEW);
+    stubExecuteToThrow(divideByZero());
+
+    final BaseServerResponseException exception = catchServerException(() -> run(builder()));
+
+    assertThat(exception.getStatusCode()).isEqualTo(422);
+    assertIssue(exception, IssueType.INVALID, "subject");
+    assertThat(diagnosticsOf(exception)).startsWith("[DIVIDE_BY_ZERO] Division by zero.");
+  }
+
+  // Once rows have been sent the 200 is committed and cannot be replaced, so the failure keeps
+  // propagating as itself and the response is cut off as for any other failure at that point.
+  @Test
+  void leavesADataExceptionUntranslatedOnceTheResponseIsCommitted() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    when(response.isCommitted()).thenReturn(true);
+    final SparkException failure = new SparkException("Job aborted", castInvalidInput("0.5"));
+    stubExecuteToThrow(failure);
+
+    assertThatThrownBy(() -> run(builder())).isSameAs(failure);
+  }
+
+  // Only the data exception class is the caller's fault. A Spark failure with any other SQLSTATE,
+  // such as an internal error, is still a server fault and must keep reaching
+  // ErrorHandlingInterceptor as itself.
+  @Test
+  void leavesASparkFailureOutsideTheDataExceptionClassUntranslated() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    final SparkException internalError = SparkException.internalError("Boom");
+    assertThat(internalError.getSqlState()).isEqualTo("XX000");
+    final SparkException failure = new SparkException("Job aborted", internalError);
+    stubExecuteToThrow(failure);
+
+    assertThatThrownBy(() -> run(builder())).isSameAs(failure);
+  }
+
+  // A data exception quotes the offending value, which can be arbitrarily long. The message is
+  // bounded in the same way as an analyser message.
+  @Test
+  void boundsTheLengthOfAReportedDataException() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    stubExecuteToThrow(castInvalidInput("x".repeat(5000)));
+
+    final BaseServerResponseException exception = catchServerException(() -> run(builder()));
+
+    assertThat(diagnosticsOf(exception))
+        .hasSize(1027)
+        .startsWith("[CAST_INVALID_INPUT] ")
+        .endsWith("...");
+  }
+
   // ---- helpers ----
 
   /** A representative Spark analyser message, of the shape the caller is meant to receive. */
@@ -588,6 +672,28 @@ class SqlRunProviderTest {
     final AnalysisException exception = mock(AnalysisException.class);
     when(exception.getSimpleMessage()).thenReturn(message);
     return exception;
+  }
+
+  /** Builds the failure Spark raises when a string cannot be cast to BIGINT, SQLSTATE 22018. */
+  @Nonnull
+  private static SparkNumberFormatException castInvalidInput(@Nonnull final String value) {
+    return new SparkNumberFormatException(
+        "CAST_INVALID_INPUT",
+        SparkException.constructMessageParams(
+            Map.of(
+                "expression", "'" + value + "'",
+                "sourceType", "\"STRING\"",
+                "targetType", "\"BIGINT\"")),
+        new QueryContext[0]);
+  }
+
+  /** Builds the failure Spark raises on division by zero under ANSI mode, SQLSTATE 22012. */
+  @Nonnull
+  private static SparkArithmeticException divideByZero() {
+    return new SparkArithmeticException(
+        "DIVIDE_BY_ZERO",
+        SparkException.constructMessageParams(Map.of("config", "\"spark.sql.ansi.enabled\"")),
+        new QueryContext[0]);
   }
 
   /**

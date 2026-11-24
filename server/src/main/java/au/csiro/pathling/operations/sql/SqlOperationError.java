@@ -23,9 +23,11 @@ import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
+import com.google.common.base.Throwables;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
+import org.apache.spark.SparkThrowable;
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.delta.DeltaAnalysisException;
 import org.hl7.fhir.r4.model.OperationOutcome;
@@ -45,8 +47,14 @@ import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
  */
 public final class SqlOperationError {
 
-  /** The longest analyser message returned to the caller, beyond which it is truncated. */
-  private static final int MAX_ANALYSER_MESSAGE_LENGTH = 1024;
+  /** The longest query engine message returned to the caller, beyond which it is truncated. */
+  private static final int MAX_ENGINE_MESSAGE_LENGTH = 1024;
+
+  /**
+   * The SQLSTATE class of a data exception: a value the query cannot process, such as a string that
+   * cannot be cast to a number, a division by zero or an arithmetic overflow.
+   */
+  private static final String DATA_EXCEPTION_SQLSTATE_CLASS = "22";
 
   private SqlOperationError() {
     // Utility class.
@@ -141,7 +149,7 @@ public final class SqlOperationError {
         || error instanceof DeltaAnalysisException) {
       return null;
     }
-    final String message = analyserMessage(analysisError);
+    final String message = bounded(analyserMessage(analysisError));
     return unprocessable(
         SubjectResolver.SUBJECT_EXPRESSION,
         subjectName == null
@@ -150,25 +158,69 @@ public final class SqlOperationError {
   }
 
   /**
+   * Translates a data exception raised while the query engine evaluates a subject's rows into a
+   * {@code 422 Unprocessable Entity}, where it is a fault in the SQL the caller submitted rather
+   * than a server fault.
+   *
+   * <p>A data exception is a Spark failure whose SQLSTATE is in class {@code 22}: a string that
+   * cannot be cast to a number, a division by zero or an arithmetic overflow, raised under ANSI
+   * mode. It reaches the caller wrapped in the {@code SparkException} that reports the failed job,
+   * so the cause chain is searched, and the message is that of the data exception rather than of
+   * its wrapper. Unlike an analyser message, it quotes the value that could not be processed.
+   *
+   * <p>The caller must only translate a failure while the response is uncommitted: once rows have
+   * been written the status can no longer be rewritten. Any other failure returns null and must be
+   * rethrown as it is, for {@code ErrorHandlingInterceptor} to convert.
+   *
+   * @param error the failure raised by the query engine
+   * @return the exception to throw, or null where the failure carries no data exception
+   */
+  @Nullable
+  public static UnprocessableEntityException asDataException(@Nonnull final Throwable error) {
+    return Throwables.getCausalChain(error).stream()
+        .filter(SqlOperationError::isDataException)
+        .findFirst()
+        .map(
+            dataException ->
+                unprocessable(
+                    SubjectResolver.SUBJECT_EXPRESSION,
+                    bounded(requireNonNullElse(dataException.getMessage(), ""))))
+        .orElse(null);
+  }
+
+  /** Returns whether the failure is a Spark failure carrying a data exception SQLSTATE. */
+  private static boolean isDataException(@Nonnull final Throwable error) {
+    return error instanceof final SparkThrowable sparkError
+        && sparkError.getSqlState() != null
+        && sparkError.getSqlState().startsWith(DATA_EXCEPTION_SQLSTATE_CLASS);
+  }
+
+  /**
    * Renders an analyser failure for the wire. {@code getMessage} appends the whole unresolved
    * logical plan, which is unbounded, names internal request-scoped views and says nothing the
    * caller can act on; {@code getSimpleMessage} is the same condition, position and suggestions
-   * without it. The result is bounded as well, since a suggestion list is drawn from the subject's
-   * columns and a wide dependency makes it long.
+   * without it.
    */
   @Nonnull
   private static String analyserMessage(@Nonnull final AnalysisException error) {
     @Nullable final String simpleMessage = error.getSimpleMessage();
-    final String message =
-        simpleMessage != null ? simpleMessage : requireNonNullElse(error.getMessage(), "");
-    if (message.length() <= MAX_ANALYSER_MESSAGE_LENGTH) {
+    return simpleMessage != null ? simpleMessage : requireNonNullElse(error.getMessage(), "");
+  }
+
+  /**
+   * Bounds a query engine message for the wire. A suggestion list is drawn from the subject's
+   * columns and a quoted value from its data, so either can make a message arbitrarily long.
+   */
+  @Nonnull
+  private static String bounded(@Nonnull final String message) {
+    if (message.length() <= MAX_ENGINE_MESSAGE_LENGTH) {
       return message;
     }
     // Step back off a trailing high surrogate, so that truncation never splits a character in two.
     final int end =
-        Character.isHighSurrogate(message.charAt(MAX_ANALYSER_MESSAGE_LENGTH - 1))
-            ? MAX_ANALYSER_MESSAGE_LENGTH - 1
-            : MAX_ANALYSER_MESSAGE_LENGTH;
+        Character.isHighSurrogate(message.charAt(MAX_ENGINE_MESSAGE_LENGTH - 1))
+            ? MAX_ENGINE_MESSAGE_LENGTH - 1
+            : MAX_ENGINE_MESSAGE_LENGTH;
     return message.substring(0, end) + "...";
   }
 
