@@ -90,7 +90,7 @@ drawn from the session. Ask dependent questions in a later round. Run anything a
 (another version, a scope case) before it enters the report.
 
 When no human is in the session (an agent filing on its own), infer each gap as
-`bugs:triage` step 3 does, label each inference in the report, and list the open questions in
+`bugs:intake` step 3 does, label each inference in the report, and list the open questions in
 the message that delivers the draft.
 
 **Done when** every template section is filled or reads "Not investigated", and every question
@@ -111,4 +111,4 @@ Show the draft and the suggested labels (per `bugs:standard`) to the user. File 
 since an issue is public.
 
 **Done when** the user has approved and the issue is filed, or has declined and the draft is saved
-in `.local/` with its path given.
+in `.private/` with its path given.

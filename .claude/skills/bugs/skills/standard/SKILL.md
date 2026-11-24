@@ -16,6 +16,17 @@ separate reports or under Related.
 **It is reproducible as written.** The snippet runs unchanged and is as short as it can be while
 still failing. The versions named are the versions that were run, with exact numbers.
 
+**It places the failure in Pathling.** When the call passes through another component, such as a
+terminology server, Spark or a proxy, the report names that component and its version, and says
+whether the failure persists without it or with another one. If you did not try, say "Not
+investigated". A failure that turns out to belong to the dependency is fixed elsewhere, so this is
+the first thing a triager needs to know.
+
+**For the server, it gives the deployment and the request.** It says how the server was started
+(the image and `docker run` command, or the configuration that matters), what sits between the
+client and the server (a proxy and the forwarded headers it sets), and the exact request as a
+runnable `curl` command. Server behaviour often depends on these more than on the versions.
+
 **It quotes the error, not a description of it.** The message is in a code block, so the report can
 be found by searching for it. The full stack trace is in a collapsed block, with home directories
 shortened to `...`.
@@ -48,6 +59,11 @@ Each answer must be yes.
 - Is the exact error quoted, with the full trace in a collapsed block?
 - Is each claim observed, or labelled as inferred (with the spec rule linked for expected behaviour)?
 - Does the report name only versions that were run, and no vague ones ("latest")?
+- If the call passes through another component (terminology server, Spark, proxy), are the
+  component and its version named, and does the report say whether the failure persists without
+  it, or "Not investigated"?
+- For a server failure, are the way it was started, anything in front of it, and the exact request
+  as a runnable command all given?
 - Does it cover one failure, with no unrun claims about scope, history or other tools?
 - Is every placeholder filled or its line removed, and are the drafting notes in the message to
   the user, not the body?
@@ -62,7 +78,7 @@ For a finished report and a failing one side by side, read
 ## Building one
 
 - From a failure in the current session: the `bugs:draft` skill.
-- From an incomplete issue filed by an external user: the `bugs:triage` skill.
+- From an incomplete issue filed by an external user: the `bugs:intake` skill.
 
 ## Labels
 

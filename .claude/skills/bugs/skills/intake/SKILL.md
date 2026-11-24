@@ -1,13 +1,13 @@
 ---
-name: triage
+name: intake
 description: >
-    Triage an incomplete bug report from an external user: reconstruct the full report by inferring
+    Take in an incomplete bug report from an external user: reconstruct the full report by inferring
     what they meant and reproducing it on the latest public release, or draft a request for more
     information when it will not reproduce. Use when a GitHub issue from outside the team is missing
-    details, or to decide what to reply to one.
+    details, or to decide what to reply to one. Can replay an old issue as of its filing date.
 ---
 
-# Skill: Triage an external bug report
+# Skill: Take in an external bug report
 
 ## 1. Purpose and posture
 
@@ -37,6 +37,32 @@ removed.
    too; details often arrive there. Pasted text with no number gets a short slug from its title,
    used wherever this skill says `<N>`.
 2. Optionally, a hint from the user about what they think it is.
+3. Optionally, `--as-of <date|now>` and `--base <version>[,<version>...]`, described below.
+
+### Replaying an issue as of a date
+
+`--as-of` takes the issue as it stood at a point in time, to evaluate this skill on an issue that
+has since been resolved, or to answer an old issue on its own terms. `--as-of created` means the
+moment the issue was filed. Without the flag, the point in time is now and nothing below applies.
+
+While replaying, everything after the cut-off is out of bounds: it is the answer key.
+
+- **The issue:** read only the body as filed and the comments made before the cut-off; with
+  `--as-of created`, that is the body alone. Read the body from the issue's edit history when it
+  was edited after the cut-off.
+- **Searches** (step 2): restrict to issues and PRs created before the cut-off (`created:<date`),
+  and ignore any match closed after it as if it were still open.
+- **Source** (step 3): read and grep at the tag of the base version, not at the current checkout.
+- **Base versions** (steps 4 and 6): `--base` names the versions to reproduce on. Without it, the
+  base is the latest library release on PyPI at the cut-off (for the server, the latest
+  `server-v*` tag), plus the reporter's own version when they named one. A base version stands in
+  for "the latest release" wherever this skill says it. Find it as
+  [../../references/pathling-build.md](../../references/pathling-build.md) describes.
+- **Skip step 6.** There is no release branch at a past date to check, so a candidate that
+  reproduces on a base version is `REPRODUCED` without it.
+- Do not run `git log`, `git blame` or the issue's linked PRs past the cut-off.
+
+Record the cut-off and the base versions under **Ran on**.
 
 ## 3. Method
 
@@ -58,8 +84,8 @@ resource named (`gh issue list --state all --search "<text>"`, `gh pr list --sta
 status as `bugs:verify-fix` step 3 defines it.
 
 An exact duplicate (same call and same error, or the same symptom when no error was quoted) cuts
-steps 3 to 5 short: run one confirming candidate on the latest release and one on the release
-branch, then go to step 6.
+steps 3 to 6 short: run one confirming candidate on the latest release and one on the release
+branch, then go to step 7.
 
 **Done when** each search term has been searched and every match is classified as duplicate,
 related or unrelated.
@@ -69,7 +95,8 @@ related or unrelated.
 For each ambiguous or missing section, write the candidate **readings**, most likely first, each
 with the clue that supports it. The strongest clues, in order:
 
-1. **The error text.** Grep the source at the latest release tag for the message, or its stable
+1. **The error text.** Grep the source at the latest release tag (or the base version's tag) for
+   the message, or its stable
    part. The code that raises it names the calls and inputs that can reach it.
 2. **The reporter's own words** mapped to API names ("search by value quantity" →
    `search_to_column(..., "value-quantity=...")`).
@@ -88,9 +115,10 @@ was searched.
 
 ### Step 4: Reproduce on the latest public release
 
-Install the latest release from PyPI in a throwaway `uv venv` and record its version, with the
-Python, Java and Spark versions that ran. When the reporter named an older version, install that
-too. Turn the top readings into runnable **candidates** and run them, most likely first, at most
+Install the latest release from PyPI (or each base version, when replaying) in a throwaway
+`uv venv` and record its version, with the Python, Java and Spark versions that ran. When the
+reporter named an older version, install that too. An older release may need an older Python, Java
+or Spark; install what its `pyproject.toml` or release notes require, and record it. Turn the top readings into runnable **candidates** and run them, most likely first, at most
 eight.
 
 A candidate **reproduces** when it gives the reported exception type and message (values may
@@ -103,10 +131,38 @@ on the library first. Run the server only when a clue points to it (an HTTP stat
 with no Python around it); otherwise list the server reading as not run, and say whether it
 shares the failing code.
 
-**Done when** a candidate reproduces, or all candidates have run. Record each candidate and its
-result either way; the request for information needs them.
+When a candidate reproduces and the call reaches another component (a terminology server, Spark,
+a proxy), check whether the failure belongs to it before going on: run the same call without the
+component or with another one, or find the component's own behaviour in its documentation. A
+failure that persists in the component alone is **upstream**.
 
-### Step 5: Check for an unreleased fix
+- **A terminology server:** a local terminology store, a different server, or a stand-in HTTP
+  server in the scratchpad that returns a fixed response. A stand-in also reproduces a server
+  that drops the connection or answers slowly.
+- **Spark,** which cannot be left out: turn off the optimizer rule the trace or the plan points to
+  (for example `spark.sql.optimizer.nestedSchemaPruning.enabled=false`), run on another Spark
+  version, and reduce the failure to a plain Spark snippet with no Pathling call. A failure that
+  goes away with the rule off, or that a plain Spark snippet shows, is upstream.
+
+A configuration switch in Pathling that makes the failure go away (retry off, cache off) does not
+place it in the component; it is a clue to the cause in Pathling.
+
+**Done when** a candidate reproduces, or all candidates have run, and a reproducing candidate that
+reaches another component has been isolated or marked "Not investigated". Record each candidate
+and its result either way; the request for information needs them.
+
+### Step 5: Ground the expected behaviour
+
+When a candidate reproduces, test the reporter's expectation against the specification before
+treating it as a defect. A claim the reporter makes about the specification ("per the spec,
+`%context` is the resource") is a reading to check, never a fact. Read the rule as a fully
+compliant engine would execute it, with the `fhirpath-spec`, `sql-on-fhir` or `fhir-search-spec`
+skill, then adapt for Pathling's documented limits.
+
+**Done when** the reproducing behaviour is classed as **violates** the rule, **follows** it, or
+**unspecified**, with the rule quoted and linked, or for unspecified, the sections searched.
+
+### Step 6: Check for an unreleased fix
 
 When the failure reproduces on the latest release, run the reproducing candidate on the current
 `release/*` branch (or `main` when none exists). Build or reuse it as
@@ -115,13 +171,14 @@ the commit and the Python and Spark versions, since they may differ from step 4'
 it passes there, find the fix (step 3 of `bugs:verify-fix`) and record its PR and status.
 
 When the failure reproduces only on the reporter's older version, the latest release already fixes
-it; step 5 is done.
+it; step 6 is done.
 
 **Done when** the result on the release branch is recorded, or this step does not apply.
 
-### Step 6: Decide the outcome and draft
+### Step 7: Decide the outcome and draft
 
-Pick exactly one **outcome** and draft its files in `.local/triage/<N>/`:
+Pick exactly one **outcome** and draft its files in `.private/intake/<N>/` (when replaying,
+`.private/intake/<N>-as-of-<date>/`):
 
 | Outcome            | When                                                                             | Files                     |
 | ------------------ | -------------------------------------------------------------------------------- | ------------------------- |
@@ -129,12 +186,13 @@ Pick exactly one **outcome** and draft its files in `.local/triage/<N>/`:
 | `FIXED_UNRELEASED` | reproduces on the latest release, passes on the release branch                   | `report.md`, `comment.md` |
 | `FIXED_IN_RELEASE` | reproduces only on the reporter's older version                                  | `comment.md`              |
 | `DUPLICATE`        | step 2 found the same failure                                                    | `comment.md`              |
-| `AS_SPECIFIED`     | the behaviour reproduces and follows the specification                           | `comment.md`              |
+| `UPSTREAM`         | it reproduces, and step 4 placed the failure in another component                | `comment.md`              |
+| `AS_SPECIFIED`     | step 5 found the reproducing behaviour follows the specification                 | `comment.md`              |
 | `NEEDS_INFO`       | no candidate reproduces                                                          | `comment.md`              |
 
 When more than one row fits, the first in this order wins: `DUPLICATE` (when the existing issue
 already meets the report standard; otherwise the row the runs give, linking the duplicate),
-`FIXED_IN_RELEASE`, `FIXED_UNRELEASED`, `REPRODUCED`, `AS_SPECIFIED`.
+`FIXED_IN_RELEASE`, `FIXED_UNRELEASED`, `UPSTREAM`, `AS_SPECIFIED`, `REPRODUCED`.
 
 **`report.md`** follows `bugs:standard`, with one addition: each fact carries its source.
 **Reported** is what the reporter said and we could not run (their environment, their data).
@@ -151,6 +209,9 @@ jargon:
 - For `FIXED_IN_RELEASE`: name the release that fixes it and how to upgrade.
 - For `DUPLICATE`: link the existing issue, show the snippet that reproduced it, give the fix
   status, and say we will close this one in its favour; ask for their error only if it differs.
+- For `UPSTREAM`: name the component and its version, show the run that places the failure there,
+  and point to its issue tracker or an existing upstream issue. Offer a workaround in Pathling
+  only if one was run.
 - For `AS_SPECIFIED`: quote and link the rule, show what the call returns and why, and invite them
   to say if their case differs. The user decides whether to post this one.
 - For `NEEDS_INFO`, the **request for information**:
@@ -170,10 +231,10 @@ observed or inferred, and `comment.md` asks no question the reporter already ans
 Reply to the user with exactly this, and no conversational filler:
 
 ```markdown
-# Triage: [#N or slug] ([issue title])
+# Intake: [#N or slug] ([issue title])
 
-- **Outcome:** [REPRODUCED | FIXED_UNRELEASED | FIXED_IN_RELEASE | DUPLICATE | AS_SPECIFIED | NEEDS_INFO]
-- **Ran on:** [Pathling version(s) and release-branch commit, Python, Java, Spark]
+- **Outcome:** [REPRODUCED | FIXED_UNRELEASED | FIXED_IN_RELEASE | DUPLICATE | UPSTREAM | AS_SPECIFIED | NEEDS_INFO]
+- **Ran on:** [Pathling version(s) and release-branch commit, Python, Java, Spark; when replaying, the cut-off and base versions]
 - **Files:** [paths]
 
 ## What was given

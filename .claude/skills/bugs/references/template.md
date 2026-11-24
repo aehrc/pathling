@@ -9,13 +9,19 @@ One or two sentences: what fails, on what.
 
 Versions actually run (Pathling, Python, Java, Spark), FHIR version, API surface used.
 
+Any other component the call reached (terminology server, proxy) with its version or endpoint, and
+whether the failure persists without it, or "Not investigated".
+
+For a server failure: how it was started (image and `docker run` command, or the configuration that
+matters) and what sits in front of it (a proxy and the forwarded headers it sets).
+
 ## How it was found
 
 One true line (for example "Reproduced while reviewing #123 (Title of the issue)").
 
 ## Steps to reproduce
 
-A runnable snippet, as short as it gets.
+A runnable snippet, as short as it gets. For the server, the request as a `curl` command.
 
 ## Actual behaviour (observed)
 

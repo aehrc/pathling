@@ -53,42 +53,50 @@ Audit in order. Mark each `PASS` or `FAIL`, with one line of evidence quoting th
    an input that should match? Fail if it only says "it should work".
 6. **[M6] Provenance:** Is there a "How it was found" line that says how, and does not refer to
    something absent from the text ("this issue")?
+7. **[M7] Isolation:** If the call passes through another component (a terminology server, Spark,
+   a proxy), does the report name it with its version or endpoint, and say whether the failure
+   persists without it or with another one, or "Not investigated"? Pass when no other component is
+   involved.
+8. **[M8] Server deployment:** For a server failure, does the report say how the server was started
+   (image and command, or the configuration that matters), what sits in front of it (a proxy and
+   its forwarded headers), and give the exact request as a runnable command? Pass when the failure
+   is not in the server.
 
 ### Part B: What is unclear or underspecified
 
-7. **[U1] Observed or inferred:** Is every claim visibly one or the other? Fail for any inferred
+9. **[U1] Observed or inferred:** Is every claim visibly one or the other? Fail for any inferred
    claim stated as observed, such as expected behaviour presented as verified when the failure
    prevents running it.
-8. **[U2] One reading:** Could two readers disagree about what the failure is, what triggers it, or
-   what correct looks like? Fail on vague words ("broken", "wrong", "sometimes", "slow",
-   "doesn't work") and on terms used for two things.
-9. **[U3] Labelled, not asserted:** Fail for any claim about scope ("affects all searches"),
-   history ("worked before"), other tools ("works in HAPI"), cause, or the right fix that is
-   written as fact and not labelled as a hypothesis or as something the reporter ran. Judge only
-   how the claim is worded, not whether it is true.
-10. **[U4] Finished:** Fail for any `[placeholder]`, TODO, drafting note or bracketed instruction in
+10. **[U2] One reading:** Could two readers disagree about what the failure is, what triggers it, or
+    what correct looks like? Fail on vague words ("broken", "wrong", "sometimes", "slow",
+    "doesn't work") and on terms used for two things.
+11. **[U3] Labelled, not asserted:** Fail for any claim about scope ("affects all searches"),
+    history ("worked before"), other tools ("works in HAPI"), cause, or the right fix that is
+    written as fact and not labelled as a hypothesis or as something the reporter ran. Judge only
+    how the claim is worded, not whether it is true.
+12. **[U4] Finished:** Fail for any `[placeholder]`, TODO, drafting note or bracketed instruction in
     the body. "Not investigated" is allowed; an unexplained blank is not.
 
 ### Part C: What is redundant
 
-11. **[R1] Repetition:** Does the same fact appear three or more times, or twice in the same kind
+13. **[R1] Repetition:** Does the same fact appear three or more times, or twice in the same kind
     of place? Repetition that serves a different reader is allowed: the title and summary (for
     scanning) and the error block (for searching) may each state the failure once.
-12. **[R2] Not needed to reproduce or triage:** Is there narrative, background, history, internals
+14. **[R2] Not needed to reproduce or triage:** Is there narrative, background, history, internals
     outside the trace and the labelled hypothesis, or a repro line that can be deleted while it
     would still fail? Judge by reading, not by running.
-13. **[R3] One failure, no filler:** Fail if the report mixes more than one symptom, or has a
+15. **[R3] One failure, no filler:** Fail if the report mixes more than one symptom, or has a
     section that pads without informing (for example a "Scope" that restates the summary). An
     honest "Not investigated" is not filler and passes.
 
 ### Part D: Safety
 
-14. **[S1] Safe to publish:** Fail for any secret, name, email, token, customer data or unshortened
+16. **[S1] Safe to publish:** Fail for any secret, name, email, token, customer data or unshortened
     home directory, including inside the stack trace.
 
 ## 4. Verdict rules
 
-- **`VERDICT: PASS`:** All 14 checks pass.
+- **`VERDICT: PASS`:** All 16 checks pass.
 - **`VERDICT: FAIL`:** Any check fails.
 - Style preferences are not failures. Put them under **Non-blocking notes**, at most three.
 - Do not guess at truth. If something looks wrong factually, note it under **For the verifier**
@@ -102,7 +110,7 @@ Output exactly this structure, with no conversational filler:
 # Bug Report Audit: [issue title or draft title]
 
 - **Audited:** [file, issue number, or "pasted draft"]
-- **Checks passed:** [X]/14
+- **Checks passed:** [X]/16
 
 ## Checklist summary
 
@@ -114,6 +122,8 @@ Output exactly this structure, with no conversational filler:
 - **[M4] Environment:** [PASS | FAIL] — [...]
 - **[M5] Expected behaviour:** [PASS | FAIL] — [...]
 - **[M6] Provenance:** [PASS | FAIL] — [...]
+- **[M7] Isolation:** [PASS | FAIL] — [...]
+- **[M8] Server deployment:** [PASS | FAIL] — [...]
 
 ### Unclear or underspecified
 
@@ -134,7 +144,7 @@ Output exactly this structure, with no conversational filler:
 
 ## Findings and required fixes
 
-_(Omit if 14/14. Otherwise one entry per failed check.)_
+_(Omit if 16/16. Otherwise one entry per failed check.)_
 
 1. **[Check ID: name]**
     - **Observed:** "[exact quote, or the structural gap]"
