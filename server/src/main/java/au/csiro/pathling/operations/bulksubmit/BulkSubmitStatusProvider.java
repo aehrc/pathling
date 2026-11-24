@@ -137,15 +137,17 @@ public class BulkSubmitStatusProvider {
 
     // If async is enabled and we have job IDs, redirect to the first running job.
     if (jobRegistry != null && !jobIds.isEmpty()) {
-      // Find the first job that is still running, or the first job if all are done.
       for (final String jobId : jobIds) {
         final Job<?> job = jobRegistry.get(jobId);
         if (job != null && !job.getResult().isDone()) {
           return redirectToJob(jobId, requestDetails);
         }
       }
-      // All jobs are done, use the first job ID.
-      return redirectToJob(jobIds.getFirst(), requestDetails);
+      // All jobs are done. Each job holds the manifest as it was when that job finished, which
+      // omits any manifest downloaded later, so build the manifest from the current submission.
+      // The submission is read again, as a job may have finished since it was first read.
+      return resultBuilder.buildStatusManifest(
+          getSubmission(submitterIdentifier, submissionId.getValue()), requestUrl, fhirServerBase);
     }
 
     // If no job IDs yet (executor hasn't started), wait briefly for one to be created.
