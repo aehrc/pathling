@@ -616,6 +616,56 @@ class SqlRunProviderIT {
     assertThat(body).contains("OperationOutcome").contains("evaluation failed");
   }
 
+  // The scenario in the report: comparing a string column with a number makes Spark cast the string
+  // to BIGINT, which fails on the first value that is not an integer. That is a data exception in
+  // the caller's own SQL, raised while the aggregate is computed and before anything is written, so
+  // it is a 422 naming the subject and carrying Spark's message rather than an opaque 500.
+  @Test
+  void reportsADataExceptionInAnAggregateAsAnUnprocessableSubject() {
+    final String body =
+        postExpectStatus(
+            inlineSqlQueryRequest(
+                "SELECT COUNT(*) AS n FROM adh WHERE family_name >= 90",
+                SqlRunFormat.CSV.getCode()),
+            422,
+            "application/fhir+json");
+
+    assertThat(body)
+        .contains("\"code\":\"invalid\"")
+        .contains("\"subject\"")
+        .contains("CAST_INVALID_INPUT")
+        .contains("BIGINT");
+    // The message is Spark's own, not the wrapper that names the failed stage and task.
+    assertThat(body).doesNotContain("Unexpected error occurred").doesNotContain("stage failure");
+  }
+
+  // A data exception raised while the first batch of rows is evaluated is reported the same way in
+  // every streamed format, since nothing has been written when it is raised.
+  @ParameterizedTest
+  @ValueSource(strings = {"csv", "ndjson", "json", "fhir"})
+  void reportsADataExceptionBeforeTheFirstRowAsAnUnprocessableSubject(final String format) {
+    final String body =
+        postExpectStatus(
+            inlineSqlQueryRequest("SELECT id, CAST(family_name AS INT) AS n FROM adh", format),
+            422,
+            "application/fhir+json");
+
+    assertThat(body).contains("\"subject\"").contains("CAST_INVALID_INPUT");
+  }
+
+  // Division by zero under ANSI mode is another data exception, from a different SQLSTATE in the
+  // same class, and is reported the same way.
+  @Test
+  void reportsADivisionByZeroAsAnUnprocessableSubject() {
+    final String body =
+        postExpectStatus(
+            inlineSqlQueryRequest("SELECT id, 1 / (LENGTH(id) - LENGTH(id)) AS q FROM adh"),
+            422,
+            "application/fhir+json");
+
+    assertThat(body).contains("\"subject\"").contains("DIVIDE_BY_ZERO");
+  }
+
   // Without a limit, rows are fetched one partition at a time, so a failure in a later partition
   // happens after earlier rows have been sent and the 200 is already committed. The response must
   // then be cut off without its terminating chunk, so that the client sees a failed transfer
