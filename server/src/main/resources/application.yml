@@ -223,6 +223,11 @@ spark:
     extensions: io.delta.sql.DeltaSparkSessionExtension
     catalog:
       spark_catalog: org.apache.spark.sql.delta.catalog.DeltaCatalog
+    optimizer:
+      # Works around SPARK-59042, in which this rule fails on a correlated subquery over the output
+      # of a UNION ALL. Column pruning through a union is done by a separate rule, so excluding it
+      # does not stop unneeded columns from being read.
+      excludedRules: org.apache.spark.sql.catalyst.optimizer.PushProjectionThroughUnion
   databricks:
     delta:
       schema:
