@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.sqlquery;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.views.FhirView;
+import jakarta.annotation.Nonnull;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.hl7.fhir.instance.model.api.IBase;
@@ -105,7 +106,8 @@ class ContentDescriptionsTest {
         .isNotEqualTo(ContentDescriptions.describeView(viewWithConstant(new IntegerType(1))));
   }
 
-  private static FhirView viewWithConstant(final IBase value) {
+  @Nonnull
+  private static FhirView viewWithConstant(@Nonnull final IBase value) {
     return FhirView.ofResource("Patient")
         .constant("c", value)
         .select(FhirView.columns(FhirView.column("id", "id")))

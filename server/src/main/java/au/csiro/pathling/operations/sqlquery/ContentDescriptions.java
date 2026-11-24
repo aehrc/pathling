@@ -54,8 +54,8 @@ public final class ContentDescriptions {
    * <p>For example, {@code SELECT * FROM a} is encoded as {@code SELECT%20%2A%20FROM%20a}.
    *
    * @param value the value to encode
-   * @return the encoded value, containing no ASCII punctuation other than {@code %} and the
-   *     unreserved characters
+   * @return the encoded value, in which every ASCII character other than the unreserved characters
+   *     appears as a {@code %XX} escape
    */
   @Nonnull
   public static String escape(@Nonnull final String value) {
