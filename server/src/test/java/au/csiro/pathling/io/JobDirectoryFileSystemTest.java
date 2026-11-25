@@ -163,11 +163,46 @@ class JobDirectoryFileSystemTest {
   }
 
   @Test
-  void resolvesNestedFilename(@TempDir final Path tempDir) throws IOException {
+  void rejectsFilenameWithSeparator(@TempDir final Path tempDir) {
+    // A filename names a file directly inside the job directory, never a nested path.
     final JobDirectoryFileSystem helper = newHelper(tempDir);
-    final org.apache.hadoop.fs.Path resolved =
-        helper.resolveFile("job1", "subdir/Patient.0000.ndjson");
-    assertThat(resolved.toString()).endsWith("/jobs/job1/subdir/Patient.0000.ndjson");
+    assertThatThrownBy(() -> helper.resolveFile("job1", "subdir/Patient.0000.ndjson"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void rejectsFilenameWithScheme(@TempDir final Path tempDir) {
+    // Hadoop resolves a child path carrying a scheme to that absolute location, ignoring the
+    // parent, so a filename with a colon could otherwise name any file.
+    final JobDirectoryFileSystem helper = newHelper(tempDir);
+    final String otherJobFile = tempDir.resolve("jobs/job2/data.ndjson").toUri().toString();
+    assertThatThrownBy(() -> helper.resolveFile("job1", otherJobFile))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void rejectsFilenameWithColon(@TempDir final Path tempDir) {
+    final JobDirectoryFileSystem helper = newHelper(tempDir);
+    assertThatThrownBy(() -> helper.resolveFile("job1", "file:data.ndjson"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void rejectsDotFilename(@TempDir final Path tempDir) {
+    // A single dot names the job directory itself rather than a file within it.
+    final JobDirectoryFileSystem helper = newHelper(tempDir);
+    assertThatThrownBy(() -> helper.resolveFile("job1", "."))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void rejectsJobIdResolvingOutsideJobsDirectory(@TempDir final Path tempDir) {
+    // A job identifier carrying a scheme would resolve to an absolute location outside the jobs
+    // directory, so it is rejected as an invalid identifier before any path is resolved.
+    final JobDirectoryFileSystem helper = newHelper(tempDir);
+    final String outsideDir = tempDir.resolve("outside").toUri().toString();
+    assertThatThrownBy(() -> helper.resolveFile(outsideDir, "data.ndjson"))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   // -------------------------------------------------------------------------
@@ -239,6 +274,43 @@ class JobDirectoryFileSystemTest {
 
     final JobDirectoryFileSystem helper = newHelper(tempDir);
     assertThat(helper.openForRead("job1", "loot.txt")).isEmpty();
+  }
+
+  @Test
+  void openForReadReturnsEmptyForSchemeUriNamingAnotherJobsFile(@TempDir final Path tempDir)
+      throws IOException {
+    // A caller who passes the ownership check for job1 must not be able to read a file from job2's
+    // directory by naming it with an absolute file: URI.
+    Files.createDirectories(tempDir.resolve("jobs").resolve("job1"));
+    final Path otherJobDir = tempDir.resolve("jobs").resolve("job2");
+    Files.createDirectories(otherJobDir);
+    final Path otherJobFile = otherJobDir.resolve("patients.00000.csv");
+    Files.writeString(otherJobFile, "secret");
+
+    final JobDirectoryFileSystem helper = newHelper(tempDir);
+    assertThat(helper.openForRead("job1", otherJobFile.toUri().toString())).isEmpty();
+    assertThat(helper.openForRead("job1", "file:" + otherJobFile.toAbsolutePath())).isEmpty();
+  }
+
+  @Test
+  void openForReadReturnsEmptyForFileSymlinkIntoAnotherJob(@TempDir final Path tempDir)
+      throws IOException {
+    // A symbolic link inside one job's directory must not expose a file from another job, even
+    // though the target is still within the jobs directory.
+    final Path jobDir = tempDir.resolve("jobs").resolve("job1");
+    Files.createDirectories(jobDir);
+    final Path otherJobDir = tempDir.resolve("jobs").resolve("job2");
+    Files.createDirectories(otherJobDir);
+    final Path otherJobFile = otherJobDir.resolve("data.ndjson");
+    Files.writeString(otherJobFile, "secret");
+    try {
+      Files.createSymbolicLink(jobDir.resolve("link.ndjson"), otherJobFile);
+    } catch (final UnsupportedOperationException | IOException e) {
+      return;
+    }
+
+    final JobDirectoryFileSystem helper = newHelper(tempDir);
+    assertThat(helper.openForRead("job1", "link.ndjson")).isEmpty();
   }
 
   // -------------------------------------------------------------------------
