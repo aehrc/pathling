@@ -180,7 +180,7 @@ pathling:
 
   import:
     allowableSources:
-      - "file:///usr/share/staging"
+      - "file:///usr/share/staging/"
     pnp:
       # Whether to allow exportUrl values that resolve to internal or private IP addresses.
       # Defaults to false for security.

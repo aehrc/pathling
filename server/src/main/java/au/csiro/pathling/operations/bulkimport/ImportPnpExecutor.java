@@ -159,10 +159,9 @@ public class ImportPnpExecutor {
 
       // Execute the import using the existing ImportExecutor with custom allowable sources.
       // This bypasses the configured allowableSources validation for the staging directory,
-      // which the server downloaded and trusts. Go via fs.getFileStatus() to obtain a URI in
-      // the same canonical form (with empty authority preserved on file://) that fs.listFiles
-      // produces for the downloaded files, so the UrlAllowlist string-prefix match holds:
-      // tempDir.toUri() alone yields file:/path while listed files come back as file:///path.
+      // which the server downloaded and trusts. The prefix is taken from fs.getFileStatus() so
+      // that it is fully qualified with the same scheme and authority as the files returned by
+      // fs.listFiles.
       final List<String> pnpAllowableSources =
           List.of(fs.getFileStatus(tempDir).getPath().toUri().toString() + "/");
       final ImportResponse response =

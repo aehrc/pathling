@@ -41,18 +41,22 @@ Additionally, you can set any variable supported by Spring Boot, see
 
 ### Import
 
-- `pathling.import.allowableSources` - (default: `file:///usr/share/staging`) A
-  set of URL prefixes which are allowable for use within the import operation.
-  HTTP(S) prefixes are matched with proper URI semantics: scheme,
+- `pathling.import.allowableSources` - (default: `file:///usr/share/staging/`)
+  A set of URL prefixes which are allowable for use within the import
+  operation. HTTP(S) prefixes are matched with proper URI semantics: scheme,
   host (case-insensitive), effective port (default 80 or 443) and a
   path-segment boundary must all match, and any candidate that contains a
   userinfo component is rejected. So `https://example.com` admits
   `https://example.com/foo` but not `https://example.com.evil.com/foo` or
-  `https://example.com@evil.com/foo`. Non-HTTP prefixes (e.g. `s3://`,
-  `file://`) are matched by case-sensitive string prefix; for these,
-  **a trailing slash should be used in cases where an attacker could create
-  an alternative URL with the same prefix**, e.g. `s3://some-bucket` would
-  also match `s3://some-bucket-alternative`.
+  `https://example.com@evil.com/foo`. Non-HTTP prefixes (e.g. `file://`,
+  `s3a://`, `hdfs://`) must match the scheme (case-insensitive), the
+  authority (exactly) and the path on a path-segment boundary, so
+  `s3a://some-bucket/data` admits `s3a://some-bucket/data/Patient.ndjson`
+  but not `s3a://some-bucket/data-other/Patient.ndjson`. A non-HTTP candidate
+  whose path contains a `..` segment, a backslash or a curly brace is
+  rejected, as these can lead outside the prefix once the path is resolved or
+  expanded as a glob pattern. A bare scheme such as `file://` admits every URL
+  with that scheme.
 
 #### Ping and pull
 
