@@ -91,4 +91,28 @@ public record SubmitterConfiguration(
         .useFormForBasicAuth(useFormForBasicAuth == null || useFormForBasicAuth)
         .build();
   }
+
+  /**
+   * Returns a string form of this configuration that omits {@code clientSecret} and {@code
+   * privateKeyJwk}, as it is written to the log when the server configuration is logged.
+   *
+   * @return the string form of this configuration, without credentials
+   */
+  @Override
+  @Nonnull
+  public String toString() {
+    return "SubmitterConfiguration[system="
+        + system
+        + ", value="
+        + value
+        + ", clientId="
+        + clientId
+        + ", scope="
+        + scope
+        + ", tokenExpiryTolerance="
+        + tokenExpiryTolerance
+        + ", useFormForBasicAuth="
+        + useFormForBasicAuth
+        + "]";
+  }
 }
