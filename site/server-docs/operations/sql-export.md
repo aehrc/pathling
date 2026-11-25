@@ -34,7 +34,7 @@ rejected rather than answered synchronously.
 | Name                       | Cardinality | Type       | Description                                                                                                                                |
 | -------------------------- | ----------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `subject`                  | 1..\*       | (parts)    | One repetition per artefact to export, in any mixture of kinds. Each produces exactly one output.                                          |
-| `subject.name`             | 0..1        | string     | The output name. Falls back to the artefact's own `name`, then to a generated one. Must be unique.                                         |
+| `subject.name`             | 0..1        | string     | The output name. Falls back to the artefact's own `name`, then to a generated one. Must be unique, and must follow the rule below.         |
 | `subject.subjectCanonical` | 0..1        | canonical  | The subject's canonical URL, honouring a `\|version` pin.                                                                                  |
 | `subject.subjectReference` | 0..1        | Reference  | A relative reference naming its type: `ViewDefinition/[id]` or `Library/[id]`.                                                             |
 | `subject.subjectResource`  | 0..1        | Resource   | An inline ViewDefinition, SQLQuery or SQLView.                                                                                             |
@@ -50,6 +50,13 @@ rejected rather than answered synchronously.
 
 Exactly one naming form must be supplied per `subject` repetition. `_limit` is
 not offered: an export writes the whole result set.
+
+The output name, whether supplied or taken from the artefact, is used as the
+base name of the subject's output files. It must start with a letter or digit,
+contain only letters, digits, hyphens and underscores, and be at most 128
+characters long. Any other name is rejected with a `400` at kick-off. An
+artefact whose own `name` does not follow this rule can be exported by
+supplying a `subject.name` that does.
 
 The `json` and `fhir` formats are not available. `json` is a format this server
 has not implemented for export, and is refused as `not-supported`; `fhir` is
@@ -191,7 +198,7 @@ per file, all under the one `name`.
 | Status                      | Condition                                                                                                                                                                                                                                                                                                            |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `202 Accepted`              | The job was accepted; poll the `Content-Location` URL.                                                                                                                                                                                                                                                               |
-| `400 Bad Request`           | A missing `Prefer` header or a `GET`; no `subject`; a malformed subject; colliding names; `_limit`; `source`; a ViewDefinition, as a subject or in `context`, with a column whose declared `type` differs from the type of its `path`.                                                                               |
+| `400 Bad Request`           | A missing `Prefer` header or a `GET`; no `subject`; a malformed subject; colliding names; an output name that does not follow the [naming rule](#parameters); `_limit`; `source`; a ViewDefinition, as a subject or in `context`, with a column whose declared `type` differs from the type of its `path`.           |
 | `404 Not Found`             | A subject's canonical or reference resolves to nothing; a dependency matches no ViewDefinition, SQLView, external table, concept map or value set; a concept map whose version cannot be determined; the status URL of a cancelled job.                                                                              |
 | `422 Unprocessable Entity`  | A subject is of no admitted kind, or is conformant but cannot be processed; on the result URL, a subject whose SQL Spark's analyser rejects.                                                                                                                                                                         |
 | `422 Unprocessable Entity`  | A value set's membership cannot be determined, exceeds `pathling.sqlQuery.valueSetMaxMembers`, or is supplied as an incomplete `expansion`; the conditions and issue text are those of [`$sql-run`](sql-run#status-codes).                                                                                           |

@@ -252,6 +252,128 @@ class SqlExportRequestParserTest {
     assertIssue(exception, IssueType.INVALID, "subject");
   }
 
+  // A name made of letters, digits, hyphens and underscores, starting with a letter or digit, is
+  // accepted and used as the output name unchanged.
+  @ParameterizedTest
+  @ValueSource(strings = {"demographics", "Cohort-2_final", "9lives", "a"})
+  void acceptsNameOfLettersDigitsHyphensAndUnderscores(final String name) {
+    stubSubject(SubjectKind.SQL_QUERY);
+
+    final SqlExportRequest request =
+        parse(body(subjectPart(name, canonicalPart("https://example.org/q"))));
+
+    assertThat(request.subjects()).extracting(SubjectInput::name).containsExactly(name);
+  }
+
+  // A name containing a parent directory segment is rejected at kick-off.
+  @Test
+  void rejectsNameContainingParentSegment() {
+    assertNameRejected("../../Observation");
+  }
+
+  // A name containing a forward slash is rejected at kick-off.
+  @Test
+  void rejectsNameContainingPathSeparator() {
+    assertNameRejected("nested/name");
+  }
+
+  // A name containing a backslash is rejected at kick-off.
+  @Test
+  void rejectsNameContainingBackslash() {
+    assertNameRejected("..\\..\\Observation");
+  }
+
+  // A name that is an absolute path is rejected at kick-off.
+  @Test
+  void rejectsNameThatIsAnAbsolutePath() {
+    assertNameRejected("/tmp/output");
+  }
+
+  // Any character outside letters, digits, hyphens and underscores is rejected, as is a name that
+  // does not start with a letter or digit.
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        ".",
+        "..",
+        "name.csv",
+        "two words",
+        "colon:name",
+        "naïve",
+        "tab\tname",
+        "trailing_newline\n",
+        "-leading-hyphen",
+        "_leading_underscore"
+      })
+  void rejectsNameWithCharacterOutsideTheAllowedSet(final String name) {
+    assertNameRejected(name);
+  }
+
+  // A name of 128 characters is the longest accepted.
+  @Test
+  void acceptsNameOf128Characters() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    final String name = "a".repeat(128);
+
+    final SqlExportRequest request =
+        parse(body(subjectPart(name, canonicalPart("https://example.org/q"))));
+
+    assertThat(request.subjects()).extracting(SubjectInput::name).containsExactly(name);
+  }
+
+  // A name of 129 characters is rejected.
+  @Test
+  void rejectsNameLongerThan128Characters() {
+    assertNameRejected("a".repeat(129));
+  }
+
+  // A subject without a supplied name takes the Library's own name, which is held to the same rule.
+  @Test
+  void rejectsLibraryNameNotAllowedAsOutputNameWhenNoNameIsSupplied() {
+    final Library library = SqlLibraryFixtures.sqlQuery("SELECT 1");
+    library.setName("../../Observation");
+    when(subjectResolver.resolve(any(), any(), any(), any()))
+        .thenReturn(new ResolvedSubject(SubjectKind.SQL_QUERY, library, null));
+
+    final BaseServerResponseException exception =
+        catchException(
+            () -> parse(body(subjectPart(null, resourcePart("subjectResource", library)))));
+
+    assertThat(exception.getStatusCode()).isEqualTo(400);
+    assertIssue(exception, IssueType.INVALID, "subject");
+  }
+
+  // A subject without a supplied name takes the ViewDefinition's own name, which is held to the
+  // same rule.
+  @Test
+  void rejectsViewDefinitionNameNotAllowedAsOutputNameWhenNoNameIsSupplied() {
+    final ViewDefinitionResource view = viewDefinition();
+    view.setName(new StringType("../../Observation"));
+    when(subjectResolver.resolve(any(), any(), any(), any()))
+        .thenReturn(new ResolvedSubject(SubjectKind.VIEW_DEFINITION, view, null));
+
+    final BaseServerResponseException exception =
+        catchException(() -> parse(body(subjectPart(null, resourcePart("subjectResource", view)))));
+
+    assertThat(exception.getStatusCode()).isEqualTo(400);
+    assertIssue(exception, IssueType.INVALID, "subject");
+  }
+
+  // A supplied name replaces the artefact's own name, so an artefact whose name is not allowed as
+  // an output name can still be exported under a supplied one.
+  @Test
+  void acceptsSuppliedNameInPlaceOfArtefactNameNotAllowedAsOutputName() {
+    final Library library = SqlLibraryFixtures.sqlQuery("SELECT 1");
+    library.setName("Blood pressure (v2)");
+    when(subjectResolver.resolve(any(), any(), any(), any()))
+        .thenReturn(new ResolvedSubject(SubjectKind.SQL_QUERY, library, "blood_pressure"));
+
+    final SqlExportRequest request =
+        parse(body(subjectPart("blood_pressure", resourcePart("subjectResource", library))));
+
+    assertThat(request.subjects()).extracting(SubjectInput::name).containsExactly("blood_pressure");
+  }
+
   // ---------------------------------------------------------------------------
   // Context.
   // ---------------------------------------------------------------------------
@@ -514,6 +636,18 @@ class SqlExportRequestParserTest {
             invocation ->
                 new ResolvedSubject(
                     kind, artefactOf(kind), invocation.getArgument(3, String.class)));
+  }
+
+  /** Asserts that a subject supplied with the given name is rejected as an invalid subject. */
+  private void assertNameRejected(@Nonnull final String name) {
+    stubSubject(SubjectKind.SQL_QUERY);
+
+    final BaseServerResponseException exception =
+        catchException(
+            () -> parse(body(subjectPart(name, canonicalPart("https://example.org/q")))));
+
+    assertThat(exception.getStatusCode()).isEqualTo(400);
+    assertIssue(exception, IssueType.INVALID, "subject");
   }
 
   @Nonnull
