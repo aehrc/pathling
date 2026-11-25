@@ -25,13 +25,13 @@ pathling:
   # Configuration passed to the server as environment variables. Helm merges
   # user-supplied entries over these defaults, so each can be overridden, or
   # removed by setting it to null. The defaults require Spark's internal
-  # connections to authenticate with a shared secret and encrypt traffic, and
-  # turn off the Spark UI. The chart also reads spark.master,
-  # spark.ui.enabled and spark.kubernetes.namespace from here to decide which
-  # Services and NetworkPolicy rules to create.
+  # connections to authenticate with a shared secret, and turn off the Spark
+  # UI. When spark.master names a cluster manager, the chart also sets
+  # spark.network.crypto.enabled to "true" unless it is set here. The chart
+  # also reads spark.master, spark.ui.enabled and spark.kubernetes.namespace
+  # from here to decide which Services and NetworkPolicy rules to create.
   config:
     spark.authenticate: "true"
-    spark.network.crypto.enabled: "true"
     spark.ui.enabled: "false"
   secretConfig: {}
   # A NetworkPolicy that admits all clients to the FHIR API, executor pods to

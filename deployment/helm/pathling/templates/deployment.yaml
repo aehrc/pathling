@@ -71,6 +71,14 @@ spec:
               value: "7078"
             - name: spark.driver.bindAddress
               value: 0.0.0.0
+            {{- if eq (include "pathling.configValue" (list . "spark.network.crypto.enabled" "")) "" }}
+            # Traffic between the driver and executor pods crosses the network, so
+            # it is encrypted unless the user configures otherwise. In local mode
+            # it stays inside the pod, and encryption can deadlock the executor's
+            # class loading against the driver's RPC server.
+            - name: spark.network.crypto.enabled
+              value: "true"
+            {{- end }}
             {{- end }}
             # In client mode, Spark only sets an ownerReference on executor
             # pods when it knows the driver pod's name. This allows Kubernetes
