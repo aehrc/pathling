@@ -36,6 +36,27 @@ const SMART_SERVICE_CODE = "SMART-on-FHIR";
 const RETURN_URL_KEY = "pathling_return_url";
 
 /**
+ * Page URL parameters that fhirclient's authorize uses in preference to the
+ * options it is called with.
+ */
+const LAUNCH_PARAMETERS = [
+  "iss",
+  "fhirServiceUrl",
+  "launch",
+  "patientId",
+  "clientId",
+];
+
+/**
+ * The part of fhirclient's stored authorisation state that is checked before
+ * the sign-in is completed.
+ */
+interface StoredAuthState {
+  serverUrl?: string;
+  tokenUri?: string;
+}
+
+/**
  * Response from the SMART configuration endpoint.
  */
 interface SmartConfiguration {
@@ -238,6 +259,36 @@ export async function checkServerCapabilities(
 }
 
 /**
+ * Converts a FHIR base URL to an absolute URL, resolving a relative one against
+ * the page origin. fhirclient requires an absolute URL.
+ *
+ * @param fhirBaseUrl - The base URL of the FHIR server.
+ * @returns The absolute base URL.
+ */
+function toAbsoluteUrl(fhirBaseUrl: string): string {
+  return fhirBaseUrl.startsWith("http")
+    ? fhirBaseUrl
+    : `${window.location.origin}${fhirBaseUrl}`;
+}
+
+/**
+ * Removes the launch parameters from the page URL, so that the sign-in always
+ * uses the server that the admin UI is configured with.
+ */
+function removeLaunchParametersFromPageUrl(): void {
+  const url = new URL(window.location.href);
+  const present = LAUNCH_PARAMETERS.filter((name) =>
+    url.searchParams.has(name),
+  );
+  if (present.length === 0) {
+    return;
+  }
+  present.forEach((name) => url.searchParams.delete(name));
+  // Keep the history state, which React Router uses to track navigation.
+  window.history.replaceState(window.history.state, "", url.href);
+}
+
+/**
  * Initiates SMART on FHIR standalone launch authorization.
  * Stores the current pathname so we can return to it after auth completes.
  *
@@ -249,16 +300,15 @@ export async function initiateAuth(fhirBaseUrl: string): Promise<void> {
   const pathname = window.location.pathname.replace(/^\/admin/, "") || "/";
   sessionStorage.setItem(RETURN_URL_KEY, pathname);
 
-  // Convert relative URLs to absolute URLs for fhirclient compatibility.
-  const absoluteUrl = fhirBaseUrl.startsWith("http")
-    ? fhirBaseUrl
-    : `${window.location.origin}${fhirBaseUrl}`;
-
   // Get the client ID from server configuration, env var, or default.
   const clientId = await getClientId(fhirBaseUrl);
 
+  // fhirclient reads the page URL the first time it is called, so this must
+  // happen immediately before authorize.
+  removeLaunchParametersFromPageUrl();
+
   await FHIR.oauth2.authorize({
-    iss: absoluteUrl,
+    iss: toAbsoluteUrl(fhirBaseUrl),
     clientId,
     scope: getScope(),
     redirectUri: `${window.location.origin}/admin/callback`,
@@ -282,11 +332,57 @@ export function clearReturnUrl(): void {
 }
 
 /**
+ * Reads the authorisation state that fhirclient stored when the sign-in began.
+ * The state key is found the same way as fhirclient finds it: from the state
+ * parameter of the page URL, or failing that from SMART_KEY.
+ *
+ * @returns The state key and stored state, or null if there is no stored state.
+ */
+function readStoredAuthState(): {
+  key: string;
+  state: StoredAuthState;
+} | null {
+  const smartKey = sessionStorage.getItem("SMART_KEY");
+  // An empty state parameter falls back to SMART_KEY, as it does in fhirclient.
+  const key =
+    new URL(window.location.href).searchParams.get("state") ||
+    (smartKey ? (JSON.parse(smartKey) as string) : null);
+  const stored = key ? sessionStorage.getItem(key) : null;
+  if (!key || !stored) {
+    return null;
+  }
+  return { key, state: JSON.parse(stored) as StoredAuthState };
+}
+
+/**
  * Completes the SMART on FHIR authorisation flow after redirect.
  *
+ * The stored state is accepted only if its server URL is the configured FHIR
+ * base, and its token endpoint is the one advertised in that server's SMART
+ * configuration. Otherwise the state is discarded and the sign-in is not
+ * completed.
+ *
+ * @param fhirBaseUrl - The base URL of the FHIR server.
  * @returns The authenticated FHIR client.
+ * @throws Error if the stored state does not match the configured server.
  */
-export async function completeAuth(): Promise<Client> {
+export async function completeAuth(fhirBaseUrl: string): Promise<Client> {
+  const stored = readStoredAuthState();
+  // With no stored state, fhirclient reports the problem itself.
+  if (stored) {
+    const smartConfig = await fetchSmartConfiguration(fhirBaseUrl);
+    const matches =
+      stored.state.serverUrl === toAbsoluteUrl(fhirBaseUrl) &&
+      !!smartConfig?.token_endpoint &&
+      stored.state.tokenUri === smartConfig.token_endpoint;
+    if (!matches) {
+      sessionStorage.removeItem(stored.key);
+      sessionStorage.removeItem("SMART_KEY");
+      throw new Error(
+        "The stored sign-in state does not match the configuration of this server. Please log in again.",
+      );
+    }
+  }
   return FHIR.oauth2.ready();
 }
 

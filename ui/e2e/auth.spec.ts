@@ -72,6 +72,49 @@ async function breakAuthorisationDiscovery(page: Page) {
 }
 
 /**
+ * Seeds the state that fhirclient stores when a sign-in begins, together with
+ * the path to return to. By default the state is for the app's own FHIR
+ * endpoint and the token endpoint in the mock SMART configuration. The page
+ * must already be on the app's origin.
+ *
+ * @param page - The Playwright page object.
+ * @param overrides - Values that replace the defaults in the stored state.
+ * @param returnUrl - The path to land on once authentication completes.
+ */
+async function seedAuthState(
+  page: Page,
+  overrides: Record<string, string>,
+  returnUrl: string,
+) {
+  await page.evaluate(
+    ({ overrides, returnUrl, tokenUri }) => {
+      const stateKey = "test-state-key";
+      // fhirclient stores a reference to the state key in SMART_KEY, and the
+      // state itself under the key.
+      sessionStorage.setItem("SMART_KEY", JSON.stringify(stateKey));
+      sessionStorage.setItem(
+        stateKey,
+        JSON.stringify({
+          clientId: "test-client-id",
+          scope: "openid profile user/*.read",
+          redirectUri: window.location.origin + "/admin/callback",
+          serverUrl: window.location.origin + "/fhir",
+          tokenUri,
+          key: stateKey,
+          ...overrides,
+        }),
+      );
+      sessionStorage.setItem("pathling_return_url", returnUrl);
+    },
+    {
+      overrides,
+      returnUrl,
+      tokenUri: mockSmartConfiguration.token_endpoint,
+    },
+  );
+}
+
+/**
  * Establishes an authenticated session by seeding fhirclient state and visiting
  * the OAuth callback, which is the only route that authenticates the
  * application.
@@ -94,22 +137,7 @@ async function authenticate(page: Page, returnUrl: string) {
   });
 
   await page.goto("/admin");
-  await page.evaluate((url) => {
-    const stateKey = "test-state-key";
-    sessionStorage.setItem("SMART_KEY", JSON.stringify(stateKey));
-    sessionStorage.setItem(
-      stateKey,
-      JSON.stringify({
-        clientId: "test-client-id",
-        scope: "openid profile user/*.read",
-        redirectUri: window.location.origin + "/admin/callback",
-        serverUrl: window.location.origin + "/fhir",
-        tokenUri: window.location.origin + "/token",
-        key: stateKey,
-      }),
-    );
-    sessionStorage.setItem("pathling_return_url", url);
-  }, returnUrl);
+  await seedAuthState(page, {}, returnUrl);
 
   await page.goto("/admin/callback?state=test-state-key&code=fake-auth-code");
   await page.waitForURL(`**/admin${returnUrl}`);
@@ -180,6 +208,44 @@ test.describe("Authentication", () => {
       expect(authorizeUrl!.searchParams.get("client_id")).toBe(
         "test-client-id",
       );
+    });
+
+    test("login ignores an iss parameter in the page address", async ({
+      page,
+    }) => {
+      await setupAuthRequiredMocks(page);
+
+      let authorizeUrl: URL | null = null;
+      await page.route("**/authorize**", async (route) => {
+        authorizeUrl = new URL(route.request().url());
+        await route.abort();
+      });
+
+      // Record any request made to the server named in the iss parameter.
+      const otherServerRequests: string[] = [];
+      await page.route("http://other.test/**", async (route) => {
+        otherServerRequests.push(route.request().url());
+        await route.abort();
+      });
+
+      await page.goto("/admin/resources?iss=http://other.test/fhir");
+      await page.getByRole("button", { name: /Login to/ }).click();
+
+      await expect
+        .poll(() => authorizeUrl !== null, {
+          timeout: 5000,
+          message: "Expected OAuth redirect to be attempted",
+        })
+        .toBe(true);
+
+      // The sign-in is for the configured server, which is the only one
+      // contacted.
+      expect(authorizeUrl!.origin).toBe("https://auth.example.com");
+      expect(authorizeUrl!.searchParams.get("aud")).toBe(
+        new URL("/fhir", page.url()).href,
+      );
+      expect(otherServerRequests).toEqual([]);
+      expect(new URL(page.url()).searchParams.has("iss")).toBe(false);
     });
 
     // Regression for #2676: the login button used to give no feedback at all
@@ -348,6 +414,35 @@ test.describe("Authentication", () => {
       );
     });
 
+    test("rejects stored state with a token endpoint the server does not advertise", async ({
+      page,
+    }) => {
+      await setupAuthRequiredMocks(page);
+
+      // Count requests to any token endpoint.
+      let tokenRequests = 0;
+      await page.route("**/token", async (route) => {
+        tokenRequests += 1;
+        await route.abort();
+      });
+
+      await page.goto("/admin");
+      await seedAuthState(
+        page,
+        { tokenUri: "http://other.test/token" },
+        "/resources",
+      );
+      await page.goto(
+        "/admin/callback?state=test-state-key&code=fake-auth-code",
+      );
+
+      // The sign-in fails without the code being sent anywhere.
+      await expect(page.getByRole("alert")).toContainText(
+        "does not match the configuration of this server",
+      );
+      expect(tokenRequests).toBe(0);
+    });
+
     test("redirects to stored return URL after successful auth", async ({
       page,
     }) => {
@@ -369,29 +464,7 @@ test.describe("Authentication", () => {
 
       // Set up fhirclient state and return URL.
       await page.goto("/admin");
-      await page.evaluate(() => {
-        const stateKey = "test-state-key";
-
-        // fhirclient stores state key reference in SMART_KEY.
-        sessionStorage.setItem("SMART_KEY", JSON.stringify(stateKey));
-
-        // fhirclient stores actual state under the state key.
-        // Note: Uses the admin_ui_client_id from the mock SMART configuration.
-        sessionStorage.setItem(
-          stateKey,
-          JSON.stringify({
-            clientId: "test-client-id",
-            scope: "openid profile user/*.read",
-            redirectUri: window.location.origin + "/admin/callback",
-            serverUrl: window.location.origin + "/fhir",
-            tokenUri: window.location.origin + "/token",
-            key: stateKey,
-          }),
-        );
-
-        // Our return URL.
-        sessionStorage.setItem("pathling_return_url", "/resources");
-      });
+      await seedAuthState(page, {}, "/resources");
 
       // Navigate to callback with matching state param.
       await page.goto(
