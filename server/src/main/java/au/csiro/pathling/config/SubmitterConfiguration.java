@@ -125,6 +125,8 @@ public record SubmitterConfiguration(
         + tokenExpiryTolerance
         + ", useFormForBasicAuth="
         + useFormForBasicAuth
+        + ", allowableSources="
+        + allowableSources
         + "]";
   }
 }

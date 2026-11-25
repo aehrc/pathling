@@ -99,19 +99,9 @@ public class BulkSubmitValidator {
           "submissionId must consist of between 1 and 64 letters, digits, hyphens or underscores.");
     }
 
-    // Extract submitter (required).
+    // Extract submitter (required) and validate that it is allowed.
     final SubmitterIdentifier submitter = extractSubmitter(parameters);
-
-    // Validate submitter is allowed.
-    final SubmitterConfiguration submitterConfig =
-        config
-            .findSubmitterConfig(submitter)
-            .orElseThrow(
-                () ->
-                    new InvalidUserInputError(
-                        "Submitter %s|%s is not in the list of allowed submitters."
-                            .formatted(submitter.system(), submitter.value())));
-    validateCredentialUse(submitterConfig);
+    validateCredentialUse(validateSubmitterAllowed(submitter));
 
     // Extract submissionStatus (required).
     final String submissionStatus = extractSubmissionStatus(parameters);
@@ -170,14 +160,19 @@ public class BulkSubmitValidator {
    * Validates that a submitter is in the list of allowed submitters.
    *
    * @param submitter The submitter identifier to check.
+   * @return The configuration of the submitter.
    * @throws InvalidUserInputError If bulk submit is not configured or the submitter is not allowed.
    */
-  public void validateSubmitterAllowed(@Nonnull final SubmitterIdentifier submitter) {
-    if (!getBulkSubmitConfig().isSubmitterAllowed(submitter)) {
-      throw new InvalidUserInputError(
-          "Submitter %s|%s is not in the list of allowed submitters."
-              .formatted(submitter.system(), submitter.value()));
-    }
+  @Nonnull
+  public SubmitterConfiguration validateSubmitterAllowed(
+      @Nonnull final SubmitterIdentifier submitter) {
+    return getBulkSubmitConfig()
+        .findSubmitterConfig(submitter)
+        .orElseThrow(
+            () ->
+                new InvalidUserInputError(
+                    "Submitter %s|%s is not in the list of allowed submitters."
+                        .formatted(submitter.system(), submitter.value())));
   }
 
   @Nonnull

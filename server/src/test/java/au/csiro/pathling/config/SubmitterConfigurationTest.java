@@ -192,7 +192,8 @@ class SubmitterConfigurationTest {
             "{\"kty\":\"RSA\",\"d\":\"private-exponent\"}",
             "system/*.read",
             60L,
-            false);
+            false,
+            List.of());
 
     final String string = config.toString();
 
@@ -208,7 +209,15 @@ class SubmitterConfigurationTest {
     // The remaining components still identify the submitter in the log.
     final SubmitterConfiguration config =
         new SubmitterConfiguration(
-            "http://system.org", "sub-1", "client-id", "secret", null, "system/*.read", 60L, false);
+            "http://system.org",
+            "sub-1",
+            "client-id",
+            "secret",
+            null,
+            "system/*.read",
+            60L,
+            false,
+            List.of("https://a.example.org/"));
 
     assertThat(config.toString())
         .startsWith("SubmitterConfiguration[")
@@ -217,6 +226,7 @@ class SubmitterConfigurationTest {
         .contains("clientId=client-id")
         .contains("scope=system/*.read")
         .contains("tokenExpiryTolerance=60")
-        .contains("useFormForBasicAuth=false");
+        .contains("useFormForBasicAuth=false")
+        .contains("allowableSources=[https://a.example.org/]");
   }
 }
