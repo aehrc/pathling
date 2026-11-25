@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import au.csiro.pathling.io.JobDirectoryFileSystem;
 import au.csiro.pathling.io.StubFileSystem;
@@ -31,9 +32,13 @@ import java.net.URI;
 import java.nio.file.Path;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Regression tests for {@link ExportFileWriter}'s per-job directory handling on a warehouse whose
@@ -71,10 +76,8 @@ class ExportFileWriterTest {
   void createJobDirectoryResolvesWarehouseSchemeAndCreatesDirectory(@TempDir final Path tempDir) {
     final ExportFileWriter writer = newWriter(tempDir);
 
-    final org.apache.hadoop.fs.Path jobDir = writer.createJobDirectory("job1");
+    writer.createJobDirectory("job1");
 
-    // The returned path must carry the warehouse scheme, not the default file:// scheme.
-    assertThat(jobDir.toUri().getScheme()).isEqualTo("stub");
     // The stub filesystem stores data on the local disk keyed on the path portion.
     assertThat(tempDir.resolve("default").resolve("jobs").resolve("job1")).isDirectory();
   }
@@ -110,5 +113,31 @@ class ExportFileWriterTest {
     final ExportFileWriter writer = new ExportFileWriter(mock(SparkSession.class), failingHelper);
 
     assertThatCode(() -> writer.deleteJobDirectory("job1")).doesNotThrowAnyException();
+  }
+
+  // A name that does not resolve to a file inside the job directory is refused for every format
+  // before the dataset is touched, so nothing is written or overwritten anywhere.
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "../outside_job",
+        "../../Observation",
+        "/tmp/absolute",
+        "a/../../b",
+        "stub://elsewhere/output"
+      })
+  void refusesNameResolvingOutsideTheJobDirectory(final String name, @TempDir final Path tempDir) {
+    final ExportFileWriter writer = newWriter(tempDir);
+    writer.createJobDirectory("job1");
+    @SuppressWarnings("unchecked")
+    final Dataset<Row> result = mock(Dataset.class);
+
+    assertThatThrownBy(() -> writer.writeNdjson(result, name, "job1"))
+        .isInstanceOf(InternalErrorException.class);
+    assertThatThrownBy(() -> writer.writeCsv(result, name, true, "job1"))
+        .isInstanceOf(InternalErrorException.class);
+    assertThatThrownBy(() -> writer.writeParquet(result, name, "job1"))
+        .isInstanceOf(InternalErrorException.class);
+    verifyNoInteractions(result);
   }
 }

@@ -439,6 +439,23 @@ class SqlExportProviderIT extends AbstractAsyncExportIT {
   }
 
   @Test
+  void rejectsNameContainingParentSegment() {
+    // The job is refused at kick-off, so no job is created and nothing is written.
+    final int jobsBefore = jobCount();
+
+    expectRejection(
+        parameters(
+            subject(
+                nameOf("../outside_job"),
+                canonicalOf(
+                    SqlRunTestConfiguration.libraryUrl(SqlRunTestConfiguration.ALL_PATIENTS_ID)))),
+        400,
+        "subject");
+
+    assertThat(jobCount()).isEqualTo(jobsBefore);
+  }
+
+  @Test
   void rejectsParametersOnAViewDefinitionSubject() {
     expectRejection(
         parameters(

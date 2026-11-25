@@ -38,7 +38,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
@@ -112,7 +111,7 @@ public class SqlExportExecutor {
   public List<ExportManifestOutput> execute(
       @Nonnull final SqlExportRequest request, @Nonnull final String jobId) {
 
-    final Path jobDirPath = fileWriter.createJobDirectory(jobId);
+    fileWriter.createJobDirectory(jobId);
     final QueryableDataSource dataSource =
         dataSourceBuilder.build(snapshot(), request.since(), request.patientIds());
     final List<ExportManifestOutput> outputs = new ArrayList<>();
@@ -121,8 +120,8 @@ public class SqlExportExecutor {
       final SubjectInput subject = request.subjects().get(i);
       final List<String> fileUrls =
           subject.kind() == SubjectKind.VIEW_DEFINITION
-              ? runView(subject, request, dataSource, jobDirPath)
-              : runSql(subject, request, dataSource, jobDirPath);
+              ? runView(subject, request, dataSource, jobId)
+              : runSql(subject, request, dataSource, jobId);
       outputs.add(new ExportManifestOutput(subject.name(), fileUrls));
     }
 
@@ -157,7 +156,7 @@ public class SqlExportExecutor {
       @Nonnull final SubjectInput subject,
       @Nonnull final SqlExportRequest request,
       @Nonnull final QueryableDataSource dataSource,
-      @Nonnull final Path jobDirPath) {
+      @Nonnull final String jobId) {
     final FhirView view = Objects.requireNonNull(subject.view());
     final Dataset<Row> result;
     try {
@@ -174,7 +173,7 @@ public class SqlExportExecutor {
           SubjectResolver.SUBJECT_EXPRESSION,
           "The subject '%s' is invalid: %s".formatted(subject.name(), e.getMessage()));
     }
-    return writeOutput(result, subject.name(), request, jobDirPath);
+    return writeOutput(result, subject.name(), request, jobId);
   }
 
   /** Runs a SQLQuery or SQLView subject through the SQL evaluation engine. */
@@ -183,13 +182,13 @@ public class SqlExportExecutor {
       @Nonnull final SubjectInput subject,
       @Nonnull final SqlExportRequest request,
       @Nonnull final QueryableDataSource dataSource,
-      @Nonnull final Path jobDirPath) {
+      @Nonnull final String jobId) {
     final AtomicReference<List<String>> fileUrls = new AtomicReference<>(List.of());
     try {
       pipeline.execute(
           Objects.requireNonNull(subject.preparedQuery()),
           dataSource,
-          result -> fileUrls.set(writeOutput(result, subject.name(), request, jobDirPath)));
+          result -> fileUrls.set(writeOutput(result, subject.name(), request, jobId)));
     } catch (final Exception e) {
       // A 422 raised here survives the async round-trip: JobProvider renders a failed job through
       // ErrorHandlingInterceptor.convertError, which passes a typed BaseServerResponseException
@@ -214,15 +213,15 @@ public class SqlExportExecutor {
       @Nonnull final Dataset<Row> result,
       @Nonnull final String name,
       @Nonnull final SqlExportRequest request,
-      @Nonnull final Path jobDirPath) {
+      @Nonnull final String jobId) {
     return switch (request.format()) {
-      case NDJSON -> fileWriter.writeNdjson(result, name, jobDirPath);
-      case CSV -> fileWriter.writeCsv(result, name, request.includeHeader(), jobDirPath);
+      case NDJSON -> fileWriter.writeNdjson(result, name, jobId);
+      case CSV -> fileWriter.writeCsv(result, name, request.includeHeader(), jobId);
       case PARQUET -> {
         // Reject unresolved (VOID) columns before writing, since Spark's Parquet writer would
         // otherwise fail the job with an opaque internal error.
         ParquetSchemaValidator.validateSchemaForParquet(result.schema());
-        yield fileWriter.writeParquet(result, name, jobDirPath);
+        yield fileWriter.writeParquet(result, name, jobId);
       }
     };
   }

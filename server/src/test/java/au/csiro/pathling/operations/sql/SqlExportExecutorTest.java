@@ -50,7 +50,6 @@ import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
-import org.apache.hadoop.fs.Path;
 import org.apache.spark.SparkException;
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
@@ -101,7 +100,6 @@ class SqlExportExecutorTest {
 
     when(deltaLake.snapshot()).thenReturn(snapshot);
     when(dataSourceBuilder.build(any(), any(), any())).thenReturn(filteredSource);
-    when(fileWriter.createJobDirectory(any())).thenReturn(new Path("/tmp/" + JOB_ID));
     when(fileWriter.writeNdjson(any(), any(), any())).thenReturn(List.of("file.ndjson"));
     when(fileWriter.writeCsv(any(), any(), anyBoolean(), any())).thenReturn(List.of("file.csv"));
 
