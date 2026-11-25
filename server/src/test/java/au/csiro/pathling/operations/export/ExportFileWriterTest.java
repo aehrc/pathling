@@ -118,7 +118,14 @@ class ExportFileWriterTest {
   // A name that does not resolve to a file inside the job directory is refused for every format
   // before the dataset is touched, so nothing is written or overwritten anywhere.
   @ParameterizedTest
-  @ValueSource(strings = {"../outside_job", "../../Observation", "/tmp/absolute", "a/../../b"})
+  @ValueSource(
+      strings = {
+        "../outside_job",
+        "../../Observation",
+        "/tmp/absolute",
+        "a/../../b",
+        "stub://elsewhere/output"
+      })
   void refusesNameResolvingOutsideTheJobDirectory(final String name, @TempDir final Path tempDir) {
     final ExportFileWriter writer = newWriter(tempDir);
     writer.createJobDirectory("job1");
