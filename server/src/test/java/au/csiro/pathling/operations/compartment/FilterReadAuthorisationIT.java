@@ -56,10 +56,10 @@ import org.springframework.test.web.reactive.server.WebTestClient.ResponseSpec;
 /**
  * End-to-end coverage of the read authority required to resolve a Group or to check that a Patient
  * exists, over HTTP against a server with authorisation enabled. Group-level {@code $export} and
- * the {@code group} filter of {@code $sql-run} resolve a Group to its members, and the {@code
- * patient} filter checks that each named Patient exists. Each of these reveals stored data, so each
- * must be refused with a 403 for a caller without read access to the type, whether or not the named
- * resource exists.
+ * the {@code group} filter of {@code $sql-run} and {@code $sql-export} resolve a Group to its
+ * members, and the {@code patient} filter checks that each named Patient exists. Each of these
+ * reveals stored data, so each must be refused with a 403 for a caller without read access to the
+ * type, whether or not the named resource exists.
  *
  * <p>Every refusal is paired with a positive control that differs only in the authority or filter
  * under test, so that a 403 caused by something else cannot pass for the check.
@@ -123,11 +123,17 @@ class FilterReadAuthorisationIT {
     // The mocked decoder maps each test token to a JWT carrying its authorities. Everything below
     // the decoder in the authorisation chain is exercised for real.
     stubToken(ADMIN_TOKEN, "pathling");
-    stubToken(PATIENT_READER_TOKEN, "pathling:export", "pathling:sql-run", "pathling:read:Patient");
+    stubToken(
+        PATIENT_READER_TOKEN,
+        "pathling:export",
+        "pathling:sql-run",
+        "pathling:sql-export",
+        "pathling:read:Patient");
     stubToken(
         GROUP_READER_TOKEN,
         "pathling:export",
         "pathling:sql-run",
+        "pathling:sql-export",
         "pathling:read:Patient",
         "pathling:read:Group");
     stubToken(OBSERVATION_READER_TOKEN, "pathling:sql-run", "pathling:read:Observation");
@@ -244,6 +250,26 @@ class FilterReadAuthorisationIT {
     sqlRun(OBSERVATION_READER_TOKEN, "Observation").expectStatus().isOk();
   }
 
+  // ---------------------------------------------------------------------------
+  // The group filter of $sql-export.
+  // ---------------------------------------------------------------------------
+
+  // The kick-off resolves the filters during validation, so the refusal comes before a job starts.
+  @Test
+  void sqlExportGroupFilterIsForbiddenWithoutGroupRead() {
+    sqlExport(PATIENT_READER_TOKEN, referencePart("group", "Group/" + GROUP_ID))
+        .expectStatus()
+        .isForbidden();
+  }
+
+  // Positive control: adding read access to Group lets the export start.
+  @Test
+  void sqlExportGroupFilterIsAcceptedWithGroupRead() {
+    sqlExport(GROUP_READER_TOKEN, referencePart("group", "Group/" + GROUP_ID))
+        .expectStatus()
+        .isAccepted();
+  }
+
   // ---- helpers ----
 
   private void stubToken(@Nonnull final String token, @Nonnull final String... authorities) {
@@ -302,18 +328,8 @@ class FilterReadAuthorisationIT {
       @Nonnull final String token,
       @Nonnull final String resourceType,
       @Nonnull final Map<String, Object>... filters) {
-    final Map<String, Object> view =
-        Map.of(
-            "resourceType",
-            "ViewDefinition",
-            "status",
-            "active",
-            "resource",
-            resourceType,
-            "select",
-            List.of(Map.of("column", List.of(Map.of("name", "id", "path", "id")))));
     final List<Map<String, Object>> parameters = new ArrayList<>();
-    parameters.add(Map.of("name", "subjectResource", "resource", view));
+    parameters.add(Map.of("name", "subjectResource", "resource", idView(resourceType)));
     parameters.add(Map.of("name", "_format", "valueString", "ndjson"));
     parameters.addAll(List.of(filters));
     final Map<String, Object> body = new LinkedHashMap<>();
@@ -326,6 +342,48 @@ class FilterReadAuthorisationIT {
         .header("Accept", "application/x-ndjson")
         .bodyValue(GSON.toJson(body))
         .exchange();
+  }
+
+  /** Kicks off an export of an inline ViewDefinition over Patient, with any filters. */
+  @SafeVarargs
+  @Nonnull
+  private ResponseSpec sqlExport(
+      @Nonnull final String token, @Nonnull final Map<String, Object>... filters) {
+    final List<Map<String, Object>> parameters = new ArrayList<>();
+    parameters.add(
+        Map.of(
+            "name",
+            "subject",
+            "part",
+            List.of(
+                Map.of("name", "name", "valueString", "patients"),
+                Map.of("name", "subjectResource", "resource", idView("Patient")))));
+    parameters.addAll(List.of(filters));
+    final Map<String, Object> body = new LinkedHashMap<>();
+    body.put("resourceType", "Parameters");
+    body.put("parameter", parameters);
+    return client(token)
+        .post()
+        .uri("http://localhost:" + port + "/fhir/$sql-export")
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .header("Prefer", "respond-async")
+        .bodyValue(GSON.toJson(body))
+        .exchange();
+  }
+
+  /** A minimal ViewDefinition projecting the id of every resource of the given type. */
+  @Nonnull
+  private static Map<String, Object> idView(@Nonnull final String resourceType) {
+    return Map.of(
+        "resourceType",
+        "ViewDefinition",
+        "status",
+        "active",
+        "resource",
+        resourceType,
+        "select",
+        List.of(Map.of("column", List.of(Map.of("name", "id", "path", "id")))));
   }
 
   @Nonnull
