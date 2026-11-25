@@ -19,6 +19,10 @@ package au.csiro.pathling.operations.sqlquery;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
@@ -29,6 +33,7 @@ import au.csiro.pathling.terminology.expand.ValueSetMember;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -74,7 +79,9 @@ class ViewRegistrationServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new ViewRegistrationService(spark, fhirContext, new ServerConfiguration());
+    service =
+        new ViewRegistrationService(
+            spark, fhirContext, new ServerConfiguration(), new SqlValidator(spark));
   }
 
   // ---------------------------------------------------------------------------
@@ -181,6 +188,53 @@ class ViewRegistrationServiceTest {
           .containsExactlyInAnyOrder("x", "y");
     } finally {
       service.dropViews(List.of(childViewName));
+    }
+  }
+
+  @Test
+  void buildSqlViewRunsQueryAsWrittenWhenSupplementaryCharactersPrecedeTheLabel() {
+    // A block comment of characters outside the Basic Multilingual Plane precedes the query, and a
+    // line comment containing a block comment terminator follows the label. The query runs as
+    // written, so the rows come from the child and the text of the line comment is not run.
+    final Dataset<Row> childData = singleColumnDataset("value", List.of("x", "y"));
+    final String childKey = "ViewDefinition/child";
+    final String childViewName = service.registerDataset(childKey, childData);
+    try {
+      final String sql =
+          "/*" + "\uD83D\uDE00".repeat(17) + "*/ SELECT value FROM t --*/ SELECT 'z' AS value";
+      final ResolvedSqlView node =
+          new ResolvedSqlView("Library/parent", sql, Map.of("t", childKey));
+
+      final Dataset<Row> result = service.buildSqlView(node, Map.of(childKey, childViewName));
+
+      assertThat(result.collectAsList().stream().map(row -> row.getString(0)).toList())
+          .containsExactlyInAnyOrder("x", "y");
+    } finally {
+      service.dropViews(List.of(childViewName));
+    }
+  }
+
+  @Test
+  void buildSqlViewRejectsRewrittenSqlNamingARelationOtherThanItsChildViews() {
+    // The rewritten text names a temp view that exists in the session but is not one of the
+    // SQLView's children. The rewritten text is validated against the child views before it is
+    // run, so the build is rejected rather than returning that view's rows.
+    final Dataset<Row> childData = singleColumnDataset("value", List.of("x"));
+    final String childKey = "ViewDefinition/child";
+    final String childViewName = service.registerDataset(childKey, childData);
+    singleColumnDataset("value", List.of("other")).createOrReplaceTempView("unregistered");
+    try {
+      final ViewRegistrationService spied = spy(service);
+      doReturn("SELECT value FROM unregistered").when(spied).rewriteSql(anyString(), anyMap());
+      final ResolvedSqlView node =
+          new ResolvedSqlView("Library/parent", "SELECT value FROM t", Map.of("t", childKey));
+      final Map<String, String> registeredByKey = Map.of(childKey, childViewName);
+
+      assertThatThrownBy(() -> spied.buildSqlView(node, registeredByKey))
+          .isInstanceOf(InvalidRequestException.class)
+          .hasMessageContaining("SQL references an undeclared table: unregistered");
+    } finally {
+      service.dropViews(List.of(childViewName, "unregistered"));
     }
   }
 

@@ -41,8 +41,9 @@ import org.springframework.stereotype.Component;
  * built as a local relation of its members, a concept map leaf is built as a local relation of its
  * mappings, and a {@code SQLView} node's SQL is rewritten against the temp views of its
  * already-materialised children, validated, and run. The top-level SQL is then rewritten against
- * its own direct dependencies' temp views and run. Every node's SQL is validated statically before
- * execution and against its analysed plan during execution.
+ * its own direct dependencies' temp views, validated, and run. Every node's SQL is validated
+ * statically before execution, again after it has been rewritten, so that the text that runs is the
+ * text that was validated, and against its analysed plan during execution.
  *
  * @author John Grimes
  */
@@ -129,11 +130,12 @@ public class SqlQueryExecutor {
           resolveLabelToViewName(graph.getTopLevelKeysByLabel(), registeredByKey);
       final String rewrittenSql =
           viewRegistrationService.rewriteSql(request.getParsedQuery().getSql(), topLevelViews);
+      final Set<String> topLevelViewNames = Set.copyOf(topLevelViews.values());
+      sqlValidator.validate(rewrittenSql, topLevelViewNames);
 
       Dataset<Row> result = runSql(sparkSession, rewrittenSql, request.getParameterBindings());
 
-      sqlValidator.validateAnalyzed(
-          result.queryExecution().analyzed(), Set.copyOf(topLevelViews.values()));
+      sqlValidator.validateAnalyzed(result.queryExecution().analyzed(), topLevelViewNames);
 
       final Integer callerLimit = request.getLimit();
       if (callerLimit != null) {

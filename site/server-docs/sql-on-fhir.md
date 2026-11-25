@@ -209,6 +209,10 @@ it is validated before it runs:
   `try_reflect` and the `input_file_*` functions. A built-in function added in a
   later version of Spark is rejected until it has been reviewed.
 
+Spark's variable substitution is switched off on the server, so text of the form
+`${name}` in the SQL is passed to Spark as written rather than replaced with the
+value of a configuration property.
+
 A fault in the SQL that only Spark's analyser can catch - an unresolved column,
 an unknown function, a missing `GROUP BY`, an ambiguous reference - is a `422`,
 and its diagnostics carry the analyser's own message, including any suggested

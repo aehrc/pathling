@@ -91,6 +91,8 @@ public class FhirServerTestConfiguration {
             // Matches the server's session: the Parquet on FHIR layout stores timestamps as
             // microsecond-precision int64.
             .config("spark.sql.parquet.outputTimestampType", "TIMESTAMP_MICROS")
+            // Matches the server's session: SQL text reaches the parser as it was written.
+            .config("spark.sql.variable.substitute", "false")
             .config(
                 "spark.sql.warehouse.dir",
                 "file://"

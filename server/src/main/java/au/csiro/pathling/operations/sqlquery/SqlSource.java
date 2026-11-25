@@ -32,6 +32,11 @@ import org.apache.spark.sql.catalyst.parser.UpperCaseCharStream;
  * {@link SqlLabelRewriter} uses the tokens to place the table alias it injects after a substituted
  * relation reference, which is the one thing the parsed plan cannot tell it.
  *
+ * <p>Every offset this class takes or returns is an offset as Spark's parser and lexer report it,
+ * which counts Unicode code points. A Java string counts UTF-16 code units instead, so the two
+ * differ by one for every character outside the Basic Multilingual Plane ahead of the offset. Use
+ * {@link #index} to convert an offset into an index into the text.
+ *
  * <p>The query is lexed at most once per instance, and only if the tokens are actually asked for.
  *
  * @author John Grimes
@@ -51,15 +56,27 @@ class SqlSource {
   }
 
   /**
+   * Converts an offset reported by Spark's parser or lexer, which counts code points, into an index
+   * into the query text, which counts UTF-16 code units.
+   *
+   * @param offset the code point offset
+   * @return the index of the same position within the text
+   * @throws IndexOutOfBoundsException if the offset lies beyond the end of the text
+   */
+  int index(final int offset) {
+    return text.offsetByCodePoints(0, offset);
+  }
+
+  /**
    * Returns the run of query text between two offsets.
    *
-   * @param beginIndex the offset of the first character, inclusive
-   * @param endIndex the offset just past the last character
+   * @param beginOffset the code point offset of the first character, inclusive
+   * @param endOffset the code point offset just past the last character
    * @return the text between the offsets
    */
   @Nonnull
-  String substring(final int beginIndex, final int endIndex) {
-    return text.substring(beginIndex, endIndex);
+  String substring(final int beginOffset, final int endOffset) {
+    return text.substring(index(beginOffset), index(endOffset));
   }
 
   /**
