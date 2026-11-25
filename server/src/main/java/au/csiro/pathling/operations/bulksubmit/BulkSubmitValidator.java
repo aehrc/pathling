@@ -86,15 +86,9 @@ public class BulkSubmitValidator {
     // Extract submissionId (required).
     final String submissionId = extractRequiredString(parameters, "submissionId");
 
-    // Extract submitter (required).
+    // Extract submitter (required) and validate that it is allowed.
     final SubmitterIdentifier submitter = extractSubmitter(parameters);
-
-    // Validate submitter is allowed.
-    if (!config.isSubmitterAllowed(submitter)) {
-      throw new InvalidUserInputError(
-          "Submitter %s|%s is not in the list of allowed submitters."
-              .formatted(submitter.system(), submitter.value()));
-    }
+    validateSubmitterAllowed(submitter);
 
     // Extract submissionStatus (required).
     final String submissionStatus = extractSubmissionStatus(parameters);
@@ -147,6 +141,20 @@ public class BulkSubmitValidator {
         oauthMetadataUrl,
         metadata,
         fileRequestHeaders);
+  }
+
+  /**
+   * Validates that a submitter is in the list of allowed submitters.
+   *
+   * @param submitter The submitter identifier to check.
+   * @throws InvalidUserInputError If bulk submit is not configured or the submitter is not allowed.
+   */
+  public void validateSubmitterAllowed(@Nonnull final SubmitterIdentifier submitter) {
+    if (!getBulkSubmitConfig().isSubmitterAllowed(submitter)) {
+      throw new InvalidUserInputError(
+          "Submitter %s|%s is not in the list of allowed submitters."
+              .formatted(submitter.system(), submitter.value()));
+    }
   }
 
   @Nonnull

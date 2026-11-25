@@ -50,6 +50,14 @@ sequenceDiagram
     PS-->>DP: 200 OK (manifest)
 ```
 
+### Submission ownership
+
+When [authorisation](../authorization) is enabled, a submission is owned by the
+token subject that created it. Later `$bulk-submit` requests for the
+submission, and `$bulk-submit-status` requests for it, must use a token with
+the same subject. A request from any other subject receives a `404` response
+and the submission is left unchanged.
+
 ## $bulk-submit operation
 
 ```
@@ -219,10 +227,10 @@ This operation retrieves the processing status and results for a submission.
 
 ### Parameters
 
-| Name           | Cardinality | Type       | Description                                       |
-| -------------- | ----------- | ---------- | ------------------------------------------------- |
-| `submitter`    | 1..1        | Identifier | The identifier of the submitting system.          |
-| `submissionId` | 1..1        | string     | The unique identifier of the submission to check. |
+| Name           | Cardinality | Type       | Description                                                                                           |
+| -------------- | ----------- | ---------- | ----------------------------------------------------------------------------------------------------- |
+| `submitter`    | 1..1        | Identifier | The identifier of the submitting system. Must match an entry in the server's allowed submitters list. |
+| `submissionId` | 1..1        | string     | The unique identifier of the submission to check.                                                     |
 
 ### Required headers
 

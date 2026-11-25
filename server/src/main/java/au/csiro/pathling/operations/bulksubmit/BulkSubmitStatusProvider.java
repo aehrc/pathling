@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.operations.bulksubmit;
 
+import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
+
 import au.csiro.pathling.async.Job;
 import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.async.ProcessingNotCompletedException;
@@ -30,6 +32,7 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -39,6 +42,7 @@ import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 /**
@@ -117,9 +121,13 @@ public class BulkSubmitStatusProvider {
 
     final SubmitterIdentifier submitterIdentifier =
         new SubmitterIdentifier(submitter.getSystem(), submitter.getValue());
+    validator.validateSubmitterAllowed(submitterIdentifier);
 
-    // Look up the submission.
-    final Submission submission = getSubmission(submitterIdentifier, submissionId.getValue());
+    // Look up the submission, which must be owned by the caller.
+    final Optional<String> currentUserId =
+        getCurrentUserId(SecurityContextHolder.getContext().getAuthentication());
+    final Submission submission =
+        getSubmission(submitterIdentifier, submissionId.getValue(), currentUserId);
 
     // Build the request URL for the status manifest.
     final String requestUrl = buildRequestUrl(requestDetails);
@@ -147,7 +155,9 @@ public class BulkSubmitStatusProvider {
       // omits any manifest downloaded later, so build the manifest from the current submission.
       // The submission is read again, as a job may have finished since it was first read.
       return resultBuilder.buildStatusManifest(
-          getSubmission(submitterIdentifier, submissionId.getValue()), requestUrl, fhirServerBase);
+          getSubmission(submitterIdentifier, submissionId.getValue(), currentUserId),
+          requestUrl,
+          fhirServerBase);
     }
 
     // If no job IDs yet (executor hasn't started), wait briefly for one to be created.
@@ -283,11 +293,25 @@ public class BulkSubmitStatusProvider {
     return null;
   }
 
+  /**
+   * Looks up a submission owned by the caller. A submission owned by another user is reported as
+   * not found, so that its existence is not disclosed.
+   *
+   * @param submitterIdentifier The submitter identifier.
+   * @param submissionId The submission ID.
+   * @param currentUserId The identifier of the calling user, if authenticated.
+   * @return The submission.
+   * @throws ResourceNotFoundException If the submission does not exist or is not owned by the
+   *     caller.
+   */
   @Nonnull
   private Submission getSubmission(
-      @Nonnull final SubmitterIdentifier submitterIdentifier, @Nonnull final String submissionId) {
+      @Nonnull final SubmitterIdentifier submitterIdentifier,
+      @Nonnull final String submissionId,
+      @Nonnull final Optional<String> currentUserId) {
     return submissionRegistry
         .get(submitterIdentifier, submissionId)
+        .filter(submission -> submission.isOwnedBy(currentUserId))
         .orElseThrow(() -> new ResourceNotFoundException("Submission not found: " + submissionId));
   }
 

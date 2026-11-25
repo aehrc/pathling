@@ -145,6 +145,11 @@ caller to be the job's owner and to hold the authority for the operation that
 started the job. A request to cancel a job owned by a different subject is
 refused with an access-denied error and the job is left unaffected.
 
+Bulk submit submissions are owned in the same way. A `$bulk-submit` or
+`$bulk-submit-status` request for a submission created by a different subject
+receives a `404` response, and the submission is left unaffected. See
+[bulk submit](operations/bulk-submit#submission-ownership).
+
 ### Reading subjects and dependencies from storage
 
 Resolving a metadata resource from server storage requires `read` authority on
