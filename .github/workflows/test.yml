@@ -19,6 +19,7 @@ jobs:
       core: ${{ steps.filter.outputs.core }}
       ui: ${{ steps.filter.outputs.ui }}
       server: ${{ steps.filter.outputs.server }}
+      helm: ${{ steps.filter.outputs.helm }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -44,6 +45,8 @@ jobs:
               - 'ui/**'
             server:
               - 'server/**'
+            helm:
+              - 'deployment/helm/**'
 
   # Produces the JARs that the server and benchmark workflows consume. This is deliberately
   # separate from the test jobs so that downstream workflows do not wait on the test suites.
@@ -343,6 +346,31 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.ui == 'true'
     uses: ./.github/workflows/ui-test.yml
+
+  test-helm:
+    name: Test Helm chart
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.helm == 'true'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v4.3.2
+
+      # Helm 4 verifies plugin signatures by default, and helm-unittest is not signed.
+      - name: Install helm-unittest
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest --version v1.2.1 --verify=false
+
+      - name: Lint and test the chart
+        run: |
+          helm lint deployment/helm/pathling
+          helm unittest deployment/helm/pathling
 
   test-server:
     name: Test server
