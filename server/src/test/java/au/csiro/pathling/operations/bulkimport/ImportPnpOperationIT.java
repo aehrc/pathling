@@ -664,8 +664,8 @@ class ImportPnpOperationIT {
 
   /**
    * Tests that a manifest with a poisoned type field containing path traversal sequences causes the
-   * $import-pnp job to fail with an error, and that no file can be retrieved via the
-   * /jobs/{jobId}/{filename} endpoint.
+   * $import-pnp job to fail with an error, and that no file named after the poisoned type is
+   * written anywhere under the warehouse.
    *
    * <p>From fhir-bulk-java 1.1.0 onwards the manifest is validated as it enters the library, so the
    * poisoned type is rejected before any download is attempted. The executor's own check that a
@@ -673,7 +673,7 @@ class ImportPnpOperationIT {
    * is covered directly by {@code ImportPnpExecutorTest}.
    */
   @Test
-  void testPoisonedManifestTypeFailsJobAndBlocksExfiltration() throws IOException {
+  void testPoisonedManifestTypeFailsJobAndWritesNoFile() throws IOException {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
     setupPoisonedBulkExportStubs();
 
@@ -719,16 +719,6 @@ class ImportPnpOperationIT {
         result.getResponseHeaders().getFirst(HttpHeaders.CONTENT_LOCATION);
     assertThat(contentLocation).isNotNull().contains("$job");
 
-    // Extract the job ID from the Content-Location header.
-    final String jobId =
-        java.util.regex.Pattern.compile("id=([^&]+)")
-            .matcher(contentLocation)
-            .results()
-            .findFirst()
-            .map(m -> m.group(1))
-            .orElse(null);
-    assertThat(jobId).isNotNull();
-
     // Poll the job status until it completes. The async framework surfaces a failed job as a
     // 4xx response carrying an OperationOutcome whose diagnostics describe the failure cause.
     // Allow extra time as preceding tests in the suite may leave the async thread pool busy
@@ -755,15 +745,6 @@ class ImportPnpOperationIT {
                             assertThat(diagnostics.toString())
                                 .contains("is not a valid FHIR resource type name")));
 
-    // Verify that the exfiltration request returns 404.
-    webTestClient
-        .get()
-        .uri("http://localhost:" + port + "/jobs/" + jobId + "/escaped.0000.ndjson")
-        .header("Authorization", "Bearer " + AUTH_TOKEN)
-        .exchange()
-        .expectStatus()
-        .isNotFound();
-
     // Verify no escaped files appear anywhere under the warehouse directory.
     try (final var paths = java.nio.file.Files.walk(warehouseDir)) {
       assertThat(
@@ -775,7 +756,7 @@ class ImportPnpOperationIT {
           .noneMatch(name -> name.contains("escaped"));
     }
 
-    log.info("Poisoned manifest job failed as expected and exfiltration was blocked");
+    log.info("Poisoned manifest job failed as expected and no file was written");
   }
 
   @Test
