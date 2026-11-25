@@ -193,13 +193,12 @@
         },
         "config": {
           "type": "object",
-          "description": "Pathling server configuration passed as environment variables, merged over defaults that enable Spark authentication and encryption and disable the Spark UI. Keys should be Spring Boot property names.",
+          "description": "Pathling server configuration passed as environment variables, merged over defaults that enable Spark authentication and disable the Spark UI. Spark encryption is enabled when spark.master names a cluster manager, unless set here. Keys should be Spring Boot property names.",
           "additionalProperties": {
             "type": ["string", "integer", "boolean", "null"]
           },
           "default": {
             "spark.authenticate": "true",
-            "spark.network.crypto.enabled": "true",
             "spark.ui.enabled": "false"
           }
         },

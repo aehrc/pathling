@@ -6,8 +6,10 @@ suite: Spark security in the server deployment
 templates:
   - deployment.yaml
 tests:
-  # Spark's RPC authentication and encryption are on, and its UI is off, without any configuration.
-  - it: enables Spark authentication and encryption and disables the UI by default
+  # Spark's RPC authentication is on, and its UI is off, without any configuration. Encryption is
+  # left at Spark's default (off) in local mode, where Spark's traffic never leaves the pod and
+  # enabling it can deadlock class loading between the in-process executor and the RPC server.
+  - it: enables Spark authentication and disables the UI and encryption by default
     documentIndex: 0
     asserts:
       - contains:
@@ -15,11 +17,11 @@ tests:
           content:
             name: spark.authenticate
             value: "true"
-      - contains:
+      - notContains:
           path: spec.template.spec.containers[0].env
+          any: true
           content:
             name: spark.network.crypto.enabled
-            value: "true"
       - contains:
           path: spec.template.spec.containers[0].env
           content:
@@ -68,8 +70,82 @@ tests:
       - contains:
           path: spec.template.spec.containers[0].env
           content:
+            name: spark.ui.enabled
+            value: "false"
+
+  # With a cluster manager, traffic between the driver and executor pods crosses the network, so
+  # it is encrypted by default.
+  - it: enables Spark encryption by default when a cluster manager is configured
+    documentIndex: 0
+    set:
+      pathling:
+        config:
+          spark.master: k8s://https://kubernetes.default.svc
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
             name: spark.network.crypto.enabled
             value: "true"
+          count: 1
+      - contains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: spark.network.crypto.enabled
+          count: 1
+
+  # The encryption default also follows a cluster manager supplied through the secret configuration.
+  - it: enables Spark encryption when the cluster manager is in secret configuration
+    documentIndex: 0
+    set:
+      pathling:
+        secretConfig:
+          spark.master: k8s://https://kubernetes.default.svc
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: spark.network.crypto.enabled
+            value: "true"
+
+  # A user can turn encryption off in cluster mode, which replaces the default rather than adding a
+  # second variable of the same name.
+  - it: lets user configuration turn off encryption in cluster mode without duplicating it
+    documentIndex: 0
+    set:
+      pathling:
+        config:
+          spark.master: k8s://https://kubernetes.default.svc
+          spark.network.crypto.enabled: "false"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: spark.network.crypto.enabled
+            value: "false"
+          count: 1
+      - contains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: spark.network.crypto.enabled
+          count: 1
+
+  # A user can still turn encryption on in local mode.
+  - it: passes through encryption set by the user in local mode
+    documentIndex: 0
+    set:
+      pathling:
+        config:
+          spark.network.crypto.enabled: "true"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: spark.network.crypto.enabled
+            value: "true"
+          count: 1
 
   # In local mode no executor connects to the driver, so it is not pinned to the driver Service.
   - it: does not configure driver networking in local mode
