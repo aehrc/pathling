@@ -98,7 +98,7 @@ class BulkSubmitAuthProviderTest {
     final BulkSubmitConfiguration bulkSubmitConfig = new BulkSubmitConfiguration();
     final SubmitterConfiguration submitterConfig =
         new SubmitterConfiguration(
-            "http://system.org", "sub-1", null, null, null, null, null, null);
+            "http://system.org", "sub-1", null, null, null, null, null, null, List.of());
     bulkSubmitConfig.getAllowedSubmitters().add(submitterConfig);
     serverConfig.setBulkSubmit(bulkSubmitConfig);
 
@@ -156,7 +156,6 @@ class BulkSubmitAuthProviderTest {
 
       final ServerConfiguration serverConfig = new ServerConfiguration();
       final BulkSubmitConfiguration bulkSubmitConfig = new BulkSubmitConfiguration();
-      bulkSubmitConfig.setAllowableSources(List.of(allowlistedBase + "/"));
       final SubmitterConfiguration submitterConfig =
           new SubmitterConfiguration(
               "http://system.org",
@@ -166,7 +165,8 @@ class BulkSubmitAuthProviderTest {
               null,
               "system/*.read",
               null,
-              null);
+              null,
+              List.of(allowlistedBase + "/"));
       bulkSubmitConfig.getAllowedSubmitters().add(submitterConfig);
       serverConfig.setBulkSubmit(bulkSubmitConfig);
 
@@ -236,7 +236,6 @@ class BulkSubmitAuthProviderTest {
 
       final ServerConfiguration serverConfig = new ServerConfiguration();
       final BulkSubmitConfiguration bulkSubmitConfig = new BulkSubmitConfiguration();
-      bulkSubmitConfig.setAllowableSources(List.of(allowlistedBase + "/"));
       final SubmitterConfiguration submitterConfig =
           new SubmitterConfiguration(
               "http://system.org",
@@ -246,7 +245,8 @@ class BulkSubmitAuthProviderTest {
               null,
               "system/*.read",
               null,
-              null);
+              null,
+              List.of(allowlistedBase + "/"));
       bulkSubmitConfig.getAllowedSubmitters().add(submitterConfig);
       serverConfig.setBulkSubmit(bulkSubmitConfig);
 
@@ -265,6 +265,75 @@ class BulkSubmitAuthProviderTest {
                 || !thrown.getMessage().contains("does not match any allowed source prefixes"),
             "Allowlisted token endpoint should not be rejected by the allowlist: "
                 + thrown.getMessage());
+      }
+    } finally {
+      wireMock.stop();
+    }
+  }
+
+  /**
+   * A discovered token endpoint on a host that the shared allowableSources list covers, but the
+   * submitter's own list does not, must be rejected before the submitter's credentials are sent.
+   * The two hosts are represented by two path prefixes on one WireMock server.
+   */
+  @Test
+  void rejectsDiscoveredTokenEndpointOutsideSubmitterSources() throws IOException {
+    final WireMockServer wireMock =
+        new WireMockServer(WireMockConfiguration.options().dynamicPort());
+    wireMock.start();
+    try {
+      final String base = "http://localhost:" + wireMock.port();
+      final String submitterBase = base + "/submitter";
+      final String otherBase = base + "/other";
+      final String discovery = "{\"token_endpoint\":\"" + otherBase + "/oauth/token\"}";
+      wireMock.stubFor(
+          get(urlEqualTo("/submitter/fhir/.well-known/smart-configuration"))
+              .willReturn(
+                  aResponse()
+                      .withStatus(200)
+                      .withHeader("Content-Type", "application/json")
+                      .withBody(discovery)));
+      wireMock.stubFor(
+          com.github.tomakehurst.wiremock.client.WireMock.post(urlEqualTo("/other/oauth/token"))
+              .willReturn(aResponse().withStatus(500)));
+
+      final ServerConfiguration serverConfig = new ServerConfiguration();
+      final BulkSubmitConfiguration bulkSubmitConfig = new BulkSubmitConfiguration();
+      bulkSubmitConfig.setAllowableSources(List.of(submitterBase + "/", otherBase + "/"));
+      bulkSubmitConfig
+          .getAllowedSubmitters()
+          .add(
+              new SubmitterConfiguration(
+                  "http://system.org",
+                  "sub-1",
+                  "client-id",
+                  "client-secret",
+                  null,
+                  null,
+                  null,
+                  null,
+                  List.of(submitterBase + "/")));
+      serverConfig.setBulkSubmit(bulkSubmitConfig);
+
+      try (final BulkSubmitAuthProvider provider = new BulkSubmitAuthProvider(serverConfig, true)) {
+        final SubmitterIdentifier submitter = new SubmitterIdentifier("http://system.org", "sub-1");
+
+        final InvalidUserInputError thrown =
+            assertThrows(
+                InvalidUserInputError.class,
+                () -> provider.acquireToken(submitter, submitterBase + "/fhir", null));
+        assertTrue(
+            thrown.getMessage().contains("does not match any allowed source prefixes"),
+            "Error message should indicate allowlist failure: " + thrown.getMessage());
+
+        // The token endpoint outside the submitter's sources must not have been called.
+        assertEquals(
+            0,
+            wireMock
+                .findAll(
+                    com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor(
+                        urlEqualTo("/other/oauth/token")))
+                .size());
       }
     } finally {
       wireMock.stop();

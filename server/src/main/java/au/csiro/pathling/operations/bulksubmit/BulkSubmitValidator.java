@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.bulksubmit;
 import au.csiro.pathling.ParamUtil;
 import au.csiro.pathling.config.BulkSubmitConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.SubmitterConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import jakarta.annotation.Nonnull;
@@ -90,11 +91,15 @@ public class BulkSubmitValidator {
     final SubmitterIdentifier submitter = extractSubmitter(parameters);
 
     // Validate submitter is allowed.
-    if (!config.isSubmitterAllowed(submitter)) {
-      throw new InvalidUserInputError(
-          "Submitter %s|%s is not in the list of allowed submitters."
-              .formatted(submitter.system(), submitter.value()));
-    }
+    final SubmitterConfiguration submitterConfig =
+        config
+            .findSubmitterConfig(submitter)
+            .orElseThrow(
+                () ->
+                    new InvalidUserInputError(
+                        "Submitter %s|%s is not in the list of allowed submitters."
+                            .formatted(submitter.system(), submitter.value())));
+    validateCredentialUse(submitterConfig);
 
     // Extract submissionStatus (required).
     final String submissionStatus = extractSubmissionStatus(parameters);
@@ -117,8 +122,8 @@ public class BulkSubmitValidator {
       if (fhirBaseUrl == null) {
         throw new InvalidUserInputError("fhirBaseUrl is required when manifestUrl is present.");
       }
-      validateUrl(manifestUrl, "manifestUrl", config);
-      validateUrl(fhirBaseUrl, "fhirBaseUrl", config);
+      validateUrl(manifestUrl, "manifestUrl", config, submitter);
+      validateUrl(fhirBaseUrl, "fhirBaseUrl", config, submitter);
     }
 
     // Extract replacesManifestUrl (optional).
@@ -127,7 +132,7 @@ public class BulkSubmitValidator {
     // Extract oauthMetadataUrl (optional).
     final String oauthMetadataUrl = extractOptionalUrl(parameters, "oauthMetadataUrl");
     if (oauthMetadataUrl != null) {
-      validateUrl(oauthMetadataUrl, "oauthMetadataUrl", config);
+      validateUrl(oauthMetadataUrl, "oauthMetadataUrl", config, submitter);
     }
 
     // Extract metadata (optional).
@@ -156,6 +161,31 @@ public class BulkSubmitValidator {
       throw new InvalidUserInputError("The $bulk-submit operation is not configured.");
     }
     return config;
+  }
+
+  /**
+   * Validates that the submitter's OAuth credentials, if it has any, can be used. Credentials are
+   * only used when authentication is enabled on this server, and only with URLs within the
+   * submitter's own allowable sources, which must therefore be configured.
+   *
+   * @param submitterConfig the configuration of the submitter named in the request.
+   * @throws InvalidUserInputError if the submitter has credentials that cannot be used.
+   */
+  private void validateCredentialUse(@Nonnull final SubmitterConfiguration submitterConfig) {
+    if (!submitterConfig.hasCredentials()) {
+      return;
+    }
+    final String submitterKey = submitterConfig.toIdentifier().toKey();
+    if (!serverConfiguration.getAuth().isEnabled()) {
+      throw new InvalidUserInputError(
+          "Submitter %s has OAuth credentials configured, which requires pathling.auth.enabled to be true."
+              .formatted(submitterKey));
+    }
+    if (submitterConfig.allowableSources().isEmpty()) {
+      throw new InvalidUserInputError(
+          "Submitter %s has OAuth credentials configured, which requires its own allowableSources."
+              .formatted(submitterKey));
+    }
   }
 
   @Nonnull
@@ -246,8 +276,9 @@ public class BulkSubmitValidator {
   private void validateUrl(
       @Nonnull final String url,
       @Nonnull final String paramName,
-      @Nonnull final BulkSubmitConfiguration config) {
-    if (!config.isSourceAllowed(url, allowInsecureUrls)) {
+      @Nonnull final BulkSubmitConfiguration config,
+      @Nonnull final SubmitterIdentifier submitter) {
+    if (!config.isSourceAllowed(submitter, url, allowInsecureUrls)) {
       throw new InvalidUserInputError(
           "%s '%s' does not match any allowed source prefixes.".formatted(paramName, url));
     }

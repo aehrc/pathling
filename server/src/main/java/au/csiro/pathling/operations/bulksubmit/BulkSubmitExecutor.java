@@ -281,8 +281,8 @@ public class BulkSubmitExecutor {
       throw new InvalidUserInputError("No files found in manifest");
     }
 
-    // Validate file URLs against allowableSources.
-    validateFileUrls(fileUrls);
+    // Validate file URLs against the submitter's allowable sources.
+    validateFileUrls(submission.submitter(), fileUrls);
 
     // Download files to persistent storage, collecting outcomes for any resources whose type
     // differs from the type declared for their file.
@@ -709,19 +709,22 @@ public class BulkSubmitExecutor {
   }
 
   /**
-   * Validates that all file URLs match the configured allowableSources prefixes.
+   * Validates that all file URLs match the allowable sources for the submitter.
    *
+   * @param submitter The submitter on whose behalf the files are fetched.
    * @param fileUrls The map of resource type to collection of file URLs.
    * @throws InvalidUserInputError If any URL does not match an allowed source prefix.
    */
-  private void validateFileUrls(@Nonnull final Map<String, Collection<String>> fileUrls) {
+  private void validateFileUrls(
+      @Nonnull final SubmitterIdentifier submitter,
+      @Nonnull final Map<String, Collection<String>> fileUrls) {
     final BulkSubmitConfiguration config = serverConfiguration.getBulkSubmit();
     if (config == null) {
       return;
     }
     for (final Collection<String> urls : fileUrls.values()) {
       for (final String url : urls) {
-        if (!config.isSourceAllowed(url, allowInsecureUrls)) {
+        if (!config.isSourceAllowed(submitter, url, allowInsecureUrls)) {
           throw new InvalidUserInputError(
               "File URL '%s' does not match any allowed source prefixes.".formatted(url));
         }

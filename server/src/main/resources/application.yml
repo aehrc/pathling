@@ -188,9 +188,11 @@ pathling:
 
   # This section configures the $bulk-submit operation for receiving data from external systems.
   bulkSubmit:
-    # The list of allowed submitters (by system and value) that can use this operation.
+    # The list of allowed submitters (by system and value) that can use this operation. A submitter
+    # with OAuth credentials must have its own allowableSources, which replace the list below for
+    # that submitter, and can only be used when auth is enabled.
     allowedSubmitters: []
-    # URL prefixes that are allowed as sources for manifest and file URLs.
+    # URL prefixes that are allowed as sources for submitters without their own allowableSources.
     allowableSources:
       - "https://"
 

@@ -120,13 +120,24 @@ and rejects all `$import-pnp` requests.
 
 - `pathling.bulkSubmit.allowedSubmitters` - (default: `[]`) The list of allowed
   submitters (by system and value) that can use the $bulk-submit operation.
+  See the [$bulk-submit](./operations/bulk-submit#submitter-configuration)
+  documentation for the properties of each submitter.
+- `pathling.bulkSubmit.allowedSubmitters.N.allowableSources` - (default: `[]`)
+  URL prefixes that are allowed as sources for this submitter. When not empty,
+  this list replaces `pathling.bulkSubmit.allowableSources` for requests that
+  name the submitter. It is required for a submitter that has OAuth
+  credentials (`clientId` with `clientSecret` or `privateKeyJwk`), because the
+  credentials and the access tokens obtained with them are only ever sent to
+  URLs within this list. A submitter with credentials can also only be used
+  when `pathling.auth.enabled` is `true`.
 - `pathling.bulkSubmit.allowableSources` - (default: `[]`) URL prefixes that
-  are allowed as sources for manifest and file URLs. This list is mandatory:
-  when it is empty every URL is rejected and the operation cannot be used.
-  This applies to the `manifestUrl` parameter, every `output[].url` discovered
-  within fetched manifests, and the `oauthMetadataUrl` parameter. HTTP(S)
-  prefixes are matched with proper URI semantics (see
-  `pathling.import.allowableSources` above for the full rules).
+  are allowed as sources for submitters that do not have their own
+  `allowableSources`. This list is mandatory for such submitters: when it is
+  empty every URL is rejected. This applies to the `manifestUrl`,
+  `fhirBaseUrl` and `oauthMetadataUrl` parameters, the token endpoint
+  discovered from the OAuth metadata, and every `output[].url` discovered
+  within fetched manifests. HTTP(S) prefixes are matched with proper URI
+  semantics (see `pathling.import.allowableSources` above for the full rules).
 
 ### Asynchronous processing
 

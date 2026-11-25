@@ -39,6 +39,7 @@ import au.csiro.pathling.async.Job;
 import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.config.BulkSubmitConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.SubmitterConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
 import au.csiro.pathling.operations.bulkimport.ImportExecutor;
@@ -717,10 +718,10 @@ class BulkSubmitExecutorTest {
     setupManifestWithOffAllowlistFileUrl();
 
     // Configure allowableSources to only allow the manifest endpoint prefix.
-    final BulkSubmitConfiguration bulkSubmitConfig = new BulkSubmitConfiguration();
-    bulkSubmitConfig.setAllowableSources(
-        List.of("http://localhost:" + wireMockServer.port() + "/allowed/"));
-    when(serverConfiguration.getBulkSubmit()).thenReturn(bulkSubmitConfig);
+    when(serverConfiguration.getBulkSubmit())
+        .thenReturn(
+            bulkSubmitConfigWith(
+                List.of("http://localhost:" + wireMockServer.port() + "/allowed/"), List.of()));
 
     @SuppressWarnings("unchecked")
     final ArgumentCaptor<UnaryOperator<ManifestJob>> updateCaptor =
@@ -761,10 +762,10 @@ class BulkSubmitExecutorTest {
     final ManifestJob manifestJob = createTestManifestJob();
     setupManifestWithOnAllowlistFileUrl();
 
-    final BulkSubmitConfiguration bulkSubmitConfig = new BulkSubmitConfiguration();
-    bulkSubmitConfig.setAllowableSources(
-        List.of("http://localhost:" + wireMockServer.port() + "/allowed/"));
-    when(serverConfiguration.getBulkSubmit()).thenReturn(bulkSubmitConfig);
+    when(serverConfiguration.getBulkSubmit())
+        .thenReturn(
+            bulkSubmitConfigWith(
+                List.of("http://localhost:" + wireMockServer.port() + "/allowed/"), List.of()));
 
     @SuppressWarnings("unchecked")
     final ArgumentCaptor<UnaryOperator<ManifestJob>> updateCaptor =
@@ -804,9 +805,8 @@ class BulkSubmitExecutorTest {
     final ManifestJob manifestJob = createTestManifestJob();
     setupManifestWithOffAllowlistFileUrl();
 
-    final BulkSubmitConfiguration bulkSubmitConfig = new BulkSubmitConfiguration();
-    bulkSubmitConfig.setAllowableSources(new ArrayList<>());
-    when(serverConfiguration.getBulkSubmit()).thenReturn(bulkSubmitConfig);
+    when(serverConfiguration.getBulkSubmit())
+        .thenReturn(bulkSubmitConfigWith(new ArrayList<>(), List.of()));
 
     @SuppressWarnings("unchecked")
     final ArgumentCaptor<UnaryOperator<ManifestJob>> updateCaptor =
@@ -835,6 +835,53 @@ class BulkSubmitExecutorTest {
             });
 
     // And: WireMock should receive zero requests for the file endpoint.
+    wireMockServer.verify(0, getRequestedFor(urlEqualTo("/evil/Patient.ndjson")));
+  }
+
+  @Test
+  @DisplayName("downloadManifestJob rejects file URL outside the submitter's own sources")
+  void downloadManifestJobRejectsFileUrlOutsideSubmitterSources() {
+    // Given: a manifest that references a file under /evil/. The shared list covers the whole
+    // WireMock host, but the submitter's own list covers only the manifest and /allowed/.
+    final Submission submission = createTestSubmission();
+    final ManifestJob manifestJob = createTestManifestJob();
+    setupManifestWithOffAllowlistFileUrl();
+
+    final String baseUrl = "http://localhost:" + wireMockServer.port();
+    when(serverConfiguration.getBulkSubmit())
+        .thenReturn(
+            bulkSubmitConfigWith(
+                List.of(baseUrl + "/"),
+                List.of(baseUrl + "/manifest.json", baseUrl + "/allowed/")));
+
+    @SuppressWarnings("unchecked")
+    final ArgumentCaptor<UnaryOperator<ManifestJob>> updateCaptor =
+        ArgumentCaptor.forClass(UnaryOperator.class);
+
+    // When: calling downloadManifestJob.
+    executor.downloadManifestJob(submission, manifestJob, List.of(), FHIR_SERVER_BASE);
+
+    // Then: the manifest job should transition to FAILED with an error naming the file URL.
+    await()
+        .atMost(Duration.ofSeconds(5))
+        .untilAsserted(
+            () -> {
+              verify(submissionRegistry, times(3))
+                  .updateManifestJob(
+                      eq(submitterIdentifier),
+                      eq(SUBMISSION_ID),
+                      eq(MANIFEST_JOB_ID),
+                      updateCaptor.capture());
+
+              final UnaryOperator<ManifestJob> thirdUpdate = updateCaptor.getAllValues().get(2);
+              final ManifestJob updatedJob = thirdUpdate.apply(manifestJob);
+              assertThat(updatedJob.state()).isEqualTo(ManifestJobState.FAILED);
+              assertThat(updatedJob.errorMessage())
+                  .contains(baseUrl + "/evil/Patient.ndjson")
+                  .contains("does not match any allowed source prefixes");
+            });
+
+    // And: the file outside the submitter's sources should never be requested.
     wireMockServer.verify(0, getRequestedFor(urlEqualTo("/evil/Patient.ndjson")));
   }
 
@@ -1290,6 +1337,29 @@ class BulkSubmitExecutorTest {
   // ========================================
   // Helper Methods
   // ========================================
+
+  /**
+   * Creates a bulk submit configuration that allows the test submitter, with the given shared
+   * allowable sources and the given allowable sources of the submitter's own.
+   */
+  private static BulkSubmitConfiguration bulkSubmitConfigWith(
+      final List<String> sharedSources, final List<String> submitterSources) {
+    final BulkSubmitConfiguration config = new BulkSubmitConfiguration();
+    config.setAllowableSources(sharedSources);
+    config.setAllowedSubmitters(
+        List.of(
+            new SubmitterConfiguration(
+                SUBMITTER_SYSTEM,
+                SUBMITTER_VALUE,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                submitterSources)));
+    return config;
+  }
 
   private Submission createTestSubmission() {
     return Submission.createPending(SUBMISSION_ID, submitterIdentifier, Optional.empty());
