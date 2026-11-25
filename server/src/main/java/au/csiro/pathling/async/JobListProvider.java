@@ -19,6 +19,7 @@ package au.csiro.pathling.async;
 
 import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
+import static au.csiro.pathling.security.SecurityAspect.isOwner;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.security.PathlingAuthority;
@@ -130,7 +131,7 @@ public class JobListProvider {
     if (!authEnabled) {
       return true;
     }
-    return currentUserId.isPresent() && job.getOwnerId().equals(currentUserId);
+    return isOwner(job.getOwnerId(), currentUserId);
   }
 
   /**

@@ -226,6 +226,33 @@ class JobResultProviderTest {
   }
 
   @Test
+  void ownershipCheckRejectsCallerWithoutSubject() {
+    // A job started by a caller whose token had no subject records no owner. Another caller
+    // without a subject must not be treated as that owner (aehrc/pathling#2986).
+    final AuthorizationConfiguration authConfig = mock(AuthorizationConfiguration.class);
+    when(config.getAuth()).thenReturn(authConfig);
+    when(authConfig.isEnabled()).thenReturn(true);
+
+    // A token that carries a claim but no subject, mimicking a client credentials token.
+    final Jwt jwt =
+        Jwt.withTokenValue("token").header("alg", "none").claim("scope", "system").build();
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            new JwtAuthenticationToken(
+                jwt, AuthorityUtils.createAuthorityList("pathling:sql-export")));
+
+    final CompletableFuture<IBaseResource> future =
+        CompletableFuture.completedFuture(new Parameters());
+    final Job<IBaseResource> job = new Job<>(JOB_ID, "sql-export", future, Optional.empty());
+    job.setPattern(AsyncPattern.STANDARD_ASYNC_PATTERN);
+    jobRegistry.register(job);
+
+    assertThatThrownBy(() -> jobResultProvider.jobResult(JOB_ID, request, response))
+        .isInstanceOf(AccessDeniedError.class)
+        .hasMessageContaining("not owned by the current user");
+  }
+
+  @Test
   void cancelledJobReturns404() {
     // A cancelled job should return 404 Not Found.
     final CompletableFuture<IBaseResource> future = new CompletableFuture<>();

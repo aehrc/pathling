@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.operations.bulkimport;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -24,13 +25,18 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.async.AsyncJobContext;
 import au.csiro.pathling.async.Job;
 import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.async.RequestTagFactory;
+import au.csiro.pathling.config.AuthorizationConfiguration;
+import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.library.io.SaveMode;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import java.time.Instant;
@@ -44,10 +50,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 /**
  * Tests for {@link ImportPnpProvider} covering cache key computation, the import-pnp operation
- * flow, and cancellation handling.
+ * flow, cancellation handling, and job ownership.
  *
  * @author John Grimes
  */
@@ -61,19 +71,29 @@ class ImportPnpProviderTest {
   @Mock private JobRegistry jobRegistry;
   @Mock private ImportResultRegistry importResultRegistry;
   @Mock private ServletRequestDetails requestDetails;
+  @Mock private ServerConfiguration serverConfiguration;
+  @Mock private AuthorizationConfiguration authConfig;
 
   private ImportPnpProvider provider;
 
   @BeforeEach
   void setUp() {
+    // Authorisation is disabled unless a test enables it.
+    lenient().when(serverConfiguration.getAuth()).thenReturn(authConfig);
     provider =
         new ImportPnpProvider(
-            executor, validator, requestTagFactory, jobRegistry, importResultRegistry);
+            executor,
+            validator,
+            requestTagFactory,
+            jobRegistry,
+            importResultRegistry,
+            serverConfiguration);
   }
 
   @AfterEach
   void tearDown() {
     AsyncJobContext.clear();
+    SecurityContextHolder.clearContext();
   }
 
   // -- computeCacheKeyComponent --
@@ -222,5 +242,72 @@ class ImportPnpProviderTest {
     final Parameters result = provider.importPnpOperation(new Parameters(), requestDetails);
 
     assertNull(result);
+  }
+
+  // -- Job ownership --
+
+  @SuppressWarnings("unchecked")
+  @Test
+  void importPnpOperationRejectsCallerWithoutSubjectWhenAuthEnabled() {
+    // A job started by a caller whose token had no subject records no owner. A caller without a
+    // subject must not be treated as that owner, so nothing is imported (aehrc/pathling#2986).
+    when(authConfig.isEnabled()).thenReturn(true);
+    final Job<ImportPnpRequest> job = mock(Job.class);
+    when(job.getOwnerId()).thenReturn(Optional.empty());
+    AsyncJobContext.setCurrentJob(job);
+    authenticate(
+        Jwt.withTokenValue("token").header("alg", "none").claim("scope", "system").build());
+
+    final Parameters parameters = new Parameters();
+    assertThatThrownBy(() -> provider.importPnpOperation(parameters, requestDetails))
+        .isExactlyInstanceOf(AccessDeniedError.class)
+        .hasMessageStartingWith("The requested result is not owned by the current user");
+    verifyNoInteractions(executor);
+    verify(importResultRegistry, never()).put(any(), any());
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  void importPnpOperationRunsForOwnerWhenAuthEnabled() {
+    // The caller whose subject is recorded as the job's owner may run the import.
+    when(authConfig.isEnabled()).thenReturn(true);
+    final Job<ImportPnpRequest> job = mock(Job.class);
+    final ImportPnpRequest pnpRequest = simpleRequest();
+    final ImportResponse importResponse = mock(ImportResponse.class);
+    when(job.getOwnerId()).thenReturn(Optional.of("alice"));
+    when(job.getPreAsyncValidationResult()).thenReturn(pnpRequest);
+    when(job.isCancelled()).thenReturn(false);
+    when(job.getId()).thenReturn("job-1");
+    when(executor.execute(pnpRequest, "job-1")).thenReturn(importResponse);
+    when(importResponse.toOutput()).thenReturn(new Parameters());
+    AsyncJobContext.setCurrentJob(job);
+    authenticate(Jwt.withTokenValue("token").header("alg", "none").claim("sub", "alice").build());
+
+    final Parameters result = provider.importPnpOperation(new Parameters(), requestDetails);
+
+    assertNotNull(result);
+    verify(executor).execute(pnpRequest, "job-1");
+  }
+
+  private static void authenticate(final Jwt jwt) {
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            new JwtAuthenticationToken(
+                jwt, AuthorityUtils.createAuthorityList("pathling:import-pnp")));
+  }
+
+  private static ImportPnpRequest simpleRequest() {
+    return new ImportPnpRequest(
+        "http://localhost/$import-pnp",
+        "http://remote.example.com/fhir",
+        "dynamic",
+        SaveMode.OVERWRITE,
+        ImportFormat.NDJSON,
+        List.of(),
+        Optional.empty(),
+        Optional.empty(),
+        List.of(),
+        List.of(),
+        List.of());
   }
 }

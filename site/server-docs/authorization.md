@@ -137,13 +137,22 @@ operation authority is refused as for any other request.
 
 ### Job ownership
 
-Asynchronous jobs are owned by the token subject that started them. When
-authorisation is enabled, the [jobs](operations/jobs) list operation
+Asynchronous jobs are owned by the token subject (the `sub` claim) that started
+them. When authorisation is enabled, the [jobs](operations/jobs) list operation
 (`pathling:jobs`) returns only the caller's own jobs, and both polling a job's
 status and cancelling it (via `GET` and `DELETE` on the job's URL) require the
 caller to be the job's owner and to hold the authority for the operation that
-started the job. A request to cancel a job owned by a different subject is
-refused with an access-denied error and the job is left unaffected.
+started the job. Retrieving a job's result, including downloading its output
+files, also requires the caller to be the job's owner. A request to cancel a job
+owned by a different subject is refused with an access-denied error and the job
+is left unaffected.
+
+A caller whose token has no `sub` claim, as some identity providers issue for
+the client credentials grant, owns no jobs. Such a caller cannot poll, cancel or
+retrieve the result of any asynchronous job, including one it started itself,
+and any `$sql-export` or `$import-pnp` job it starts fails with an access-denied
+error. Configure the identity provider to include a `sub` claim in access tokens
+used for asynchronous operations.
 
 Bulk submit submissions are owned in the same way. A `$bulk-submit` or
 `$bulk-submit-status` request for a submission created by a different subject

@@ -240,4 +240,46 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
         .isThrownBy(
             () -> performExportResult(queryParams.get("job"), queryParams.get("file"), "admin"));
   }
+
+  @Test
+  @WithMockJwt(
+      username = "admin",
+      authorities = {"pathling:export", "pathling:read:Patient"})
+  void testForbiddenDownloadNdjsonIfCallerHasNoSubject() {
+    // A caller whose token has no subject must not be able to download another user's result
+    // (aehrc/pathling#2986).
+    exportProvider = setupScenario(tempDir, "Patient");
+    final JsonNode manifest = performExport();
+    final String url = getOutputUrls(manifest).get(0);
+    final Map<String, String> queryParams =
+        UriComponentsBuilder.fromUriString(url).build().getQueryParams().toSingleValueMap();
+
+    switchToUserWithoutSubject("pathling:export");
+
+    assertThatThrownBy(
+            () -> performExportResult(queryParams.get("job"), queryParams.get("file"), "admin"))
+        .isExactlyInstanceOf(AccessDeniedError.class)
+        .hasMessageStartingWith("The requested result is not owned by the current user");
+  }
+
+  @Test
+  @WithMockJwt(
+      username = "admin",
+      authorities = {"pathling:export", "pathling:read:Patient"})
+  void testForbiddenDownloadNdjsonWithoutOwnerIfCallerHasNoSubject() {
+    // A result started by a caller without a subject records no owner. Another caller without a
+    // subject must not be treated as that owner.
+    exportProvider = setupScenario(tempDir, "Patient");
+    final JsonNode manifest = performExport();
+    final String url = getOutputUrls(manifest).get(0);
+    final Map<String, String> queryParams =
+        UriComponentsBuilder.fromUriString(url).build().getQueryParams().toSingleValueMap();
+
+    switchToUserWithoutSubject("pathling:export");
+
+    assertThatThrownBy(
+            () -> performExportResult(queryParams.get("job"), queryParams.get("file"), null))
+        .isExactlyInstanceOf(AccessDeniedError.class)
+        .hasMessageStartingWith("The requested result is not owned by the current user");
+  }
 }

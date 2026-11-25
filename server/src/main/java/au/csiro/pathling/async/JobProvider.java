@@ -19,6 +19,7 @@ package au.csiro.pathling.async;
 
 import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
+import static au.csiro.pathling.security.SecurityAspect.isOwner;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.config.ServerConfiguration;
@@ -109,7 +110,7 @@ public class JobProvider {
       checkHasAuthority(PathlingAuthority.operationAccess(job.getOperation()));
       final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
       final Optional<String> currentUserId = getCurrentUserId(authentication);
-      if (!job.getOwnerId().equals(currentUserId)) {
+      if (!isOwner(job.getOwnerId(), currentUserId)) {
         throw new AccessDeniedError("The requested job is not owned by the current user");
       }
     }
@@ -152,7 +153,7 @@ public class JobProvider {
       // Check that the user requesting the job status is the same user that started the job.
       final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
       final Optional<String> currentUserId = getCurrentUserId(authentication);
-      if (!job.getOwnerId().equals(currentUserId)) {
+      if (!isOwner(job.getOwnerId(), currentUserId)) {
         throw new AccessDeniedError("The requested job is not owned by the current user");
       }
     }
