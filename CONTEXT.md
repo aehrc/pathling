@@ -37,18 +37,44 @@ _Avoid_: migration, converter
 **Resource table**:
 The stored representation of one FHIR resource type.
 
-**Schema mode**:
-How much of the layout a resource table's schema carries: fitted or dense.
-Independent of which layout it follows.
+**Uber-schema**:
+The complete PoF schema of a resource type: every element the definition set
+describes, at every depth, with every primitive metadata group and annotation.
+Unbounded wherever types recurse, so it is never materialised. Every PoF schema
+is a subset of it.
+_Avoid_: full schema, complete schema, dense schema
 
-**Fitted schema**:
-A schema carrying only the elements the data populates.
-_Avoid_: pruned schema, sparse schema
+**PoF schema**:
+A subset of the uber-schema: every field it carries sits at a path of the
+uber-schema with that path's type, in canonical field order.
+_Avoid_: valid schema
 
-**Dense schema**:
-A schema carrying every element the definitions describe, within configured
-nesting, extension and open-type bounds.
-_Avoid_: full schema
+**Inferred schema**:
+The PoF schema a load derives from the data it reads: the subset of the
+uber-schema the data populates. The default.
+_Avoid_: fitted schema, pruned schema, sparse schema
+
+**Defined schema**:
+A schema the user supplies for a resource type, used in place of the inferred
+schema. It selects elements and the definition set types them, so a load always
+produces a PoF schema, equal to the defined schema when that is a PoF schema.
+_Avoid_: explicit schema, user schema, dense schema
+
+**Generated schema**:
+A bounded subset of the uber-schema produced from the definition set, within
+nesting, extension and open-type bounds. Not yet implemented.
+_Avoid_: dense schema
+
+**Schema set**:
+A mapping from resource type code to schema, in Spark's JSON form. Returned by
+every data source and accepted by every source.
+
+**Base schema**:
+A schema without its annotations. Primitive metadata groups are part of it.
+
+**Projection**:
+Shaping a batch to a defined schema when it is loaded or written.
+_Avoid_: cast, conform
 
 **Definition set**:
 The FHIR structural definitions that fix every element's type and cardinality.
@@ -73,13 +99,14 @@ _Avoid_: warning, validation error
 ### Query
 
 **Absent element**:
-An element the definition set describes but a schema does not carry. Evaluates
-to an empty collection.
+An element of the uber-schema that a schema does not carry. Evaluates exactly as
+the element would if it were present and empty.
 _Avoid_: missing field
 
 **FHIR type**:
 A type the definition set describes, such as `FHIR.Coding`. A complex value of a
-FHIR type has the shape its schema gives it, fitted or dense.
+FHIR type has the shape its schema gives it, a subset of the type's shape in
+the uber-schema.
 
 **System type**:
 A FHIRPath type independent of FHIR, such as `System.Quantity` or
