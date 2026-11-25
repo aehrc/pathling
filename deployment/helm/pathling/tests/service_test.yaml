@@ -36,6 +36,31 @@ tests:
           any: true
         not: true
 
+  # A null master, as left by removing a value with --set, means the server's default local master.
+  - it: treats a null master as local mode
+    set:
+      pathling:
+        config:
+          spark.master: null
+    asserts:
+      - hasDocuments:
+          count: 2
+
+  # A null configuration map renders with the Spark defaults rather than failing.
+  - it: renders when the configuration maps are null
+    set:
+      pathling:
+        config: null
+        secretConfig: null
+    asserts:
+      - hasDocuments:
+          count: 3
+      - containsDocument:
+          kind: Service
+          apiVersion: v1
+          name: pathling-spark-ui
+          any: true
+
   # Executors need the driver Service to reach the driver.
   - it: creates the driver Service when a cluster manager is configured
     set:

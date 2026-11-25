@@ -117,6 +117,11 @@ the plans of running queries and allows jobs to be killed. To turn it on, set
 Entries in `pathling.config` are merged over these defaults, so any of them
 can be overridden, or removed by setting it to `null`.
 
+When upgrading a release installed with version 2 of the chart, use
+`helm upgrade --reset-then-reuse-values` rather than `--reuse-values`. The
+values stored with the earlier release do not include these defaults, and
+`--reuse-values` does not add them, so the upgrade fails.
+
 The `pathling-driver` Service, and the settings that make the driver listen on
 fixed ports behind it, are only created when `spark.master` in
 `pathling.config` or `pathling.secretConfig` names a cluster manager. The

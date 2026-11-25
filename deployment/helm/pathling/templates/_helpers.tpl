@@ -7,20 +7,20 @@ Author: John Grimes
 
 {{/*
 Looks up a configuration value across pathling.config and pathling.secretConfig, returning it as a
-string, or the supplied default when neither sets it. Takes a list of the root context, the key and
-the default.
+string, or the supplied default when neither sets it. A null map or value counts as unset. Takes a
+list of the root context, the key and the default.
 */}}
 {{- define "pathling.configValue" -}}
 {{- $root := index . 0 -}}
 {{- $key := index . 1 -}}
-{{- $default := index . 2 -}}
-{{- if hasKey $root.Values.pathling.config $key -}}
-{{- index $root.Values.pathling.config $key | toString -}}
-{{- else if hasKey $root.Values.pathling.secretConfig $key -}}
-{{- index $root.Values.pathling.secretConfig $key | toString -}}
-{{- else -}}
-{{- $default -}}
+{{- $value := index . 2 -}}
+{{- range list $root.Values.pathling.secretConfig $root.Values.pathling.config -}}
+{{- $configValue := index (. | default dict) $key -}}
+{{- if not (kindIs "invalid" $configValue) -}}
+{{- $value = $configValue -}}
 {{- end -}}
+{{- end -}}
+{{- $value | toString -}}
 {{- end -}}
 
 {{/*
