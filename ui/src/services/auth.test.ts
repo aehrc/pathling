@@ -554,9 +554,11 @@ describe("initiateAuth", () => {
       value: {
         pathname: "/admin/some/path",
         origin: "http://localhost:3000",
+        href: "http://localhost:3000/admin/some/path",
       },
       writable: true,
     });
+    vi.spyOn(window.history, "replaceState").mockImplementation(() => {});
 
     // Default mock for SMART config fetch (no admin_ui_client_id).
     vi.mocked(global.fetch).mockResolvedValue({
@@ -583,6 +585,7 @@ describe("initiateAuth", () => {
       value: {
         pathname: "/admin",
         origin: "http://localhost:3000",
+        href: "http://localhost:3000/admin",
       },
       writable: true,
     });
@@ -634,6 +637,75 @@ describe("initiateAuth", () => {
       redirectUri: "http://localhost:3000/admin/callback",
     });
   });
+
+  it.each(["iss", "fhirServiceUrl", "launch", "patientId", "clientId"])(
+    "removes the %s parameter from the page URL before authorising",
+    async (parameter) => {
+      // fhirclient reads these parameters from the page URL in preference to
+      // the options it is given, so they are removed first. Other parameters
+      // are left in place.
+      const FHIR = await import("fhirclient");
+      const href = `http://localhost:3000/admin/resources?${parameter}=https%3A%2F%2Fother.example.com%2Ffhir&tab=search`;
+      Object.defineProperty(window, "location", {
+        value: {
+          pathname: "/admin/resources",
+          origin: "http://localhost:3000",
+          href,
+        },
+        writable: true,
+      });
+
+      await initiateAuth(mockFhirBaseUrl);
+
+      expect(window.history.replaceState).toHaveBeenCalledWith(
+        window.history.state,
+        "",
+        "http://localhost:3000/admin/resources?tab=search",
+      );
+      // The URL is cleaned before fhirclient gets to read it.
+      expect(
+        vi.mocked(window.history.replaceState).mock.invocationCallOrder[0],
+      ).toBeLessThan(
+        vi.mocked(FHIR.default.oauth2.authorize).mock.invocationCallOrder[0],
+      );
+    },
+  );
+
+  it("removes all launch parameters when several are present", async () => {
+    // Every launch parameter is removed, not just the first one found.
+    Object.defineProperty(window, "location", {
+      value: {
+        pathname: "/admin/resources",
+        origin: "http://localhost:3000",
+        href: "http://localhost:3000/admin/resources?iss=a&launch=b&clientId=c&patientId=d&fhirServiceUrl=e",
+      },
+      writable: true,
+    });
+
+    await initiateAuth(mockFhirBaseUrl);
+
+    expect(window.history.replaceState).toHaveBeenCalledWith(
+      window.history.state,
+      "",
+      "http://localhost:3000/admin/resources",
+    );
+  });
+
+  it("leaves the page URL unchanged when it has no launch parameters", async () => {
+    // A URL without launch parameters is not rewritten.
+    Object.defineProperty(window, "location", {
+      value: {
+        pathname: "/admin/resources",
+        origin: "http://localhost:3000",
+        href: "http://localhost:3000/admin/resources?tab=search",
+      },
+      writable: true,
+    });
+
+    await initiateAuth(mockFhirBaseUrl);
+
+    expect(window.history.replaceState).not.toHaveBeenCalled();
+  });
 });
 
 describe("getReturnUrl", () => {
@@ -674,21 +746,190 @@ describe("clearReturnUrl", () => {
 });
 
 describe("completeAuth", () => {
+  const mockFhirBaseUrl = "http://localhost:3000/fhir";
+  const tokenEndpoint = "https://auth.example.com/token";
+  const stateKey = "test-state-key";
+
+  /**
+   * Seeds sessionStorage with fhirclient's authorisation state, in the same
+   * form that fhirclient stores it.
+   *
+   * @param state - The stored state.
+   */
+  function storeAuthState(state: Record<string, unknown>) {
+    sessionStorage.setItem("SMART_KEY", JSON.stringify(stateKey));
+    sessionStorage.setItem(
+      stateKey,
+      JSON.stringify({ key: stateKey, ...state }),
+    );
+  }
+
+  /**
+   * Sets the page URL that the callback is handled on.
+   *
+   * @param search - The query string of the callback URL.
+   */
+  function setCallbackUrl(search: string) {
+    Object.defineProperty(window, "location", {
+      value: {
+        pathname: "/admin/callback",
+        origin: "http://localhost:3000",
+        href: `http://localhost:3000/admin/callback${search}`,
+      },
+      writable: true,
+    });
+  }
+
+  /**
+   * Makes the server's SMART configuration advertise the given token endpoint.
+   *
+   * @param tokenEndpointValue - The advertised token endpoint.
+   */
+  function mockSmartConfigurationTokenEndpoint(tokenEndpointValue: string) {
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          authorization_endpoint: "https://auth.example.com/authorize",
+          token_endpoint: tokenEndpointValue,
+        }),
+    } as Response);
+  }
+
   beforeEach(async () => {
     vi.resetAllMocks();
+    global.fetch = vi.fn();
+    sessionStorage.clear();
+    setCallbackUrl(`?state=${stateKey}&code=abc`);
+    mockSmartConfigurationTokenEndpoint(tokenEndpoint);
   });
 
-  it("calls FHIR.oauth2.ready and returns the client", async () => {
-    // completeAuth should delegate to FHIR.oauth2.ready() and return the
-    // authenticated client.
+  it("completes when the stored server URL and token endpoint match the server", async () => {
+    // A state created for the configured server, holding the token endpoint
+    // that the server advertises, is handed to fhirclient to complete.
     const FHIR = await import("fhirclient");
     const mockClient = { patient: { id: "123" } };
     vi.mocked(FHIR.default.oauth2.ready).mockResolvedValue(mockClient as never);
+    storeAuthState({ serverUrl: mockFhirBaseUrl, tokenUri: tokenEndpoint });
 
-    const result = await completeAuth();
+    const result = await completeAuth(mockFhirBaseUrl);
 
     expect(FHIR.default.oauth2.ready).toHaveBeenCalled();
     expect(result).toBe(mockClient);
+    expect(global.fetch).toHaveBeenCalledWith(
+      `${mockFhirBaseUrl}/.well-known/smart-configuration`,
+    );
+  });
+
+  it("resolves a relative FHIR base URL against the page origin", async () => {
+    // The configured base URL is usually relative, while fhirclient stores the
+    // absolute URL it was given.
+    const FHIR = await import("fhirclient");
+    vi.mocked(FHIR.default.oauth2.ready).mockResolvedValue({} as never);
+    storeAuthState({
+      serverUrl: "http://localhost:3000/fhir",
+      tokenUri: tokenEndpoint,
+    });
+
+    await completeAuth("/fhir");
+
+    expect(FHIR.default.oauth2.ready).toHaveBeenCalled();
+  });
+
+  it.each([
+    ["has no state parameter", ""],
+    ["has an empty state parameter", "?state=&code=abc"],
+  ])(
+    "reads the state key from SMART_KEY when the URL %s",
+    async (_description, search) => {
+      // fhirclient falls back to SMART_KEY when the callback URL carries no
+      // usable state parameter, so the check must look in the same place.
+      const FHIR = await import("fhirclient");
+      setCallbackUrl(search);
+      storeAuthState({
+        serverUrl: mockFhirBaseUrl,
+        tokenUri: "https://other.example.com/token",
+      });
+
+      await expect(completeAuth(mockFhirBaseUrl)).rejects.toThrow(
+        /does not match/,
+      );
+
+      expect(FHIR.default.oauth2.ready).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejects a stored state whose server URL differs from the configured server", async () => {
+    // The stored state is discarded and fhirclient is never asked to complete
+    // the sign-in.
+    const FHIR = await import("fhirclient");
+    storeAuthState({
+      serverUrl: "https://other.example.com/fhir",
+      tokenUri: tokenEndpoint,
+    });
+
+    await expect(completeAuth(mockFhirBaseUrl)).rejects.toThrow(
+      /does not match/,
+    );
+
+    expect(FHIR.default.oauth2.ready).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem(stateKey)).toBeNull();
+    expect(sessionStorage.getItem("SMART_KEY")).toBeNull();
+  });
+
+  it("rejects a stored state whose token endpoint differs from the advertised one", async () => {
+    // The token endpoint must be the one in the server's own SMART
+    // configuration.
+    const FHIR = await import("fhirclient");
+    storeAuthState({
+      serverUrl: mockFhirBaseUrl,
+      tokenUri: "https://other.example.com/token",
+    });
+
+    await expect(completeAuth(mockFhirBaseUrl)).rejects.toThrow(
+      /does not match/,
+    );
+
+    expect(FHIR.default.oauth2.ready).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem(stateKey)).toBeNull();
+  });
+
+  it("rejects a stored state without a token endpoint", async () => {
+    // A state with no token endpoint does not match the advertised one.
+    const FHIR = await import("fhirclient");
+    storeAuthState({ serverUrl: mockFhirBaseUrl });
+
+    await expect(completeAuth(mockFhirBaseUrl)).rejects.toThrow(
+      /does not match/,
+    );
+
+    expect(FHIR.default.oauth2.ready).not.toHaveBeenCalled();
+  });
+
+  it("rejects when the server's SMART configuration is unavailable", async () => {
+    // Without the server's SMART configuration there is no token endpoint to
+    // compare against.
+    const FHIR = await import("fhirclient");
+    vi.mocked(global.fetch).mockResolvedValue({ ok: false } as Response);
+    storeAuthState({ serverUrl: mockFhirBaseUrl, tokenUri: tokenEndpoint });
+
+    await expect(completeAuth(mockFhirBaseUrl)).rejects.toThrow();
+
+    expect(FHIR.default.oauth2.ready).not.toHaveBeenCalled();
+  });
+
+  it("leaves a missing state to fhirclient to report", async () => {
+    // With no stored state there is nothing to check, and fhirclient reports
+    // the missing state itself.
+    const FHIR = await import("fhirclient");
+    vi.mocked(FHIR.default.oauth2.ready).mockRejectedValue(
+      new Error("No state found! Please (re)launch the app."),
+    );
+
+    await expect(completeAuth(mockFhirBaseUrl)).rejects.toThrow(
+      "No state found!",
+    );
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });
 
