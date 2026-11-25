@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.config;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -156,5 +157,48 @@ class SubmitterConfigurationTest {
     assertNull(authConfig.getClientSecret());
     assertNull(authConfig.getPrivateKeyJWK());
     assertNull(authConfig.getScope());
+  }
+
+  // -- toString --
+
+  @Test
+  void toStringOmitsClientSecretAndPrivateKey() {
+    // The string form is written to the log when the server configuration is logged, so it must
+    // not carry either credential.
+    final SubmitterConfiguration config =
+        new SubmitterConfiguration(
+            "http://system.org",
+            "sub-1",
+            "client-id",
+            "top-secret-value",
+            "{\"kty\":\"RSA\",\"d\":\"private-exponent\"}",
+            "system/*.read",
+            60L,
+            false);
+
+    final String string = config.toString();
+
+    assertThat(string)
+        .doesNotContain("top-secret-value")
+        .doesNotContain("private-exponent")
+        .doesNotContain("clientSecret")
+        .doesNotContain("privateKeyJwk");
+  }
+
+  @Test
+  void toStringIncludesNonSecretComponents() {
+    // The remaining components still identify the submitter in the log.
+    final SubmitterConfiguration config =
+        new SubmitterConfiguration(
+            "http://system.org", "sub-1", "client-id", "secret", null, "system/*.read", 60L, false);
+
+    assertThat(config.toString())
+        .startsWith("SubmitterConfiguration[")
+        .contains("system=http://system.org")
+        .contains("value=sub-1")
+        .contains("clientId=client-id")
+        .contains("scope=system/*.read")
+        .contains("tokenExpiryTolerance=60")
+        .contains("useFormForBasicAuth=false");
   }
 }

@@ -96,4 +96,28 @@ class BulkSubmitConfigurationTest {
     assertThat(config.isSourceAllowed("https://disallowed.example.org/file.ndjson", false))
         .isFalse();
   }
+
+  @Test
+  void toStringOmitsSubmitterCredentials() {
+    // Given: a configuration with a submitter that has both kinds of credential.
+    final BulkSubmitConfiguration config = new BulkSubmitConfiguration();
+    config.setAllowedSubmitters(
+        List.of(
+            new SubmitterConfiguration(
+                "http://system.org",
+                "sub-1",
+                "client-id",
+                "top-secret-value",
+                "{\"kty\":\"RSA\",\"d\":\"private-exponent\"}",
+                null,
+                null,
+                null)));
+
+    // Then: the string form, which is logged as part of the server configuration, identifies the
+    // submitter without disclosing either credential.
+    assertThat(config.toString())
+        .contains("value=sub-1")
+        .doesNotContain("top-secret-value")
+        .doesNotContain("private-exponent");
+  }
 }

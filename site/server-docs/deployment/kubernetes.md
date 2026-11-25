@@ -166,7 +166,6 @@ pathling:
         pathling.terminology.cache.maxEntries: 500000
         pathling.terminology.cache.overrideExpiry: "2592000"
         pathling.encoding.openTypes: string,code,decimal,Coding,Address
-        logging.level.au.csiro.pathling: debug
 ```
 
 ### Cluster
@@ -205,7 +204,6 @@ pathling:
         pathling.terminology.cache.maxEntries: 500000
         pathling.terminology.cache.overrideExpiry: "2592000"
         pathling.encoding.openTypes: string,code,decimal,Coding,Address
-        logging.level.au.csiro.pathling: debug
         spark.master: k8s://https://kubernetes.default.svc
         spark.kubernetes.namespace: pathling
         spark.kubernetes.executor.container.image: ghcr.io/aehrc/pathling
