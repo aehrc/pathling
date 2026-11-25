@@ -203,6 +203,10 @@ it is validated before it runs:
   SQL: membership and translation in SQL are expressed with joins to a
   [value set](#value-sets) or [concept map](#concept-maps) instead.
 
+Spark's variable substitution is switched off on the server, so text of the form
+`${name}` in the SQL is passed to Spark as written rather than replaced with the
+value of a configuration property.
+
 A fault in the SQL that only Spark's analyser can catch - an unresolved column,
 an unknown function, a missing `GROUP BY`, an ambiguous reference - is a `422`,
 and its diagnostics carry the analyser's own message, including any suggested

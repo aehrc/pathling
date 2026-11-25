@@ -53,6 +53,9 @@ public class Spark {
   /** The timestamp type required by the Parquet on FHIR layout. */
   static final String TIMESTAMP_MICROS = "TIMESTAMP_MICROS";
 
+  /** The session setting that substitutes {@code ${...}} references in SQL text before parsing. */
+  static final String VARIABLE_SUBSTITUTE = "spark.sql.variable.substitute";
+
   private Spark() {}
 
   /**
@@ -95,6 +98,10 @@ public class Spark {
     // that type from the session rather than from writer options. It is set after the session is
     // built, so that no Spark configuration in a profile can drop it.
     spark.conf().set(OUTPUT_TIMESTAMP_TYPE, TIMESTAMP_MICROS);
+    // The SQL on FHIR operations edit SQL text at the offsets Spark's parser reports for it, which
+    // hold only if the parser sees the text as it was written. It is set after the session is built
+    // for the same reason as the timestamp type.
+    spark.conf().set(VARIABLE_SUBSTITUTE, false);
     sparkListener.ifPresent(l -> spark.sparkContext().addSparkListener(l));
 
     // Configure user defined strategy and functions.
