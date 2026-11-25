@@ -239,9 +239,10 @@ declines. Pathling serves no OperationDefinition of its own for it.
 The operation is enabled by `pathling.operations.sqlRunEnabled` (default
 `true`) and guarded by the `pathling:sql-run` authority. Running a subject also
 requires `read` authority for the resource type it projects, and reading a
-stored subject requires `read` authority for `ViewDefinition` or `Library`. A
-value set or concept map dependency requires only the operation authority. See
-[authorization](../authorization.md).
+stored subject requires `read` authority for `ViewDefinition` or `Library`. The
+`patient` filter requires `read` authority for `Patient`, and the `group` filter
+`read` authority for `Group`. A value set or concept map dependency requires
+only the operation authority. See [authorization](../authorization.md).
 
 ## Python client
 

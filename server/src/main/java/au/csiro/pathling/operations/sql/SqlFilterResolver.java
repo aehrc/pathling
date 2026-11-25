@@ -17,8 +17,12 @@
 
 package au.csiro.pathling.operations.sql;
 
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.compartment.GroupMemberService;
+import au.csiro.pathling.security.PathlingAuthority;
+import au.csiro.pathling.security.ResourceAccess.AccessType;
+import au.csiro.pathling.security.SecurityAspect;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.ArrayList;
@@ -44,6 +48,12 @@ import org.springframework.stereotype.Component;
  * client asked for, with no indication that anything was wrong. Issues are collected rather than
  * thrown so several bad values, and a bad subject alongside them, can be reported in one outcome.
  *
+ * <p>Resolving either filter reveals stored data: whether a Patient exists, or whether a Group
+ * exists and who its members are. When authorisation is enabled, a supplied {@code patient} filter
+ * therefore requires read authority for Patient, and a supplied {@code group} filter read authority
+ * for Group. Both are checked before anything is read, so a caller without them learns nothing
+ * about the values it named.
+ *
  * @author John Grimes
  */
 @Component
@@ -63,18 +73,24 @@ public class SqlFilterResolver {
 
   @Nonnull private final GroupMemberService groupMemberService;
 
+  @Nonnull private final ServerConfiguration serverConfiguration;
+
   /**
    * Constructs a new SqlFilterResolver.
    *
    * @param deltaLake the data source used to confirm that a named patient exists
    * @param groupMemberService resolves a {@code group} to the patient ids of its members
+   * @param serverConfiguration the server configuration, used to determine whether authorisation is
+   *     enabled
    */
   @Autowired
   public SqlFilterResolver(
       @Nonnull final QueryableDataSource deltaLake,
-      @Nonnull final GroupMemberService groupMemberService) {
+      @Nonnull final GroupMemberService groupMemberService,
+      @Nonnull final ServerConfiguration serverConfiguration) {
     this.deltaLake = deltaLake;
     this.groupMemberService = groupMemberService;
+    this.serverConfiguration = serverConfiguration;
   }
 
   /**
@@ -108,6 +124,7 @@ public class SqlFilterResolver {
     if (patients == null || patients.isEmpty()) {
       return Set.of();
     }
+    checkReadAuthority(PATIENT);
     final Set<String> requested = new LinkedHashSet<>();
     for (final Reference patient : patients) {
       final String id = logicalId(patient, PATIENT);
@@ -151,6 +168,7 @@ public class SqlFilterResolver {
     if (groups == null || groups.isEmpty()) {
       return Set.of();
     }
+    checkReadAuthority(GROUP);
     final Set<String> memberIds = new LinkedHashSet<>();
     for (final Reference group : groups) {
       final String id = logicalId(group, GROUP);
@@ -176,6 +194,14 @@ public class SqlFilterResolver {
       }
     }
     return memberIds;
+  }
+
+  /** Requires read authority for the given resource type, when authorisation is enabled. */
+  private void checkReadAuthority(@Nonnull final String resourceType) {
+    if (serverConfiguration.getAuth().isEnabled()) {
+      SecurityAspect.checkHasAuthority(
+          PathlingAuthority.resourceAccess(AccessType.READ, resourceType));
+    }
   }
 
   /**

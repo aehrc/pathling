@@ -100,11 +100,26 @@ version 3.0.0 of the server.
 The import, delete, batch, and bulk submit operations require `write` authority
 for all resource types that are referenced within the request.
 
+The group-level export operation (`GET [base]/Group/[id]/$export`) also
+requires `pathling:read:Group` authority, because resolving the group reveals
+whether it exists and which patients are its members. The authority is checked
+before the group is read, so a caller without it receives `403 Forbidden`
+whether or not the group exists.
+
 The SQL on FHIR data operations (`sql-run` and `sql-export`) require `read`
 authority for the resource type a ViewDefinition subject projects, named in its
 `resource` element. For example, a ViewDefinition targeting `Patient` resources
 requires `pathling:read:Patient` authority in addition to the operation
 authority.
+
+The `patient` and `group` filters of the SQL on FHIR data operations read
+stored data to resolve their values, so each requires `read` authority for the
+type it names: the `patient` filter requires `pathling:read:Patient`, which is
+needed to check that each named patient exists, and the `group` filter requires
+`pathling:read:Group`. This applies whatever resource type the subject
+projects. As with group-level export, the authority is checked before anything
+is read, so a caller without it receives `403 Forbidden` rather than an error
+naming a value that does not exist.
 
 A configured [external table](configuration#sql-query) referenced as a
 dependency of a SQL subject requires only the operation authority. It is

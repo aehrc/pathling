@@ -226,8 +226,8 @@ manifest; both are optional upstream.
 
 The operation is enabled by `pathling.operations.sqlExportEnabled` (default
 `true`) and guarded by the `pathling:sql-export` authority. The same
-per-projected-resource and stored-artefact read authorities apply as for
-[`$sql-run`](sql-run.md). Jobs are owned by the token subject that started
+per-projected-resource, stored-artefact and filter read authorities apply as
+for [`$sql-run`](sql-run.md). Jobs are owned by the token subject that started
 them; see [authorization](../authorization.md).
 
 ## Python client
