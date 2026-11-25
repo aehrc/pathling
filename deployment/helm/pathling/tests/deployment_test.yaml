@@ -1,0 +1,195 @@
+# Tests for the Spark security settings and driver networking in the server Deployment.
+#
+# Author: John Grimes
+
+suite: Spark security in the server deployment
+templates:
+  - deployment.yaml
+tests:
+  # Spark's RPC authentication and encryption are on, and its UI is off, without any configuration.
+  - it: enables Spark authentication and encryption and disables the UI by default
+    documentIndex: 0
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: spark.authenticate
+            value: "true"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: spark.network.crypto.enabled
+            value: "true"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: spark.ui.enabled
+            value: "false"
+
+  # A user-supplied value replaces the default rather than adding a second variable of the same name.
+  - it: lets user configuration override a security default without duplicating it
+    documentIndex: 0
+    set:
+      pathling:
+        config:
+          spark.authenticate: "false"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: spark.authenticate
+            value: "false"
+          count: 1
+      - contains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: spark.authenticate
+          count: 1
+
+  # Adding unrelated configuration does not drop the security defaults.
+  - it: keeps the security defaults when other configuration is supplied
+    documentIndex: 0
+    set:
+      pathling:
+        config:
+          pathling.implementationDescription: My Pathling Server
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: pathling.implementationDescription
+            value: My Pathling Server
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: spark.authenticate
+            value: "true"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: spark.network.crypto.enabled
+            value: "true"
+
+  # In local mode no executor connects to the driver, so it is not pinned to the driver Service.
+  - it: does not configure driver networking in local mode
+    documentIndex: 0
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: spark.driver.host
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: spark.driver.bindAddress
+      - notContains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            containerPort: 7077
+      - notContains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            containerPort: 7078
+      - notContains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            containerPort: 4040
+
+  # An explicit local master with a thread count is still local mode.
+  - it: treats an explicit local master as local mode
+    documentIndex: 0
+    set:
+      pathling:
+        config:
+          spark.master: local[4]
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: spark.driver.host
+
+  # With a cluster manager, executors reach the driver through the driver Service.
+  - it: configures driver networking when a cluster manager is configured
+    documentIndex: 0
+    set:
+      pathling:
+        config:
+          spark.master: k8s://https://kubernetes.default.svc
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: spark.driver.host
+            value: pathling-driver
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: spark.driver.port
+            value: "7077"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: spark.blockManager.port
+            value: "7078"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: spark.driver.bindAddress
+            value: 0.0.0.0
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            containerPort: 7077
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            containerPort: 7078
+
+  # The cluster manager can also be supplied through the secret configuration.
+  - it: detects a cluster manager configured through secret configuration
+    documentIndex: 0
+    set:
+      pathling:
+        secretConfig:
+          spark.master: k8s://https://kubernetes.default.svc
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: spark.driver.host
+            value: pathling-driver
+
+  # The UI port is only declared when the UI has been switched back on.
+  - it: exposes the UI port when the Spark UI is enabled
+    documentIndex: 0
+    set:
+      pathling:
+        config:
+          spark.ui.enabled: "true"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            containerPort: 4040
+
+  # Removing the default with a null leaves Spark at its own default, which is to run the UI.
+  - it: treats a removed UI setting as enabled, following the Spark default
+    documentIndex: 0
+    set:
+      pathling:
+        config:
+          spark.ui.enabled: null
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: spark.ui.enabled
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            containerPort: 4040
