@@ -29,10 +29,10 @@ import lombok.Value;
 @Value
 class SqlEdit {
 
-  /** The offset of the first character the edit replaces. */
+  /** The index into the query text of the first character the edit replaces. */
   int start;
 
-  /** The offset just past the last character the edit replaces. */
+  /** The index into the query text just past the last character the edit replaces. */
   int end;
 
   /** The text that replaces the span. */

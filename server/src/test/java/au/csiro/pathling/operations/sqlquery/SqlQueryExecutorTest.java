@@ -19,7 +19,11 @@ package au.csiro.pathling.operations.sqlquery;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.io.source.DataSource;
@@ -290,6 +294,57 @@ class SqlQueryExecutorTest {
   }
 
   // -------------------------------------------------------------------------
+  // Rewritten SQL: run as written, and validated before it is run.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void executesQueryAsWrittenWhenSupplementaryCharactersPrecedeTheLabel(
+      @TempDir final Path tempDir) {
+    // A block comment of characters outside the Basic Multilingual Plane precedes the query, and a
+    // line comment containing a block comment terminator follows the label. The query runs as
+    // written, so the rows come from t and the text of the line comment is not run.
+    final ResolvedExternalTable table = writeExternalTable(tempDir);
+    final String sql =
+        "/*" + "\uD83D\uDE00".repeat(17) + "*/ SELECT id FROM t ORDER BY id --*/ SELECT 99 AS id";
+    final AtomicReference<List<Row>> rows = new AtomicReference<>();
+
+    newExecutor()
+        .execute(
+            request(sql, null, table.getCanonicalKey()),
+            graphOf(table),
+            mock(DataSource.class),
+            dataset -> rows.set(dataset.collectAsList()));
+
+    assertThat(rows.get()).extracting(row -> row.getInt(0)).containsExactly(1, 2);
+  }
+
+  @Test
+  void rejectsRewrittenSqlNamingARelationOtherThanTheRegisteredViews(@TempDir final Path tempDir) {
+    // The rewritten text names a temp view that exists in the session but was not registered for
+    // this request. The rewritten text is validated against the registered views before it is run,
+    // so the request is rejected rather than returning that view's rows.
+    final ResolvedExternalTable table = writeExternalTable(tempDir);
+    final ViewRegistrationService service = spy(newViewRegistrationService());
+    doReturn("SELECT * FROM unregistered").when(service).rewriteSql(anyString(), anyMap());
+    sparkSession.sql("SELECT 1 AS id").createOrReplaceTempView("unregistered");
+    try {
+      final SqlQueryExecutor executor = new SqlQueryExecutor(sparkSession, service, sqlValidator);
+
+      assertThatThrownBy(
+              () ->
+                  executor.execute(
+                      request("SELECT * FROM t", null, table.getCanonicalKey()),
+                      graphOf(table),
+                      mock(DataSource.class),
+                      dataset -> {}))
+          .isInstanceOf(InvalidRequestException.class)
+          .hasMessageContaining("SQL references an undeclared table: unregistered");
+    } finally {
+      sparkSession.catalog().dropTempView("unregistered");
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Value set leaves: materialised as the five-column relation under the label.
   // -------------------------------------------------------------------------
 
@@ -458,9 +513,13 @@ class SqlQueryExecutorTest {
   /** Builds an executor over the real Spark session, view registration service and validator. */
   @Nonnull
   private SqlQueryExecutor newExecutor() {
-    return new SqlQueryExecutor(
-        sparkSession,
-        new ViewRegistrationService(sparkSession, fhirContext, new ServerConfiguration()),
-        sqlValidator);
+    return new SqlQueryExecutor(sparkSession, newViewRegistrationService(), sqlValidator);
+  }
+
+  /** Builds a view registration service over the real Spark session and validator. */
+  @Nonnull
+  private ViewRegistrationService newViewRegistrationService() {
+    return new ViewRegistrationService(
+        sparkSession, fhirContext, new ServerConfiguration(), sqlValidator);
   }
 }
