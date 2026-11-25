@@ -40,8 +40,9 @@ import org.springframework.stereotype.Component;
  *
  * <p>All resolution goes through validated path construction that rejects path traversal (parent
  * segments, absolute paths, null bytes, backslashes) and verifies containment within the canonical
- * jobs directory. For the local {@code file://} scheme, symbolic links are also resolved before the
- * containment check, defeating symlink escapes.
+ * jobs directory. Job identifiers must also be a single plain path segment, with no separator, no
+ * scheme delimiter and no leading dot. For the local {@code file://} scheme, symbolic links are
+ * also resolved before the containment check, defeating symlink escapes.
  *
  * @author John Grimes
  */
@@ -154,7 +155,7 @@ public class JobDirectoryFileSystem {
    * (for example, removing a partial output directory after an export fails) catch and log.
    *
    * @param jobId the job identifier
-   * @throws IllegalArgumentException if the job identifier contains traversal sequences
+   * @throws IllegalArgumentException if the job identifier is not a single plain path segment
    * @throws IOException if the directory exists but could not be deleted
    */
   public void deleteJobDirectory(@Nonnull final String jobId) throws IOException {
