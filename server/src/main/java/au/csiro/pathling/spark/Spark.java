@@ -53,6 +53,9 @@ public class Spark {
   /** The timestamp type required by the Parquet on FHIR layout. */
   static final String TIMESTAMP_MICROS = "TIMESTAMP_MICROS";
 
+  /** The session setting that determines whether {@code ${...}} references in SQL are replaced. */
+  static final String VARIABLE_SUBSTITUTE = "spark.sql.variable.substitute";
+
   private Spark() {}
 
   /**
@@ -92,9 +95,12 @@ public class Spark {
                 "org.apache.spark.sql.delta.catalog.DeltaCatalog")
             .getOrCreate();
     // The Parquet on FHIR layout stores timestamps as microsecond-precision int64, and Spark takes
-    // that type from the session rather than from writer options. It is set after the session is
-    // built, so that no Spark configuration in a profile can drop it.
+    // that type from the session rather than from writer options. Spark also replaces ${...}
+    // references in SQL text before parsing it unless told not to, and the server runs SQL as it
+    // was submitted. Both are set after the session is built, so that no Spark configuration in a
+    // profile can change them.
     spark.conf().set(OUTPUT_TIMESTAMP_TYPE, TIMESTAMP_MICROS);
+    spark.conf().set(VARIABLE_SUBSTITUTE, false);
     sparkListener.ifPresent(l -> spark.sparkContext().addSparkListener(l));
 
     // Configure user defined strategy and functions.

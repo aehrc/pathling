@@ -202,6 +202,9 @@ it is validated before it runs:
   as its terminology functions, belong in a ViewDefinition and are rejected in
   SQL: membership and translation in SQL are expressed with joins to a
   [value set](#value-sets) or [concept map](#concept-maps) instead.
+- It must not contain the character sequence `${` anywhere, including in string
+  literals and comments. The text is run as submitted, and Spark's `${...}`
+  reference syntax is not supported.
 
 A fault in the SQL that only Spark's analyser can catch - an unresolved column,
 an unknown function, a missing `GROUP BY`, an ambiguous reference - is a `422`,

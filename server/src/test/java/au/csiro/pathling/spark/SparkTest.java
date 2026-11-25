@@ -26,6 +26,7 @@ import au.csiro.pathling.util.FhirServerTestConfiguration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -83,6 +84,39 @@ class SparkTest {
       // The pass-through of Spark configuration sets system properties, which must not leak into
       // other tests.
       System.clearProperty("spark.sql.parquet.outputTimestampType");
+    }
+  }
+
+  // Spark's parser replaces ${...} references in SQL text unless spark.sql.variable.substitute is
+  // false. The server's session must run SQL as written even where that setting has been turned
+  // back on.
+  @Test
+  void sessionReturnsDollarBraceTextUnchangedRegardlessOfConfiguration() {
+    final StandardEnvironment environment = new StandardEnvironment();
+    environment
+        .getPropertySources()
+        .addFirst(
+            new MapPropertySource("profile", Map.of("spark.sql.variable.substitute", "true")));
+    // Spark.build reuses the running session, so the setting is also turned on directly.
+    sparkSession.conf().set("spark.sql.variable.substitute", "true");
+
+    try {
+      final SparkSession spark =
+          Spark.build(serverConfiguration, environment, Optional.empty(), List.of());
+
+      assertThat(spark.conf().get("spark.sql.variable.substitute")).isEqualTo("false");
+      final Row row =
+          spark
+              .sql(
+                  "SELECT '${spark:spark.app.name}' AS app, '${env:PATH}' AS path,"
+                      + " '${system:user.dir}' AS dir")
+              .first();
+      assertThat(row.getString(0)).isEqualTo("${spark:spark.app.name}");
+      assertThat(row.getString(1)).isEqualTo("${env:PATH}");
+      assertThat(row.getString(2)).isEqualTo("${system:user.dir}");
+    } finally {
+      sparkSession.conf().set("spark.sql.variable.substitute", "false");
+      System.clearProperty("spark.sql.variable.substitute");
     }
   }
 }

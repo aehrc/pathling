@@ -556,6 +556,9 @@ Here are a few that you might be particularly interested in:
   a further `UNION` or `UNION ALL`. If you set this option, include the default
   rule in the list unless you are running a Spark version that fixes that bug.
 
+The server always sets `spark.sql.variable.substitute` to `false`, so that SQL
+is run as it was submitted. Setting it in configuration has no effect.
+
 This is the default Spark configuration:
 
 ```yaml

@@ -252,6 +252,19 @@ class SqlViewRunProviderIT {
   }
 
   @Test
+  void rejectsSqlQueryContainingDollarBraceWith400() {
+    // The ${ sequence is refused before any SQL runs, so the response carries the submitted text.
+    final Library library =
+        sqlQueryLibrary(
+            "SELECT '${system:user.dir}' AS dir FROM ap",
+            "ap",
+            SqlViewTestConfiguration.libraryUrl(SqlViewTestConfiguration.ACTIVE_PATIENTS_ID));
+
+    final String body = postExpect4xx(parametersJson(library));
+    assertThat(body).contains("${").doesNotContain(System.getProperty("user.dir"));
+  }
+
+  @Test
   void runsQueryUsingFirstLastAndAnyValue() {
     // Issue 2867: these aggregates have dedicated grammar rules, so the parser builds them as
     // aggregate expressions rather than function calls, and the validator previously rejected them.
