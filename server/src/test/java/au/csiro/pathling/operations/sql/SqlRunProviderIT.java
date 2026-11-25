@@ -30,11 +30,14 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.sun.net.httpserver.HttpServer;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -49,6 +52,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Attachment;
@@ -420,6 +424,39 @@ class SqlRunProviderIT {
     postExpectStatus(inlineSqlQueryRequest("SELEKT id FROM adh"), 400, "application/fhir+json");
     postExpectStatus(inlineSqlQueryRequest("SELECT x FROM nope"), 400, "application/fhir+json");
     postExpectStatus(inlineSqlQueryRequest("DROP TABLE adh"), 400, "application/fhir+json");
+  }
+
+  // A built-in function that opens a URL named in the SQL is rejected as a 400 before the query
+  // runs, so the server makes no request to that URL (issue 2978).
+  @Test
+  void rejectsAFunctionThatOpensAUrlBeforeAnyRequestIsMade() throws IOException {
+    final AtomicInteger requests = new AtomicInteger();
+    final HttpServer listener =
+        HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
+    listener.createContext(
+        "/",
+        exchange -> {
+          requests.incrementAndGet();
+          exchange.sendResponseHeaders(404, -1);
+          exchange.close();
+        });
+    listener.start();
+    try {
+      final String url =
+          "http://127.0.0.1:" + listener.getAddress().getPort() + "/latest/meta-data/";
+      final String body =
+          postExpectStatus(
+              inlineSqlQueryRequest(
+                  "SELECT from_xml('<a/>', 'a STRING', map('rowValidationXSDPath','"
+                      + url
+                      + "')) AS x"),
+              400,
+              "application/fhir+json");
+      assertThat(body).contains("disallowed function: from_xml");
+    } finally {
+      listener.stop(0);
+    }
+    assertThat(requests).hasValue(0);
   }
 
   @Test

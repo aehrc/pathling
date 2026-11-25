@@ -202,6 +202,12 @@ it is validated before it runs:
   as its terminology functions, belong in a ViewDefinition and are rejected in
   SQL: membership and translation in SQL are expressed with joins to a
   [value set](#value-sets) or [concept map](#concept-maps) instead.
+- A small number of built-in functions are also rejected, because they open a
+  file or URL chosen by the caller, invoke arbitrary Java code, or disclose
+  where data is stored. These are `from_xml`, `schema_of_xml`, the `xpath`
+  functions, the Avro and Protobuf functions, `reflect`, `java_method`,
+  `try_reflect` and the `input_file_*` functions. A built-in function added in a
+  later version of Spark is rejected until it has been reviewed.
 
 A fault in the SQL that only Spark's analyser can catch - an unresolved column,
 an unknown function, a missing `GROUP BY`, an ambiguous reference - is a `422`,

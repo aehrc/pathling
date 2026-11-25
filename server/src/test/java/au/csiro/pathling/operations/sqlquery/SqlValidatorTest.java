@@ -597,6 +597,14 @@ class SqlValidatorTest {
         .hasMessageContaining("disallowed function");
   }
 
+  @Test
+  void rejectsTryReflectFunction() {
+    assertThatThrownBy(
+            () -> validate("SELECT try_reflect('java.lang.Runtime', 'getRuntime') FROM t", "t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessage("SQL contains a disallowed function: try_reflect");
+  }
+
   // The input file functions expose the storage path of a scanned file, which for an external
   // table is the operator's configured path that responses must never disclose (spec 060 FR-012).
   @ParameterizedTest
@@ -606,6 +614,112 @@ class SqlValidatorTest {
     assertThatThrownBy(() -> validate("SELECT " + call + " FROM t", "t"))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("disallowed function");
+  }
+
+  // The query from issue 2978. The rowValidationXSDPath option of from_xml is opened through the
+  // Hadoop file system API, so the caller chooses the scheme and host of a request that the server
+  // makes. It must be rejected before the query runs.
+  @Test
+  void rejectsFromXmlWithValidationSchemaUrl() {
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "SELECT from_xml('<a/>', 'a STRING',"
+                        + " map('rowValidationXSDPath','http://127.0.0.1:18777/latest/meta-data/'))"
+                        + " AS x"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessage("SQL contains a disallowed function: from_xml");
+  }
+
+  // Built-in functions that open a path or URL chosen by the caller: through an option
+  // (rowValidationXSDPath, avroSchemaUrl), an argument (a protobuf descriptor file), or the
+  // external DTD named by the document they parse (the xpath family). The function name is the
+  // text before the first parenthesis.
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "schema_of_xml('<a/>', map('rowValidationXSDPath', 'http://127.0.0.1:18777/'))",
+        "xpath('<!DOCTYPE a SYSTEM \"http://127.0.0.1:18777/\"><a/>', 'a')",
+        "xpath_boolean('<!DOCTYPE a SYSTEM \"http://127.0.0.1:18777/\"><a/>', 'a')",
+        "xpath_double('<!DOCTYPE a SYSTEM \"http://127.0.0.1:18777/\"><a/>', 'a')",
+        "xpath_float('<!DOCTYPE a SYSTEM \"http://127.0.0.1:18777/\"><a/>', 'a')",
+        "xpath_int('<!DOCTYPE a SYSTEM \"http://127.0.0.1:18777/\"><a/>', 'a')",
+        "xpath_long('<!DOCTYPE a SYSTEM \"http://127.0.0.1:18777/\"><a/>', 'a')",
+        "xpath_number('<!DOCTYPE a SYSTEM \"http://127.0.0.1:18777/\"><a/>', 'a')",
+        "xpath_short('<!DOCTYPE a SYSTEM \"http://127.0.0.1:18777/\"><a/>', 'a')",
+        "xpath_string('<!DOCTYPE a SYSTEM \"http://127.0.0.1:18777/\"><a/>', 'a')",
+        "from_avro(x, '{}', map('avroSchemaUrl', 'http://127.0.0.1:18777/'))",
+        "schema_of_avro('{}', map('avroSchemaUrl', 'http://127.0.0.1:18777/'))",
+        "to_avro(x)",
+        "from_protobuf(x, 'Message', '/etc/passwd')",
+        "to_protobuf(x, 'Message', '/etc/passwd')"
+      })
+  void rejectsFunctionsThatOpenACallerChosenLocation(final String call) {
+    final String name = call.substring(0, call.indexOf('('));
+    assertThatThrownBy(() -> validate("SELECT " + call + " FROM t", "t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessage("SQL contains a disallowed function: " + name);
+  }
+
+  // The function name is matched case-insensitively and on its last part, so neither a change of
+  // case nor a qualifier naming the built-in namespace gets a rejected function past the check.
+  @ParameterizedTest
+  @ValueSource(strings = {"FROM_XML", "From_Xml", "builtin.from_xml", "system.builtin.from_xml"})
+  void rejectsDisallowedFunctionWhateverItsSpelling(final String name) {
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "SELECT "
+                        + name
+                        + "('<a/>', 'a STRING', map('rowValidationXSDPath', 'http://127.0.0.1/'))"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed function");
+  }
+
+  @Test
+  void rejectsDisallowedFunctionNamedThroughIdentifierClause() {
+    // IDENTIFIER('from_xml')(...) names the function with a string that is only resolved during
+    // analysis, so the call cannot be checked by name and is rejected outright.
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "SELECT IDENTIFIER('from_xml')('<a/>', 'a STRING',"
+                        + " map('rowValidationXSDPath', 'http://127.0.0.1/'))"))
+        .isInstanceOf(InvalidRequestException.class);
+  }
+
+  @Test
+  void rejectsDisallowedFunctionNestedInsideAllowedFunction() {
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "SELECT upper(xpath_string('<!DOCTYPE a SYSTEM \"http://127.0.0.1/\"><a/>',"
+                        + " 'a'))"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessage("SQL contains a disallowed function: xpath_string");
+  }
+
+  // Functions that parse or produce a structured string without opening anything remain available.
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "from_json('{\"a\": 1}', 'a INT')",
+        "schema_of_json('{\"a\": 1}')",
+        "to_json(named_struct('a', 1))",
+        "from_csv('1', 'a INT')",
+        "to_xml(named_struct('a', 1))",
+        "parse_json('{\"a\": 1}')",
+        "parse_url('http://example.org/a?b=c', 'HOST')"
+      })
+  void acceptsFunctionsThatDoNotOpenALocation(final String call) {
+    assertThatCode(() -> validate("SELECT " + call)).doesNotThrowAnyException();
+  }
+
+  @Test
+  void leavesAnUnknownFunctionNameForTheAnalyser() {
+    // A name that is not a function at all is left for Spark's analyser, whose "routine not found"
+    // message, with its suggestions, is more helpful than a synthetic rejection.
+    assertThatCode(() -> validate("SELECT no_such_fn(id) FROM t", "t")).doesNotThrowAnyException();
   }
 
   // -------------------------------------------------------------------------

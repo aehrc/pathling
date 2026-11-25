@@ -21,6 +21,7 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
@@ -84,12 +85,13 @@ import scala.jdk.javaapi.CollectionConverters;
  *   <li><strong>Expression allow-list</strong> — only safe expression types are permitted. An
  *       aggregate that the parser builds directly ({@code first}, {@code last}, {@code any_value})
  *       is permitted only when its aggregate function is on a separate allow-list.
- *   <li><strong>Built-in functions only</strong> — every {@link UnresolvedFunction} in user SQL
- *       must resolve to a built-in Spark function. Pathling-registered UDFs (terminology, FHIRPath
- *       helpers, etc.) are intended for use within ViewDefinitions; the {@code $sql-run} surface
- *       stays portable and implementation-agnostic. UDFs introduced by referenced views are
- *       unaffected because they appear in the analyzed plan, not in the unresolved tree this rule
- *       walks.
+ *   <li><strong>Function allow-list</strong> — every {@link UnresolvedFunction} in user SQL must
+ *       name a built-in Spark function on {@link SqlFunctionAllowList#ALLOWED_FUNCTION_NAMES}.
+ *       Built-ins that open a caller-chosen file or URL, invoke arbitrary code or disclose storage
+ *       paths are withheld. Pathling-registered UDFs (terminology, FHIRPath helpers, etc.) are
+ *       intended for use within ViewDefinitions; the {@code $sql-run} surface stays portable and
+ *       implementation-agnostic. UDFs introduced by referenced views are unaffected because they
+ *       appear in the analyzed plan, not in the unresolved tree this rule walks.
  * </ol>
  *
  * <p>Two schema-introspection statements are carved out of the blanket {@link Command} rejection:
@@ -179,18 +181,6 @@ public class SqlValidator {
           "org.apache.spark.sql.catalyst.plans.logical.DescribeRelation",
           "org.apache.spark.sql.execution.command.DescribeTableCommand",
           "org.apache.spark.sql.execution.command.DescribeQueryCommand");
-
-  // Function names rejected outright: the reflection functions enable arbitrary code execution, and
-  // the input file functions disclose the storage path of a scanned file, which for an external
-  // table is the operator's configured path.
-  private static final Set<String> REJECTED_FUNCTION_NAMES =
-      Set.of(
-          "reflect",
-          "java_method",
-          "try_reflect",
-          "input_file_name",
-          "input_file_block_start",
-          "input_file_block_length");
 
   // Source marker used by Spark's ExpressionInfo for built-in functions. Anything else (scala_udf,
   // hive, python_udf, sql_udf, java_udf, ...) is implementation-specific and rejected from user
@@ -792,8 +782,9 @@ public class SqlValidator {
   /**
    * Validates an expression. In both modes, explicitly rejected expression types and disallowed
    * function names are caught. In strict mode, the expression allow-list is additionally enforced,
-   * {@link UnresolvedFunction}s are required to resolve to a built-in Spark function, and {@link
-   * AggregateExpression}s are required to wrap an allowed aggregate function.
+   * {@link UnresolvedFunction}s are required to name a built-in Spark function on the function
+   * allow-list, and {@link AggregateExpression}s are required to wrap an allowed aggregate
+   * function.
    */
   private void validateExpression(@Nonnull final Expression expr, final boolean strict) {
     final String fqn = canonicalClassName(expr);
@@ -848,23 +839,22 @@ public class SqlValidator {
   }
 
   /**
-   * Validates an unresolved function reference from user SQL. Rejects known-dangerous names
-   * (reflection-style functions) and any function whose Spark registry entry is not flagged as
-   * built-in - that is, any UDF (Pathling-registered terminology and FHIRPath helpers, Hive UDFs,
-   * Python/SQL/Java UDFs). Pathling UDFs belong in ViewDefinitions; user SQL should remain portable
-   * and implementation-agnostic. Unknown function names are left alone here so that Spark's
-   * analyser produces its standard "function not found" error, which is more helpful than a
-   * synthetic rejection.
+   * Validates an unresolved function reference from user SQL. A function whose Spark registry entry
+   * is not flagged as built-in - any UDF (Pathling-registered terminology and FHIRPath helpers,
+   * Hive UDFs, Python/SQL/Java UDFs) - is rejected, as Pathling UDFs belong in ViewDefinitions and
+   * user SQL should remain portable and implementation-agnostic. Any other function is rejected
+   * unless its name is on {@link SqlFunctionAllowList#ALLOWED_FUNCTION_NAMES}. The name is matched
+   * on its last part, so qualifying a built-in (for example {@code system.builtin.from_xml}) does
+   * not get it past the check.
+   *
+   * <p>A name that is neither allowed nor a known function is left alone, so that Spark's analyser
+   * produces its standard "function not found" error, which is more helpful than a synthetic
+   * rejection.
    */
   private void validateFunctionName(@Nonnull final UnresolvedFunction func) {
     final List<String> nameParts = CollectionConverters.asJava(func.nameParts());
     if (nameParts.isEmpty()) {
       return;
-    }
-    final String simpleName = nameParts.getLast().toLowerCase();
-    if (REJECTED_FUNCTION_NAMES.contains(simpleName)) {
-      throw new InvalidRequestException(
-          "SQL contains a disallowed function: " + String.join(".", nameParts));
     }
     if (isNonBuiltInFunction(nameParts)) {
       throw new InvalidRequestException(
@@ -872,6 +862,23 @@ public class SqlValidator {
               + String.join(".", nameParts)
               + ". Implementation-specific functions belong in ViewDefinitions, not in user SQL.");
     }
+    final String simpleName = nameParts.getLast().toLowerCase(Locale.ROOT);
+    if (!SqlFunctionAllowList.ALLOWED_FUNCTION_NAMES.contains(simpleName)
+        && isKnownFunction(simpleName)) {
+      throw new InvalidRequestException(
+          "SQL contains a disallowed function: " + String.join(".", nameParts));
+    }
+  }
+
+  /**
+   * Returns {@code true} if the unqualified name is a function in the session's registry, which
+   * holds every Spark built-in function as well as any registered UDF.
+   */
+  private boolean isKnownFunction(@Nonnull final String simpleName) {
+    return sparkSession
+        .sessionState()
+        .functionRegistry()
+        .functionExists(new FunctionIdentifier(simpleName));
   }
 
   /**
