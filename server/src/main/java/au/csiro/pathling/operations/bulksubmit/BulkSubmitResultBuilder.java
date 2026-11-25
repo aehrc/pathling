@@ -102,7 +102,7 @@ public class BulkSubmitResultBuilder {
               .setName("url")
               .setValue(
                   new UriType(
-                      buildResultUrl(fhirServerBase, submission.submissionId(), file.fileName())));
+                      buildResultUrl(fhirServerBase, submission.stagingId(), file.fileName())));
 
           // Add manifestUrl extension per spec.
           final ParametersParameterComponent extPart = outputParam.addPart();
@@ -149,7 +149,7 @@ public class BulkSubmitResultBuilder {
     errorParam
         .addPart()
         .setName("url")
-        .setValue(new UriType(buildResultUrl(fhirServerBase, submission.submissionId(), fileName)));
+        .setValue(new UriType(buildResultUrl(fhirServerBase, submission.stagingId(), fileName)));
 
     // Add manifestUrl extension per spec.
     final ParametersParameterComponent extPart = errorParam.addPart();
@@ -162,16 +162,16 @@ public class BulkSubmitResultBuilder {
    * Builds a URL for downloading a result file via the $result operation.
    *
    * @param fhirServerBase The FHIR server base URL.
-   * @param submissionId The submission ID (used as the job ID).
+   * @param stagingId The staging ID of the submission (used as the job ID).
    * @param fileName The name of the file.
    * @return The complete $result URL.
    */
   @Nonnull
   private static String buildResultUrl(
       @Nonnull final String fhirServerBase,
-      @Nonnull final String submissionId,
+      @Nonnull final String stagingId,
       @Nonnull final String fileName) {
-    return fhirServerBase + "/$result?job=" + submissionId + "&file=" + fileName;
+    return fhirServerBase + "/$result?job=" + stagingId + "&file=" + fileName;
   }
 
   /**

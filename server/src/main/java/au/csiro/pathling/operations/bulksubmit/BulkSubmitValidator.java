@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Identifier;
@@ -52,6 +53,13 @@ public class BulkSubmitValidator {
           BulkSubmitRequest.STATUS_IN_PROGRESS,
           BulkSubmitRequest.STATUS_COMPLETE,
           BulkSubmitRequest.STATUS_ABORTED);
+
+  /**
+   * The permitted form of a client-chosen submission identifier. Submission identifiers appear in
+   * logs and URLs, so they are limited to a conservative set of characters that cannot express a
+   * path, a URI or a hidden file.
+   */
+  private static final Pattern SUBMISSION_ID_PATTERN = Pattern.compile("[A-Za-z0-9_-]{1,64}");
 
   @Nonnull private final ServerConfiguration serverConfiguration;
 
@@ -85,6 +93,10 @@ public class BulkSubmitValidator {
 
     // Extract submissionId (required).
     final String submissionId = extractRequiredString(parameters, "submissionId");
+    if (!SUBMISSION_ID_PATTERN.matcher(submissionId).matches()) {
+      throw new InvalidUserInputError(
+          "submissionId must consist of between 1 and 64 letters, digits, hyphens or underscores.");
+    }
 
     // Extract submitter (required) and validate that it is allowed.
     final SubmitterIdentifier submitter = extractSubmitter(parameters);

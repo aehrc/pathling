@@ -122,8 +122,11 @@ class BulkSubmitResultBuilderTest {
             .map(p -> p.getValue().primitiveValue())
             .findFirst()
             .orElse(null);
+    // The result URL refers to the server-generated staging ID, not the client-chosen submission
+    // ID, as the staging ID is the key under which the files are stored and their owner recorded.
     assertThat(patientUrl)
-        .contains("$result?job=" + SUBMISSION_ID + "&file=Patient.manifest-job-1-1.ndjson");
+        .contains(
+            "$result?job=" + submission.stagingId() + "&file=Patient.manifest-job-1-1.ndjson");
   }
 
   @Test
@@ -242,7 +245,7 @@ class BulkSubmitResultBuilderTest {
         .isEqualTo(
             FHIR_SERVER_BASE
                 + "/$result?job="
-                + SUBMISSION_ID
+                + submission.stagingId()
                 + "&file=OperationOutcome.manifest-job-1-type-mismatch.ndjson");
     assertThat(manifestUrlExtensionValue(error)).isEqualTo(manifestUrl);
   }
@@ -283,11 +286,11 @@ class BulkSubmitResultBuilderTest {
         .containsExactlyInAnyOrder(
             FHIR_SERVER_BASE
                 + "/$result?job="
-                + SUBMISSION_ID
+                + submission.stagingId()
                 + "&file=OperationOutcome.manifest-job-1-type-mismatch.ndjson",
             FHIR_SERVER_BASE
                 + "/$result?job="
-                + SUBMISSION_ID
+                + submission.stagingId()
                 + "&file=OperationOutcome.manifest-job-1-error.ndjson");
     assertThat(errors).extracting(this::manifestUrlExtensionValue).containsOnly(manifestUrl);
   }
