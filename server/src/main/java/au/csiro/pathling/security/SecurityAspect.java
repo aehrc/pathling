@@ -165,4 +165,18 @@ public class SecurityAspect {
     }
     return Optional.ofNullable(subject);
   }
+
+  /**
+   * Determines whether the current user is the recorded owner of an asynchronous job or its result.
+   * A caller without a subject owns nothing, so that callers whose tokens lack a {@code sub} claim
+   * are never treated as a single shared owner.
+   *
+   * @param ownerId the subject recorded as the owner, or empty if none was recorded
+   * @param currentUserId the current user's subject, or empty if their token has none
+   * @return true if the current user has a subject and it matches the owner
+   */
+  public static boolean isOwner(
+      @Nonnull final Optional<String> ownerId, @Nonnull final Optional<String> currentUserId) {
+    return currentUserId.isPresent() && ownerId.equals(currentUserId);
+  }
 }

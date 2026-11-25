@@ -21,6 +21,7 @@ import static au.csiro.pathling.operations.sqlquery.ContentDescriptions.describe
 import static au.csiro.pathling.operations.sqlquery.ContentDescriptions.describeView;
 import static au.csiro.pathling.operations.sqlquery.ContentDescriptions.escape;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
+import static au.csiro.pathling.security.SecurityAspect.isOwner;
 
 import au.csiro.pathling.async.AsyncJobContext;
 import au.csiro.pathling.async.Job;
@@ -125,9 +126,10 @@ public class SqlExportSupport {
       throw new InvalidRequestException("Missing 'Prefer: respond-async' header value.");
     }
 
-    // The result belongs to the user who started the job, and to nobody else.
+    // When authorisation is enabled, the result belongs to the user who started the job, and to
+    // nobody else.
     final Optional<String> currentUserId = getCurrentUserId(authentication);
-    if (currentUserId.isPresent() && !ownJob.getOwnerId().equals(currentUserId)) {
+    if (serverConfiguration.getAuth().isEnabled() && !isOwner(ownJob.getOwnerId(), currentUserId)) {
       throw new AccessDeniedError(
           "The requested result is not owned by the current user '%s'."
               .formatted(currentUserId.orElse("null")));

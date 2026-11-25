@@ -214,7 +214,22 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
   protected void switchToUser(final String username, final String... authorities) {
     final Jwt jwt =
         Jwt.withTokenValue("mock-token").header("alg", "none").claim("sub", username).build();
+    switchToToken(jwt, authorities);
+  }
 
+  /**
+   * Switches to a caller whose token carries no subject claim, as some identity providers issue for
+   * the client credentials grant.
+   *
+   * @param authorities the authorities granted to the caller
+   */
+  protected void switchToUserWithoutSubject(final String... authorities) {
+    final Jwt jwt =
+        Jwt.withTokenValue("mock-token").header("alg", "none").claim("scope", "system").build();
+    switchToToken(jwt, authorities);
+  }
+
+  private static void switchToToken(final Jwt jwt, final String... authorities) {
     final List<GrantedAuthority> grantedAuthorities =
         AuthorityUtils.createAuthorityList(authorities);
 

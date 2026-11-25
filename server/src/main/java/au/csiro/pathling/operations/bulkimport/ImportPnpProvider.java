@@ -18,6 +18,7 @@
 package au.csiro.pathling.operations.bulkimport;
 
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
+import static au.csiro.pathling.security.SecurityAspect.isOwner;
 
 import au.csiro.pathling.async.AsyncJobContext;
 import au.csiro.pathling.async.AsyncSupported;
@@ -26,6 +27,7 @@ import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.async.PreAsyncValidation;
 import au.csiro.pathling.async.RequestTag;
 import au.csiro.pathling.async.RequestTagFactory;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
@@ -64,6 +66,8 @@ public class ImportPnpProvider implements PreAsyncValidation<ImportPnpRequest> {
 
   @Nonnull private final ImportResultRegistry importResultRegistry;
 
+  @Nonnull private final ServerConfiguration serverConfiguration;
+
   /**
    * Constructor for ImportPnpProvider.
    *
@@ -72,18 +76,22 @@ public class ImportPnpProvider implements PreAsyncValidation<ImportPnpRequest> {
    * @param requestTagFactory factory for creating request tags
    * @param jobRegistry registry for async jobs
    * @param importResultRegistry registry for import results
+   * @param serverConfiguration the server configuration, used to determine whether authorisation is
+   *     enabled
    */
   public ImportPnpProvider(
       @Nonnull final ImportPnpExecutor executor,
       @Nonnull final ImportPnpOperationValidator validator,
       @Nonnull final RequestTagFactory requestTagFactory,
       @Nonnull final JobRegistry jobRegistry,
-      @Nonnull final ImportResultRegistry importResultRegistry) {
+      @Nonnull final ImportResultRegistry importResultRegistry,
+      @Nonnull final ServerConfiguration serverConfiguration) {
     this.executor = executor;
     this.validator = validator;
     this.requestTagFactory = requestTagFactory;
     this.jobRegistry = jobRegistry;
     this.importResultRegistry = importResultRegistry;
+    this.serverConfiguration = serverConfiguration;
   }
 
   /**
@@ -132,9 +140,9 @@ public class ImportPnpProvider implements PreAsyncValidation<ImportPnpRequest> {
       throw new InvalidRequestException("Missing 'Prefer: respond-async' header value.");
     }
 
-    // Check that the user requesting the result is the same user that started the job.
+    // When authorisation is enabled, only the user that started the job may run it.
     final Optional<String> currentUserId = getCurrentUserId(authentication);
-    if (currentUserId.isPresent() && !ownJob.getOwnerId().equals(currentUserId)) {
+    if (serverConfiguration.getAuth().isEnabled() && !isOwner(ownJob.getOwnerId(), currentUserId)) {
       throw new AccessDeniedError(
           "The requested result is not owned by the current user '%s'."
               .formatted(currentUserId.orElse("null")));

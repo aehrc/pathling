@@ -125,6 +125,37 @@ class JobProviderSecurityTest {
   }
 
   @Test
+  void rejectsPollWhenCallerHasNoSubject() {
+    // A job started by a caller whose token had no subject records no owner. Another caller
+    // without a subject must not be treated as that owner (aehrc/pathling#2986).
+    final String jobId = UUID.randomUUID().toString();
+    final CompletableFuture<IBaseResource> future = new CompletableFuture<>();
+    final Job<IBaseResource> job = new Job<>(jobId, "export", future, Optional.empty());
+    jobRegistry.register(job);
+
+    setAuthenticatedUserWithoutSubject("pathling:export");
+
+    assertThatThrownBy(() -> jobProvider.job(jobId, request, response))
+        .isExactlyInstanceOf(AccessDeniedError.class)
+        .hasMessage("The requested job is not owned by the current user");
+  }
+
+  @Test
+  void rejectsPollOfOwnedJobWhenCallerHasNoSubject() {
+    // A caller without a subject cannot poll a job that belongs to a named subject.
+    final String jobId = UUID.randomUUID().toString();
+    final CompletableFuture<IBaseResource> future = new CompletableFuture<>();
+    final Job<IBaseResource> job = new Job<>(jobId, "export", future, Optional.of(OWNER_USER));
+    jobRegistry.register(job);
+
+    setAuthenticatedUserWithoutSubject("pathling:export");
+
+    assertThatThrownBy(() -> jobProvider.job(jobId, request, response))
+        .isExactlyInstanceOf(AccessDeniedError.class)
+        .hasMessage("The requested job is not owned by the current user");
+  }
+
+  @Test
   void allowsDeleteWhenOwnerWithAuthority() {
     // The owner, holding the job's operation authority, may delete their own job.
     final String jobId = registerTaggedJob(OWNER_USER);
@@ -144,6 +175,22 @@ class JobProviderSecurityTest {
     final Job<IBaseResource> job = new Job<>(jobId, "export", future, Optional.of(OWNER_USER));
     jobRegistry.register(job);
     setAuthenticatedUser(OTHER_USER, "pathling:export");
+
+    assertThatThrownBy(() -> jobProvider.deleteJob(jobId))
+        .isExactlyInstanceOf(AccessDeniedError.class)
+        .hasMessage("The requested job is not owned by the current user");
+    assertThat(jobRegistry.<IBaseResource>get(jobId)).isSameAs(job);
+  }
+
+  @Test
+  void rejectsDeleteWhenCallerHasNoSubject() {
+    // A caller without a subject cannot cancel a job that has no recorded owner, and the job is
+    // left untouched in the registry.
+    final String jobId = UUID.randomUUID().toString();
+    final CompletableFuture<IBaseResource> future = new CompletableFuture<>();
+    final Job<IBaseResource> job = new Job<>(jobId, "export", future, Optional.empty());
+    jobRegistry.register(job);
+    setAuthenticatedUserWithoutSubject("pathling:export");
 
     assertThatThrownBy(() -> jobProvider.deleteJob(jobId))
         .isExactlyInstanceOf(AccessDeniedError.class)
@@ -219,6 +266,18 @@ class JobProviderSecurityTest {
       @Nonnull final String username, @Nonnull final String... authorities) {
     final Jwt jwt =
         Jwt.withTokenValue("mock-token").header("alg", "none").claim("sub", username).build();
+    setAuthentication(jwt, authorities);
+  }
+
+  private void setAuthenticatedUserWithoutSubject(@Nonnull final String... authorities) {
+    // A token that carries a claim but no subject, mimicking a client credentials token.
+    final Jwt jwt =
+        Jwt.withTokenValue("mock-token").header("alg", "none").claim("scope", "system").build();
+    setAuthentication(jwt, authorities);
+  }
+
+  private static void setAuthentication(
+      @Nonnull final Jwt jwt, @Nonnull final String... authorities) {
     final List<GrantedAuthority> grantedAuthorities =
         AuthorityUtils.createAuthorityList(authorities);
     final JwtAuthenticationToken authentication =
