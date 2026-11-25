@@ -98,12 +98,12 @@ public class JobDirectoryFileSystem {
    *
    * @param jobId the job identifier
    * @return the qualified path of the per-job directory
-   * @throws IllegalArgumentException if the job identifier contains traversal sequences
+   * @throws IllegalArgumentException if the job identifier is not a single plain path segment
    * @throws IOException if the file system cannot be obtained
    */
   @Nonnull
   public Path jobDirectory(@Nonnull final String jobId) throws IOException {
-    rejectInvalidComponent(jobId);
+    rejectInvalidJobId(jobId);
     return getFileSystem().makeQualified(new Path(jobsDirectoryRaw(), jobId));
   }
 
@@ -114,13 +114,14 @@ public class JobDirectoryFileSystem {
    * @param jobId the job identifier
    * @param filename the requested filename
    * @return the qualified Hadoop path of the requested file
-   * @throws IllegalArgumentException if the jobId or filename contains traversal sequences
+   * @throws IllegalArgumentException if the job identifier is not a single plain path segment, or
+   *     the filename contains traversal sequences
    * @throws IOException if the resolved path falls outside the jobs directory
    */
   @Nonnull
   public Path resolveFile(@Nonnull final String jobId, @Nonnull final String filename)
       throws IOException {
-    rejectInvalidComponent(jobId);
+    rejectInvalidJobId(jobId);
     rejectInvalidComponent(filename);
     final FileSystem fs = getFileSystem();
     final Path qualifiedJobsDir = fs.makeQualified(jobsDirectoryRaw());
@@ -282,6 +283,20 @@ public class JobDirectoryFileSystem {
         || component.endsWith("/..")
         || component.contains("/../")) {
       throw new IllegalArgumentException("Invalid path component: " + component);
+    }
+  }
+
+  /**
+   * Rejects job identifiers that are not a single plain path segment. A job identifier names a
+   * directory directly beneath the jobs root, so beyond the checks applied to every path component
+   * it must not contain a separator or a scheme delimiter, and must not start with a dot. Otherwise
+   * an identifier such as {@code ./abc} would resolve to the directory of job {@code abc}, and one
+   * such as {@code file:/tmp/x} to a location outside the warehouse.
+   */
+  private static void rejectInvalidJobId(@Nonnull final String jobId) {
+    rejectInvalidComponent(jobId);
+    if (jobId.contains("/") || jobId.contains(":") || jobId.startsWith(".")) {
+      throw new IllegalArgumentException("Invalid job identifier: " + jobId);
     }
   }
 }

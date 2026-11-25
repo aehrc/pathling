@@ -40,6 +40,7 @@ import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.config.BulkSubmitConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.operations.bulkexport.ExportResult;
 import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
 import au.csiro.pathling.operations.bulkimport.ImportExecutor;
 import au.csiro.pathling.operations.bulkimport.ImportRequest;
@@ -136,23 +137,7 @@ class BulkSubmitExecutorTest {
     when(resultBuilder.buildStatusManifest(any(), anyString(), anyString()))
         .thenReturn(new Parameters());
 
-    final au.csiro.pathling.io.JobDirectoryFileSystem jobDirectoryFileSystem =
-        new au.csiro.pathling.io.JobDirectoryFileSystem(
-            java.net.URI.create("file://" + tempDir.toAbsolutePath()),
-            new org.apache.hadoop.conf.Configuration());
-    executor =
-        new BulkSubmitExecutor(
-            importExecutor,
-            submissionRegistry,
-            exportResultRegistry,
-            serverConfiguration,
-            resultBuilder,
-            jobRegistry,
-            sparkSession,
-            jobDirectoryFileSystem,
-            fhirContext,
-            authProvider,
-            true);
+    executor = newExecutor(exportResultRegistry);
 
     submitterIdentifier = new SubmitterIdentifier(SUBMITTER_SYSTEM, SUBMITTER_VALUE);
 
@@ -442,7 +427,7 @@ class BulkSubmitExecutorTest {
               final Path errorPath =
                   tempDir
                       .resolve("jobs")
-                      .resolve(SUBMISSION_ID)
+                      .resolve(submission.stagingId())
                       .resolve(updatedJob.errorFileName());
               assertThat(Files.exists(errorPath)).isTrue();
             });
@@ -471,7 +456,8 @@ class BulkSubmitExecutorTest {
         .isEqualTo("OperationOutcome." + MANIFEST_JOB_ID + "-type-mismatch.ndjson");
 
     // And: the file holds one OperationOutcome per file and unexpected type.
-    final List<OperationOutcome> outcomes = readOutcomes(updatedJob.typeMismatchFileName());
+    final List<OperationOutcome> outcomes =
+        readOutcomes(submission, updatedJob.typeMismatchFileName());
     assertThat(outcomes)
         .allSatisfy(
             outcome -> {
@@ -517,7 +503,7 @@ class BulkSubmitExecutorTest {
             Files.exists(
                 tempDir
                     .resolve("jobs")
-                    .resolve(SUBMISSION_ID)
+                    .resolve(submission.stagingId())
                     .resolve("OperationOutcome." + MANIFEST_JOB_ID + "-type-mismatch.ndjson")))
         .isFalse();
   }
@@ -536,7 +522,100 @@ class BulkSubmitExecutorTest {
     // Then: should register in export registry.
     await()
         .atMost(Duration.ofSeconds(5))
-        .untilAsserted(() -> verify(exportResultRegistry).put(eq(SUBMISSION_ID), any()));
+        .untilAsserted(
+            () -> verify(exportResultRegistry).putIfAbsent(eq(submission.stagingId()), any()));
+  }
+
+  @Test
+  @DisplayName("downloadManifestJob stages files under the staging ID, not the submission ID")
+  void downloadManifestJobStagesFilesUnderStagingId() throws Exception {
+    // Given: a submission and manifest job.
+    final Submission submission = createTestSubmission();
+    final ManifestJob manifestJob = createTestManifestJob();
+    setupSuccessfulManifestStubs();
+
+    // When: downloading the manifest job.
+    executor
+        .downloadManifestJob(submission, manifestJob, List.of(), FHIR_SERVER_BASE)
+        .get(30, TimeUnit.SECONDS);
+
+    // Then: every file is staged in the directory named by the server-generated staging ID.
+    final ManifestJob updatedJob = finalManifestJobUpdate(manifestJob);
+    final Path stagingDir = tempDir.resolve("jobs").resolve(submission.stagingId());
+    assertThat(updatedJob.downloadedFiles())
+        .isNotEmpty()
+        .allSatisfy(
+            file -> {
+              assertThat(stagingDir.resolve(file.fileName())).isRegularFile();
+              assertThat(file.localPath()).contains("/jobs/" + submission.stagingId() + "/");
+            });
+    // And: nothing is written to a directory named after the client-chosen submission ID.
+    assertThat(tempDir.resolve("jobs").resolve(SUBMISSION_ID)).doesNotExist();
+  }
+
+  @Test
+  @DisplayName("downloadManifestJob does not replace an existing result registration")
+  void downloadManifestJobDoesNotReplaceExistingResultRegistration() throws Exception {
+    // Given: a result registration that already exists under the submission's staging ID.
+    final ExportResultRegistry realRegistry = new ExportResultRegistry();
+    final Submission submission = createTestSubmission();
+    final ExportResult existing = new ExportResult(Optional.of("hospital-user"));
+    realRegistry.put(submission.stagingId(), existing);
+    setupFailingManifestStub();
+
+    // When: a failed download registers the submission for $result.
+    newExecutor(realRegistry)
+        .downloadManifestJob(submission, createTestManifestJob(), List.of(), FHIR_SERVER_BASE)
+        .get(30, TimeUnit.SECONDS);
+
+    // Then: the existing registration, and so its owner, is left in place.
+    assertThat(realRegistry.get(submission.stagingId())).isSameAs(existing);
+  }
+
+  @Test
+  @DisplayName("a submission reusing another submitter's ID does not take over its results")
+  void submissionReusingAnotherSubmittersIdDoesNotTakeOverItsResults() throws Exception {
+    // Given: a submission from one submitter whose files have been staged.
+    final ExportResultRegistry realRegistry = new ExportResultRegistry();
+    final BulkSubmitExecutor executorWithRegistry = newExecutor(realRegistry);
+    final Submission original =
+        Submission.createPending(SUBMISSION_ID, submitterIdentifier, Optional.of("hospital-user"));
+    setupSuccessfulManifestStubs();
+    executorWithRegistry
+        .downloadManifestJob(original, createTestManifestJob(), List.of(), FHIR_SERVER_BASE)
+        .get(30, TimeUnit.SECONDS);
+    final Path originalDir = tempDir.resolve("jobs").resolve(original.stagingId());
+    final List<String> originalFiles;
+    try (final var files = Files.list(originalDir)) {
+      originalFiles = files.map(path -> path.getFileName().toString()).sorted().toList();
+    }
+
+    // When: a second submitter, with a different owner, submits the same submission ID with a
+    // manifest that cannot be downloaded. The failure path still registers the submission.
+    final Submission intruding =
+        Submission.createPending(
+            SUBMISSION_ID,
+            new SubmitterIdentifier(SUBMITTER_SYSTEM, "other-submitter"),
+            Optional.of("mallory"));
+    wireMockServer.resetAll();
+    setupFailingManifestStub();
+    executorWithRegistry
+        .downloadManifestJob(intruding, createTestManifestJob(), List.of(), FHIR_SERVER_BASE)
+        .get(30, TimeUnit.SECONDS);
+
+    // Then: the original submission is still registered to its own owner.
+    assertThat(realRegistry.get(original.stagingId()).ownerId()).contains("hospital-user");
+    // And: the second submission is registered separately, and nothing is registered under the
+    // shared, client-chosen submission ID.
+    assertThat(realRegistry.get(intruding.stagingId()).ownerId()).contains("mallory");
+    assertThat(realRegistry).doesNotContainKey(SUBMISSION_ID);
+    // And: the second submission's error file is written to its own directory, leaving the files
+    // of the original submission as they were.
+    assertThat(tempDir.resolve("jobs").resolve(intruding.stagingId())).isDirectory();
+    try (final var files = Files.list(originalDir)) {
+      assertThat(files.map(path -> path.getFileName().toString()).sorted().toList())
+          .isEqualTo(originalFiles);
+    }
   }
 
   @Test
@@ -898,7 +977,7 @@ class BulkSubmitExecutorTest {
     executor.abortSubmission(submission);
 
     // Then: should remove from export registry.
-    verify(exportResultRegistry).remove(SUBMISSION_ID);
+    verify(exportResultRegistry).remove(submission.stagingId());
   }
 
   @Test
@@ -955,7 +1034,7 @@ class BulkSubmitExecutorTest {
     executor.abortSubmission(submission);
 
     // Then: should complete without error.
-    verify(exportResultRegistry).remove(SUBMISSION_ID);
+    verify(exportResultRegistry).remove(submission.stagingId());
     verify(submissionRegistry, never()).updateManifestJob(any(), anyString(), anyString(), any());
   }
 
@@ -991,7 +1070,7 @@ class BulkSubmitExecutorTest {
     executorNoAsync.abortSubmission(submission);
 
     // Then: should complete without trying to access JobRegistry.
-    verify(exportResultRegistry).remove(SUBMISSION_ID);
+    verify(exportResultRegistry).remove(submission.stagingId());
     verify(submissionRegistry)
         .updateManifestJob(eq(submitterIdentifier), eq(SUBMISSION_ID), eq(MANIFEST_JOB_ID), any());
   }
@@ -1191,6 +1270,13 @@ class BulkSubmitExecutorTest {
               final ManifestJob updatedJob = updateCaptor.getValue().apply(manifestJob);
               assertThat(updatedJob.state()).isEqualTo(ManifestJobState.FAILED);
               assertThat(updatedJob.errorMessage()).contains("Import failed");
+              // The error file is written to the submission's staging directory.
+              assertThat(
+                      tempDir
+                          .resolve("jobs")
+                          .resolve(submission.stagingId())
+                          .resolve(updatedJob.errorFileName()))
+                  .isRegularFile();
             });
   }
 
@@ -1291,21 +1377,33 @@ class BulkSubmitExecutorTest {
   // Helper Methods
   // ========================================
 
+  private BulkSubmitExecutor newExecutor(final ExportResultRegistry resultRegistry) {
+    final au.csiro.pathling.io.JobDirectoryFileSystem jobDirectoryFileSystem =
+        new au.csiro.pathling.io.JobDirectoryFileSystem(
+            java.net.URI.create("file://" + tempDir.toAbsolutePath()),
+            new org.apache.hadoop.conf.Configuration());
+    return new BulkSubmitExecutor(
+        importExecutor,
+        submissionRegistry,
+        resultRegistry,
+        serverConfiguration,
+        resultBuilder,
+        jobRegistry,
+        sparkSession,
+        jobDirectoryFileSystem,
+        fhirContext,
+        authProvider,
+        true);
+  }
+
   private Submission createTestSubmission() {
     return Submission.createPending(SUBMISSION_ID, submitterIdentifier, Optional.empty());
   }
 
   private Submission createSubmissionWithManifestJob(final ManifestJob manifestJob) {
-    return new Submission(
-        SUBMISSION_ID,
-        submitterIdentifier,
-        SubmissionState.PROCESSING,
-        new ArrayList<>(List.of(manifestJob)),
-        "2024-01-01T00:00:00Z",
-        null,
-        null,
-        null,
-        null);
+    return createTestSubmission()
+        .withManifestJob(manifestJob)
+        .withState(SubmissionState.PROCESSING);
   }
 
   private ManifestJob createTestManifestJob() {
@@ -1376,9 +1474,10 @@ class BulkSubmitExecutorTest {
     return updateCaptor.getAllValues().get(2).apply(manifestJob);
   }
 
-  /** Reads the OperationOutcome resources from an NDJSON file in the submission directory. */
-  private List<OperationOutcome> readOutcomes(final String fileName) throws IOException {
-    final Path path = tempDir.resolve("jobs").resolve(SUBMISSION_ID).resolve(fileName);
+  /** Reads the OperationOutcome resources from an NDJSON file in the submission's directory. */
+  private List<OperationOutcome> readOutcomes(final Submission submission, final String fileName)
+      throws IOException {
+    final Path path = tempDir.resolve("jobs").resolve(submission.stagingId()).resolve(fileName);
     return Files.readAllLines(path).stream()
         .filter(line -> !line.isBlank())
         .map(line -> fhirContext.newJsonParser().parseResource(OperationOutcome.class, line))

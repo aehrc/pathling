@@ -34,6 +34,8 @@ import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Tests for BulkSubmitValidator.
@@ -125,6 +127,55 @@ class BulkSubmitValidatorTest {
     assertThatCode(() -> validator.validateAndExtract(mockRequest, params))
         .isInstanceOf(InvalidUserInputError.class)
         .hasMessageContaining("submissionId");
+  }
+
+  // The submission identifier is chosen by the client, so it is restricted to a conservative set
+  // of characters. Path-like values, URIs and dot-prefixed names are rejected outright.
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "./S1",
+        "../S1",
+        "S1/../S2",
+        "a/b",
+        ".hidden",
+        "file:/tmp/escape",
+        "S1 ",
+        "S1\u0000",
+        "S1\\S2",
+        "s1.v2",
+        "sübmission",
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      })
+  void rejectsSubmissionIdOutsidePermittedPattern(final String submissionId) {
+    final Parameters params = paramsWithSubmissionId(submissionId);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
+
+    assertThatCode(() -> validator.validateAndExtract(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("submissionId");
+  }
+
+  // Identifiers made of letters, digits, hyphens and underscores, up to 64 characters long, are
+  // accepted. This includes UUIDs, which is what most clients generate.
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "S1",
+        "a",
+        "test_submission-1",
+        "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      })
+  void acceptsSubmissionIdWithinPermittedPattern(final String submissionId) {
+    final Parameters params = paramsWithSubmissionId(submissionId);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
+
+    final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
+
+    assertThat(result.submissionId()).isEqualTo(submissionId);
   }
 
   @Test
@@ -443,8 +494,12 @@ class BulkSubmitValidatorTest {
   // ========================================
 
   private Parameters minimalInProgressParams() {
+    return paramsWithSubmissionId("test-submission-id");
+  }
+
+  private Parameters paramsWithSubmissionId(final String submissionId) {
     final Parameters params = new Parameters();
-    params.addParameter().setName("submissionId").setValue(new StringType("test-submission-id"));
+    params.addParameter().setName("submissionId").setValue(new StringType(submissionId));
     addSubmitter(params, SUBMITTER_SYSTEM, SUBMITTER_VALUE);
     addSubmissionStatus(params, BulkSubmitRequest.STATUS_IN_PROGRESS);
     return params;

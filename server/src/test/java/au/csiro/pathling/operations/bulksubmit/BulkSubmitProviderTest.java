@@ -231,6 +231,7 @@ class BulkSubmitProviderTest {
     final Submission existingSubmission =
         new Submission(
             SUBMISSION_ID,
+            "staging-1",
             submitterIdentifier,
             SubmissionState.PROCESSING,
             new ArrayList<>(List.of(oldJob)),

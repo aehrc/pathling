@@ -38,6 +38,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.hl7.fhir.r4.model.Bundle;
@@ -62,6 +63,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * Integration test for the $bulk-submit operation.
@@ -78,12 +80,15 @@ import org.springframework.test.web.reactive.server.WebTestClient;
     properties = {
       "pathling.async.enabled=true",
       "pathling.bulk-submit.allowed-submitters[0].system=http://example.org/submitters",
-      "pathling.bulk-submit.allowed-submitters[0].value=test-submitter"
+      "pathling.bulk-submit.allowed-submitters[0].value=test-submitter",
+      "pathling.bulk-submit.allowed-submitters[1].system=http://example.org/submitters",
+      "pathling.bulk-submit.allowed-submitters[1].value=other-submitter"
     })
 class BulkSubmitOperationIT {
 
   private static final String SUBMITTER_SYSTEM = "http://example.org/submitters";
   private static final String SUBMITTER_VALUE = "test-submitter";
+  private static final String OTHER_SUBMITTER_VALUE = "other-submitter";
   private static final FhirContext FHIR_CONTEXT = FhirEncoders.contextFor(FhirVersionEnum.R4);
 
   private static WireMockServer wireMockServer;
@@ -234,6 +239,25 @@ class BulkSubmitOperationIT {
       final String status,
       final String manifestUrl,
       final String fhirBaseUrl) {
+    return buildBulkSubmitRequest(SUBMITTER_VALUE, submissionId, status, manifestUrl, fhirBaseUrl);
+  }
+
+  /**
+   * Builds a $bulk-submit request Parameters resource on behalf of a given submitter.
+   *
+   * @param submitterValue The value of the submitter identifier.
+   * @param submissionId The submission ID.
+   * @param status The submission status (in-progress, complete, or aborted).
+   * @param manifestUrl Optional manifest URL (null if not provided).
+   * @param fhirBaseUrl Optional FHIR base URL (null if not provided).
+   * @return JSON string representation of the Parameters resource.
+   */
+  private String buildBulkSubmitRequest(
+      final String submitterValue,
+      final String submissionId,
+      final String status,
+      final String manifestUrl,
+      final String fhirBaseUrl) {
     final StringBuilder params = new StringBuilder();
     params.append(
         """
@@ -253,7 +277,7 @@ class BulkSubmitOperationIT {
               "valueCoding": {"code": "%s"}
             }
         """
-            .formatted(SUBMITTER_SYSTEM, SUBMITTER_VALUE, submissionId, status));
+            .formatted(SUBMITTER_SYSTEM, submitterValue, submissionId, status));
 
     if (manifestUrl != null) {
       params.append(
@@ -336,6 +360,18 @@ class BulkSubmitOperationIT {
    * @return JSON string representation of the Parameters resource.
    */
   private String buildBulkSubmitStatusRequest(final String submissionId) {
+    return buildBulkSubmitStatusRequest(SUBMITTER_VALUE, submissionId);
+  }
+
+  /**
+   * Builds a $bulk-submit-status request on behalf of a given submitter.
+   *
+   * @param submitterValue The value of the submitter identifier.
+   * @param submissionId The submission ID to check status for.
+   * @return JSON string representation of the Parameters resource.
+   */
+  private String buildBulkSubmitStatusRequest(
+      final String submitterValue, final String submissionId) {
     return """
     {
       "resourceType": "Parameters",
@@ -351,7 +387,7 @@ class BulkSubmitOperationIT {
       ]
     }
     """
-        .formatted(submissionId, SUBMITTER_SYSTEM, SUBMITTER_VALUE);
+        .formatted(submissionId, SUBMITTER_SYSTEM, submitterValue);
   }
 
   @Test
@@ -802,11 +838,146 @@ class BulkSubmitOperationIT {
     assertThat(errorParameters(awaitStatusManifest(statusRequest, 2))).hasSize(2);
   }
 
+  // Reproduces #2982. A second allowed submitter reuses the submission ID of another submitter,
+  // with a manifest that cannot be downloaded. The first submission's files must stay reachable
+  // through its own result URLs only, and must not become reachable through the shared ID.
+  @Test
+  void submissionIdReusedByAnotherSubmitterDoesNotExposeStagedFiles() {
+    setupSuccessfulManifestStubs();
+    final String baseUrl = "http://localhost:" + wireMockServer.port();
+    wireMockServer.stubFor(
+        get(urlEqualTo("/missing-manifest.json")).willReturn(aResponse().withStatus(404)));
+    final String submissionId = "S" + UUID.randomUUID().toString().replace("-", "");
+    final String uri = "http://localhost:" + port + "/fhir/$bulk-submit";
+
+    // Given: the first submitter's files have been staged.
+    webTestClient
+        .post()
+        .uri(uri)
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .bodyValue(
+            buildBulkSubmitRequest(
+                SUBMITTER_VALUE,
+                submissionId,
+                "in-progress",
+                baseUrl + "/manifest.json",
+                baseUrl + "/fhir"))
+        .exchange()
+        .expectStatus()
+        .isOk();
+    final Parameters originalManifest =
+        awaitStatusManifest(
+            buildBulkSubmitStatusRequest(SUBMITTER_VALUE, submissionId),
+            manifest -> !outputUrls(manifest).isEmpty());
+    final String originalResultUrl = outputUrls(originalManifest).getFirst();
+    final String stagedFile = queryParameter(originalResultUrl, "file");
+    final String originalJob = queryParameter(originalResultUrl, "job");
+
+    // When: the second submitter submits the same submission ID with a manifest that fails.
+    webTestClient
+        .post()
+        .uri(uri)
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .bodyValue(
+            buildBulkSubmitRequest(
+                OTHER_SUBMITTER_VALUE,
+                submissionId,
+                "in-progress",
+                baseUrl + "/missing-manifest.json",
+                baseUrl + "/fhir"))
+        .exchange()
+        .expectStatus()
+        .isOk();
+    final Parameters otherManifest =
+        awaitStatusManifest(
+            buildBulkSubmitStatusRequest(OTHER_SUBMITTER_VALUE, submissionId),
+            manifest -> errorParameters(manifest).size() == 1);
+
+    // Then: the result URLs of both submissions refer to server-generated identifiers that differ
+    // from each other and from the client-chosen submission ID.
+    final String otherJob =
+        queryParameter(
+            errorParameters(otherManifest).getFirst().getPart().stream()
+                .filter(part -> "url".equals(part.getName()))
+                .map(part -> part.getValue().primitiveValue())
+                .findFirst()
+                .orElseThrow(),
+            "job");
+    assertThat(originalJob).isNotEqualTo(submissionId);
+    assertThat(otherJob).isNotIn(submissionId, originalJob);
+
+    // And: the staged file cannot be retrieved through the shared submission ID.
+    webTestClient
+        .get()
+        .uri(
+            "http://localhost:{port}/fhir/$result?job={job}&file={file}",
+            port,
+            submissionId,
+            stagedFile)
+        .exchange()
+        .expectStatus()
+        .isNotFound();
+
+    // And: the staged file cannot be retrieved through the second submission's identifier.
+    webTestClient
+        .get()
+        .uri(
+            "http://localhost:{port}/fhir/$result?job={job}&file={file}",
+            port,
+            otherJob,
+            stagedFile)
+        .exchange()
+        .expectStatus()
+        .isNotFound();
+
+    // And: the first submission's result URL still returns its file.
+    webTestClient.get().uri(originalResultUrl).exchange().expectStatus().isOk();
+  }
+
+  // Reproduces #2982. Submission IDs that are path-like or scheme-qualified are rejected before any
+  // directory is created for them.
+  @Test
+  void submissionIdThatIsNotAPlainIdentifierIsRejected() {
+    final String baseUrl = "http://localhost:" + wireMockServer.port();
+    wireMockServer.stubFor(
+        get(urlEqualTo("/missing-manifest.json")).willReturn(aResponse().withStatus(404)));
+    final Path escape = stagingDir.resolve("bs-escape");
+    final String uri = "http://localhost:" + port + "/fhir/$bulk-submit";
+
+    for (final String submissionId : List.of("./S1", "S1/../S2", "file:" + escape)) {
+      webTestClient
+          .post()
+          .uri(uri)
+          .header("Content-Type", "application/fhir+json")
+          .header("Accept", "application/fhir+json")
+          .bodyValue(
+              buildBulkSubmitRequest(
+                  SUBMITTER_VALUE,
+                  submissionId,
+                  "in-progress",
+                  baseUrl + "/missing-manifest.json",
+                  baseUrl + "/fhir"))
+          .exchange()
+          .expectStatus()
+          .isBadRequest();
+    }
+    assertThat(escape).doesNotExist();
+  }
+
   /**
    * Polls the status of a submission until it returns a status manifest with the expected number of
    * error entries.
    */
   private Parameters awaitStatusManifest(final String statusRequest, final int expectedErrors) {
+    return awaitStatusManifest(
+        statusRequest, manifest -> errorParameters(manifest).size() == expectedErrors);
+  }
+
+  /** Polls the status of a submission until it returns a status manifest matching a condition. */
+  private Parameters awaitStatusManifest(
+      final String statusRequest, final Predicate<Parameters> condition) {
     final String statusUri = "http://localhost:" + port + "/fhir/$bulk-submit-status";
     return await()
         .atMost(60, TimeUnit.SECONDS)
@@ -830,7 +1001,20 @@ class BulkSubmitOperationIT {
                       .parseResource(Parameters.class, result.getResponseBody())
                   : null;
             },
-            manifest -> manifest != null && errorParameters(manifest).size() == expectedErrors);
+            manifest -> manifest != null && condition.test(manifest));
+  }
+
+  private static List<String> outputUrls(final Parameters manifest) {
+    return manifest.getParameter().stream()
+        .filter(p -> "output".equals(p.getName()))
+        .flatMap(p -> p.getPart().stream())
+        .filter(part -> "url".equals(part.getName()))
+        .map(part -> part.getValue().primitiveValue())
+        .toList();
+  }
+
+  private static String queryParameter(final String url, final String name) {
+    return UriComponentsBuilder.fromUriString(url).build().getQueryParams().getFirst(name);
   }
 
   private static List<ParametersParameterComponent> errorParameters(final Parameters manifest) {

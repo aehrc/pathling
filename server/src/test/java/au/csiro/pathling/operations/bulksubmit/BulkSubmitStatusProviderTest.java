@@ -257,6 +257,7 @@ class BulkSubmitStatusProviderTest {
     final Submission pendingSubmission =
         new Submission(
             SUBMISSION_ID,
+            "staging-1",
             submitterIdentifier,
             SubmissionState.PROCESSING,
             List.of(manifestJob),
@@ -359,6 +360,7 @@ class BulkSubmitStatusProviderTest {
     final Submission pendingSubmission =
         new Submission(
             SUBMISSION_ID,
+            "staging-1",
             submitterIdentifier,
             SubmissionState.PROCESSING,
             List.of(manifestJob),
@@ -396,6 +398,7 @@ class BulkSubmitStatusProviderTest {
   private Submission processingSubmission(final List<ManifestJob> manifestJobs) {
     return new Submission(
         SUBMISSION_ID,
+        "staging-1",
         new SubmitterIdentifier(SUBMITTER_SYSTEM, SUBMITTER_VALUE),
         SubmissionState.PROCESSING,
         manifestJobs,
