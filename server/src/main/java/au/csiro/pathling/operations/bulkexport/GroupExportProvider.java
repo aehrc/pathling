@@ -26,10 +26,14 @@ import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.UNTIL
 
 import au.csiro.pathling.async.AsyncSupported;
 import au.csiro.pathling.async.PreAsyncValidation;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.bulkexport.ExportRequest.ExportLevel;
 import au.csiro.pathling.operations.compartment.GroupMemberService;
 import au.csiro.pathling.security.OperationAccess;
+import au.csiro.pathling.security.PathlingAuthority;
+import au.csiro.pathling.security.ResourceAccess.AccessType;
+import au.csiro.pathling.security.SecurityAspect;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
@@ -64,6 +68,8 @@ public class GroupExportProvider implements IResourceProvider, PreAsyncValidatio
 
   @Nonnull private final GroupMemberService groupMemberService;
 
+  @Nonnull private final ServerConfiguration serverConfiguration;
+
   @Override
   public Class<Group> getResourceType() {
     return Group.class;
@@ -76,17 +82,21 @@ public class GroupExportProvider implements IResourceProvider, PreAsyncValidatio
    * @param exportOperationHelper the export operation helper
    * @param deltaLake the queryable data source
    * @param groupMemberService the group member service
+   * @param serverConfiguration the server configuration, used to determine whether authorisation is
+   *     enabled
    */
   @Autowired
   public GroupExportProvider(
       @Nonnull final ExportOperationValidator exportOperationValidator,
       @Nonnull final ExportOperationHelper exportOperationHelper,
       @Nonnull final QueryableDataSource deltaLake,
-      @Nonnull final GroupMemberService groupMemberService) {
+      @Nonnull final GroupMemberService groupMemberService,
+      @Nonnull final ServerConfiguration serverConfiguration) {
     this.exportOperationValidator = exportOperationValidator;
     this.exportOperationHelper = exportOperationHelper;
     this.deltaLake = deltaLake;
     this.groupMemberService = groupMemberService;
+    this.serverConfiguration = serverConfiguration;
   }
 
   /**
@@ -133,6 +143,12 @@ public class GroupExportProvider implements IResourceProvider, PreAsyncValidatio
     final List<String> type = (List<String>) args[4];
     final List<String> typeFilter = (List<String>) args[5];
     final List<String> elements = (List<String>) args[6];
+
+    // Resolving the group reveals whether it exists and who its members are, so read authority for
+    // Group is required before it is read.
+    if (serverConfiguration.getAuth().isEnabled()) {
+      SecurityAspect.checkHasAuthority(PathlingAuthority.resourceAccess(AccessType.READ, "Group"));
+    }
 
     // Extract patient IDs from the group during validation.
     final Set<String> patientIds =

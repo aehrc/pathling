@@ -17,12 +17,18 @@
 
 package au.csiro.pathling.operations.bulkexport;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.async.PreAsyncValidation;
+import au.csiro.pathling.config.AuthorizationConfiguration;
+import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.bulkexport.ExportRequest.ExportLevel;
 import au.csiro.pathling.operations.compartment.GroupMemberService;
@@ -34,12 +40,19 @@ import java.util.Set;
 import org.hl7.fhir.r4.model.Group;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Parameters;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 /**
  * Tests for {@link GroupExportProvider} covering resource type, pre-async validation, group member
@@ -56,13 +69,27 @@ class GroupExportProviderTest {
   @Mock private QueryableDataSource deltaLake;
   @Mock private GroupMemberService groupMemberService;
 
+  private AuthorizationConfiguration authConfig;
+
   private GroupExportProvider provider;
 
   @BeforeEach
   void setUp() {
+    authConfig = new AuthorizationConfiguration();
+    final ServerConfiguration configuration = new ServerConfiguration();
+    configuration.setAuth(authConfig);
     provider =
         new GroupExportProvider(
-            exportOperationValidator, exportOperationHelper, deltaLake, groupMemberService);
+            exportOperationValidator,
+            exportOperationHelper,
+            deltaLake,
+            groupMemberService,
+            configuration);
+  }
+
+  @AfterEach
+  void tearDown() {
+    SecurityContextHolder.clearContext();
   }
 
   @Test
@@ -121,5 +148,64 @@ class GroupExportProviderTest {
         provider.preAsyncValidate(requestDetails, args);
 
     assertNotNull(result);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Read authority for the group.
+  // ---------------------------------------------------------------------------
+
+  // A caller holding the export authority and read access to Patient, but not to Group, must be
+  // refused before the group is resolved. Resolving it first would reveal whether the group exists
+  // (via a 404) and who its members are (via the export output).
+  @Test
+  void preAsyncValidateRejectsCallerWithoutGroupReadAuthority() {
+    authConfig.setEnabled(true);
+    setSecurityContext("pathling:export", "pathling:read:Patient");
+    final ServletRequestDetails requestDetails = mock(ServletRequestDetails.class);
+
+    assertThatThrownBy(() -> provider.preAsyncValidate(requestDetails, argsFor("g1")))
+        .isInstanceOf(AccessDeniedError.class)
+        .hasMessageContaining("pathling:read:Group");
+    verifyNoInteractions(groupMemberService, exportOperationValidator);
+  }
+
+  // Read access to Group, granted directly or through a broader authority that subsumes it, lets
+  // the group be resolved.
+  @ParameterizedTest
+  @ValueSource(strings = {"pathling:read:Group", "pathling:read", "pathling"})
+  void preAsyncValidateResolvesGroupWithGroupReadAuthority(final String readAuthority) {
+    authConfig.setEnabled(true);
+    setSecurityContext("pathling:export", readAuthority);
+    final ServletRequestDetails requestDetails = mock(ServletRequestDetails.class);
+    when(groupMemberService.extractPatientIdsFromGroup("g1")).thenReturn(Set.of("p1"));
+
+    provider.preAsyncValidate(requestDetails, argsFor("g1"));
+
+    verify(groupMemberService).extractPatientIdsFromGroup("g1");
+  }
+
+  // With authorisation disabled there is no token to check, and the group is resolved as before.
+  @Test
+  void preAsyncValidateResolvesGroupWhenAuthDisabled() {
+    authConfig.setEnabled(false);
+    final ServletRequestDetails requestDetails = mock(ServletRequestDetails.class);
+    when(groupMemberService.extractPatientIdsFromGroup("g1")).thenReturn(Set.of("p1"));
+
+    provider.preAsyncValidate(requestDetails, argsFor("g1"));
+
+    verify(groupMemberService).extractPatientIdsFromGroup("g1");
+  }
+
+  /** Builds the pre-async validation arguments for a group export with no other parameters. */
+  private static Object[] argsFor(final String groupId) {
+    // Args: [groupId, outputFormat, since, until, type, typeFilter, elements, requestDetails].
+    return new Object[] {new IdType("Group/" + groupId), null, null, null, null, null, null, null};
+  }
+
+  private static void setSecurityContext(final String... authorities) {
+    final Jwt jwt = Jwt.withTokenValue("mock").header("alg", "none").claim("sub", "user").build();
+    final JwtAuthenticationToken auth =
+        new JwtAuthenticationToken(jwt, AuthorityUtils.createAuthorityList(authorities));
+    SecurityContextHolder.getContext().setAuthentication(auth);
   }
 }
