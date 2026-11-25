@@ -60,8 +60,7 @@ append.
 2. **Given** a schema set of PoF schemas and a batch lacking elements the schema has, **When** the batch is
    loaded with the set, **Then** the missing elements are present and null.
 3. **Given** a schema set of PoF schemas and a batch carrying elements the schema lacks, **When** the batch
-   is loaded with the set, **Then** those elements are absent from the result, with no error or
-   warning.
+   is loaded with the set, **Then** those elements are absent from the result, with no error.
 4. **Given** a Delta table and batches with differing content, **When** each is loaded with the
    table's own schema set and appended, **Then** the table's schema is unchanged
    after every append.
@@ -76,15 +75,17 @@ append.
 
 ### User Story 2 - Encode a stream with a defined schema (Priority: P1)
 
-A developer reads FHIR bundles from Kafka, encodes them with a defined schema, and writes the
-encoded resources to Delta or Parquet with Spark's own streaming writer. Pathling reads the result
-back like any other table.
+A developer reads FHIR bundles from Kafka, encodes them with a defined schema, and writes each
+micro-batch of encoded resources to Delta or Parquet with a Pathling sink inside Spark's
+`foreachBatch`, as the 10.x streaming documentation did. Every check a Pathling sink makes applies
+to each micro-batch. Pathling reads the result back like any other table.
 
 **Why this priority**: Streaming encode worked in 10.x and is refused in 11.0. It is the use case
 that inference cannot serve at all.
 
-**Independent Test**: Encode a streaming source of NDJSON lines with a schema, write it to Delta
-and to Parquet with Spark's streaming writer, and read both back through Pathling.
+**Independent Test**: Encode a streaming source of NDJSON lines with a schema, write each
+micro-batch to Delta and to Parquet with a Pathling sink in `foreachBatch`, and read both back
+through Pathling.
 
 **Acceptance Scenarios**:
 
@@ -94,35 +95,15 @@ and to Parquet with Spark's streaming writer, and read both back through Pathlin
    **Then** the same holds.
 3. **Given** a streaming dataset and no schema, **When** the user encodes it, **Then** the encode is
    refused with a message telling the user to supply a schema.
-4. **Given** an encoded stream written with Spark's streaming writer to a Delta or a Parquet
-   location following Pathling's table naming, **When** Pathling reads the location, **Then** it
-   returns the streamed resources.
+4. Removed with FR-014. A raw `writeStream` is neither promised nor tested.
 5. **Given** the streaming example in the documentation, **When** it is run, **Then** it works.
 
 ---
 
-### User Story 3 - Check a destination before writing (Priority: P2)
+### User Story 3 - Removed
 
-Before starting a stream, or any write that does not go through a Pathling sink, the developer asks
-Pathling to check the destination for each resource type. The check refuses a destination Pathling
-could not read back, as a Pathling sink would before writing.
-
-**Why this priority**: A stream written with Spark's own writer skips the checks a Pathling sink
-makes. Without this, the first sign of a legacy-layout target or a wrong timestamp setting is
-corrupt or unreadable output.
-
-**Independent Test**: Run the check against a legacy-layout table, against a session with the wrong
-Parquet timestamp setting, and against an empty location.
-
-**Acceptance Scenarios**:
-
-1. **Given** a destination holding a table in a layout this release does not read, **When** the
-   user checks it, **Then** the check fails with the same refusal a Pathling sink gives.
-2. **Given** a session that would not store timestamps as Parquet on FHIR requires, and datasets
-   carrying range annotations, **When** the user checks the destination, **Then** the check
-   fails with the same refusal a Pathling sink gives.
-3. **Given** a location with no table, or a readable Parquet on FHIR table, and a correct session,
-   **When** the user checks it, **Then** the check passes.
+Removed. A stream written through a Pathling sink inside `foreachBatch` gets every check the sink
+makes, so a separate destination check is not needed (see Out of Scope).
 
 ---
 
@@ -159,9 +140,11 @@ pass it to every source.
 - **Annotation fields in the given schema** are ignored. The configuration decides which
   annotations the output carries, as in an inferred load.
 - **Primitive metadata groups** are kept or dropped as the given schema says, whatever the
-  primitive metadata option is set to.
+  primitive metadata option is set to. A schema without `_birthDate` therefore drops a
+  data-absent-reason extension on `birthDate` even when the option is on.
 - **A resource type the schema set names but the source lacks** behaves as today: it is not listed,
-  reading it is an error, and sinks write nothing for it. Provisional (see Open Items).
+  reading it is an error, and sinks write nothing for it. Reading it as an empty table is a
+  follow-up (#2997).
 - **A resource type the source holds but the set does not name** is inferred, as today.
 - **A schema that cannot be read** (malformed JSON, or not a struct) is refused with an error naming
   the resource type.
@@ -172,8 +155,9 @@ pass it to every source.
   documented.
 - **An append through a Pathling sink of data whose schema differs from the table's** widens the
   table, as an inferred append does today.
-- **A value whose stored type differs from the definitions' type** cannot occur in PoF-layout
-  input, because the types come from the definitions on every path.
+- **A value whose stored type differs from the definitions' type** is not decided here. Read
+  non-conformant data as empty, with no modes (#2884) settles it: the read never fails, and a value
+  that cannot be matched reads as null.
 
 ## Requirements _(mandatory)_
 
@@ -197,7 +181,13 @@ Projection:
 - **FR-006**: Projecting a batch to a schema MUST give the result that inference gives when it
   observes exactly the given schema's base schema: the elements and primitive metadata groups the
   schema names are kept, with type, cardinality and order from the definitions; elements the batch
-  lacks are present and null; content the schema has no field for is dropped silently.
+  lacks are present and null; content the schema has no field for is dropped, with no error.
+- **FR-006a**: When a source reads stored data whose schema is known without reading rows
+  (Parquet, Delta, catalog tables and datasets), it MUST log at debug level the paths that the
+  defined schema drops. They MUST be found by comparing the stored schema with the defined schema
+  alone, with no extra Spark job and no per-row work. NDJSON, bundle and XML reads with a defined
+  schema run no inference, so finding dropped content would need per-row work: they MUST NOT detect
+  it, and log nothing about it.
 - **FR-007**: Annotation fields in a given schema MUST be ignored. The output's annotations MUST be
   those the configuration enables, computed as in an inferred load.
 - **FR-008**: When the given schema is a PoF schema, the output's base schema MUST equal it exactly. When
@@ -213,19 +203,18 @@ Streaming:
 
 - **FR-012**: `encode` and `encodeBundle` MUST accept a streaming dataset when given a schema, and
   return a streaming dataset with that schema.
-- **FR-013**: Without a schema, a streaming encode MUST stay refused, with a message that tells the
-  user to supply a schema.
-- **FR-014**: An encoded stream written with Spark's streaming writer to a Delta or Parquet location
-  that follows Pathling's table naming MUST be readable by the corresponding Pathling source.
+- **FR-013**: Without a schema, a streaming encode MUST stay refused, with the exception type it
+  has today and a message that tells the user to supply a schema or to encode each batch within
+  `foreachBatch`.
+- **FR-014**: Removed. A stream is written through a Pathling sink inside `foreachBatch` (FR-024),
+  so reading back the output of a raw `writeStream` is neither promised nor tested.
 
 Destination check:
 
-- **FR-015**: Pathling MUST provide a public check, in Java, Python and R, that is given a
-  destination and the datasets to be written, by resource type (streaming or not), returns each
-  type's table path, and refuses, before anything is written, a destination
-  that a Pathling sink would refuse for a layout it does not read or for the session's Parquet
-  timestamp setting, with the same errors.
-- **FR-016**: The check MUST cover Delta and Parquet locations.
+- **FR-015**: Removed. A stream is written through a Pathling sink inside `foreachBatch`, which
+  makes every check the sink makes, so no separate destination check is provided (see Out of
+  Scope).
+- **FR-016**: Removed, with FR-015.
 
 Schemas from data:
 
@@ -244,22 +233,32 @@ Compatibility:
   element that is empty everywhere, at every kind of position (ADR-0007).
 - **FR-021a**: Each way of loading or writing data MUST be shown to produce exactly the schema and
   data it should for a given input and defined schema.
-- **FR-021b**: An opt-in run, outside the regular build, MUST re-run the SQL on FHIR compliance and
-  YAML FHIRPath suites over their data loaded with a defined schema wider than the data, and give
-  the same results as the inferred run.
+- **FR-021b**: In the regular build, both YAML FHIRPath suites (the fhirpath.js reference suite and
+  Pathling's own suite) MUST load every case with a defined schema in place of an inferred one:
+    - a case whose subject is not a FHIR resource, with the schema derived from the definition the
+      case's YAML gives, alone;
+    - a case whose subject is a FHIR resource, from an input file or inline, with the schema
+      inferred from all of its suite's input resources of that type, merged by name with the case's
+      own inferred schema, so that it is never narrower than the data.
+
+    A case whose result changes is an engine or reader defect to fix or, if it is a genuine
+    conformance gap, is recorded in the exclusion baselines. These schemas are only ever wider than
+    the data, so narrowing (FR-006) is covered by the load tests of FR-021a.
 
 Documentation:
 
 - **FR-022**: The documentation MUST describe defined schemas in every binding: how to get, save
-  and pass a schema set; that content outside the schema is lost without warning, and that a wide
+  and pass a schema set; that content outside the schema is lost with no error, and that a wide
   schema avoids it; that annotations follow the configuration and primitive metadata follows the
   schema; the narrowing effect of a Delta merge; and that the output's schema equals the given
   schema only when the given schema is a PoF schema.
 - **FR-023**: The documentation MUST describe how to bootstrap a schema set from a representative
   sample with inference, and that elements absent from the sample are dropped from later loads.
-- **FR-024**: The streaming documentation MUST show a streaming encode with a schema written with
-  Spark's streaming writer to Delta and to Parquet, using the destination check of FR-015, and MUST
-  state what such a write skips compared with a Pathling sink.
+- **FR-024**: The streaming documentation MUST show a streaming encode with a schema written to
+  Delta and to Parquet through a Pathling sink inside `foreachBatch`, extending the 10.x
+  `foreachBatch` idiom, in each binding whose Spark API offers `foreachBatch` (Python and Java;
+  sparklyr has none), and MUST state that a write with Spark's own streaming writer skips the
+  checks a Pathling sink makes.
 
 Follow-up:
 
@@ -276,28 +275,34 @@ Follow-up:
   elements and primitive metadata groups. Its annotation fields carry no meaning on input.
 - **Schema set**: resource type code → schema. Produced by every source, accepted by every source.
   Users keep and share it; Pathling does not store it.
-- **Destination**: a Delta or Parquet location holding one table per resource type, named as
-  Pathling's sinks name them.
 
 ## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
-- **SC-001**: A streaming encode with a schema succeeds in Java, Python and R, and its output
-  written to Delta and to Parquet is read back by Pathling with every resource present.
+- **SC-001**: A streaming encode with a schema succeeds in Java, Python and R and returns a
+  streaming dataset with the schema.
 - **SC-002**: A Delta table appended to only with its own schema set, with at least three batches of
-  differing content, has the same schema after every append.
+  differing content, has the same schema after every append. Here, and wherever these documents
+  say a schema "equals" or is "exactly" another, two schemas are the same when their base schemas
+  are equal field for field, in order, ignoring nullability (of fields, array elements and map
+  values) and field metadata, with field order significant at every depth: Pathling's output is in
+  canonical field order, so a test's expected schema is written in that order too. This criterion applies to a table written under the same annotation
+  configuration as the loads that append to it.
 - **SC-003**: For every input path (NDJSON, bundles, JSON and XML encode, Parquet, Delta, catalog
   tables, bulk, datasets), output loaded with a schema set of PoF schemas, and that output written by
-  every sink, has exactly the given base schema plus the configured annotations, including for batches that lack
-  elements of the schema or carry elements it does not.
+  every sink, has exactly the given base schema (in the sense of SC-002) plus the annotations the
+  configuration enables, including for batches that lack elements of the schema or carry elements
+  it does not.
 - **SC-004**: The same resources loaded from JSON, XML and stored Parquet with the same schema set
   give equal data.
 - **SC-005**: Absence is tested at every kind of position (singular and repeating primitive,
   singular and repeating complex element, choice type, primitive metadata group, annotation, nested,
   and on one or both sides of a combination), each giving the result of the present-but-empty
-  element; and the opt-in parity run gives identical results over inferred and widened defined
-  schemas. The regular build time grows by no more than the new load and absence tests.
+  element; and both YAML FHIRPath suites, with every case loaded with a defined schema, give the
+  results of the inferred load, apart from conformance gaps recorded in the exclusion baselines.
+  The regular build time grows by no more than the new tests and the derivation of each YAML
+  suite's schemas.
 - **SC-006**: Every existing test that passes no schema passes unchanged.
 - **SC-007**: A schema set taken from each source and round-tripped through a JSON file is accepted
   by every source in every binding.
@@ -305,8 +310,7 @@ Follow-up:
 
 ## Assumptions
 
-- Projection never casts values. Types come from the definitions on every path, so PoF-layout input
-  cannot clash with them.
+- Projection never casts values. A stored type that clashes with the definitions is left to #2884.
 - Schema sets are stored and versioned by the user, not by Pathling.
 - The layout column (001 tickets 29 and 30) is not implemented yet. When it is, it is treated as
   part of the base schema that ingest always writes.
@@ -322,15 +326,20 @@ Follow-up:
 - Exposing Delta's idempotent-write options on Pathling's sinks: a follow-up issue (FR-025).
 - The 10.x shaping options as shortcuts: part of the generator follow-up.
 - A Pathling streaming sink.
+- A destination check for raw `writeStream`: `foreachBatch` with a Pathling sink keeps every check
+  the sink makes, so a stream written that way needs no separate check.
 - A schema option on sinks: the source's schema set already decides what a sink writes.
 - Inferring a schema from a stream.
+- Reading a type that the schema set names but the data lacks as an empty table: #2997.
+- Reading a value whose stored type clashes with the definitions: Read non-conformant data as
+  empty, with no modes (#2884).
 - Changing the default from inferred.
 - Migrating a source from one defined schema to another, beyond reading with one set and writing
   with another.
 
 ## Open Items
 
-- **Absent resource types.** A type the schema set names but the data lacks keeps today's behaviour
-  (not listed, read is an error, nothing written). This is provisional and MUST be confirmed with
-  the Pathling owner before release; the alternative is an empty dataset and an empty table with the
-  schema.
+- **Absent resource types.** Resolved: a type the schema set names but the data lacks keeps today's
+  behaviour (not listed, read is an error, nothing written). Reading it as an empty dataset and
+  writing an empty table is #2997, "Read a type that a schema set names but the data lacks as an
+  empty table".

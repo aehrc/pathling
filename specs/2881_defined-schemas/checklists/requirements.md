@@ -15,7 +15,7 @@
 ## Requirement completeness
 
 - [x] CHK004 No `[NEEDS CLARIFICATION]` markers remain. The one deferred decision (absent resource
-      types) is recorded under Open Items with a provisional answer, not left unanswered.
+      types) is resolved under Open Items: today's behaviour, with #2997 as the follow-up.
 - [x] CHK005 Requirements are testable and unambiguous: each FR states an observable behaviour.
 - [x] CHK006 Success criteria are measurable and technology-agnostic beyond the public API names.
 - [x] CHK007 Acceptance scenarios are defined for every story.
@@ -27,11 +27,12 @@
 
 ## Feature readiness
 
-- [x] CHK011 Every FR has acceptance criteria: FR-001–010 → US1 and US4 (FR-011 removed); FR-012–014 → US2;
-      FR-015–016 → US3; FR-017–019 → US4; FR-020–021b → SC-005, SC-006; FR-022–024 → US2 scenario 5,
-      SC-008; FR-025–026 are delivery obligations checked at completion.
-- [x] CHK012 User scenarios cover the primary flows: batch load and write, streaming encode,
-      destination check, schemas from data.
+- [x] CHK011 Every FR has acceptance criteria: FR-001–010 → US1 and US4 (FR-011 removed), with
+      FR-006a's debug log checked by review rather than a dedicated test; FR-012–013 → US2 (FR-014 removed);
+      FR-015–016 removed with US3; FR-017–019 → US4; FR-020–021b → SC-005, SC-006; FR-022–024 →
+      US2 scenario 5, SC-008; FR-025–026 are delivery obligations checked at completion.
+- [x] CHK012 User scenarios cover the primary flows: batch load and write, streaming encode
+      written through a Pathling sink in `foreachBatch`, schemas from data.
 
 ## Notes
 

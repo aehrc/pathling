@@ -19,12 +19,15 @@ recomputed from the configuration.
 The feature also adds:
 
 - `schemas()` on every source;
-- a public destination check that runs the sinks' layout and timestamp refusals and returns each
-  type's table path;
-- an opt-in parity profile.
+- a debug log of the paths a defined schema drops from stored data, found by comparing schemas;
+- YAML FHIRPath suites that load every case with a defined schema, in the regular build.
+
+A stream is written to a lake through a Pathling sink inside `foreachBatch`, so it needs no
+separate destination check.
 
 Following ADR-0007, correctness rests on load tests and on the existing and extended absence tests.
-The conformance suites are not run per schema source.
+The conformance suites are not run per schema source: the YAML suites load their cases with a
+defined schema in place of the inferred one, not in addition to it.
 
 ## Technical Context
 
@@ -38,13 +41,15 @@ Lake, Py4J (Python), sparklyr and jsonlite (R).
 - JUnit 5 in `io`, `library-api` and `fhirpath`.
 - pytest in `lib/python/tests`.
 - testthat in `lib/R/tests/testthat`.
-- An opt-in Maven profile `definedSchemaParity` in `fhirpath/pom.xml`.
+- The YAML FHIRPath suites in `fhirpath`, whose resolvers load each case with a defined schema.
 
 **Target Platform**: Spark 4 on JVM 21: local, Databricks, and Spark clusters.
 **Project Type**: Library: `io` (reading and projection), `library-api` (public surface), and the
 language bindings.
 **Performance Goals**: A load with a defined schema does no inference pass, so it does one fewer
-Spark job than an inferred load. The regular build grows only by the new tests (SC-005).
+Spark job than an inferred load. The regular build grows only by the new tests and by the
+derivation of each YAML suite's schemas, once per suite and resource type (SC-005). Logging dropped
+paths compares schemas only, with no Spark job (FR-006a).
 **Constraints**:
 
 - `io` may not use internal Catalyst API.
@@ -65,8 +70,8 @@ The constitution is the global `CLAUDE.md`, the project `CLAUDE.md` and `.claude
     - one projector, extracted from existing code, not new;
     - the plumbing.
 
-    There is no schema-mode enum, no validator and no cast (ADR-0008). The parity run reuses the
-    existing `TestSchemaMode` switch and its `PofDatasets.fromJson` choke point. ✅
+    There is no schema-mode enum, no validator and no cast (ADR-0008). The YAML suites take a
+    defined schema in their existing resolvers, with no profile, fixture or new test mode. ✅
 
 - **Test-driven development**: every task phase starts with failing tests. Load tests
   (FR-021a/SC-003) and absence tests (FR-021/SC-005) come before the reader, projector and API
@@ -76,8 +81,15 @@ The constitution is the global `CLAUDE.md`, the project `CLAUDE.md` and `.claude
     - `final` everywhere.
     - Jakarta nullability annotations.
     - One top-level class per file, with no new records, enums or inner classes. `DataSourceBuilder`
-      is already a record, and adding a component to it extends existing code rather than
-      introducing a record.
+      is already a record; `withSchemas` adds a schema-set component to it, so no record is
+      introduced.
+- **Public API change**: `DataSourceBuilder` is a public record of `library-api`, and adding a
+  component changes its canonical constructor, adds an accessor and changes `equals`, `hashCode`
+  and `toString`. That is a change to the public API, not an internal extension. The released
+  canonical constructor (v10.0.0) is `DataSourceBuilder(PathlingContext)`, which the record keeps
+  as an explicit constructor, so callers of it (`PathlingContext.read()` and the server tests) are
+  unaffected. The current canonical constructor, `(PathlingContext, boolean)`, is unreleased and is
+  replaced by one with the extra component. The Java contract records the change. ✅
     - `Optional`/`Stream` composition.
     - Substantial logic in `*Logic`-style classes: `DefinedSchemaLogic`, `Projection`.
 
@@ -90,11 +102,9 @@ The constitution is the global `CLAUDE.md`, the project `CLAUDE.md` and `.claude
 - **Only strictly necessary code**: no code or tests beyond what an FR needs. The XML parse-schema
   builder reuses `XmlIngestShape` rather than adding a second parser. ✅
 - **Visibility of system status**: errors name the resource type (unreadable schema, unknown key,
-  streaming without a schema, destination refusals). ✅
+  streaming without a schema). ✅
 
-| Violation                                                     | Why needed                                                                                       | Simpler alternative rejected because                                                               |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
-| A new public method on `PathlingContext` (`checkDestination`) | A stream written with Spark's own writer bypasses every sink, so the check cannot live on a sink | Running the check implicitly inside `encode` was rejected: `encode` does not know the destination. |
+There are no violations to justify.
 
 ## Project Structure
 
@@ -138,28 +148,35 @@ io/src/test/java/au/csiro/pathling/io/
 └── SchemaSetTest.java               # New.
 
 library-api/src/main/java/au/csiro/pathling/library/
-├── PathlingContext.java        # encode/encodeBundle schema, streaming refusal, checkDestination.
+├── PathlingContext.java        # encode/encodeBundle schema, streaming refusal.
 ├── io/source/DataSourceBuilder.java   # withSchemas; parquetWithSchemas removed.
-├── io/source/*Source.java      # Project named types; schemas().
+├── io/source/*Source.java      # Project named types (Parquet/Delta transformer,
+│                               # CatalogSource.read, DatasetSource.dataset), logging dropped
+│                               # paths; schemas().
 ├── io/source/QueryableDataSource.java # schemas().
-├── io/sink/DeltaSink.java      # conformToTarget replaced by io Projection.
-└── io/sink/DestinationCheck.java      # New: shared refusals, used by sinks and checkDestination.
+└── io/sink/DeltaSink.java      # conformToTarget replaced by io Projection.
 library-api/src/test/java/au/csiro/pathling/library/
 ├── io/source/DefinedSchemaSourceTest.java   # New.
 ├── io/source/SourceSchemasTest.java         # New.
 ├── io/sink/DefinedSchemaWriteTest.java      # New: sinks keep the source's schema.
-├── io/sink/DestinationCheckTest.java        # New.
+├── io/SchemaEquality.java                   # New test helper: schema equality of SC-002.
+├── io/SchemaEqualityTest.java               # New.
 └── StreamingEncodeTest.java                 # New.
 
 fhirpath/src/test/java/au/csiro/pathling/
-├── AbsentElementTest.java      # Extended to the positions not yet covered.
-└── test/layout/{TestSchemaMode,PofDatasets}.java  # "defined" mode for the parity profile.
-fhirpath/pom.xml                # definedSchemaParity profile.
+├── fhirpath/AbsentElementTest.java   # Extended to the positions not yet covered.
+├── test/yaml/YamlTestArgumentProvider.java  # Per-suite, per-type schemas for FHIR-resource cases.
+├── test/yaml/YamlSupport.java        # Stored-layout helpers removed where unused.
+├── test/yaml/resolver/FhirResolverFactory.java  # Defined read with the suite's merged schema.
+├── test/yaml/resolver/ArbitraryObjectResolverFactory.java  # Defined read through FhirReader.
+└── test/layout/TestSchemaMode.java   # The dense placeholder removed.
 
 lib/python/pathling/{datasource.py,context.py}
-lib/python/tests/{test_datasource.py,test_encoders.py,test_defined_schemas.py}
+lib/python/tests/{test_datasource.py,test_encoders.py,test_defined_schemas.py,
+                  schema_equality.py,test_schema_equality.py}
 lib/R/R/{datasource.R,context.R,encoding.R}
-lib/R/tests/testthat/{test-datasource.R,test-encoding.R,test-defined-schemas.R}
+lib/R/tests/testthat/{test-datasource.R,test-encoding.R,test-defined-schemas.R,
+                      helper_schema_equality.R,test-schema-equality.R}
 
 site/docs/libraries/io/schema.md, site/docs/libraries/examples/streaming.md
 ```
@@ -181,7 +198,7 @@ See [research.md](research.md). Two points are to be confirmed by a measurement 
 
 ## Phase 1: Design & Contracts
 
-- [data-model.md](data-model.md): schema, schema set, observed shape, layout schema, destination.
+- [data-model.md](data-model.md): schema, schema set, observed shape, layout schema.
 - [contracts/](contracts/): the Java, Python and R surfaces.
-- [quickstart.md](quickstart.md): daily Delta append, Kafka stream to Delta and Parquet, schema
-  round trip, destination check.
+- [quickstart.md](quickstart.md): daily Delta append, Kafka stream to Delta and Parquet through
+  `foreachBatch`, schema round trip.

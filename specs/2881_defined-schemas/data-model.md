@@ -43,15 +43,10 @@ The output schema of the ingest walk for an observed shape, before annotation. I
 that stored data is projected to. When the given schema is a PoF schema, the layout schema equals
 its base schema (FR-008).
 
-## Destination
+## Schema equality (tests)
 
-- **Fields**:
-    - format: `delta` or `parquet`;
-    - path: a directory;
-    - the datasets to be written, by resource type.
-- **Derived**: a table path per type, `<path>/<fileNameMapper(type)>.parquet`.
-- **States checked**:
-    - no table: passes;
-    - a PoF-layout table: passes;
-    - a legacy-layout table: refused;
-    - the datasets carry timestamps and the session does not write INT64 TIMESTAMP(MICROS): refused.
+Two schemas are the same when their base schemas are equal field for field, in order at every
+depth (so an output out of canonical field order fails), ignoring
+nullability (of fields, array elements and map values) and field metadata (spec SC-002). The
+annotation fields are compared separately, against the configuration. One test helper per binding
+implements this comparison, and every test of an "exact" or "equal" schema uses it.
