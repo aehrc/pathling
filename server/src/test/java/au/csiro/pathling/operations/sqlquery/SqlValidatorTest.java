@@ -1262,6 +1262,46 @@ class SqlValidatorTest {
   }
 
   // -------------------------------------------------------------------------
+  // The ${ character sequence. Spark's parser replaces ${...} references in SQL
+  // text before parsing it, so SQL containing the sequence anywhere - in a
+  // string literal, an identifier or a comment - is rejected, whatever form the
+  // reference takes.
+  // -------------------------------------------------------------------------
+
+  @ParameterizedTest(name = "rejects: {0}")
+  @ValueSource(
+      strings = {
+        "SELECT '${env:HOME}' AS home",
+        "SELECT '${system:user.dir}' AS dir",
+        "SELECT '${spark:spark.app.name}' AS app",
+        "SELECT '${sparkconf:spark.app.name}' AS app",
+        "SELECT '${spark.app.name}' AS app",
+        "SELECT \"${env:HOME}\" AS home",
+        "SELECT 1 AS `${env:HOME}`",
+        "SELECT 1 -- ${env:HOME}",
+        "SELECT 1 /* ${env:HOME} */",
+        "SELECT id FROM t WHERE name = '${'"
+      })
+  void rejectsSqlContainingDollarBrace(final String sql) {
+    assertThatThrownBy(() -> validate(sql, "t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("${");
+  }
+
+  @ParameterizedTest(name = "accepts: {0}")
+  @ValueSource(
+      strings = {
+        "SELECT '$5' AS price",
+        "SELECT '{x}' AS braces",
+        "SELECT '$ {x}' AS spaced",
+        "SELECT concat('$', '{x}') AS joined"
+      })
+  void acceptsDollarSignNotImmediatelyFollowedByBrace(final String sql) {
+    // A dollar sign or a brace on its own is ordinary text.
+    assertThatCode(() -> validate(sql)).doesNotThrowAnyException();
+  }
+
+  // -------------------------------------------------------------------------
   // Regression corpus — known-bad queries the validator must reject.
   // -------------------------------------------------------------------------
 

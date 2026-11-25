@@ -94,6 +94,9 @@ import scala.jdk.javaapi.CollectionConverters;
  *       appear in the analyzed plan, not in the unresolved tree this rule walks.
  * </ol>
  *
+ * <p>Before any of these, {@link #validate(String, Set)} rejects SQL text that contains the <code>
+ * ${</code> character sequence, which Spark's parser would otherwise replace before parsing.
+ *
  * <p>Two schema-introspection statements are carved out of the blanket {@link Command} rejection:
  * {@code DESCRIBE [TABLE] <label>} and {@code DESCRIBE [QUERY] <query>}. Because Spark executes
  * {@link Command} plans eagerly when {@code sparkSession.sql(...)} builds the Dataset - before the
@@ -378,6 +381,13 @@ public class SqlValidator {
   private static final Pattern LABEL_PATTERN = Pattern.compile("^[A-Za-z]\\w*$");
 
   /**
+   * Character sequence that SQL must not contain. Spark's parser replaces {@code ${...}} references
+   * in SQL text before parsing it unless the session disables this, so the sequence is refused
+   * wherever it appears rather than relying on the session configuration alone.
+   */
+  private static final String DOLLAR_BRACE = "${";
+
+  /**
    * Validates that the given SQL parses to an unresolved logical plan that contains only allowed
    * operations and that every relation reference resolves to either a declared label or a CTE
    * defined within the same query. Suitable for early rejection before any temp views are
@@ -386,10 +396,14 @@ public class SqlValidator {
    * @param sql the SQL query to validate
    * @param allowedLabels the set of relation labels declared in the request (i.e. the labels of the
    *     {@code Library.relatedArtifact} entries) that may appear as relation references
-   * @throws InvalidRequestException if the query contains disallowed operations or references an
-   *     undeclared table
+   * @throws InvalidRequestException if the query contains the <code>${</code> character sequence,
+   *     contains disallowed operations or references an undeclared table
    */
   public void validate(@Nonnull final String sql, @Nonnull final Set<String> allowedLabels) {
+    if (sql.contains(DOLLAR_BRACE)) {
+      throw new InvalidRequestException(
+          "SQL must not contain the character sequence " + DOLLAR_BRACE);
+    }
     final LogicalPlan plan;
     try {
       plan = sparkSession.sessionState().sqlParser().parsePlan(sql);

@@ -61,7 +61,7 @@ public class Spark {
   private static final List<String> SENSITIVE_NAME_PARTS =
       List.of("secret", "key", "token", "password");
 
-  /** The session setting that substitutes {@code ${...}} references in SQL text before parsing. */
+  /** The session setting that determines whether {@code ${...}} references in SQL are replaced. */
   static final String VARIABLE_SUBSTITUTE = "spark.sql.variable.substitute";
 
   private Spark() {}
@@ -103,12 +103,12 @@ public class Spark {
                 "org.apache.spark.sql.delta.catalog.DeltaCatalog")
             .getOrCreate();
     // The Parquet on FHIR layout stores timestamps as microsecond-precision int64, and Spark takes
-    // that type from the session rather than from writer options. It is set after the session is
-    // built, so that no Spark configuration in a profile can drop it.
+    // that type from the session rather than from writer options. Spark also replaces ${...}
+    // references in SQL text before parsing it unless told not to. The server runs SQL as it was
+    // submitted, and the SQL on FHIR operations edit SQL text at the offsets Spark's parser reports
+    // for it, which hold only if the parser sees the text as it was written. Both are set after the
+    // session is built, so that no Spark configuration in a profile can change them.
     spark.conf().set(OUTPUT_TIMESTAMP_TYPE, TIMESTAMP_MICROS);
-    // The SQL on FHIR operations edit SQL text at the offsets Spark's parser reports for it, which
-    // hold only if the parser sees the text as it was written. It is set after the session is built
-    // for the same reason as the timestamp type.
     spark.conf().set(VARIABLE_SUBSTITUTE, false);
     sparkListener.ifPresent(l -> spark.sparkContext().addSparkListener(l));
 

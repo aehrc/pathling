@@ -272,6 +272,28 @@ class SqlQueryExecutorTest {
         .hasMessageContaining("SQL references an undeclared table");
   }
 
+  // -------------------------------------------------------------------------
+  // The ${ character sequence is rejected in the SQL of every node, not only in
+  // the top-level query.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void rejectsSqlViewWhoseSqlContainsDollarBrace() {
+    final ResolvedSqlView view =
+        new ResolvedSqlView(
+            "https://example.org/Library/view", "SELECT '${env:PATH}' AS path", Map.of());
+    final ResolvedDependencyGraph graph =
+        new ResolvedDependencyGraph(
+            List.of(view),
+            Map.of("t", view.getCanonicalKey()),
+            Map.of(view.getCanonicalKey(), view));
+    final SqlQueryRequest query = request("SELECT path FROM t", null, view.getCanonicalKey());
+
+    assertThatThrownBy(() -> newExecutor().validateStatically(query, graph))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("${");
+  }
+
   /** Writes a two-row Delta table into the temp directory and returns the leaf that reads it. */
   @Nonnull
   private ResolvedExternalTable writeExternalTable(@Nonnull final Path tempDir) {

@@ -208,10 +208,9 @@ it is validated before it runs:
   functions, the Avro and Protobuf functions, `reflect`, `java_method`,
   `try_reflect` and the `input_file_*` functions. A built-in function added in a
   later version of Spark is rejected until it has been reviewed.
-
-Spark's variable substitution is switched off on the server, so text of the form
-`${name}` in the SQL is passed to Spark as written rather than replaced with the
-value of a configuration property.
+- It must not contain the character sequence `${` anywhere, including in string
+  literals and comments. The text is run as submitted, and Spark's `${...}`
+  reference syntax is not supported.
 
 A fault in the SQL that only Spark's analyser can catch - an unresolved column,
 an unknown function, a missing `GROUP BY`, an ambiguous reference - is a `422`,

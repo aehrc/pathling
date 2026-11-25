@@ -33,6 +33,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -165,29 +166,38 @@ class SparkTest {
         .noneMatch(message -> message.contains("top-secret-value"));
   }
 
-  // The SQL on FHIR operations edit SQL text at the offsets Spark's parser reports for it.
-  // Substitution of ${...} references would change the text the parser sees, so the session must
-  // have it switched off even where the Spark configuration in a profile switches it on.
+  // Spark's parser replaces ${...} references in SQL text unless spark.sql.variable.substitute is
+  // false. The server's session must run SQL as written even where that setting has been turned
+  // back on, and the SQL on FHIR operations edit SQL text at the offsets the parser reports for it,
+  // which hold only if the parser sees the text as it was written.
   @Test
-  void sessionDisablesVariableSubstitutionRegardlessOfConfiguration() {
+  void sessionReturnsDollarBraceTextUnchangedRegardlessOfConfiguration() {
     final StandardEnvironment environment = new StandardEnvironment();
     environment
         .getPropertySources()
         .addFirst(
             new MapPropertySource("profile", Map.of("spark.sql.variable.substitute", "true")));
-    // The test session is shared and already has substitution switched off, so it is switched on
-    // here to show that the build switches it off.
-    sparkSession.conf().set("spark.sql.variable.substitute", true);
+    // The test session is shared and already has substitution switched off, and Spark.build reuses
+    // the running session, so it is switched on here to show that the build switches it off.
+    sparkSession.conf().set("spark.sql.variable.substitute", "true");
 
     try {
       final SparkSession spark =
           Spark.build(serverConfiguration, environment, Optional.empty(), List.of());
 
       assertThat(spark.conf().get("spark.sql.variable.substitute")).isEqualTo("false");
-      assertThat(spark.sql("SELECT '${spark.sql.variable.substitute}' AS v").first().getString(0))
-          .isEqualTo("${spark.sql.variable.substitute}");
+      final Row row =
+          spark
+              .sql(
+                  "SELECT '${spark:spark.app.name}' AS app, '${env:PATH}' AS path,"
+                      + " '${system:user.dir}' AS dir, '${spark.sql.variable.substitute}' AS conf")
+              .first();
+      assertThat(row.getString(0)).isEqualTo("${spark:spark.app.name}");
+      assertThat(row.getString(1)).isEqualTo("${env:PATH}");
+      assertThat(row.getString(2)).isEqualTo("${system:user.dir}");
+      assertThat(row.getString(3)).isEqualTo("${spark.sql.variable.substitute}");
     } finally {
-      sparkSession.conf().set("spark.sql.variable.substitute", false);
+      sparkSession.conf().set("spark.sql.variable.substitute", "false");
       System.clearProperty("spark.sql.variable.substitute");
     }
   }

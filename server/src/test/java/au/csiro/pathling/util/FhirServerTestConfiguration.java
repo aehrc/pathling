@@ -89,9 +89,8 @@ public class FhirServerTestConfiguration {
                 "org.apache.spark.sql.delta.catalog.DeltaCatalog")
             .config("spark.sql.catalogImplementation", "hive")
             // Matches the server's session: the Parquet on FHIR layout stores timestamps as
-            // microsecond-precision int64.
+            // microsecond-precision int64, and ${...} references in SQL text are left unchanged.
             .config("spark.sql.parquet.outputTimestampType", "TIMESTAMP_MICROS")
-            // Matches the server's session: SQL text reaches the parser as it was written.
             .config("spark.sql.variable.substitute", "false")
             .config(
                 "spark.sql.warehouse.dir",
