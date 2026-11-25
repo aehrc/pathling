@@ -1,0 +1,97 @@
+# Tests for which Services the chart creates.
+#
+# Author: John Grimes
+
+suite: Services
+templates:
+  - service.yaml
+tests:
+  # Only the FHIR API and management Services are created by default.
+  - it: creates only the FHIR and management Services by default
+    asserts:
+      - hasDocuments:
+          count: 2
+      - containsDocument:
+          kind: Service
+          apiVersion: v1
+          name: pathling-fhir
+          any: true
+      - containsDocument:
+          kind: Service
+          apiVersion: v1
+          name: pathling-management
+          any: true
+
+  # A local master is not a cluster manager, so there is no driver Service.
+  - it: does not create the driver Service for an explicit local master
+    set:
+      pathling:
+        config:
+          spark.master: local[*]
+    asserts:
+      - containsDocument:
+          kind: Service
+          apiVersion: v1
+          name: pathling-driver
+          any: true
+        not: true
+
+  # Executors need the driver Service to reach the driver.
+  - it: creates the driver Service when a cluster manager is configured
+    set:
+      pathling:
+        config:
+          spark.master: k8s://https://kubernetes.default.svc
+    asserts:
+      - hasDocuments:
+          count: 3
+      - containsDocument:
+          kind: Service
+          apiVersion: v1
+          name: pathling-driver
+          any: true
+      - contains:
+          path: spec.ports
+          content:
+            name: driver
+            port: 7077
+            targetPort: 7077
+        documentSelector:
+          path: metadata.name
+          value: pathling-driver
+      - contains:
+          path: spec.ports
+          content:
+            name: block-manager
+            port: 7078
+            targetPort: 7078
+        documentSelector:
+          path: metadata.name
+          value: pathling-driver
+
+  # The Spark UI Service follows the Spark UI setting.
+  - it: creates the Spark UI Service when the Spark UI is enabled
+    set:
+      pathling:
+        config:
+          spark.ui.enabled: "true"
+    asserts:
+      - containsDocument:
+          kind: Service
+          apiVersion: v1
+          name: pathling-spark-ui
+          any: true
+
+  # A YAML boolean is read the same way as the string form.
+  - it: does not create the Spark UI Service when the UI is disabled with a boolean
+    set:
+      pathling:
+        config:
+          spark.ui.enabled: false
+    asserts:
+      - containsDocument:
+          kind: Service
+          apiVersion: v1
+          name: pathling-spark-ui
+          any: true
+        not: true

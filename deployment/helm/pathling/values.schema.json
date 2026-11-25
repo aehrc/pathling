@@ -193,11 +193,15 @@
         },
         "config": {
           "type": "object",
-          "description": "Pathling server configuration passed as environment variables. Keys should be Spring Boot property names.",
+          "description": "Pathling server configuration passed as environment variables, merged over defaults that enable Spark authentication and encryption and disable the Spark UI. Keys should be Spring Boot property names.",
           "additionalProperties": {
             "type": ["string", "integer", "boolean", "null"]
           },
-          "default": {}
+          "default": {
+            "spark.authenticate": "true",
+            "spark.network.crypto.enabled": "true",
+            "spark.ui.enabled": "false"
+          }
         },
         "secretConfig": {
           "type": "object",
@@ -206,6 +210,33 @@
             "type": ["string", "integer", "boolean", "null"]
           },
           "default": {}
+        },
+        "networkPolicy": {
+          "type": "object",
+          "description": "A NetworkPolicy limiting ingress to the server pod.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether to create the NetworkPolicy",
+              "default": true
+            },
+            "managementFrom": {
+              "type": "array",
+              "description": "NetworkPolicy peers allowed to reach the management port (8081)",
+              "items": {
+                "type": "object"
+              },
+              "default": []
+            },
+            "sparkUiFrom": {
+              "type": "array",
+              "description": "NetworkPolicy peers allowed to reach the Spark UI port (4040) when the UI is enabled",
+              "items": {
+                "type": "object"
+              },
+              "default": []
+            }
+          }
         },
         "truststore": {
           "type": "object",
