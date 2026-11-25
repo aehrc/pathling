@@ -21,6 +21,7 @@ import au.csiro.fhir.auth.AuthConfig;
 import au.csiro.pathling.operations.bulksubmit.SubmitterIdentifier;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.List;
 
 /**
  * Configuration for an allowed bulk submit submitter, including optional OAuth credentials for
@@ -34,6 +35,8 @@ import jakarta.annotation.Nullable;
  * @param scope the OAuth scope to request
  * @param tokenExpiryTolerance the token expiry tolerance in seconds
  * @param useFormForBasicAuth whether to use form encoding for basic auth
+ * @param allowableSources URL prefixes that are allowed as sources for this submitter, replacing
+ *     the shared {@code pathling.bulkSubmit.allowableSources} list when not empty
  * @author John Grimes
  * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
  */
@@ -45,10 +48,19 @@ public record SubmitterConfiguration(
     @Nullable String privateKeyJwk,
     @Nullable String scope,
     @Nullable Long tokenExpiryTolerance,
-    @Nullable Boolean useFormForBasicAuth) {
+    @Nullable Boolean useFormForBasicAuth,
+    @Nonnull List<String> allowableSources) {
 
   /** Default token expiry tolerance in seconds. */
   public static final long DEFAULT_TOKEN_EXPIRY_TOLERANCE = 120;
+
+  /**
+   * Creates a new submitter configuration, treating an absent list of allowable sources as empty.
+   * Spring binds a list that is missing from the configuration as null.
+   */
+  public SubmitterConfiguration {
+    allowableSources = allowableSources == null ? List.of() : List.copyOf(allowableSources);
+  }
 
   /**
    * Creates a SubmitterIdentifier from this configuration.

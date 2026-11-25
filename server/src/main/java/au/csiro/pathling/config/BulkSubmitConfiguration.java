@@ -39,7 +39,10 @@ public class BulkSubmitConfiguration {
    */
   @Nonnull private List<SubmitterConfiguration> allowedSubmitters = new ArrayList<>();
 
-  /** URL prefixes that are allowed as sources for manifest and file URLs. */
+  /**
+   * URL prefixes that are allowed as sources for submitters that have neither their own allowable
+   * sources nor OAuth credentials.
+   */
   @Nonnull private List<String> allowableSources = new ArrayList<>();
 
   /** The directory to use for staging downloaded files before import. */
@@ -63,31 +66,39 @@ public class BulkSubmitConfiguration {
   }
 
   /**
-   * Checks if a submitter is allowed to use the $bulk-submit operation.
+   * Checks if a URL is allowed as a source for the given submitter.
    *
-   * @param submitter the submitter to check.
-   * @return true if the submitter is allowed, false otherwise.
-   */
-  public boolean isSubmitterAllowed(@Nonnull final SubmitterIdentifier submitter) {
-    return findSubmitterConfig(submitter).isPresent();
-  }
-
-  /**
-   * Checks if a URL is allowed based on the configured allowableSources prefixes.
+   * <p>The prefixes that apply are the submitter's own {@code allowableSources} when it has any.
+   * Otherwise the shared {@code allowableSources} apply, unless the submitter has OAuth
+   * credentials: its credentials are only ever presented to its own sources, so no URL is allowed
+   * for it. No URL is allowed for a submitter that is not configured.
    *
-   * <p>The allowlist is mandatory: if no prefixes are configured the URL is rejected. This
-   * fails-closed default prevents the server being used as an SSRF or credential-forwarding proxy
-   * when the operator has not yet configured trusted sources. Matching is performed by {@link
-   * UrlAllowlist} with proper URI semantics, so subdomain confusion and userinfo bypasses are
-   * rejected.
+   * <p>The allowlist is mandatory: if no prefixes apply the URL is rejected. This fails-closed
+   * default prevents the server being used as an SSRF or credential-forwarding proxy when the
+   * operator has not yet configured trusted sources. Matching is performed by {@link UrlAllowlist}
+   * with proper URI semantics, so subdomain confusion and userinfo bypasses are rejected.
    *
+   * @param submitter the submitter on whose behalf the URL would be fetched.
    * @param url the URL to check.
    * @param allowInsecure if false, plain-http candidates are rejected before any prefix-matching is
    *     attempted, in line with the server's default TLS-only policy for outgoing requests.
-   * @return true if at least one configured prefix matches the URL, false otherwise (including when
-   *     no prefixes are configured).
+   * @return true if at least one applicable prefix matches the URL, false otherwise (including when
+   *     no prefixes apply).
    */
-  public boolean isSourceAllowed(@Nonnull final String url, final boolean allowInsecure) {
-    return UrlAllowlist.matches(getAllowableSources(), url, allowInsecure);
+  public boolean isSourceAllowed(
+      @Nonnull final SubmitterIdentifier submitter,
+      @Nonnull final String url,
+      final boolean allowInsecure) {
+    final List<String> prefixes =
+        findSubmitterConfig(submitter).map(this::allowableSourcesFor).orElse(List.of());
+    return UrlAllowlist.matches(prefixes, url, allowInsecure);
+  }
+
+  @Nonnull
+  private List<String> allowableSourcesFor(@Nonnull final SubmitterConfiguration submitter) {
+    if (!submitter.allowableSources().isEmpty()) {
+      return submitter.allowableSources();
+    }
+    return submitter.hasCredentials() ? List.of() : allowableSources;
   }
 }
