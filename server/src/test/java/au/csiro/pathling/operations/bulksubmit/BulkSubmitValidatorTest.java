@@ -228,6 +228,28 @@ class BulkSubmitValidatorTest {
   }
 
   @Test
+  void validateSubmitterAllowedAcceptsConfiguredSubmitter() {
+    // A submitter in the allowed submitters list passes the standalone check used by
+    // $bulk-submit-status.
+    assertThatNoException()
+        .isThrownBy(
+            () ->
+                validator.validateSubmitterAllowed(
+                    new SubmitterIdentifier(SUBMITTER_SYSTEM, SUBMITTER_VALUE)));
+  }
+
+  @Test
+  void validateSubmitterAllowedRejectsUnknownSubmitter() {
+    // A submitter that is not configured is rejected with the same error as $bulk-submit.
+    assertThatCode(
+            () ->
+                validator.validateSubmitterAllowed(
+                    new SubmitterIdentifier(SUBMITTER_SYSTEM, "unauthorised-submitter")))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("not in the list of allowed submitters");
+  }
+
+  @Test
   void invalidManifestUrlPrefix() {
     final BulkSubmitConfiguration config = new BulkSubmitConfiguration();
     config.setAllowedSubmitters(

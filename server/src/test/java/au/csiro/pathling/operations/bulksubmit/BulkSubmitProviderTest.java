@@ -29,6 +29,8 @@ import static org.mockito.Mockito.when;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -37,9 +39,13 @@ import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.context.SecurityContextImpl;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 /**
  * Unit tests for BulkSubmitProvider.
@@ -54,6 +60,8 @@ class BulkSubmitProviderTest {
   private static final String FHIR_SERVER_BASE = "http://localhost:8080/fhir";
   private static final String MANIFEST_URL = "https://example.org/manifest.json";
   private static final String FHIR_BASE_URL = "https://example.org/fhir";
+  private static final String OWNER = "hospital-user";
+  private static final String OTHER_USER = "mallory";
 
   private BulkSubmitValidator validator;
   private SubmissionRegistry submissionRegistry;
@@ -463,5 +471,177 @@ class BulkSubmitProviderTest {
     // Then: should create submission but not call executor.
     verify(submissionRegistry, org.mockito.Mockito.atLeast(1)).put(any(Submission.class));
     assertThat(result.getParameter("submissionId")).isNotNull();
+  }
+
+  // ========================================
+  // Ownership Tests
+  // ========================================
+
+  @Test
+  void rejectsAbortWithNotFoundWhenCallerIsNotOwner() {
+    // Given: a submission owned by another user, and an abort request from a different caller.
+    givenRequest(BulkSubmitRequest.STATUS_ABORTED, null, null);
+    givenExistingSubmission(processingSubmissionOwnedBy(OWNER));
+    authenticateAs(OTHER_USER);
+
+    // When/Then: the caller is told the submission does not exist, and nothing is aborted.
+    assertThatThrownBy(() -> provider.bulkSubmitOperation(new Parameters(), requestDetails))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessage("Submission not found: " + SUBMISSION_ID);
+    verify(executor, never()).abortSubmission(any());
+    verify(submissionRegistry, never()).put(any());
+  }
+
+  @Test
+  void rejectsCompleteWithNotFoundWhenCallerIsNotOwner() {
+    // Given: a submission owned by another user whose downloads have finished.
+    givenRequest(BulkSubmitRequest.STATUS_COMPLETE, null, null);
+    final ManifestJob downloadedJob =
+        ManifestJob.createPending("job-1", MANIFEST_URL, FHIR_BASE_URL, null)
+            .withState(ManifestJobState.DOWNLOADED);
+    givenExistingSubmission(processingSubmissionOwnedBy(OWNER).withManifestJob(downloadedJob));
+    authenticateAs(OTHER_USER);
+
+    // When/Then: the submission is not completed early and no import is started.
+    assertThatThrownBy(() -> provider.bulkSubmitOperation(new Parameters(), requestDetails))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessage("Submission not found: " + SUBMISSION_ID);
+    verify(executor, never()).importSubmission(any());
+    verify(submissionRegistry, never()).put(any());
+  }
+
+  @Test
+  void rejectsNewManifestWithNotFoundWhenCallerIsNotOwner() {
+    // Given: an in-progress request adding a manifest to a submission owned by another user.
+    givenRequest(BulkSubmitRequest.STATUS_IN_PROGRESS, MANIFEST_URL, null);
+    givenExistingSubmission(processingSubmissionOwnedBy(OWNER));
+    authenticateAs(OTHER_USER);
+
+    // When/Then: no manifest is added and no download starts. A new submission is not created
+    // under the same key either.
+    assertThatThrownBy(() -> provider.bulkSubmitOperation(new Parameters(), requestDetails))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessage("Submission not found: " + SUBMISSION_ID);
+    verify(executor, never()).downloadManifestJob(any(), any(), any(), any());
+    verify(submissionRegistry, never()).put(any());
+  }
+
+  @Test
+  void rejectsManifestReplacementWithNotFoundWhenCallerIsNotOwner() {
+    // Given: a request replacing a manifest of a submission owned by another user.
+    final String oldManifestUrl = "https://example.org/old-manifest.json";
+    givenRequest(BulkSubmitRequest.STATUS_IN_PROGRESS, MANIFEST_URL, oldManifestUrl);
+    final ManifestJob oldJob =
+        ManifestJob.createPending("old-job-id", oldManifestUrl, FHIR_BASE_URL, null);
+    givenExistingSubmission(processingSubmissionOwnedBy(OWNER).withManifestJob(oldJob));
+    authenticateAs(OTHER_USER);
+
+    // When/Then: the existing manifest job is left running.
+    assertThatThrownBy(() -> provider.bulkSubmitOperation(new Parameters(), requestDetails))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessage("Submission not found: " + SUBMISSION_ID);
+    verify(executor, never()).abortManifestJob(any(), any());
+    verify(submissionRegistry, never()).put(any());
+  }
+
+  @Test
+  void rejectsAuthenticatedCallerForSubmissionWithoutOwner() {
+    // Given: a submission created by a caller without a subject, and an abort request from an
+    // authenticated caller.
+    givenRequest(BulkSubmitRequest.STATUS_ABORTED, null, null);
+    givenExistingSubmission(
+        Submission.createPending(SUBMISSION_ID, submitterIdentifier, Optional.empty())
+            .withState(SubmissionState.PROCESSING));
+    authenticateAs(OTHER_USER);
+
+    // When/Then: the authenticated caller does not own the submission.
+    assertThatThrownBy(() -> provider.bulkSubmitOperation(new Parameters(), requestDetails))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessage("Submission not found: " + SUBMISSION_ID);
+    verify(executor, never()).abortSubmission(any());
+    verify(submissionRegistry, never()).put(any());
+  }
+
+  @Test
+  void allowsOwnerToAbortOwnSubmission() {
+    // Given: an abort request from the user who created the submission.
+    givenRequest(BulkSubmitRequest.STATUS_ABORTED, null, null);
+    final Submission submission = processingSubmissionOwnedBy(OWNER);
+    givenExistingSubmission(submission);
+    authenticateAs(OWNER);
+
+    // When: calling the operation.
+    final Parameters result = provider.bulkSubmitOperation(new Parameters(), requestDetails);
+
+    // Then: the submission is aborted.
+    verify(executor).abortSubmission(submission);
+    assertThat(((StringType) result.getParameter("status").getValue()).getValue())
+        .isEqualTo("aborted");
+  }
+
+  @Test
+  void allowsOwnerToAddManifestToOwnSubmission() {
+    // Given: an in-progress request from the user who created the submission.
+    givenRequest(BulkSubmitRequest.STATUS_IN_PROGRESS, MANIFEST_URL, null);
+    givenExistingSubmission(processingSubmissionOwnedBy(OWNER));
+    authenticateAs(OWNER);
+
+    // When: calling the operation.
+    provider.bulkSubmitOperation(new Parameters(), requestDetails);
+
+    // Then: the manifest is downloaded.
+    verify(executor).downloadManifestJob(any(), any(), any(), eq(FHIR_SERVER_BASE));
+  }
+
+  @Test
+  void recordsCallerAsOwnerOfNewSubmission() {
+    // Given: an in-progress request for a submission that does not exist yet.
+    givenRequest(BulkSubmitRequest.STATUS_IN_PROGRESS, null, null);
+    when(submissionRegistry.get(submitterIdentifier, SUBMISSION_ID)).thenReturn(Optional.empty());
+    authenticateAs(OWNER);
+
+    // When: calling the operation.
+    provider.bulkSubmitOperation(new Parameters(), requestDetails);
+
+    // Then: the new submission is owned by the caller.
+    final ArgumentCaptor<Submission> captor = ArgumentCaptor.forClass(Submission.class);
+    verify(submissionRegistry).put(captor.capture());
+    assertThat(captor.getValue().ownerId()).isEqualTo(OWNER);
+  }
+
+  private void givenRequest(
+      @Nonnull final String status,
+      @Nullable final String manifestUrl,
+      @Nullable final String replacesManifestUrl) {
+    final BulkSubmitRequest request =
+        new BulkSubmitRequest(
+            FHIR_SERVER_BASE + "/$bulk-submit",
+            SUBMISSION_ID,
+            submitterIdentifier,
+            status,
+            manifestUrl,
+            manifestUrl == null ? null : FHIR_BASE_URL,
+            replacesManifestUrl,
+            null,
+            null,
+            List.of());
+    when(validator.validateAndExtract(any(), any())).thenReturn(request);
+  }
+
+  private void givenExistingSubmission(@Nonnull final Submission submission) {
+    when(submissionRegistry.get(submitterIdentifier, SUBMISSION_ID))
+        .thenReturn(Optional.of(submission));
+  }
+
+  @Nonnull
+  private Submission processingSubmissionOwnedBy(@Nonnull final String owner) {
+    return Submission.createPending(SUBMISSION_ID, submitterIdentifier, Optional.of(owner))
+        .withState(SubmissionState.PROCESSING);
+  }
+
+  private static void authenticateAs(@Nonnull final String subject) {
+    final Jwt jwt =
+        Jwt.withTokenValue("mock-token").header("alg", "none").claim("sub", subject).build();
+    SecurityContextHolder.setContext(new SecurityContextImpl(new JwtAuthenticationToken(jwt)));
   }
 }

@@ -24,6 +24,7 @@ import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -96,6 +97,12 @@ public class BulkSubmitProvider {
       @Nonnull final String fhirServerBase) {
     final Optional<Submission> existingSubmission =
         submissionRegistry.get(request.submitter(), request.submissionId());
+
+    // A submission owned by another user is reported as not found. It is neither modified nor
+    // replaced by a new submission under the same key.
+    if (existingSubmission.isPresent() && !existingSubmission.get().isOwnedBy(ownerId)) {
+      throw new ResourceNotFoundException("Submission not found: " + request.submissionId());
+    }
 
     if (request.isInProgress()) {
       return handleInProgressSubmission(request, existingSubmission, ownerId, fhirServerBase);
@@ -320,9 +327,7 @@ public class BulkSubmitProvider {
     // Validate that submission exists.
     final Submission submission =
         existingSubmission.orElseThrow(
-            () ->
-                new ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException(
-                    "Submission not found: " + request.submissionId()));
+            () -> new ResourceNotFoundException("Submission not found: " + request.submissionId()));
 
     // Validate that submission can be aborted.
     if (submission.state() == SubmissionState.COMPLETED

@@ -314,6 +314,17 @@ public record Submission(
   }
 
   /**
+   * Checks whether this submission belongs to a user. A submission created without an authenticated
+   * user belongs only to callers without one, as with asynchronous jobs.
+   *
+   * @param userId The identifier of the calling user, if authenticated.
+   * @return True if the user is the owner of this submission.
+   */
+  public boolean isOwnedBy(@Nonnull final Optional<String> userId) {
+    return Optional.ofNullable(ownerId).equals(userId);
+  }
+
+  /**
    * Returns a unique key for this submission based on submitter and submission ID.
    *
    * @return A composite key for registry storage.
