@@ -222,18 +222,37 @@ class ExportOperationDownloadTest {
   }
 
   @Test
-  void testValidNestedFileIsServed() throws Exception {
-    // Create a nested file within the job directory.
-    final Path jobDir = tempDir.resolve("jobs").resolve(TEST_JOB_ID);
-    final Path subDir = jobDir.resolve("subdir");
+  void testNestedFileIsRejected() throws Exception {
+    // Export results are written directly into the job directory, so a file parameter naming a
+    // nested path is not a valid result file.
+    final Path subDir = tempDir.resolve("jobs").resolve(TEST_JOB_ID).resolve("subdir");
     Files.createDirectories(subDir);
-    final Path nestedFile = subDir.resolve("nested-file.ndjson");
-    final String nestedContent = "{\"resourceType\":\"Patient\",\"id\":\"nested\"}";
-    Files.writeString(nestedFile, nestedContent);
+    Files.writeString(subDir.resolve("nested-file.ndjson"), "nested");
 
     final MockHttpServletResponse response = new MockHttpServletResponse();
-    exportResultProvider.result(TEST_JOB_ID, "subdir/nested-file.ndjson", response);
-    assertThat(response.getStatus()).isEqualTo(200);
-    assertThat(response.getContentAsString()).isEqualTo(nestedContent);
+    assertThatCode(
+            () -> exportResultProvider.result(TEST_JOB_ID, "subdir/nested-file.ndjson", response))
+        .isExactlyInstanceOf(ResourceNotFoundError.class)
+        .hasMessageContaining("does not exist or is not a file.");
+  }
+
+  @Test
+  void testFileUriNamingAnotherJobsFileIsRejected() throws Exception {
+    // A caller who passes the ownership check for their own job must not be able to read a file
+    // from another job's directory by naming it with an absolute file: URI.
+    final Path otherJobDir =
+        tempDir.resolve("jobs").resolve("1b0e8f2a-0d4e-4c2b-9a51-3f6d2c7e9b10");
+    Files.createDirectories(otherJobDir);
+    final Path otherJobFile = otherJobDir.resolve("patients.00000.csv");
+    Files.writeString(otherJobFile, "secret-content");
+
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    assertThatCode(
+            () ->
+                exportResultProvider.result(
+                    TEST_JOB_ID, "file:" + otherJobFile.toAbsolutePath(), response))
+        .isExactlyInstanceOf(ResourceNotFoundError.class)
+        .hasMessageContaining("does not exist or is not a file.");
+    assertThat(response.getContentAsString()).doesNotContain("secret-content");
   }
 }
