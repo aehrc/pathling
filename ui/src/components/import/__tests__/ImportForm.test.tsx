@@ -159,6 +159,42 @@ describe("ImportForm", () => {
       expect(urlInputs).toHaveLength(2);
     });
 
+    // Adding an input moves focus to its resource type selector, the first
+    // control of the new row.
+    it("focuses the resource type selector of the new input row", async () => {
+      const user = userEvent.setup();
+      render(
+        <ImportForm
+          onSubmit={mockOnSubmit}
+          isSubmitting={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+        />,
+      );
+
+      await user.click(screen.getByRole("button", { name: /add input/i }));
+
+      // Comboboxes: input format, then one resource type per input row.
+      const comboboxes = screen.getAllByRole("combobox");
+      expect(comboboxes).toHaveLength(3);
+      expect(comboboxes[2]).toHaveFocus();
+    });
+
+    // The default input row was not added by the user, so it does not take
+    // focus when the form renders.
+    it("does not focus the default input row on render", () => {
+      render(
+        <ImportForm
+          onSubmit={mockOnSubmit}
+          isSubmitting={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+        />,
+      );
+
+      expect(document.body).toHaveFocus();
+    });
+
     it("removes an input row when remove button is clicked", async () => {
       const user = userEvent.setup();
       render(

@@ -26,6 +26,7 @@ import { PlusIcon, TrashIcon } from "@radix-ui/react-icons";
 import { Box, Button, Flex, IconButton, Select, Text, TextArea, TextField } from "@radix-ui/themes";
 
 import { findSourceByUrl } from "../../hooks/sqlQueryHelpers";
+import { useFocusOnAdd } from "../../hooks/useFocusOnAdd";
 import { FieldGuidance } from "../FieldGuidance";
 import { FieldLabel } from "../FieldLabel";
 import { ParameterValueInput } from "./ParameterValueInput";
@@ -168,16 +169,12 @@ export function SqlQueryInlineTab({
   const sqlViewSources = sqlViews.filter(isReferenceable);
   const allSources = [...viewDefinitionSources, ...sqlViewSources];
   const hasSources = allSources.length > 0;
+  const { focusOnRender, focusRef } = useFocusOnAdd<string>();
 
   const handleAddTable = () => {
-    onTablesChange([
-      ...tables,
-      {
-        rowId: crypto.randomUUID(),
-        label: "",
-        referenceUrl: "",
-      },
-    ]);
+    const rowId = crypto.randomUUID();
+    focusOnRender(rowId);
+    onTablesChange([...tables, { rowId, label: "", referenceUrl: "" }]);
   };
 
   const handleRemoveTable = (rowId: string) => {
@@ -189,10 +186,9 @@ export function SqlQueryInlineTab({
   };
 
   const handleAddTerminology = () => {
-    onTerminologyChange([
-      ...terminology,
-      { rowId: crypto.randomUUID(), label: "", referenceUrl: "" },
-    ]);
+    const rowId = crypto.randomUUID();
+    focusOnRender(rowId);
+    onTerminologyChange([...terminology, { rowId, label: "", referenceUrl: "" }]);
   };
 
   const handleRemoveTerminology = (rowId: string) => {
@@ -204,15 +200,9 @@ export function SqlQueryInlineTab({
   };
 
   const handleAddParameter = () => {
-    onParametersChange([
-      ...parameters,
-      {
-        rowId: crypto.randomUUID(),
-        name: "",
-        type: "string",
-        value: "",
-      },
-    ]);
+    const rowId = crypto.randomUUID();
+    focusOnRender(rowId);
+    onParametersChange([...parameters, { rowId, name: "", type: "string", value: "" }]);
   };
 
   const handleRemoveParameter = (rowId: string) => {
@@ -293,6 +283,7 @@ export function SqlQueryInlineTab({
                   </Text>
                 )}
                 <TextField.Root
+                  ref={focusRef(table.rowId)}
                   value={table.label}
                   placeholder="e.g. patients"
                   onChange={(e) => handleUpdateTable(table.rowId, { label: e.target.value })}
@@ -368,6 +359,7 @@ export function SqlQueryInlineTab({
                   </Text>
                 )}
                 <TextField.Root
+                  ref={focusRef(row.rowId)}
                   value={row.label}
                   placeholder="e.g. cvd_codes"
                   onChange={(e) => handleUpdateTerminology(row.rowId, { label: e.target.value })}
@@ -436,6 +428,7 @@ export function SqlQueryInlineTab({
                     </Text>
                   )}
                   <TextField.Root
+                    ref={focusRef(param.rowId)}
                     value={param.name}
                     placeholder="e.g. patient_id"
                     onChange={(e) =>

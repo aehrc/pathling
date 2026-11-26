@@ -162,6 +162,39 @@ describe("ResourceSearchForm", () => {
       expect(filterInputs).toHaveLength(2);
     });
 
+    // Adding a filter moves focus to its expression field.
+    it("focuses the expression field of the new filter row", async () => {
+      const user = userEvent.setup();
+      render(
+        <ResourceSearchForm
+          onSubmit={mockOnSubmit}
+          isLoading={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+        />,
+      );
+
+      await user.click(screen.getByRole("button", { name: /add filter/i }));
+
+      const filterInputs = screen.getAllByPlaceholderText(/gender = 'female'/i);
+      expect(filterInputs[1]).toHaveFocus();
+    });
+
+    // The default filter row was not added by the user, so it does not take
+    // focus when the form renders.
+    it("does not focus the default filter row on render", () => {
+      render(
+        <ResourceSearchForm
+          onSubmit={mockOnSubmit}
+          isLoading={false}
+          disabled={false}
+          resourceTypes={defaultResourceTypes}
+        />,
+      );
+
+      expect(document.body).toHaveFocus();
+    });
+
     it("removes a filter row when remove button is clicked", async () => {
       const user = userEvent.setup();
       render(
