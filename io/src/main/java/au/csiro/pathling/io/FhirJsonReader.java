@@ -97,6 +97,26 @@ public final class FhirJsonReader implements FhirFormatReader {
   }
 
   /**
+   * Reads files of newline-delimited FHIR JSON into this layout with a schema defined up front, as
+   * {@link #read(String, Dataset, StructType)} reads documents.
+   *
+   * <p>Not yet implemented.
+   *
+   * @param resourceType the type of every resource the files carry
+   * @param path the path to read from, which may name a file or a directory
+   * @param schema the schema of the resources, in this layout
+   * @return the resources, in this layout
+   * @throws IllegalArgumentException if the type is {@code Bundle} or is not a resource type
+   */
+  @Nonnull
+  public Dataset<Row> read(
+      @Nonnull final String resourceType,
+      @Nonnull final String path,
+      @Nonnull final StructType schema) {
+    throw new UnsupportedOperationException("Defined-schema reads are not yet implemented.");
+  }
+
+  /**
    * {@inheritDoc}
    *
    * <p>Every document is a resource of the type asked for, as for files.
@@ -107,6 +127,20 @@ public final class FhirJsonReader implements FhirFormatReader {
       @Nonnull final String resourceType, @Nonnull final Dataset<String> documents) {
     transformer.requireStorable(resourceType);
     return transformer.toLayout(resourceType, json(documents.sparkSession()).json(documents));
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Not yet implemented.
+   */
+  @Override
+  @Nonnull
+  public Dataset<Row> read(
+      @Nonnull final String resourceType,
+      @Nonnull final Dataset<String> documents,
+      @Nonnull final StructType schema) {
+    throw new UnsupportedOperationException("Defined-schema reads are not yet implemented.");
   }
 
   /**
@@ -145,6 +179,20 @@ public final class FhirJsonReader implements FhirFormatReader {
             observed,
             functions.col(BundleResource.PARSED),
             reference -> BundleResource.resolve(reference, references)));
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Not yet implemented.
+   */
+  @Override
+  @Nonnull
+  public Dataset<Row> readBundles(
+      @Nonnull final String resourceType,
+      @Nonnull final Dataset<String> bundles,
+      @Nonnull final StructType schema) {
+    throw new UnsupportedOperationException("Defined-schema reads are not yet implemented.");
   }
 
   @Nonnull

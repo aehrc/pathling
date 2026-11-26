@@ -155,6 +155,20 @@ public final class FhirXmlReader implements FhirFormatReader {
   /**
    * {@inheritDoc}
    *
+   * <p>Not yet implemented.
+   */
+  @Override
+  @Nonnull
+  public Dataset<Row> read(
+      @Nonnull final String resourceType,
+      @Nonnull final Dataset<String> documents,
+      @Nonnull final StructType schema) {
+    throw new UnsupportedOperationException("Defined-schema reads are not yet implemented.");
+  }
+
+  /**
+   * {@inheritDoc}
+   *
    * <p>Each bundle is read with a streaming parse, which takes out the resources of the type asked
    * for, each then read as a document of its own. A document that is not a bundle fails the read,
    * as does one that is not well-formed FHIR XML.
@@ -168,6 +182,20 @@ public final class FhirXmlReader implements FhirFormatReader {
         resourceType,
         BundleResource.resources(bundles, SPLIT, resourceType),
         functions.col(BundleResource.REFERENCES_COLUMN));
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Not yet implemented.
+   */
+  @Override
+  @Nonnull
+  public Dataset<Row> readBundles(
+      @Nonnull final String resourceType,
+      @Nonnull final Dataset<String> bundles,
+      @Nonnull final StructType schema) {
+    throw new UnsupportedOperationException("Defined-schema reads are not yet implemented.");
   }
 
   /**

@@ -14,23 +14,24 @@ independently.
 The work is delivered as slices, each built from the tasks below and merged by a pull request into
 `issue/2881`. A final pull request takes `issue/2881` to `main`.
 
-| Gate  | Status      | Date       | Note                                 |
-| ----- | ----------- | ---------- | ------------------------------------ |
-| A     | approved    | 2026-11-26 | Intent and design                    |
-| B     | approved    | 2026-11-26 | Decimal read as text, equal in value |
-| 01 G3 | approved    | 2026-11-26 | #3007, merged                        |
-| 02 G3 | not started |            |                                      |
-| 03 G2 | not started |            |                                      |
-| 03 G3 | not started |            |                                      |
-| 04 G2 | not started |            |                                      |
-| 04 G3 | not started |            |                                      |
-| 05 G2 | not started |            |                                      |
-| 05 G3 | not started |            |                                      |
-| 06 G2 | not started |            |                                      |
-| 06 G3 | not started |            |                                      |
-| 07 G2 | not started |            |                                      |
-| 07 G3 | not started |            |                                      |
-| Final | not started |            | `issue/2881` to `main`               |
+| Gate   | Status      | Date       | Note                                       |
+| ------ | ----------- | ---------- | ------------------------------------------ |
+| A      | approved    | 2026-11-26 | Intent and design                          |
+| B      | approved    | 2026-11-26 | Decimal read as text, equal in value       |
+| 01 G3  | approved    | 2026-11-26 | #3007, merged                              |
+| 02a G3 | not started |            | Split from 02 for size (owner, 2026-11-26) |
+| 02b G3 | not started |            |                                            |
+| 03 G2  | not started |            |                                            |
+| 03 G3  | not started |            |                                            |
+| 04 G2  | not started |            |                                            |
+| 04 G3  | not started |            |                                            |
+| 05 G2  | not started |            |                                            |
+| 05 G3  | not started |            |                                            |
+| 06 G2  | not started |            |                                            |
+| 06 G3  | not started |            |                                            |
+| 07 G2  | not started |            |                                            |
+| 07 G3  | not started |            |                                            |
+| Final  | not started |            | `issue/2881` to `main`                     |
 
 G2 asks the owner whether the failing tests say what should happen, before the implementation. G3
 asks whether the pull request should merge.
@@ -39,7 +40,8 @@ asks whether the pull request should merge.
 | --- | ---------------------------------- | ----------------------------------------------------------------- | ------------------------- | --- |
 | 00  | Spikes                             | T002, T003                                                        | —                         | no  |
 | 01  | Extract `Projection`               | T006, T013, T014                                                  | —                         | no  |
-| 02  | `io` foundation                    | T001, T005, T007–T012, T015–T018                                  | 00, 01, gate B            | no  |
+| 02a | `io` foundation                    | T001, T005, T007–T010, T012, T015–T017                            | 00, 01, gate B            | no  |
+| 02b | Schema-equality helpers            | T011, T018                                                        | 02a                       | no  |
 | 03  | US1: sources take a schema set     | T019–T028, T067, T069, T049, T050                                 | 02                        | yes |
 | 04  | US4: schema sets from data         | T037–T040, T057–T066                                              | 02; T037 and T038 need 03 | yes |
 | 05  | US2: streaming encode              | T029, T031–T033, T035, T036, T051, T052                           | 02                        | yes |
@@ -81,7 +83,7 @@ is split if its pull request would change more than about 800 lines.
 
 **Purpose**: Settle the two facts the read rests on, and the open product question.
 
-- [ ] T001 Create the evidence index `specs/2881-defined-schemas/evidence/README.md`, listing each
+- [x] T001 Create the evidence index `specs/2881-defined-schemas/evidence/README.md`, listing each
       measurement and the decision it supports.
 - [x] T002 [P] Measure whether each step of a defined read needs an action, or fails, over a
       streaming dataset. Record a runnable reproduction and the result of each in
@@ -109,7 +111,7 @@ uses.
 
 ### Tests ⚠️ write first, confirm failing
 
-- [ ] T005 [P] Test schema-set parsing in `io/…/io/SchemaSetTest.java`:
+- [x] T005 [P] Test schema-set parsing in `io/…/io/SchemaSetTest.java`:
     - building from a map of `StructType`, and parsing a schema set file's content (data-model.md);
     - an unknown resource type key is refused with an error naming the key;
     - in parsed content, a value that is not a struct, or is malformed, is refused with an error
@@ -124,7 +126,7 @@ uses.
     A leaf type clash is not tested here: it never reaches the projector, because a stored
     source checks its stored schema first (FR-006c, T019).
 
-- [ ] T007 [P] Test observed-shape and layout-schema derivation in
+- [x] T007 [P] Test observed-shape and layout-schema derivation in
       `io/…/io/DefinedSchemaLogicTest.java`:
     - each primitive kind maps to its ingest type, with decimal as fixed by T003;
     - metadata groups, choice types, and repeating and singular complex elements are mapped;
@@ -141,7 +143,7 @@ uses.
       annotations goes right after its primitive, whatever the given order (FR-008);
     - a given schema with non-nullable fields and field metadata yields every field nullable and
       none of the given metadata, as an inferred load does (FR-008).
-- [ ] T008 [P] Test defined-schema reads in `io/…/io/DefinedSchemaReadTest.java`, for JSON files,
+- [x] T008 [P] Test defined-schema reads in `io/…/io/DefinedSchemaReadTest.java`, for JSON files,
       JSON documents, JSON bundles, XML documents and XML bundles:
     - elements the batch lacks are present and null;
     - content the schema lacks is dropped with no error (FR-006), including content the
@@ -152,7 +154,7 @@ uses.
     - annotations follow the configuration, whatever annotations the schema carries (FR-007);
     - metadata groups follow the schema whatever the primitive metadata option (edge case);
     - a read without a schema is unchanged (FR-020).
-- [ ] T009 [P] Test path parity in `io/…/io/DefinedSchemaParityTest.java`:
+- [x] T009 [P] Test path parity in `io/…/io/DefinedSchemaParityTest.java`:
     - the same resources as JSON, as XML, and as stored PoF Parquet projected through `Projection`
       and `Annotator`, with the same schema, give equal data, a decimal equal in value (FR-009,
       SC-004);
@@ -160,7 +162,7 @@ uses.
       equal in value (FR-021a, R3);
     - JSON bundles and XML bundles read with and without a schema give equal data, including
       `urn:uuid` references between entries resolved by `BundleResource.resolve` (research R4).
-- [ ] T010 [P] Test that the defined reads of a streaming dataset (a `MemoryStream` of strings)
+- [x] T010 [P] Test that the defined reads of a streaming dataset (a `MemoryStream` of strings)
       return a streaming dataset with the layout schema, in
       `io/…/io/DefinedSchemaStreamingReadTest.java`, for JSON documents, XML documents, JSON
       bundles and XML bundles.
