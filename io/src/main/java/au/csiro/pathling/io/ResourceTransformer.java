@@ -217,6 +217,112 @@ final class ResourceTransformer {
   }
 
   /**
+   * Returns the shape in the JSON data model that a schema in this layout gives the resources of
+   * one type, which is what a read with that schema parses them with (research R2). The schema's
+   * field order is kept. Each primitive takes the type it is stored as, but for a base64Binary,
+   * which JSON carries as text. An annotation is left out, as is a metadata group that holds
+   * nothing else, and so is a field the definitions do not describe.
+   *
+   * @param resourceType the type of the resources the schema describes
+   * @param schema the schema, in this layout
+   * @return the shape
+   * @throws IllegalArgumentException if the type is {@code Bundle} or is not a resource type
+   */
+  @Nonnull
+  StructType observedShape(@Nonnull final String resourceType, @Nonnull final StructType schema) {
+    requireStorable(resourceType);
+    return observedStructure(
+        DefinitionCanonicalStructure.forResource(definitions, resourceType), schema);
+  }
+
+  /** Returns the shape of one structure of a schema in the JSON data model. */
+  @Nonnull
+  private static StructType observedStructure(
+      @Nonnull final DefinitionCanonicalStructure node, @Nonnull final StructType schema) {
+    return DataTypes.createStructType(
+        Stream.of(schema.fields())
+            .filter(field -> !AnnotationNames.isAnnotation(field.name()))
+            .flatMap(
+                field ->
+                    node
+                        .entry(field.name())
+                        .flatMap(entry -> observedType(node, entry, field.dataType()))
+                        .map(type -> DataTypes.createStructField(field.name(), type, true))
+                        .stream())
+            .toList());
+  }
+
+  /**
+   * Returns the shape of one field of a schema in the JSON data model, as an array where the schema
+   * gives it as one, or empty where nothing of it is parsed.
+   */
+  @Nonnull
+  private static Optional<DataType> observedType(
+      @Nonnull final DefinitionCanonicalStructure node,
+      @Nonnull final LayoutEntry entry,
+      @Nonnull final DataType given) {
+    if (entry.isResourceType()) {
+      return Optional.of(DataTypes.StringType);
+    }
+    final DataType value = elementTypeOf(given);
+    final Optional<DataType> single;
+    if (entry.isMetadataGroup()) {
+      single =
+          Optional.of(value)
+              .filter(StructType.class::isInstance)
+              .flatMap(group -> observedGroup(node, (StructType) group));
+    } else if (entry.isElement()) {
+      single =
+          entry
+              .primitiveType()
+              .<DataType>map(
+                  type -> {
+                    final DataType stored = converter(type).getStored();
+                    return DataTypes.BinaryType.equals(stored) ? DataTypes.StringType : stored;
+                  })
+              .or(
+                  () ->
+                      Optional.of(value)
+                          .filter(StructType.class::isInstance)
+                          .flatMap(
+                              structure ->
+                                  node.elementStructure(entry)
+                                      .map(
+                                          child ->
+                                              observedStructure(child, (StructType) structure))));
+    } else {
+      single = Optional.empty();
+    }
+    return single.map(
+        type -> given instanceof ArrayType ? DataTypes.createArrayType(type, true) : type);
+  }
+
+  /**
+   * Returns the shape of a metadata group in the JSON data model, its id and its extensions, or
+   * empty where it holds neither.
+   */
+  @Nonnull
+  private static Optional<DataType> observedGroup(
+      @Nonnull final DefinitionCanonicalStructure node, @Nonnull final StructType group) {
+    final List<StructField> fields =
+        Stream.of(group.fields())
+            .flatMap(
+                field ->
+                    (switch (field.name()) {
+                          case LayoutFields.METADATA_GROUP_ID ->
+                              Optional.<DataType>of(DataTypes.StringType);
+                          case LayoutFields.METADATA_GROUP_EXTENSION ->
+                              MetadataGroups.extensionEntry(node)
+                                  .flatMap(entry -> observedType(node, entry, field.dataType()));
+                          default -> Optional.<DataType>empty();
+                        })
+                            .map(type -> DataTypes.createStructField(field.name(), type, true))
+                            .stream())
+            .toList();
+    return fields.isEmpty() ? Optional.empty() : Optional.of(DataTypes.createStructType(fields));
+  }
+
+  /**
    * Transforms resources in this layout into the dataset the JSON writer serialises as FHIR JSON,
    * one top-level column per field of the document (FR-016, FR-019).
    *

@@ -80,8 +80,10 @@ public final class FhirReader {
       @Nonnull final SchemaConfiguration configuration) {
     final ResourceTransformer transformer =
         ResourceTransformer.of(definitions, configuration.isStorePrimitiveMetadata());
+    final DefinedSchemaLogic defined = DefinedSchemaLogic.of(spark, definitions);
     return new FhirReader(
-        new FhirJsonReader(spark, transformer), new FhirXmlReader(spark, transformer, definitions));
+        new FhirJsonReader(spark, transformer, defined),
+        new FhirXmlReader(spark, transformer, definitions, defined));
   }
 
   /**

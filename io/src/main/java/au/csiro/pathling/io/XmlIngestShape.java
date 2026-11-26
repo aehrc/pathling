@@ -109,6 +109,26 @@ final class XmlIngestShape {
   }
 
   /**
+   * Plans the shape of the resources of one type from the shape a schema defined up front gives
+   * them, in the JSON data model, so that the documents are parsed without inferring anything. A
+   * repeating element is parsed as an array, whether a document holds it once or several times.
+   *
+   * @param resource the canonical structure of the type
+   * @param resourceType the type
+   * @param observed the shape of the resources in the JSON data model, as {@link
+   *     ResourceTransformer#observedShape(String, StructType)} derives it from a schema
+   * @return the plan
+   */
+  @Nonnull
+  static XmlIngestShape ofObserved(
+      @Nonnull final DefinitionCanonicalStructure resource,
+      @Nonnull final String resourceType,
+      @Nonnull final StructType observed) {
+    return new XmlIngestShape(
+        resource, resourceType, observedStructure(resource, null, true, observed));
+  }
+
+  /**
    * Returns the schema the documents are parsed with: what the definitions describe, every value as
    * text.
    *
@@ -211,6 +231,100 @@ final class XmlIngestShape {
                         DataTypes.createStructField(name, rewrap(field.dataType(), type), true)));
       }
     }
+    return DataTypes.createStructType(kept);
+  }
+
+  /**
+   * Plans the parse schema of one structure from its shape in the JSON data model, every value as
+   * text.
+   */
+  @Nonnull
+  private static StructType observedStructure(
+      @Nonnull final DefinitionCanonicalStructure node,
+      @Nullable final FHIRDefinedType nodeType,
+      final boolean isResource,
+      @Nonnull final StructType observed) {
+    final List<StructField> kept = new ArrayList<>();
+    for (final LayoutEntry entry : node.entries()) {
+      final String name = entry.getName();
+      if (!entry.isElement()) {
+        continue;
+      }
+      if (isAttribute(nodeType, isResource, name)) {
+        if (fieldOf(observed, name).isPresent()) {
+          kept.add(text(ATTRIBUTE + name));
+        }
+      } else {
+        final StructType element = observedElement(node, entry, observed);
+        if (element.fields().length > 0) {
+          kept.add(
+              DataTypes.createStructField(
+                  name,
+                  entry.isRepeating() ? DataTypes.createArrayType(element, true) : element,
+                  true));
+        }
+      }
+    }
+    return DataTypes.createStructType(kept);
+  }
+
+  /**
+   * Plans the parse type of one occurrence of an element from the shape of its structure in the
+   * JSON data model: a primitive from its value and its metadata group, and a complex element from
+   * its own structure.
+   */
+  @Nonnull
+  private static StructType observedElement(
+      @Nonnull final DefinitionCanonicalStructure node,
+      @Nonnull final LayoutEntry entry,
+      @Nonnull final StructType observed) {
+    final String name = entry.getName();
+    if (entry.primitiveType().isEmpty()) {
+      return fieldOf(observed, name)
+          .map(field -> elementTypeOf(field.dataType()))
+          .filter(StructType.class::isInstance)
+          .map(
+              type ->
+                  observedStructure(
+                      node.elementStructure(entry).orElseThrow(),
+                      fhirType(entry),
+                      false,
+                      (StructType) type))
+          .orElseGet(StructType::new);
+    }
+    final List<StructField> kept = new ArrayList<>();
+    if (fieldOf(observed, name).isPresent()) {
+      kept.add(text(VALUE));
+    }
+    fieldOf(observed, LayoutFields.metadataGroupName(name))
+        .map(field -> elementTypeOf(field.dataType()))
+        .filter(StructType.class::isInstance)
+        .map(StructType.class::cast)
+        .ifPresent(
+            group -> {
+              if (fieldOf(group, LayoutFields.METADATA_GROUP_ID).isPresent()) {
+                kept.add(text(ID));
+              }
+              fieldOf(group, LayoutFields.METADATA_GROUP_EXTENSION)
+                  .map(field -> elementTypeOf(field.dataType()))
+                  .filter(StructType.class::isInstance)
+                  .flatMap(
+                      extension ->
+                          MetadataGroups.extensionStructure(node, entry)
+                              .map(
+                                  structure ->
+                                      observedStructure(
+                                          structure,
+                                          FHIRDefinedType.EXTENSION,
+                                          false,
+                                          (StructType) extension)))
+                  .filter(type -> type.fields().length > 0)
+                  .ifPresent(
+                      type ->
+                          kept.add(
+                              DataTypes.createStructField(
+                                  EXTENSION, DataTypes.createArrayType(type, true), true)));
+            });
     return DataTypes.createStructType(kept);
   }
 

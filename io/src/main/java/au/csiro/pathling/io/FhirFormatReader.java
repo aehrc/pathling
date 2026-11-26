@@ -20,6 +20,7 @@ package au.csiro.pathling.io;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.StructType;
 
 /**
  * Reads FHIR resources written in one format into this layout, whether each document is a resource
@@ -50,6 +51,38 @@ public sealed interface FhirFormatReader permits FhirJsonReader, FhirXmlReader {
   Dataset<Row> read(@Nonnull String resourceType, @Nonnull Dataset<String> documents);
 
   /**
+   * Reads a dataset of FHIR resources, one document per row, into this layout with a schema defined
+   * up front, so that nothing is inferred from the documents (FR-006).
+   *
+   * <p>The output has the layout schema of the defined schema: its base schema, every field
+   * nullable and without metadata, in the defined field order. An element the documents lack is
+   * null, and content the schema lacks is dropped (FR-006, FR-008). Annotation fields in the schema
+   * are ignored, since annotations follow the configuration (FR-007).
+   *
+   * @param resourceType the type of the resources to read
+   * @param documents the documents
+   * @param schema the schema of the resources, in this layout
+   * @return the resources, in this layout
+   * @throws IllegalArgumentException if the type is {@code Bundle} or is not a resource type
+   */
+  @Nonnull
+  Dataset<Row> read(
+      @Nonnull String resourceType, @Nonnull Dataset<String> documents, @Nonnull StructType schema);
+
+  /**
+   * Reads files of FHIR documents, one per line, into this layout with a schema defined up front,
+   * as {@link #read(String, Dataset, StructType)} reads documents.
+   *
+   * @param resourceType the type of the resources to read
+   * @param path the path to read from, which may name a file or a directory
+   * @param schema the schema of the resources, in this layout
+   * @return the resources, in this layout
+   * @throws IllegalArgumentException if the type is {@code Bundle} or is not a resource type
+   */
+  @Nonnull
+  Dataset<Row> read(@Nonnull String resourceType, @Nonnull String path, @Nonnull StructType schema);
+
+  /**
    * Reads the resources of one type that a dataset of FHIR bundles carries, one bundle per row,
    * into this layout.
    *
@@ -72,4 +105,20 @@ public sealed interface FhirFormatReader permits FhirJsonReader, FhirXmlReader {
    */
   @Nonnull
   Dataset<Row> readBundles(@Nonnull String resourceType, @Nonnull Dataset<String> bundles);
+
+  /**
+   * Reads the resources of one type that a dataset of FHIR bundles carries, one bundle per row,
+   * into this layout with a schema defined up front, as {@link #read(String, Dataset, StructType)}
+   * reads documents. References are resolved as {@link #readBundles(String, Dataset)} resolves
+   * them.
+   *
+   * @param resourceType the type of the resources to read
+   * @param bundles the bundles
+   * @param schema the schema of the resources, in this layout
+   * @return the resources of that type, in this layout
+   * @throws IllegalArgumentException if the type is {@code Bundle} or is not a resource type
+   */
+  @Nonnull
+  Dataset<Row> readBundles(
+      @Nonnull String resourceType, @Nonnull Dataset<String> bundles, @Nonnull StructType schema);
 }

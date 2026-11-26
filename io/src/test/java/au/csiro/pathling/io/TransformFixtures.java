@@ -32,7 +32,7 @@ import org.apache.spark.sql.SparkSession;
 
 /**
  * Fixtures shared by the transform tests: the R4 definitions, a Spark session, the transformer,
- * readers and writers over them, and the writing of a corpus of FHIR JSON documents to a directory.
+ * readers and writers over them, and the writing of a corpus of FHIR documents to a directory.
  */
 final class TransformFixtures {
 
@@ -109,8 +109,8 @@ final class TransformFixtures {
   }
 
   /**
-   * Writes a corpus of FHIR JSON documents to a directory as newline-delimited JSON, returning the
-   * path the reader is given.
+   * Writes a corpus of FHIR documents to a directory, one per line, as newline-delimited JSON or
+   * line-delimited XML, returning the path the reader is given.
    */
   @Nonnull
   public static String corpus(@Nonnull final Path directory, @Nonnull final String... documents) {

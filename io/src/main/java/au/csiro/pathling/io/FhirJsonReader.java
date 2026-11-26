@@ -19,6 +19,7 @@ package au.csiro.pathling.io;
 
 import jakarta.annotation.Nonnull;
 import java.util.Map;
+import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Dataset;
@@ -76,10 +77,15 @@ public final class FhirJsonReader implements FhirFormatReader {
 
   @Nonnull private final ResourceTransformer transformer;
 
+  @Nonnull private final DefinedSchemaLogic defined;
+
   FhirJsonReader(
-      @Nonnull final SparkSession spark, @Nonnull final ResourceTransformer transformer) {
+      @Nonnull final SparkSession spark,
+      @Nonnull final ResourceTransformer transformer,
+      @Nonnull final DefinedSchemaLogic defined) {
     this.spark = spark;
     this.transformer = transformer;
+    this.defined = defined;
   }
 
   /**
@@ -99,6 +105,24 @@ public final class FhirJsonReader implements FhirFormatReader {
   /**
    * {@inheritDoc}
    *
+   * <p>The files are newline-delimited FHIR JSON, and every resource they carry is of the type
+   * asked for.
+   */
+  @Override
+  @Nonnull
+  public Dataset<Row> read(
+      @Nonnull final String resourceType,
+      @Nonnull final String path,
+      @Nonnull final StructType schema) {
+    final StructType observed = defined.observedShape(resourceType, schema);
+    return Projection.project(
+        defined.transformer().toLayout(resourceType, json(spark).schema(observed).json(path)),
+        defined.layoutSchema(resourceType, schema));
+  }
+
+  /**
+   * {@inheritDoc}
+   *
    * <p>Every document is a resource of the type asked for, as for files.
    */
   @Override
@@ -107,6 +131,33 @@ public final class FhirJsonReader implements FhirFormatReader {
       @Nonnull final String resourceType, @Nonnull final Dataset<String> documents) {
     transformer.requireStorable(resourceType);
     return transformer.toLayout(resourceType, json(documents.sparkSession()).json(documents));
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Each document is parsed with the shape the schema gives, so nothing is inferred.
+   */
+  @Override
+  @Nonnull
+  public Dataset<Row> read(
+      @Nonnull final String resourceType,
+      @Nonnull final Dataset<String> documents,
+      @Nonnull final StructType schema) {
+    final StructType observed = defined.observedShape(resourceType, schema);
+    final Dataset<Row> parsed =
+        documents.select(
+            parse(functions.col(documents.columns()[0]), observed).alias(BundleResource.PARSED));
+    return Projection.project(
+        parsed.select(
+            defined
+                .transformer()
+                .toLayout(
+                    resourceType,
+                    observed,
+                    functions.col(BundleResource.PARSED),
+                    UnaryOperator.identity())),
+        defined.layoutSchema(resourceType, schema));
   }
 
   /**
@@ -128,16 +179,45 @@ public final class FhirJsonReader implements FhirFormatReader {
         json(bundles.sparkSession())
             .json(resources.select(BundleResource.DOCUMENT_COLUMN).as(Encoders.STRING()))
             .schema();
+    return stored(resourceType, resources, observed, transformer);
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Each bundle is split as {@link #readBundles(String, Dataset)} splits it, and each resource
+   * is parsed with the shape the schema gives, so nothing is inferred.
+   */
+  @Override
+  @Nonnull
+  public Dataset<Row> readBundles(
+      @Nonnull final String resourceType,
+      @Nonnull final Dataset<String> bundles,
+      @Nonnull final StructType schema) {
+    final StructType observed = defined.observedShape(resourceType, schema);
+    return Projection.project(
+        stored(
+            resourceType,
+            BundleResource.resources(bundles, SPLIT, resourceType),
+            observed,
+            defined.transformer()),
+        defined.layoutSchema(resourceType, schema));
+  }
+
+  /**
+   * Stores the resources split from bundles, parsed with the given shape, resolving their
+   * references through the resolutions beside them.
+   */
+  @Nonnull
+  private static Dataset<Row> stored(
+      @Nonnull final String resourceType,
+      @Nonnull final Dataset<Row> resources,
+      @Nonnull final StructType observed,
+      @Nonnull final ResourceTransformer transformer) {
     // Each resource is parsed once, in a projection of its own, and stored from what it holds.
     final Dataset<Row> parsed =
         resources.withColumn(
-            BundleResource.PARSED,
-            observed.fields().length == 0
-                ? functions.struct()
-                : functions.from_json(
-                    functions.col(BundleResource.DOCUMENT_COLUMN),
-                    observed,
-                    Map.of(READ_MODE, FAIL_FAST)));
+            BundleResource.PARSED, parse(functions.col(BundleResource.DOCUMENT_COLUMN), observed));
     final Column references = functions.col(BundleResource.REFERENCES_COLUMN);
     return parsed.select(
         transformer.toLayout(
@@ -145,6 +225,14 @@ public final class FhirJsonReader implements FhirFormatReader {
             observed,
             functions.col(BundleResource.PARSED),
             reference -> BundleResource.resolve(reference, references)));
+  }
+
+  /** Parses JSON text with the given shape, failing on text that is not JSON. */
+  @Nonnull
+  private static Column parse(@Nonnull final Column text, @Nonnull final StructType observed) {
+    return observed.fields().length == 0
+        ? functions.struct()
+        : functions.from_json(text, observed, Map.of(READ_MODE, FAIL_FAST));
   }
 
   @Nonnull
