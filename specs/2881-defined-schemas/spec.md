@@ -177,6 +177,11 @@ with the binding's write and read functions, and pass it to every source.
   specification assumes that the check fails the read with an error naming the resource type and
   path; if #2884 decides otherwise (its OQ-B), a read with a defined schema follows it. The
   projection of this feature casts nothing.
+- **A stored field whose name differs from the defined schema's only in case**, such as a stored
+  `Patient.name.Family` where the schema has `name.family`, fails the read with an error naming
+  the resource type and both paths. So does a stored struct holding two fields whose names differ
+  only in case. FHIR names are case-exact, so neither is read as a match or as two unrelated
+  fields.
 - **NDJSON, bundle, XML and streaming input carrying content the defined schema has no field for**
   loses that content silently, with no error, even where a read of the same data without a schema
   fails by the check #2884 adds. A read with a defined schema runs no inference, so it does not look at the
