@@ -79,16 +79,18 @@ measured from the files listed in the manifest.
 
 We needed to make one change to the script. It polls the status URL with
 `Accept: application/fhir+json`, the same header it sends with the kick-off
-request. The
+request, but it expects the response to be the JSON manifest, which has a
+content type of `application/json`. The
 [Bulk Data Access](https://hl7.org/fhir/uv/bulkdata/STU3/en/export.html#bulk-data-status-request)
 specification says that a client should ask for `application/json` when
 requesting status. Pathling uses the header to choose between the JSON manifest
-and the same content as a FHIR Parameters resource, and returns the Parameters
-resource when `application/fhir+json` is requested. HAPI FHIR, whose output is
-measured from the manifest in the same way, returns the JSON manifest in
-response to the same header. We added a few lines to the script to read the
-list of output files from the Parameters resource. This does not affect the
-timing.
+and the same content as a FHIR Parameters resource, so it returned the
+Parameters resource. HAPI FHIR, whose output is measured from the manifest in
+the same way, returns the JSON manifest whatever the header says. We added a
+few lines to the script to read the list of output files from the Parameters
+resource. This does not affect the timing. We have
+[raised an issue](https://github.com/HealthSamurai/fhir-server-performance-benchmark/issues/46)
+suggesting that the script ask for `application/json` when it polls for status.
 
 ## Results
 
