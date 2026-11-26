@@ -254,6 +254,7 @@ class DefinedSchemaWriteTest {
     final String message = failure.getMessage();
     assertTrue(message.contains("`Gender`"), () -> "should name `Gender`: " + message);
     assertTrue(message.contains("`gender`"), () -> "should name `gender`: " + message);
+    assertTrue(message.contains(PATIENT), () -> "should name " + PATIENT + ": " + message);
   }
 
   /** Returns the PoF schema, without annotations, that a Patient is read with when inferred. */

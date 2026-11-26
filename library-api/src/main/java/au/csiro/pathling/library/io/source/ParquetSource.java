@@ -203,9 +203,14 @@ public class ParquetSource extends FileSource {
 
   /**
    * Constructs a ParquetSource with the specified PathlingContext and map of resource types to
-   * files, saying whether the layout of the stored data is classified as it is read. See {@link
-   * #ParquetSource(PathlingContext, String, Function, SchemaSet, boolean)} for what layout
-   * detection does.
+   * files, saying whether the layout of the stored data is classified as it is read.
+   *
+   * <p>Layout detection is enabled by every other constructor. It classifies each resource type's
+   * data from the schema the read already resolves, and refuses data in a layout this release does
+   * not read, such as the layout written by earlier releases, with an {@link
+   * UnsupportedLayoutException}. Disabling it is an opt-out for conforming data the detector
+   * misclassifies, and applies to this source alone (FR-040). Data in the earlier layout read with
+   * it disabled is not supported, and the results of a query over it are undefined.
    *
    * @param context the PathlingContext to use
    * @param files a map where keys are resource type names and values are collections of file paths

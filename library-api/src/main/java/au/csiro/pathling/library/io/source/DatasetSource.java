@@ -75,10 +75,16 @@ public class DatasetSource extends AbstractSource {
     this.reads = DefinedSchemaReads.of(context, schemaSet);
   }
 
+  /**
+   * Constructs a DatasetSource holding datasets already added, which projects each dataset added to
+   * it later as the source it was derived from does.
+   */
   private DatasetSource(
       @Nonnull final PathlingContext context,
-      @Nonnull final Map<String, Dataset<Row>> resourceMap) {
-    this(context, DefinedSchemaReads.noSchemas());
+      @Nonnull final Map<String, Dataset<Row>> resourceMap,
+      @Nonnull final DefinedSchemaReads reads) {
+    super(context);
+    this.reads = reads;
     this.resourceMap = resourceMap;
   }
 
@@ -124,7 +130,7 @@ public class DatasetSource extends AbstractSource {
       final Dataset<Row> dataset = entry.getValue();
       transformedMap.put(resourceType, operator.apply(entry.getKey(), dataset));
     }
-    return new DatasetSource(context, transformedMap);
+    return new DatasetSource(context, transformedMap, reads);
   }
 
   @Override
@@ -134,7 +140,7 @@ public class DatasetSource extends AbstractSource {
         resourceMap.entrySet().stream()
             .filter(entry -> resourceTypePredicate.test(entry.getKey()))
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    return new DatasetSource(context, filteredMap);
+    return new DatasetSource(context, filteredMap, reads);
   }
 
   @Override

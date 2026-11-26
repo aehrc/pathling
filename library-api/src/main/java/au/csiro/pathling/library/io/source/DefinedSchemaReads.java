@@ -137,8 +137,12 @@ final class DefinedSchemaReads {
               final Column type =
                   functions.get_json_object(
                       documents.col(documents.columns()[0]), "$.resourceType");
+              // A line of only whitespace holds no resource, so it is dropped as encoding drops it,
+              // rather than being read as a resource with every element absent.
+              final Column line = documents.col(documents.columns()[0]);
               final Dataset<String> selected =
-                  documents.filter(type.isNull().or(type.equalTo(resourceType)));
+                  documents.filter(
+                      line.rlike("\\S").and(type.isNull().or(type.equalTo(resourceType))));
               return context.annotate(
                   reader().json().read(resourceType, selected, schema), resourceType);
             })

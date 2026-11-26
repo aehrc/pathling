@@ -332,6 +332,34 @@ class ProjectionTest {
   }
 
   /**
+   * Pins that a struct held as a map value with two fields whose names differ only in case is
+   * refused, with the map transparent in the paths.
+   */
+  @Test
+  void refusesFieldsDifferingOnlyInCaseInsideMapValue() {
+    final StructType source =
+        struct(
+            field(
+                "byKey",
+                DataTypes.createMapType(
+                    DataTypes.StringType,
+                    struct(
+                        field("value", DataTypes.StringType),
+                        field("Value", DataTypes.StringType)))));
+    final StructType target =
+        struct(
+            field(
+                "byKey",
+                DataTypes.createMapType(
+                    DataTypes.StringType,
+                    struct(
+                        field("value", DataTypes.StringType),
+                        field("absent", DataTypes.StringType)))));
+
+    assertRefused(source, target, "byKey.value", "byKey.Value");
+  }
+
+  /**
    * Pins the pass-through that R14 relies on: a subtree whose type equals the target's apart from
    * nullability is not rebuilt, so the projection of a canonical schema is a no-op. The stored
    * nullability surviving, and the plan holding no rebuilt struct, both show it.

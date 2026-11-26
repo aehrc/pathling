@@ -33,6 +33,8 @@ import au.csiro.pathling.library.TestHelpers;
 import au.csiro.pathling.library.io.SchemaEquality;
 import au.csiro.pathling.schema.SchemaConfiguration;
 import jakarta.annotation.Nonnull;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -248,7 +250,7 @@ class DefinedSchemaSourceTest {
    * edge case "A stored field whose name differs from the defined schema's only in case").
    */
   @ParameterizedTest
-  @ValueSource(strings = {"parquet", "delta"})
+  @ValueSource(strings = {"parquet", "delta", "tables"})
   void aStoredFieldDifferingOnlyInCaseFailsTheRead(@Nonnull final String kind) {
     final StructType schema = SchemaSetSources.definedPatientSchema(context);
     final Dataset<Row> stored =
@@ -382,6 +384,38 @@ class DefinedSchemaSourceTest {
     assertTrue(nullFailure.getMessage().contains(PATIENT), nullFailure::getMessage);
   }
 
+  /**
+   * A blank or whitespace-only line of NDJSON holds no resource, so it gives no row with a schema
+   * set, just as it gives none without one.
+   */
+  @Test
+  void blankNdjsonLinesGiveNoRows() throws IOException {
+    final StructType schema = SchemaSetSources.definedPatientSchema(context);
+    final Path ndjson = Files.createDirectory(directory.resolve("blank-lines"));
+    Files.writeString(
+        ndjson.resolve("Patient.ndjson"),
+        "{\"resourceType\":\"Patient\",\"id\":\"p1\"}\n"
+            + "\n"
+            + "   \t \n"
+            + "{\"resourceType\":\"Patient\",\"id\":\"p2\"}\n");
+
+    final long inferred = context.read().ndjson(ndjson.toString()).read(PATIENT).count();
+    final long defined =
+        withSchemas(Map.of(PATIENT, schema)).ndjson(ndjson.toString()).read(PATIENT).count();
+
+    assertEquals(2, inferred);
+    assertEquals(inferred, defined);
+  }
+
+  /** A schema set with a null key is refused with an IllegalArgumentException. */
+  @Test
+  void aSchemaSetWithANullKeyIsRefused() {
+    final Map<String, StructType> nullKey = new HashMap<>();
+    nullKey.put(null, SchemaSetSources.definedPatientSchema(context));
+
+    assertThrows(IllegalArgumentException.class, () -> withSchemas(nullKey));
+  }
+
   @Nonnull
   private static DataSourceBuilder withSchemas(@Nonnull final Map<String, StructType> schemaSet) {
     return context.read().withSchemas(schemaSet);
@@ -395,7 +429,9 @@ class DefinedSchemaSourceTest {
 
   private void store(@Nonnull final String kind, @Nonnull final Dataset<Row> patients) {
     final String table = directory.resolve("Patient.parquet").toString();
-    if (SchemaSetSources.DELTA.equals(kind)) {
+    if (SchemaSetSources.TABLES.equals(kind)) {
+      patients.write().format("delta").saveAsTable(database + "." + PATIENT);
+    } else if (SchemaSetSources.DELTA.equals(kind)) {
       patients.write().format("delta").save(table);
     } else {
       patients.write().parquet(table);
@@ -418,7 +454,11 @@ class DefinedSchemaSourceTest {
       final Dataset<String> lines = spark.read().format("text").load(files).as(Encoders.STRING());
       final Column type =
           functions.get_json_object(lines.col(lines.columns()[0]), "$.resourceType");
-      return reader.read(PATIENT, lines.filter(type.isNull().or(type.equalTo(PATIENT))), schema);
+      final Column line = lines.col(lines.columns()[0]);
+      return reader.read(
+          PATIENT,
+          lines.filter(line.rlike("\\S").and(type.isNull().or(type.equalTo(PATIENT)))),
+          schema);
     }
     return reader.readBundles(
         PATIENT,

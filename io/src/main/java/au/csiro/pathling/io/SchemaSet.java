@@ -53,12 +53,15 @@ public final class SchemaSet {
    *
    * @param schemas the schema of each resource type, keyed by resource type code
    * @return the schema set
-   * @throws IllegalArgumentException if a schema is null, naming its key
+   * @throws IllegalArgumentException if a key is null, or if a schema is null, naming its key
    */
   @Nonnull
   public static SchemaSet of(@Nonnull final Map<String, StructType> schemas) {
     schemas.forEach(
         (resourceType, schema) -> {
+          if (resourceType == null) {
+            throw new IllegalArgumentException("A schema is given for no resource type");
+          }
           if (schema == null) {
             throw new IllegalArgumentException("No schema is given for " + resourceType);
           }
