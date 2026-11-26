@@ -178,7 +178,7 @@ uses.
 
 ### Implementation
 
-- [ ] T012 [P] Implement the internal `SchemaSet` (`parse(String)`, `of(Map<String, StructType>)`,
+- [x] T012 [P] Implement the internal `SchemaSet` (`parse(String)`, `of(Map<String, StructType>)`,
       lookup by type, validation against the definitions) in
       `io/src/main/java/au/csiro/pathling/io/SchemaSet.java` (research R10).
 - [x] T013 [P] Implement `Projection.project(Dataset<Row>, StructType)` in
@@ -187,7 +187,7 @@ uses.
 - [x] T014 Replace `DeltaSink`'s private conform methods with `Projection` in
       `library-api/src/main/java/au/csiro/pathling/library/io/sink/DeltaSink.java`. Run
       `NarrowMergeTest` and `DeltaSchemaMergingTest` unchanged.
-- [ ] T015 Refuse a defined schema that is not a PoF schema with the check of a schema against
+- [x] T015 Refuse a defined schema that is not a PoF schema with the check of a schema against
       the uber-schema that #2884 adds, ignoring its
       annotation fields (FR-006b), and implement the observed-shape derivation, skipping
       annotation fields, in
@@ -197,7 +197,7 @@ uses.
       repeating-element paths), so that T008's metadata case passes. Implement `observedShape(type,
 schema)` and `layoutSchema(type, schema)` in
       `io/src/main/java/au/csiro/pathling/io/DefinedSchemaLogic.java`.
-- [ ] T016 Add defined-schema overloads of `read(type, path)`, `read(type, documents)` and
+- [x] T016 Add defined-schema overloads of `read(type, path)`, `read(type, documents)` and
       `readBundles(type, bundles)`:
     - declare them in `io/src/main/java/au/csiro/pathling/io/FhirFormatReader.java`;
     - implement them in `io/src/main/java/au/csiro/pathling/io/FhirJsonReader.java` with
@@ -205,7 +205,7 @@ schema)` and `layoutSchema(type, schema)` in
     - the bundle overload keeps the splitter UDF, the `explode` and the reference resolution of
       `readBundles`, passing `reference -> BundleResource.resolve(reference, references)` to
       `toLayout`, and drops only the inference read.
-- [ ] T017 Implement the XML overloads in `io/src/main/java/au/csiro/pathling/io/FhirXmlReader.java`,
+- [x] T017 Implement the XML overloads in `io/src/main/java/au/csiro/pathling/io/FhirXmlReader.java`,
       building the parse schema from the observed shape in
       `io/src/main/java/au/csiro/pathling/io/XmlIngestShape.java` and skipping the inference read
       (research R5). The bundle overload keeps the splitter UDF, the references column and the

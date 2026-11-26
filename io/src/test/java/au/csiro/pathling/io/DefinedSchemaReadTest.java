@@ -166,7 +166,7 @@ class DefinedSchemaReadTest {
     final Row row = result.collectAsList().get(0);
     assertEquals("Patient", row.getAs("resourceType"));
     assertEquals("p1", row.getAs("id"));
-    final Row name = row.<List<Row>>getAs("name").get(0);
+    final Row name = row.<Row>getList(row.fieldIndex("name")).get(0);
     assertEquals("Smith", name.getAs("family"));
     assertEquals(List.of("Ann"), name.getList(name.fieldIndex("given")));
     assertNull(name.get(name.fieldIndex("prefix")));

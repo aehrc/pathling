@@ -19,6 +19,8 @@ package au.csiro.pathling.io;
 
 import au.csiro.pathling.definition.DefinitionContext;
 import jakarta.annotation.Nonnull;
+import java.util.List;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
 
@@ -28,7 +30,15 @@ import org.apache.spark.sql.types.StructType;
  */
 final class DefinedSchemaLogic {
 
-  private DefinedSchemaLogic() {}
+  @Nonnull private final SparkSession spark;
+
+  @Nonnull private final ResourceTransformer transformer;
+
+  private DefinedSchemaLogic(
+      @Nonnull final SparkSession spark, @Nonnull final ResourceTransformer transformer) {
+    this.spark = spark;
+    this.transformer = transformer;
+  }
 
   /**
    * Returns the logic over a session and a set of definitions.
@@ -40,7 +50,20 @@ final class DefinedSchemaLogic {
   @Nonnull
   static DefinedSchemaLogic of(
       @Nonnull final SparkSession spark, @Nonnull final DefinitionContext definitions) {
-    throw new UnsupportedOperationException("Defined schemas are not yet implemented.");
+    // A metadata group is stored where the observed shape has one, which is where the schema does.
+    return new DefinedSchemaLogic(spark, ResourceTransformer.of(definitions, true));
+  }
+
+  /**
+   * Returns the transformer a read with a schema stores resources with, which keeps a metadata
+   * group where the schema has one and drops it where the schema has none, whatever the reader's
+   * configuration says.
+   *
+   * @return the transformer
+   */
+  @Nonnull
+  ResourceTransformer transformer() {
+    return transformer;
   }
 
   /**
@@ -53,7 +76,7 @@ final class DefinedSchemaLogic {
    */
   @Nonnull
   StructType observedShape(@Nonnull final String resourceType, @Nonnull final StructType schema) {
-    throw new UnsupportedOperationException("Defined schemas are not yet implemented.");
+    return transformer.observedShape(resourceType, schema);
   }
 
   /**
@@ -67,6 +90,12 @@ final class DefinedSchemaLogic {
    */
   @Nonnull
   StructType layoutSchema(@Nonnull final String resourceType, @Nonnull final StructType schema) {
-    throw new UnsupportedOperationException("Defined schemas are not yet implemented.");
+    final StructType observed = observedShape(resourceType, schema);
+    // The walk over a frame with no rows gives its output schema without running a job, and the
+    // observed shape holds the schema's fields in the schema's order.
+    return Projection.project(
+            transformer.toLayout(resourceType, spark.createDataFrame(List.<Row>of(), observed)),
+            observed)
+        .schema();
   }
 }

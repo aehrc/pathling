@@ -18,9 +18,17 @@
 package au.csiro.pathling.io;
 
 import au.csiro.pathling.definition.DefinitionContext;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 import jakarta.annotation.Nonnull;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.StructType;
 
 /**
@@ -32,7 +40,13 @@ import org.apache.spark.sql.types.StructType;
  */
 public final class SchemaSet {
 
-  private SchemaSet() {}
+  @Nonnull private static final JsonFactory FACTORY = new JsonFactory();
+
+  @Nonnull private final Map<String, StructType> schemas;
+
+  private SchemaSet(@Nonnull final Map<String, StructType> schemas) {
+    this.schemas = schemas;
+  }
 
   /**
    * Returns the schema set a map holds.
@@ -43,7 +57,13 @@ public final class SchemaSet {
    */
   @Nonnull
   public static SchemaSet of(@Nonnull final Map<String, StructType> schemas) {
-    throw new UnsupportedOperationException("Schema sets are not yet implemented.");
+    schemas.forEach(
+        (resourceType, schema) -> {
+          if (schema == null) {
+            throw new IllegalArgumentException("No schema is given for " + resourceType);
+          }
+        });
+    return new SchemaSet(Map.copyOf(schemas));
   }
 
   /**
@@ -57,7 +77,28 @@ public final class SchemaSet {
    */
   @Nonnull
   public static SchemaSet parse(@Nonnull final String json) {
-    throw new UnsupportedOperationException("Schema sets are not yet implemented.");
+    final Map<String, StructType> schemas = new HashMap<>();
+    try (final JsonParser parser = FACTORY.createParser(json)) {
+      if (parser.nextToken() != JsonToken.START_OBJECT) {
+        throw new IllegalArgumentException("A schema set is not a JSON object");
+      }
+      while (parser.nextToken() == JsonToken.FIELD_NAME) {
+        final String resourceType = parser.currentName();
+        parser.nextToken();
+        // Each value is copied out as text, so that Spark parses it as the JSON form of a type.
+        final StringWriter value = new StringWriter();
+        try (final JsonGenerator generator = FACTORY.createGenerator(value)) {
+          generator.copyCurrentStructure(parser);
+        }
+        schemas.put(resourceType, structType(resourceType, value.toString()));
+      }
+      if (parser.currentToken() != JsonToken.END_OBJECT || parser.nextToken() != null) {
+        throw new IllegalArgumentException("A schema set is not a JSON object");
+      }
+    } catch (final IOException e) {
+      throw new IllegalArgumentException("A schema set is not valid JSON: " + e.getMessage(), e);
+    }
+    return new SchemaSet(Map.copyOf(schemas));
   }
 
   /**
@@ -69,7 +110,9 @@ public final class SchemaSet {
    */
   @Nonnull
   public SchemaSet requireResourceTypes(@Nonnull final DefinitionContext definitions) {
-    throw new UnsupportedOperationException("Schema sets are not yet implemented.");
+    // The definitions refuse a name they do not describe as a resource type, naming it.
+    schemas.keySet().forEach(definitions::findResourceDefinition);
+    return this;
   }
 
   /**
@@ -80,7 +123,7 @@ public final class SchemaSet {
    */
   @Nonnull
   public Optional<StructType> schema(@Nonnull final String resourceType) {
-    throw new UnsupportedOperationException("Schema sets are not yet implemented.");
+    return Optional.ofNullable(schemas.get(resourceType));
   }
 
   /**
@@ -90,7 +133,7 @@ public final class SchemaSet {
    */
   @Nonnull
   public Map<String, StructType> schemas() {
-    throw new UnsupportedOperationException("Schema sets are not yet implemented.");
+    return schemas;
   }
 
   /**
@@ -99,6 +142,22 @@ public final class SchemaSet {
    * @return whether the set is empty
    */
   public boolean isEmpty() {
-    throw new UnsupportedOperationException("Schema sets are not yet implemented.");
+    return schemas.isEmpty();
+  }
+
+  /** Parses the JSON form of the schema of one resource type, which must be a struct type. */
+  @Nonnull
+  private static StructType structType(
+      @Nonnull final String resourceType, @Nonnull final String json) {
+    final DataType type;
+    try {
+      type = DataType.fromJson(json);
+    } catch (final RuntimeException e) {
+      throw new IllegalArgumentException("The schema of " + resourceType + " is malformed", e);
+    }
+    if (type instanceof final StructType struct) {
+      return struct;
+    }
+    throw new IllegalArgumentException("The schema of " + resourceType + " is not a struct type");
   }
 }

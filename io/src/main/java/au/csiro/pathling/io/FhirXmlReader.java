@@ -103,13 +103,17 @@ public final class FhirXmlReader implements FhirFormatReader {
 
   @Nonnull private final DefinitionContext definitions;
 
+  @Nonnull private final DefinedSchemaLogic defined;
+
   FhirXmlReader(
       @Nonnull final SparkSession spark,
       @Nonnull final ResourceTransformer transformer,
-      @Nonnull final DefinitionContext definitions) {
+      @Nonnull final DefinitionContext definitions,
+      @Nonnull final DefinedSchemaLogic defined) {
     this.spark = spark;
     this.transformer = transformer;
     this.definitions = definitions;
+    this.defined = defined;
   }
 
   /**
@@ -142,20 +146,14 @@ public final class FhirXmlReader implements FhirFormatReader {
   public Dataset<Row> read(
       @Nonnull final String resourceType, @Nonnull final Dataset<String> documents) {
     transformer.requireStorable(resourceType);
-    final Dataset<Row> prepared =
-        documents.select(
-            functions
-                .explode(
-                    PREPARE.apply(
-                        functions.col(documents.columns()[0]), functions.lit(resourceType)))
-                .alias(BundleResource.DOCUMENT_COLUMN));
-    return toLayout(resourceType, prepared, null);
+    return inferredLayout(resourceType, prepared(resourceType, documents), null);
   }
 
   /**
    * {@inheritDoc}
    *
-   * <p>Not yet implemented.
+   * <p>Documents are checked and left out as {@link #read(String, Dataset)} checks them and leaves
+   * them out, and each is parsed with the shape the schema gives, so nothing is inferred.
    */
   @Override
   @Nonnull
@@ -163,7 +161,7 @@ public final class FhirXmlReader implements FhirFormatReader {
       @Nonnull final String resourceType,
       @Nonnull final Dataset<String> documents,
       @Nonnull final StructType schema) {
-    throw new UnsupportedOperationException("Defined-schema reads are not yet implemented.");
+    return definedLayout(resourceType, prepared(resourceType, documents), null, schema);
   }
 
   /**
@@ -178,7 +176,7 @@ public final class FhirXmlReader implements FhirFormatReader {
   public Dataset<Row> readBundles(
       @Nonnull final String resourceType, @Nonnull final Dataset<String> bundles) {
     transformer.requireStorable(resourceType);
-    return toLayout(
+    return inferredLayout(
         resourceType,
         BundleResource.resources(bundles, SPLIT, resourceType),
         functions.col(BundleResource.REFERENCES_COLUMN));
@@ -187,7 +185,8 @@ public final class FhirXmlReader implements FhirFormatReader {
   /**
    * {@inheritDoc}
    *
-   * <p>Not yet implemented.
+   * <p>Each bundle is split as {@link #readBundles(String, Dataset)} splits it, and each resource
+   * is parsed with the shape the schema gives, so nothing is inferred.
    */
   @Override
   @Nonnull
@@ -195,15 +194,30 @@ public final class FhirXmlReader implements FhirFormatReader {
       @Nonnull final String resourceType,
       @Nonnull final Dataset<String> bundles,
       @Nonnull final StructType schema) {
-    throw new UnsupportedOperationException("Defined-schema reads are not yet implemented.");
+    return definedLayout(
+        resourceType,
+        BundleResource.resources(bundles, SPLIT, resourceType),
+        functions.col(BundleResource.REFERENCES_COLUMN),
+        schema);
+  }
+
+  /** Checks each document and prepares it for Spark, leaving out those of other types. */
+  @Nonnull
+  private static Dataset<Row> prepared(
+      @Nonnull final String resourceType, @Nonnull final Dataset<String> documents) {
+    return documents.select(
+        functions
+            .explode(
+                PREPARE.apply(functions.col(documents.columns()[0]), functions.lit(resourceType)))
+            .alias(BundleResource.DOCUMENT_COLUMN));
   }
 
   /**
-   * Stores documents of one type, prepared for Spark, resolving their references through the
-   * resolutions beside them where they came from a bundle.
+   * Stores documents of one type, prepared for Spark, with the shape inferred from them, resolving
+   * their references through the resolutions beside them where they came from a bundle.
    */
   @Nonnull
-  private Dataset<Row> toLayout(
+  private Dataset<Row> inferredLayout(
       @Nonnull final String resourceType,
       @Nonnull final Dataset<Row> documents,
       @Nullable final Column references) {
@@ -220,6 +234,37 @@ public final class FhirXmlReader implements FhirFormatReader {
             DefinitionCanonicalStructure.forResource(definitions, resourceType),
             resourceType,
             inferred);
+    return toLayout(resourceType, documents, references, shape, transformer);
+  }
+
+  /**
+   * Stores documents of one type, prepared for Spark, with the shape a schema defined up front
+   * gives them, resolving their references as {@link #inferredLayout} does.
+   */
+  @Nonnull
+  private Dataset<Row> definedLayout(
+      @Nonnull final String resourceType,
+      @Nonnull final Dataset<Row> documents,
+      @Nullable final Column references,
+      @Nonnull final StructType schema) {
+    final XmlIngestShape shape =
+        XmlIngestShape.ofObserved(
+            DefinitionCanonicalStructure.forResource(definitions, resourceType),
+            resourceType,
+            defined.observedShape(resourceType, schema));
+    return Projection.project(
+        toLayout(resourceType, documents, references, shape, defined.transformer()),
+        defined.layoutSchema(resourceType, schema));
+  }
+
+  /** Stores documents of one type, prepared for Spark, with a planned shape. */
+  @Nonnull
+  private static Dataset<Row> toLayout(
+      @Nonnull final String resourceType,
+      @Nonnull final Dataset<Row> documents,
+      @Nullable final Column references,
+      @Nonnull final XmlIngestShape shape,
+      @Nonnull final ResourceTransformer transformer) {
     final Column document = functions.col(BundleResource.DOCUMENT_COLUMN);
     final boolean parsing = shape.parseSchema().fields().length > 0;
     // Each document is parsed once, in a projection of its own, and shaped from what it holds.
