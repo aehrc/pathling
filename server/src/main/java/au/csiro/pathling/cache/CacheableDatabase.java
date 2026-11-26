@@ -18,7 +18,6 @@
 package au.csiro.pathling.cache;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.spark.sql.functions.desc;
 
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
@@ -30,7 +29,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import lombok.Getter;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,7 +38,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 /**
@@ -49,37 +47,39 @@ import org.springframework.stereotype.Component;
  * <p>It works on the assumption that all changes happen through the official interactions so it's
  * always logged.
  *
+ * <p>The cache key is refreshed synchronously by the operation that changes the data, so that it is
+ * current by the time the response to that operation is sent. A client that revalidates a search
+ * straight after a write then receives the new data rather than 304 Not Modified.
+ *
  * @author Felix Naumann
+ * @author John Grimes
  */
 @Component
 @Slf4j
 public class CacheableDatabase implements Cacheable {
 
-  @Nonnull private final ThreadPoolTaskExecutor executor;
-
   private final SparkSession spark;
 
   private final String databasePath;
 
-  @Nonnull @Getter private Optional<String> cacheKey;
+  // The key is replaced by the thread that performed a write, and read by the threads serving
+  // other requests.
+  @Nonnull private final AtomicReference<Optional<String>> cacheKey;
 
   /**
    * Creates a new cacheable database instance.
    *
    * @param spark the Spark session
    * @param databasePath the path to the database
-   * @param executor the executor for async cache invalidation
    */
   @Autowired
   public CacheableDatabase(
       final SparkSession spark,
       @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-          final String databasePath,
-      @Nonnull final ThreadPoolTaskExecutor executor) {
+          final String databasePath) {
     this.spark = spark;
     this.databasePath = convertS3ToS3aUrl(databasePath);
-    this.cacheKey = buildCacheKeyFromStorage();
-    this.executor = executor;
+    this.cacheKey = new AtomicReference<>(buildCacheKeyFromStorage());
   }
 
   /**
@@ -177,7 +177,8 @@ public class CacheableDatabase implements Cacheable {
   }
 
   /**
-   * Queries a Delta table for the latest update time.
+   * Queries a Delta table for the latest update time. Only the latest commit is read, rather than
+   * the whole history retained in the log.
    *
    * @param deltaTable the Delta table to query
    * @return the latest update time, or empty if no update time could be determined
@@ -185,8 +186,7 @@ public class CacheableDatabase implements Cacheable {
   @Nonnull
   private static Optional<Long> latestUpdateToTable(@Nonnull final DeltaTable deltaTable) {
     @SuppressWarnings("RedundantCast")
-    final Row[] head =
-        (Row[]) deltaTable.history().orderBy(desc("version")).select("timestamp").head(1);
+    final Row[] head = (Row[]) deltaTable.history(1).select("timestamp").head(1);
     if (head.length != 1) {
       return Optional.empty();
     } else {
@@ -217,22 +217,25 @@ public class CacheableDatabase implements Cacheable {
   }
 
   @Override
+  @Nonnull
+  public Optional<String> getCacheKey() {
+    return cacheKey.get();
+  }
+
+  @Override
   public boolean cacheKeyMatches(@Nonnull final String otherKey) {
-    return cacheKey.map(key -> key.equals(otherKey)).orElse(false);
+    return cacheKey.get().map(key -> key.equals(otherKey)).orElse(false);
   }
 
   /**
-   * Invalidates the cache by asynchronously refreshing the cache key from the current database
-   * state. This method scans all tables to determine the latest timestamp and should only be used
-   * when multiple tables may have been modified (e.g., bulk import). For single-table
-   * modifications, use {@link #invalidate(String)} instead.
+   * Invalidates the cache by refreshing the cache key from the current database state. This method
+   * scans all tables to determine the latest timestamp and should only be used when multiple tables
+   * may have been modified (e.g., bulk import). For single-table modifications, use {@link
+   * #invalidate(String)} instead.
    */
   public void invalidate() {
-    executor.execute(
-        () -> {
-          cacheKey = buildCacheKeyFromStorage();
-          spark.sqlContext().clearCache();
-        });
+    cacheKey.set(buildCacheKeyFromStorage());
+    spark.sqlContext().clearCache();
   }
 
   /**
@@ -243,17 +246,13 @@ public class CacheableDatabase implements Cacheable {
    * @param tablePath the path to the Delta table that was modified
    */
   public void invalidate(@Nonnull final String tablePath) {
-    executor.execute(
-        () -> {
-          try {
-            final DeltaTable table = DeltaTable.forPath(spark, tablePath);
-            cacheKey = buildCacheKeyFromTable(table);
-          } catch (final Exception e) {
-            log.debug(
-                "Unable to access table for cache invalidation, clearing cache: {}", tablePath, e);
-          }
-          spark.sqlContext().clearCache();
-        });
+    try {
+      final DeltaTable table = DeltaTable.forPath(spark, tablePath);
+      cacheKey.set(buildCacheKeyFromTable(table));
+    } catch (final Exception e) {
+      log.debug("Unable to access table for cache invalidation, clearing cache: {}", tablePath, e);
+    }
+    spark.sqlContext().clearCache();
   }
 
   /**
