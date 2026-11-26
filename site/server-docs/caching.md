@@ -44,6 +44,9 @@ sequenceDiagram
 
 Web browsers already implement this behaviour, and if your application runs in
 the browser you will get the benefits without any extra implementation effort.
+Cacheable responses are returned with `Cache-Control: must-revalidate,max-age=0`,
+so the browser revalidates a stored response on every request rather than
+reusing it without asking the server.
 
 The current limitation of this implementation within Pathling is that caching is
 done over the entire database, not scoped to individual resource types. This

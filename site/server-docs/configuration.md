@@ -814,8 +814,9 @@ These settings control the [Model Context Protocol](./mcp) (MCP) endpoint at
 - `pathling.httpCaching.vary` - (default: `Accept`, `Accept-Encoding`, `Prefer`,
   `Authorization`) A list of values to return within the `Vary` header.
 - `pathling.httpCaching.cacheableControl` - (default: `must-revalidate`,
-  `max-age=1`) A list of values to return within the `Cache-Control` header, for
-  cacheable responses.
+  `max-age=0`) A list of values to return within the `Cache-Control` header, for
+  cacheable responses. With the default, browsers and intermediate caches can
+  store a response but must revalidate it on every request.
 - `pathling.httpCaching.uncacheableControl` - (default: `no-store`) A list of
   values to return within the `Cache-Control` header, for uncacheable responses.
 
