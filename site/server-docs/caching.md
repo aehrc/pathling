@@ -50,6 +50,10 @@ done over the entire database, not scoped to individual resource types. This
 means that updates to any resource will invalidate the cache for the entire
 database.
 
+The cache key is updated before the response to a create, update or delete is
+sent, so a request that revalidates a cached response after the write returns
+receives the new data rather than `304 Not Modified`.
+
 Cache keys persist across restarts of the server, as they are derived from state
 that is persisted along with the data.
 

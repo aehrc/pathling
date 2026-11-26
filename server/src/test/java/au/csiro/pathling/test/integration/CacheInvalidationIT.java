@@ -22,11 +22,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import au.csiro.pathling.util.TestDataSetup;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
-import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -42,7 +40,8 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 
 /**
  * Integration tests that verify ETag cache invalidation after resource modifications (create,
- * update, delete).
+ * update, delete). Each test revalidates a search with the ETag it held before the write, straight
+ * after the write returns, as a client refreshing its view of the data would.
  *
  * @author John Grimes
  */
@@ -136,33 +135,8 @@ class CacheInvalidationIT {
 
     log.info("Updated Patient resource");
 
-    // Step 3: Make another search request and verify the ETag has changed.
-    // The cache invalidation happens asynchronously, so we need to poll.
-    Awaitility.await()
-        .atMost(10, TimeUnit.SECONDS)
-        .pollInterval(500, TimeUnit.MILLISECONDS)
-        .untilAsserted(
-            () -> {
-              final AtomicReference<String> newEtag = new AtomicReference<>();
-              webTestClient
-                  .get()
-                  .uri(searchUri)
-                  .header("Accept", "application/fhir+json")
-                  .exchange()
-                  .expectStatus()
-                  .isOk()
-                  .expectHeader()
-                  .exists("ETag")
-                  .expectHeader()
-                  .value(
-                      "ETag",
-                      etag -> {
-                        log.info("New ETag: {}", etag);
-                        newEtag.set(etag);
-                      });
-
-              assertThat(newEtag.get()).isNotNull().isNotEqualTo(originalEtag.get());
-            });
+    // Step 3: Revalidate the search with the original ETag and verify that it is now stale.
+    assertSearchRevalidatesAsModified(searchUri, originalEtag.get());
   }
 
   @Test
@@ -219,32 +193,8 @@ class CacheInvalidationIT {
 
     log.info("Created new Patient resource");
 
-    // Step 3: Verify the ETag has changed.
-    Awaitility.await()
-        .atMost(10, TimeUnit.SECONDS)
-        .pollInterval(500, TimeUnit.MILLISECONDS)
-        .untilAsserted(
-            () -> {
-              final AtomicReference<String> newEtag = new AtomicReference<>();
-              webTestClient
-                  .get()
-                  .uri(searchUri)
-                  .header("Accept", "application/fhir+json")
-                  .exchange()
-                  .expectStatus()
-                  .isOk()
-                  .expectHeader()
-                  .exists("ETag")
-                  .expectHeader()
-                  .value(
-                      "ETag",
-                      etag -> {
-                        log.info("New ETag: {}", etag);
-                        newEtag.set(etag);
-                      });
-
-              assertThat(newEtag.get()).isNotNull().isNotEqualTo(originalEtag.get());
-            });
+    // Step 3: Revalidate the search with the original ETag and verify that it is now stale.
+    assertSearchRevalidatesAsModified(searchUri, originalEtag.get());
   }
 
   @Test
@@ -319,31 +269,33 @@ class CacheInvalidationIT {
 
     log.info("Deleted Patient resource");
 
-    // Step 4: Verify the ETag has changed.
-    Awaitility.await()
-        .atMost(10, TimeUnit.SECONDS)
-        .pollInterval(500, TimeUnit.MILLISECONDS)
-        .untilAsserted(
-            () -> {
-              final AtomicReference<String> newEtag = new AtomicReference<>();
-              webTestClient
-                  .get()
-                  .uri(baseUri)
-                  .header("Accept", "application/fhir+json")
-                  .exchange()
-                  .expectStatus()
-                  .isOk()
-                  .expectHeader()
-                  .exists("ETag")
-                  .expectHeader()
-                  .value(
-                      "ETag",
-                      etag -> {
-                        log.info("New ETag: {}", etag);
-                        newEtag.set(etag);
-                      });
+    // Step 4: Revalidate the search with the original ETag and verify that it is now stale.
+    assertSearchRevalidatesAsModified(baseUri, originalEtag.get());
+  }
 
-              assertThat(newEtag.get()).isNotNull().isNotEqualTo(originalEtag.get());
-            });
+  /**
+   * Revalidates a search with an ETag obtained before a write, and asserts that the server returns
+   * the search afresh with a new ETag rather than 304 Not Modified. This is sent as soon as the
+   * write returns, without polling, so it fails if the cache key is refreshed after the response to
+   * the write has been sent.
+   *
+   * @param searchUri the URI of the search to revalidate
+   * @param originalEtag the ETag returned by the search before the write
+   */
+  private void assertSearchRevalidatesAsModified(
+      final String searchUri, final String originalEtag) {
+    final AtomicReference<String> newEtag = new AtomicReference<>();
+    webTestClient
+        .get()
+        .uri(searchUri)
+        .header("Accept", "application/fhir+json")
+        .header("If-None-Match", originalEtag)
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectHeader()
+        .value("ETag", newEtag::set);
+    log.info("New ETag: {}", newEtag.get());
+    assertThat(newEtag.get()).isNotNull().isNotEqualTo(originalEtag);
   }
 }

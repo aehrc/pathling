@@ -157,10 +157,8 @@ public class FhirServerTestConfiguration {
   @ConditionalOnMissingBean
   @Bean
   public CacheableDatabase cacheableDatabase(
-      SparkSession sparkSession,
-      @Value("${pathling.storage.warehouseUrl}") String warehouseUrl,
-      ThreadPoolTaskExecutor threadPoolTaskExecutor) {
-    return new CacheableDatabase(sparkSession, warehouseUrl, threadPoolTaskExecutor);
+      SparkSession sparkSession, @Value("${pathling.storage.warehouseUrl}") String warehouseUrl) {
+    return new CacheableDatabase(sparkSession, warehouseUrl);
   }
 
   @Primary
