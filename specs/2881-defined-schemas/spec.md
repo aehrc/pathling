@@ -165,6 +165,8 @@ with the binding's write and read functions, and pass it to every source.
   struct type's JSON form) is refused with an error naming the resource type. A schema set file
   that cannot be read is refused with an error naming the file.
 - **A key in the set that is not a resource type code** is refused with an error naming it.
+- **A schema set file that names a resource type more than once** is refused with an error naming
+  the type.
 - **An empty schema set** behaves as no schema set.
 - **A Delta merge (upsert) with a schema narrower than the table** replaces each matched resource
   in full, so the fields the schema lacks become null on every matched row. This is accepted and

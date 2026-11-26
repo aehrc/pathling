@@ -135,6 +135,20 @@ public final class FhirXmlReader implements FhirFormatReader {
   /**
    * {@inheritDoc}
    *
+   * <p>The files are line-delimited FHIR XML, read as {@link #read(String, String)} reads them.
+   */
+  @Override
+  @Nonnull
+  public Dataset<Row> read(
+      @Nonnull final String resourceType,
+      @Nonnull final String path,
+      @Nonnull final StructType schema) {
+    return read(resourceType, spark.read().textFile(path), schema);
+  }
+
+  /**
+   * {@inheritDoc}
+   *
    * <p>A document whose resource is of another type is left out, as the previous encoder left it
    * out, and so is a null or blank document, such as the empty line between two documents of a
    * line-delimited file. A bundle is a document of another type, and so is left out rather than

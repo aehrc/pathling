@@ -66,6 +66,14 @@ class SchemaSetTest {
   }
 
   @Test
+  void refusesTypeNamedMoreThanOnceNamingIt() {
+    final String content =
+        "{\"Patient\":" + PATIENT.json() + ",\"Patient\":" + PATIENT.json() + "}";
+
+    assertRefusedNaming(() -> SchemaSet.parse(content), "Patient more than once");
+  }
+
+  @Test
   void refusesUnknownResourceTypeNamingKey() {
     final SchemaSet set = SchemaSet.of(Map.of("Patient", PATIENT, "NotAType", OBSERVATION));
 

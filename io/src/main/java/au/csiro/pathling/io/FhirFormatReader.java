@@ -52,7 +52,7 @@ public sealed interface FhirFormatReader permits FhirJsonReader, FhirXmlReader {
 
   /**
    * Reads a dataset of FHIR resources, one document per row, into this layout with a schema defined
-   * up front, so that nothing is inferred from the documents (FR-005).
+   * up front, so that nothing is inferred from the documents (FR-006).
    *
    * <p>The output has the layout schema of the defined schema: its base schema, every field
    * nullable and without metadata, in the defined field order. An element the documents lack is
@@ -68,6 +68,19 @@ public sealed interface FhirFormatReader permits FhirJsonReader, FhirXmlReader {
   @Nonnull
   Dataset<Row> read(
       @Nonnull String resourceType, @Nonnull Dataset<String> documents, @Nonnull StructType schema);
+
+  /**
+   * Reads files of FHIR documents, one per line, into this layout with a schema defined up front,
+   * as {@link #read(String, Dataset, StructType)} reads documents.
+   *
+   * @param resourceType the type of the resources to read
+   * @param path the path to read from, which may name a file or a directory
+   * @param schema the schema of the resources, in this layout
+   * @return the resources, in this layout
+   * @throws IllegalArgumentException if the type is {@code Bundle} or is not a resource type
+   */
+  @Nonnull
+  Dataset<Row> read(@Nonnull String resourceType, @Nonnull String path, @Nonnull StructType schema);
 
   /**
    * Reads the resources of one type that a dataset of FHIR bundles carries, one bundle per row,

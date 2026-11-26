@@ -72,8 +72,9 @@ public final class SchemaSet {
    *
    * @param json the content
    * @return the schema set
-   * @throws IllegalArgumentException if the content is not a JSON object, or a value is not a
-   *     struct type or is malformed, naming its key
+   * @throws IllegalArgumentException if the content is not a JSON object, if it names a resource
+   *     type more than once, naming it, or if a value is not a struct type or is malformed, naming
+   *     its key
    */
   @Nonnull
   public static SchemaSet parse(@Nonnull final String json) {
@@ -90,7 +91,10 @@ public final class SchemaSet {
         try (final JsonGenerator generator = FACTORY.createGenerator(value)) {
           generator.copyCurrentStructure(parser);
         }
-        schemas.put(resourceType, structType(resourceType, value.toString()));
+        if (schemas.put(resourceType, structType(resourceType, value.toString())) != null) {
+          throw new IllegalArgumentException(
+              "The schema set names " + resourceType + " more than once");
+        }
       }
       if (parser.currentToken() != JsonToken.END_OBJECT || parser.nextToken() != null) {
         throw new IllegalArgumentException("A schema set is not a JSON object");

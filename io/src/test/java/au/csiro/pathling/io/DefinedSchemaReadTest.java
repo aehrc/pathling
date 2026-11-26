@@ -143,6 +143,13 @@ class DefinedSchemaReadTest {
       case "jsonDocuments" -> reader.json().read(resourceType, strings(json), schema);
       case "jsonBundles" ->
           reader.json().readBundles(resourceType, strings(jsonBundle(json)), schema);
+      case "xmlFiles" ->
+          reader
+              .xml()
+              .read(
+                  resourceType,
+                  TransformFixtures.corpus(Files.createTempDirectory(directory, "corpus"), xml),
+                  schema);
       case "xmlDocuments" -> reader.xml().read(resourceType, strings(xml), schema);
       case "xmlBundles" -> reader.xml().readBundles(resourceType, strings(xmlBundle(xml)), schema);
       default -> throw new IllegalArgumentException(route);
@@ -151,7 +158,14 @@ class DefinedSchemaReadTest {
 
   @ParameterizedTest
   @ValueSource(
-      strings = {"jsonFiles", "jsonDocuments", "jsonBundles", "xmlDocuments", "xmlBundles"})
+      strings = {
+        "jsonFiles",
+        "jsonDocuments",
+        "jsonBundles",
+        "xmlFiles",
+        "xmlDocuments",
+        "xmlBundles"
+      })
   void elementsTheBatchLacksArePresentAndNull(@Nonnull final String route) throws IOException {
     final StructType schema =
         StructType.fromDDL(
@@ -177,7 +191,14 @@ class DefinedSchemaReadTest {
 
   @ParameterizedTest
   @ValueSource(
-      strings = {"jsonFiles", "jsonDocuments", "jsonBundles", "xmlDocuments", "xmlBundles"})
+      strings = {
+        "jsonFiles",
+        "jsonDocuments",
+        "jsonBundles",
+        "xmlFiles",
+        "xmlDocuments",
+        "xmlBundles"
+      })
   void contentTheSchemaLacksIsDropped(@Nonnull final String route) throws IOException {
     // The resources carry content that the schema lacks and the definitions describe, and content
     // that they do not describe, at the top level and inside an element.
@@ -207,7 +228,14 @@ class DefinedSchemaReadTest {
 
   @ParameterizedTest
   @ValueSource(
-      strings = {"jsonFiles", "jsonDocuments", "jsonBundles", "xmlDocuments", "xmlBundles"})
+      strings = {
+        "jsonFiles",
+        "jsonDocuments",
+        "jsonBundles",
+        "xmlFiles",
+        "xmlDocuments",
+        "xmlBundles"
+      })
   void annotationsFollowTheConfiguration(@Nonnull final String route) throws IOException {
     // The schema carries annotations of every kind, but only the range annotation is configured.
     final StructType schema =
@@ -251,7 +279,14 @@ class DefinedSchemaReadTest {
 
   @ParameterizedTest
   @ValueSource(
-      strings = {"jsonFiles", "jsonDocuments", "jsonBundles", "xmlDocuments", "xmlBundles"})
+      strings = {
+        "jsonFiles",
+        "jsonDocuments",
+        "jsonBundles",
+        "xmlFiles",
+        "xmlDocuments",
+        "xmlBundles"
+      })
   void metadataGroupIsKeptWhereTheSchemaHasItWithTheOptionOff(@Nonnull final String route)
       throws IOException {
     final StructType schema =
@@ -278,7 +313,14 @@ class DefinedSchemaReadTest {
 
   @ParameterizedTest
   @ValueSource(
-      strings = {"jsonFiles", "jsonDocuments", "jsonBundles", "xmlDocuments", "xmlBundles"})
+      strings = {
+        "jsonFiles",
+        "jsonDocuments",
+        "jsonBundles",
+        "xmlFiles",
+        "xmlDocuments",
+        "xmlBundles"
+      })
   void metadataGroupIsDroppedWhereTheSchemaLacksItWithTheOptionOn(@Nonnull final String route)
       throws IOException {
     final StructType schema =

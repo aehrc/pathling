@@ -103,15 +103,12 @@ public final class FhirJsonReader implements FhirFormatReader {
   }
 
   /**
-   * Reads files of newline-delimited FHIR JSON into this layout with a schema defined up front, as
-   * {@link #read(String, Dataset, StructType)} reads documents.
+   * {@inheritDoc}
    *
-   * @param resourceType the type of every resource the files carry
-   * @param path the path to read from, which may name a file or a directory
-   * @param schema the schema of the resources, in this layout
-   * @return the resources, in this layout
-   * @throws IllegalArgumentException if the type is {@code Bundle} or is not a resource type
+   * <p>The files are newline-delimited FHIR JSON, and every resource they carry is of the type
+   * asked for.
    */
+  @Override
   @Nonnull
   public Dataset<Row> read(
       @Nonnull final String resourceType,
