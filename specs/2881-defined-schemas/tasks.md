@@ -432,7 +432,7 @@ every source.
 
     Fix any engine defect they expose.
 
-- [ ] T043 Record the baseline: run `YamlReferenceImplTest` and `YamlFhirPathTest` with today's
+- [x] T043 Record the baseline: run `YamlReferenceImplTest` and `YamlFhirPathTest` with today's
       loads, and record each case's result in
       `specs/2881-defined-schemas/evidence/yaml-defined-run.md`, under a baseline heading.
 - [ ] T044 [P] Test the load of a case whose subject is not a FHIR resource (path 2) in
