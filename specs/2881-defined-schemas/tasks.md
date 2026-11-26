@@ -115,7 +115,7 @@ uses.
     - in parsed content, a value that is not a struct, or is malformed, is refused with an error
       naming the type;
     - an empty set equals no set.
-- [ ] T006 [P] Test the by-name projector in `io/…/io/ProjectionTest.java`:
+- [x] T006 [P] Test the by-name projector in `io/…/io/ProjectionTest.java`:
     - extra fields are dropped and absent elements are added as typed nulls, at the top level and
       inside structs, arrays and maps;
     - a null struct stays null;
@@ -179,10 +179,10 @@ uses.
 - [ ] T012 [P] Implement the internal `SchemaSet` (`parse(String)`, `of(Map<String, StructType>)`,
       lookup by type, validation against the definitions) in
       `io/src/main/java/au/csiro/pathling/io/SchemaSet.java` (research R10).
-- [ ] T013 [P] Implement `Projection.project(Dataset<Row>, StructType)` in
+- [x] T013 [P] Implement `Projection.project(Dataset<Row>, StructType)` in
       `io/src/main/java/au/csiro/pathling/io/Projection.java`, extracted from
       `DeltaSink.conformToTarget`/`conformColumn`/`conformFields`.
-- [ ] T014 Replace `DeltaSink`'s private conform methods with `Projection` in
+- [x] T014 Replace `DeltaSink`'s private conform methods with `Projection` in
       `library-api/src/main/java/au/csiro/pathling/library/io/sink/DeltaSink.java`. Run
       `NarrowMergeTest` and `DeltaSchemaMergingTest` unchanged.
 - [ ] T015 Refuse a defined schema that is not a PoF schema with the check of a schema against

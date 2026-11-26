@@ -18,13 +18,9 @@
 package au.csiro.pathling.library.io.sink;
 
 import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths;
-import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.struct;
-import static org.apache.spark.sql.functions.transform;
-import static org.apache.spark.sql.functions.transform_values;
-import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
+import au.csiro.pathling.io.Projection;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
@@ -34,17 +30,13 @@ import au.csiro.pathling.utilities.StructureMerge;
 import io.delta.tables.DeltaMergeBuilder;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.function.UnaryOperator;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.ArrayType;
@@ -258,9 +250,9 @@ final class DeltaSink implements DataSink {
               dataset.schema(),
               DefinitionCanonicalStructure.forResource(
                   FhirDefinitionContext.of(context.getFhirContext()), resourceType));
-      updates = conformToTarget(dataset, union);
+      updates = Projection.project(dataset, union);
     } else if (!sourcePaths.containsAll(targetPaths)) {
-      updates = conformToTarget(dataset, targetSchema);
+      updates = Projection.project(dataset, targetSchema);
     } else {
       updates = dataset;
     }
@@ -274,99 +266,6 @@ final class DeltaSink implements DataSink {
         .whenNotMatched()
         .insertAll()
         .execute();
-  }
-
-  /**
-   * Presents the dataset under the target schema, supplying as nulls the fields the target carries
-   * and the dataset does not.
-   *
-   * <p>Only the parts of the dataset that differ from the target are rebuilt; a subtree whose type
-   * already matches is passed straight through.
-   *
-   * @param dataset the dataset to project, whose fields must be a subset of the target's
-   * @param target the schema to present it under
-   * @return the projected dataset
-   */
-  @Nonnull
-  private static Dataset<Row> conformToTarget(
-      @Nonnull final Dataset<Row> dataset, @Nonnull final StructType target) {
-    return dataset.select(conformFields(dataset::col, dataset.schema(), target));
-  }
-
-  /** Projects a column onto a target type, resolving struct fields by name at every depth. */
-  @Nonnull
-  private static Column conformColumn(
-      @Nonnull final Column column,
-      @Nonnull final DataType sourceType,
-      @Nonnull final DataType targetType) {
-    if (sourceType.sameType(targetType)) {
-      // Nothing below this point differs, so there is nothing to rebuild.
-      return column;
-    }
-    if (sourceType instanceof final StructType source
-        && targetType instanceof final StructType target) {
-      // A struct built field by field is never null, so the null case has to be restored
-      // explicitly, or an absent nested struct would be written as one full of nulls.
-      return when(column.isNull(), lit(null).cast(target))
-          .otherwise(struct(conformFields(column::getField, source, target)));
-    }
-    if (sourceType instanceof final ArrayType source
-        && targetType instanceof final ArrayType target) {
-      return transform(
-          column, element -> conformColumn(element, source.elementType(), target.elementType()));
-    }
-    if (sourceType instanceof final MapType source && targetType instanceof final MapType target) {
-      return transform_values(
-          column, (key, value) -> conformColumn(value, source.valueType(), target.valueType()));
-    }
-    return column;
-  }
-
-  /**
-   * Builds one column per target field, taking it from the source by name where the source has it,
-   * and supplying a typed null where it does not.
-   *
-   * @param fieldAccessor how to reach a named field of the source, which differs between the top
-   *     level of a dataset and a nested struct
-   * @param source the schema the columns are being taken from
-   * @param target the schema the columns are being presented under
-   * @return the projected columns, in the target's field order
-   */
-  @Nonnull
-  private static Column[] conformFields(
-      @Nonnull final Function<String, Column> fieldAccessor,
-      @Nonnull final StructType source,
-      @Nonnull final StructType target) {
-    return Arrays.stream(target.fields())
-        .map(
-            field -> {
-              final StructField sourceField = fieldOrNull(source, field.name());
-              return (sourceField == null
-                      ? lit(null).cast(field.dataType())
-                      : conformColumn(
-                          fieldAccessor.apply(sourceField.name()),
-                          sourceField.dataType(),
-                          field.dataType()))
-                  .alias(field.name());
-            })
-        .toArray(Column[]::new);
-  }
-
-  /**
-   * Returns the named field of the struct, or null if it has none.
-   *
-   * <p>Matched on the exact name rather than through the session's resolver, unlike the decode
-   * side. A difference of case alone therefore reads as a difference of field, so the merge is left
-   * to whatever Delta would have done with it rather than being quietly conformed - which is the
-   * conservative reading, since the two names may well have been meant to be different.
-   */
-  @Nullable
-  private static StructField fieldOrNull(
-      @Nonnull final StructType struct, @Nonnull final String name) {
-    return Arrays.stream(struct.fields())
-        .filter(field -> field.name().equals(name))
-        .findFirst()
-        .orElse(null);
   }
 
   /**
