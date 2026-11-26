@@ -19,7 +19,6 @@
 
 from typing import List, Optional
 
-from pytest import fixture
 from pyspark.sql.types import (
     ArrayType,
     BooleanType,
@@ -32,6 +31,7 @@ from pyspark.sql.types import (
     StructType,
     TimestampType,
 )
+from pytest import fixture
 
 from tests.schema_equality import same_schema, same_schema_set
 
