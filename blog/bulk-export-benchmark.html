@@ -5,7 +5,7 @@
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Bulk export performance in Pathling server 3.2.0 | Pathling</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:image" content="https://pathling.csiro.au/assets/images/social-preview.png"><meta data-rh="true" name="twitter:image" content="https://pathling.csiro.au/assets/images/social-preview.png"><meta data-rh="true" property="og:url" content="https://pathling.csiro.au/blog/bulk-export-benchmark"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docusaurus_tag" content="default"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docsearch:docusaurus_tag" content="default"><meta data-rh="true" property="og:title" content="Bulk export performance in Pathling server 3.2.0 | Pathling"><meta data-rh="true" name="description" content="Health Samurai maintain an open"><meta data-rh="true" property="og:description" content="Health Samurai maintain an open"><meta data-rh="true" property="og:type" content="article"><meta data-rh="true" property="article:published_time" content="2026-11-26T00:00:00.000Z"><meta data-rh="true" property="article:author" content="https://github.com/johngrimes"><meta data-rh="true" property="article:tag" content="server,performance"><link data-rh="true" rel="icon" href="/favicon.ico"><link data-rh="true" rel="canonical" href="https://pathling.csiro.au/blog/bulk-export-benchmark"><link data-rh="true" rel="alternate" href="https://pathling.csiro.au/blog/bulk-export-benchmark" hreflang="en"><link data-rh="true" rel="alternate" href="https://pathling.csiro.au/blog/bulk-export-benchmark" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","@id":"https://pathling.csiro.au/blog/bulk-export-benchmark","mainEntityOfPage":"https://pathling.csiro.au/blog/bulk-export-benchmark","url":"https://pathling.csiro.au/blog/bulk-export-benchmark","headline":"Bulk export performance in Pathling server 3.2.0","name":"Bulk export performance in Pathling server 3.2.0","description":"Health Samurai maintain an open","datePublished":"2026-11-26T00:00:00.000Z","author":{"@type":"Person","name":"John Grimes","url":"https://github.com/johngrimes"},"keywords":[],"isPartOf":{"@type":"Blog","@id":"https://pathling.csiro.au/blog","name":"Blog"}}</script><link rel="alternate" type="application/rss+xml" href="/blog/rss.xml" title="Pathling RSS Feed">
 <link rel="alternate" type="application/atom+xml" href="/blog/atom.xml" title="Pathling Atom Feed"><link rel="stylesheet" href="/assets/css/styles.268c7013.css">
-<script src="/assets/js/runtime~main.6bcf3747.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.b1b25086.js" defer="defer"></script>
 <script src="/assets/js/main.b8942ed1.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -64,18 +64,13 @@ loaded the result with <code>$import</code>. The import took about 85 seconds.</
 settings that the benchmark uses for HAPI FHIR. Pathling keeps export output in
 its own storage rather than writing it to S3, so the size of the output was
 measured from the files listed in the manifest.</p>
-<p>We needed to make one change to the script. It polls the status URL with
-<code>Accept: application/fhir+json</code>, the same header it sends with the kick-off
-request. The
-<a href="https://hl7.org/fhir/uv/bulkdata/STU3/en/export.html#bulk-data-status-request" target="_blank" rel="noopener noreferrer" class="">Bulk Data Access</a>
-specification says that a client should ask for <code>application/json</code> when
-requesting status. Pathling uses the header to choose between the JSON manifest
-and the same content as a FHIR Parameters resource, and returns the Parameters
-resource when <code>application/fhir+json</code> is requested. HAPI FHIR, whose output is
-measured from the manifest in the same way, returns the JSON manifest in
-response to the same header. We added a few lines to the script to read the
-list of output files from the Parameters resource. This does not affect the
-timing.</p>
+<p>We needed to make one change to the script. Pathling returns the completed
+export manifest as a FHIR Parameters resource, rather than the JSON document
+defined by the
+<a href="https://hl7.org/fhir/uv/bulkdata/export.html#response---complete-status" target="_blank" rel="noopener noreferrer" class="">Bulk Data Access</a>
+specification. We added a few lines to the script to read the list of output
+files from the Parameters resource. This does not affect the timing, but it is a
+departure from the specification that we need to fix.</p>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="results">Results<a href="#results" class="hash-link" aria-label="Direct link to Results" title="Direct link to Results" translate="no">​</a></h2>
 <p>Every run exported all 1,630,685 resources, as 2,887 MB of NDJSON in 106 files.</p>
 <table><thead><tr><th>Scenario</th><th style="text-align:right">Duration (s)</th><th style="text-align:right">Throughput (MB/s)</th><th style="text-align:right">Resources per second</th></tr></thead><tbody><tr><td>First export after import</td><td style="text-align:right">54</td><td style="text-align:right">53.2</td><td style="text-align:right">30,000</td></tr><tr><td>First export after a restart</td><td style="text-align:right">72</td><td style="text-align:right">40.4</td><td style="text-align:right">22,800</td></tr><tr><td>Warm, dataset caching on (the default)</td><td style="text-align:right">12</td><td style="text-align:right">239.2</td><td style="text-align:right">134,800</td></tr><tr><td>Warm, dataset caching off</td><td style="text-align:right">20</td><td style="text-align:right">143.8</td><td style="text-align:right">81,100</td></tr></tbody></table>

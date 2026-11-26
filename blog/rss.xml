@@ -66,18 +66,13 @@ loaded the result with <code>$import</code>. The import took about 85 seconds.</
 settings that the benchmark uses for HAPI FHIR. Pathling keeps export output in
 its own storage rather than writing it to S3, so the size of the output was
 measured from the files listed in the manifest.</p>
-<p>We needed to make one change to the script. It polls the status URL with
-<code>Accept: application/fhir+json</code>, the same header it sends with the kick-off
-request. The
-<a href="https://hl7.org/fhir/uv/bulkdata/STU3/en/export.html#bulk-data-status-request" target="_blank" rel="noopener noreferrer" class="">Bulk Data Access</a>
-specification says that a client should ask for <code>application/json</code> when
-requesting status. Pathling uses the header to choose between the JSON manifest
-and the same content as a FHIR Parameters resource, and returns the Parameters
-resource when <code>application/fhir+json</code> is requested. HAPI FHIR, whose output is
-measured from the manifest in the same way, returns the JSON manifest in
-response to the same header. We added a few lines to the script to read the
-list of output files from the Parameters resource. This does not affect the
-timing.</p>
+<p>We needed to make one change to the script. Pathling returns the completed
+export manifest as a FHIR Parameters resource, rather than the JSON document
+defined by the
+<a href="https://hl7.org/fhir/uv/bulkdata/export.html#response---complete-status" target="_blank" rel="noopener noreferrer" class="">Bulk Data Access</a>
+specification. We added a few lines to the script to read the list of output
+files from the Parameters resource. This does not affect the timing, but it is a
+departure from the specification that we need to fix.</p>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="results">Results<a href="https://pathling.csiro.au/blog/bulk-export-benchmark#results" class="hash-link" aria-label="Direct link to Results" title="Direct link to Results" translate="no">​</a></h2>
 <p>Every run exported all 1,630,685 resources, as 2,887 MB of NDJSON in 106 files.</p>
 <table><thead><tr><th>Scenario</th><th style="text-align:right">Duration (s)</th><th style="text-align:right">Throughput (MB/s)</th><th style="text-align:right">Resources per second</th></tr></thead><tbody><tr><td>First export after import</td><td style="text-align:right">54</td><td style="text-align:right">53.2</td><td style="text-align:right">30,000</td></tr><tr><td>First export after a restart</td><td style="text-align:right">72</td><td style="text-align:right">40.4</td><td style="text-align:right">22,800</td></tr><tr><td>Warm, dataset caching on (the default)</td><td style="text-align:right">12</td><td style="text-align:right">239.2</td><td style="text-align:right">134,800</td></tr><tr><td>Warm, dataset caching off</td><td style="text-align:right">20</td><td style="text-align:right">143.8</td><td style="text-align:right">81,100</td></tr></tbody></table>
