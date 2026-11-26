@@ -198,3 +198,22 @@ test_that("a schema set that does not name every schema is refused", {
     same_schema_set(list(Patient = schema, schema), list(Patient = schema, schema)), "must name"
   )
 })
+
+test_that("empty schema sets are the same", {
+  expect_true(same_schema_set(list(), list()))
+  expect_false(same_schema_set(list(), list(Patient = schema)))
+  expect_false(same_schema_set(list(Patient = schema), list()))
+})
+
+test_that("a schema set that names a resource type twice is refused", {
+  observation <- st(sf("id", '"string"'), sf("status", '"string"'))
+  expect_error(
+    same_schema_set(
+      list(Patient = schema, Patient = observation), list(Patient = schema, Patient = schema)
+    ),
+    "twice"
+  )
+  expect_error(
+    same_schema_set(list(Patient = schema), list(Patient = schema, Patient = schema)), "twice"
+  )
+})

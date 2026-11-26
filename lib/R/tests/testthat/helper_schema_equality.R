@@ -29,12 +29,17 @@ same_schema <- function(left, right) {
 }
 
 # Two schema sets, lists of schemas named by resource type, are the same when they name the same
-# types and the schemas of each type are the same. A list that does not name every schema is
-# refused.
+# types and the schemas of each type are the same. An empty list is an empty set. A non-empty list
+# that does not name every schema, or names a type twice, is refused.
 same_schema_set <- function(left, right) {
-  named <- function(set) !is.null(names(set)) && all(nzchar(names(set)))
+  named <- function(set) {
+    length(set) == 0 || (!is.null(names(set)) && all(nzchar(names(set))))
+  }
   if (!named(left) || !named(right)) {
     stop("A schema set must name the resource type of every schema.")
+  }
+  if (anyDuplicated(names(left)) || anyDuplicated(names(right))) {
+    stop("A schema set must not name a resource type twice.")
   }
   setequal(names(left), names(right)) &&
     length(left) == length(right) &&
