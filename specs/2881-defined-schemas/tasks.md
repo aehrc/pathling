@@ -28,24 +28,42 @@ The work is delivered as slices, each built from the tasks below and merged by a
 | 05 G3 | not started |            |                                      |
 | 06 G2 | not started |            |                                      |
 | 06 G3 | not started |            |                                      |
+| 07 G2 | not started |            |                                      |
+| 07 G3 | not started |            |                                      |
 | Final | not started |            | `issue/2881` to `main`               |
 
 G2 asks the owner whether the failing tests say what should happen, before the implementation. G3
 asks whether the pull request should merge.
 
-| #   | Slice                              | Tasks                                   | Blocked by                | G2  |
-| --- | ---------------------------------- | --------------------------------------- | ------------------------- | --- |
-| 00  | Spikes                             | T002, T003                              | —                         | no  |
-| 01  | Extract `Projection`               | T006, T013, T014                        | —                         | no  |
-| 02  | `io` foundation                    | T001, T005, T007–T012, T015–T018        | 00, 01, #2884, gate B     | no  |
-| 03  | US1: sources take a schema set     | T019–T028, T067, T069, T049, T050       | 02                        | yes |
-| 04  | US4: schema sets from data         | T037–T040, T057–T066                    | 02; T037 and T038 need 03 | yes |
-| 05  | US2: streaming encode              | T029, T031–T033, T035, T036, T051, T052 | 02                        | yes |
-| 06  | Engine parity and removing `dense` | T041–T048, T054, T068                   | 02; T043 runs first       | yes |
-| —   | Close-out                          | T053, T055, T056                        | all                       | —   |
+| #   | Slice                              | Tasks                                                             | Blocked by                | G2  |
+| --- | ---------------------------------- | ----------------------------------------------------------------- | ------------------------- | --- |
+| 00  | Spikes                             | T002, T003                                                        | —                         | no  |
+| 01  | Extract `Projection`               | T006, T013, T014                                                  | —                         | no  |
+| 02  | `io` foundation                    | T001, T005, T007–T012, T015–T018                                  | 00, 01, gate B            | no  |
+| 03  | US1: sources take a schema set     | T019–T028, T067, T069, T049, T050                                 | 02                        | yes |
+| 04  | US4: schema sets from data         | T037–T040, T057–T066                                              | 02; T037 and T038 need 03 | yes |
+| 05  | US2: streaming encode              | T029, T031–T033, T035, T036, T051, T052                           | 02                        | yes |
+| 06  | Engine parity and removing `dense` | T041–T048, T054, T068                                             | 02; T043 runs first       | yes |
+| 07  | #2884 checks                       | The #2884 parts of T007, T008, T015, T019, T024, T025, T029, T049 | #2884, 03, 05             | yes |
+| —   | Close-out                          | T053, T055, T056                                                  | all                       | —   |
 
 Slice 00 has no pull request: its evidence is judged at gate B. T043, the baseline that slice 06 is
-compared against, may run before gate B, as may slice 01. A slice
+compared against, may run before gate B, as may slice 01.
+
+#2884 is far off, so nothing waits for it except slice 07 (decided by the owner on 2026-11-26).
+Every part of a task that reuses the check of a schema against the uber-schema that #2884 adds is
+moved to slice 07, and the slice that owns the rest of the task leaves it out:
+
+- the refusal of a schema that is not a PoF schema (FR-006b): the refusal cases of T007, T008,
+  T019 and T029, the refusal half of T015, and its line in the T049 docs;
+- the check of a stored schema under a schema set (FR-006c): the stored-clash case of T019, and
+  the check before projection in T024 and T025;
+- the part of T008's dropped-content case that compares with a read without a schema, which fails
+  by the #2884 check. The drop itself is tested in slice 02.
+
+Until slice 07, a defined schema is not checked against the definitions. A slice before 07 adds no
+check of its own in place of #2884's, and leaves no failing or disabled test for the moved
+cases. A slice
 is split if its pull request would change more than about 800 lines.
 
 ## Format: `[ID] [P?] [Story?] Description`
@@ -579,8 +597,9 @@ every source.
 
 - **Setup (T001–T004)**: T001 has no dependencies. T002 and T003 feed T007 and T015–T017. T004
   is done and adds no tasks.
-- **#2884**: the check of a schema against the uber-schema that #2884 adds must land first; its
-  issue and specification are being re-scoped to include it. The refusal of a
+- **#2884**: the check of a schema against the uber-schema that #2884 adds must land before
+  slice 07, and before nothing else; its issue and specification are being re-scoped to include
+  it. The refusal of a
   schema that is not a PoF schema (T015, and the refusal cases of T007, T008, T019 and T029) and
   the check of stored schemas under a schema set (T024, T025, and the stored-clash case of T019)
   reuse it, as does the case of T008 that a read without a schema fails on.
