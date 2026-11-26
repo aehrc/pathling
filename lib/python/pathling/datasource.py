@@ -251,9 +251,9 @@ class DataSources(SparkConversionsMixin):
                     jvm.org.apache.spark.sql.types.DataType.fromJson(schema.json()),
                 )
             return self._wrap_ds(
-                self._stored_sources(layout_detection).parquetWithSchemas(
-                    path, jschemas
-                )
+                self._stored_sources(layout_detection)
+                .withSchemas(jschemas)
+                .parquet(path)
             )
         return self._wrap_ds(self._stored_sources(layout_detection).parquet(path))
 
