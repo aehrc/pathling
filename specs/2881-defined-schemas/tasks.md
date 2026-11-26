@@ -18,7 +18,7 @@ The work is delivered as slices, each built from the tasks below and merged by a
 | ----- | ----------- | ---------- | ------------------------------------ |
 | A     | approved    | 2026-11-26 | Intent and design                    |
 | B     | approved    | 2026-11-26 | Decimal read as text, equal in value |
-| 01 G3 | approved    | 2026-11-26 | #3007, to merge once CI is green     |
+| 01 G3 | approved    | 2026-11-26 | #3007, merged                        |
 | 02 G3 | not started |            |                                      |
 | 03 G2 | not started |            |                                      |
 | 03 G3 | not started |            |                                      |
