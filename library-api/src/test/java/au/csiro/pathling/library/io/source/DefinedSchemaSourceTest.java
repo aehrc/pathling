@@ -18,9 +18,11 @@
 package au.csiro.pathling.library.io.source;
 
 import static au.csiro.pathling.library.io.DivergentBatches.byId;
+import static au.csiro.pathling.library.io.SchemaEquality.annotationPaths;
 import static au.csiro.pathling.library.io.source.SchemaSetSources.CONDITION;
 import static au.csiro.pathling.library.io.source.SchemaSetSources.PATIENT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -29,7 +31,7 @@ import au.csiro.pathling.io.FhirFormatReader;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.TestHelpers;
 import au.csiro.pathling.library.io.SchemaEquality;
-import au.csiro.pathling.utilities.AnnotationNames;
+import au.csiro.pathling.schema.SchemaConfiguration;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -44,11 +46,7 @@ import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
-import org.apache.spark.sql.types.ArrayType;
-import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.MapType;
-import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -255,29 +253,121 @@ class DefinedSchemaSourceTest {
   }
 
   /**
-   * A stored struct holding two fields whose names differ only in case fails the read, naming the
-   * resource type and both paths, rather than with Spark's ambiguous reference (spec edge case "A
-   * stored field whose name differs from the defined schema's only in case"). Delta refuses to
-   * store such a struct, so only Parquet can hold one.
+   * A struct holding two fields whose names differ only in case fails the read, naming the resource
+   * type and both paths, rather than with Spark's ambiguous reference (spec edge case "A stored
+   * field whose name differs from the defined schema's only in case").
+   *
+   * <p>The struct is held by a dataset, because neither Parquet nor Delta can give one to a source:
+   * Delta refuses to store it, and Spark refuses to load a Parquet file holding it, top-level or
+   * nested, with its own error naming one of the two columns, before the source sees the data.
    */
   @Test
   void aStoredStructWithFieldsDifferingOnlyInCaseFailsTheRead() {
     final StructType schema = SchemaSetSources.definedPatientSchema(context);
-    final String caseSensitive = spark.conf().get("spark.sql.caseSensitive");
-    spark.conf().set("spark.sql.caseSensitive", "true");
-    try {
-      store(
-          SchemaSetSources.PARQUET,
-          spark.sql("SELECT 'Patient' AS resourceType, 'p1' AS id, 'p2' AS ID, 'male' AS gender"));
-    } finally {
-      spark.conf().set("spark.sql.caseSensitive", caseSensitive);
-    }
-    final QueryableDataSource source = open(SchemaSetSources.PARQUET, Map.of(PATIENT, schema));
+    final Dataset<Row> stored =
+        spark.sql("SELECT 'Patient' AS resourceType, 'p1' AS id, 'p2' AS ID, 'male' AS gender");
 
     final IllegalArgumentException failure =
-        assertThrows(IllegalArgumentException.class, () -> source.read(PATIENT));
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                withSchemas(Map.of(PATIENT, schema))
+                    .datasets()
+                    .dataset(PATIENT, stored)
+                    .read(PATIENT));
 
     assertNames(failure, PATIENT, "id", "ID");
+  }
+
+  /**
+   * A struct holding two fields whose names differ only in case fails the read even where the
+   * defined schema names neither of them, since a projection that descends into the struct cannot
+   * tell which of the two is meant (spec edge case "A stored field whose name differs from the
+   * defined schema's only in case"). The struct is held by a dataset, for the reason given on
+   * {@link #aStoredStructWithFieldsDifferingOnlyInCaseFailsTheRead}.
+   */
+  @Test
+  void aStoredStructWithFieldsDifferingOnlyInCaseFailsTheReadWhenTheSchemaNamesNeither() {
+    final StructType schema =
+        SchemaSetSources.reader(context)
+            .json()
+            .read(
+                PATIENT,
+                spark.createDataset(
+                    List.of(
+                        "{\"resourceType\":\"Patient\",\"id\":\"d\","
+                            + "\"name\":[{\"given\":[\"Ann\"]}]}"),
+                    Encoders.STRING()))
+            .schema();
+    final Dataset<Row> stored =
+        spark.sql(
+            "SELECT 'Patient' AS resourceType, 'p1' AS id,"
+                + " array(named_struct('family', 'Smith', 'Family', 'Jones')) AS name");
+
+    final IllegalArgumentException failure =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                withSchemas(Map.of(PATIENT, schema))
+                    .datasets()
+                    .dataset(PATIENT, stored)
+                    .read(PATIENT));
+
+    assertNames(failure, PATIENT, "name.family", "name.Family");
+  }
+
+  /**
+   * A stored source given a schema carrying annotation fields, under a configuration that enables
+   * no annotations, has no annotations: the annotations of the given schema are not kept, but
+   * recomputed as the configuration says (FR-007).
+   */
+  @ParameterizedTest
+  @ValueSource(strings = {"parquet", "delta", "tables", "datasets"})
+  void aStoredReadRecomputesTheAnnotationsOfTheGivenSchema(@Nonnull final String kind) {
+    final StructType annotated =
+        SchemaSetSources.expectedSchema(
+            context, PATIENT, SchemaSetSources.definedPatientSchema(context));
+    assertFalse(annotationPaths(annotated).isEmpty(), "the given schema should carry annotations");
+    final PathlingContext unannotated =
+        PathlingContext.builder(spark)
+            .schemaConfiguration(
+                SchemaConfiguration.builder()
+                    .enableNumericAnnotation(false)
+                    .enableRangeAnnotation(false)
+                    .enableCanonicalAnnotation(false)
+                    .build())
+            .build();
+    SchemaSetSources.write(kind, context, directory, database);
+
+    final Dataset<Row> patients =
+        SchemaSetSources.open(
+                kind,
+                unannotated.read().withSchemas(Map.of(PATIENT, annotated)),
+                directory,
+                database)
+            .read(PATIENT);
+
+    assertTrue(SchemaEquality.same(annotated, patients.schema()));
+    assertEquals(List.of(), annotationPaths(patients.schema()));
+  }
+
+  /**
+   * A schema set whose key is not a resource type, or whose schema is null, is refused when it is
+   * given, naming the key (FR-004).
+   */
+  @Test
+  void aSchemaSetWithAnUnknownTypeOrANullSchemaIsRefused() {
+    final Map<String, StructType> unknown = Map.of("NotAResource", new StructType());
+    final Map<String, StructType> nullSchema = new HashMap<>();
+    nullSchema.put(PATIENT, null);
+
+    final IllegalArgumentException unknownFailure =
+        assertThrows(IllegalArgumentException.class, () -> withSchemas(unknown));
+    final IllegalArgumentException nullFailure =
+        assertThrows(IllegalArgumentException.class, () -> withSchemas(nullSchema));
+
+    assertTrue(unknownFailure.getMessage().contains("NotAResource"), unknownFailure::getMessage);
+    assertTrue(nullFailure.getMessage().contains(PATIENT), nullFailure::getMessage);
   }
 
   @Nonnull
@@ -324,40 +414,21 @@ class DefinedSchemaSourceTest {
         schema);
   }
 
+  /**
+   * Asserts that a failure names a resource type, and each of a number of paths delimited by
+   * backticks, so that a path is not matched inside a longer name.
+   */
   private static void assertNames(
-      @Nonnull final IllegalArgumentException failure, @Nonnull final String... names) {
+      @Nonnull final IllegalArgumentException failure,
+      @Nonnull final String resourceType,
+      @Nonnull final String... paths) {
     final String message = failure.getMessage();
-    Arrays.stream(names)
+    assertTrue(
+        message.contains(resourceType), () -> "should name " + resourceType + ": " + message);
+    Arrays.stream(paths)
+        .map(path -> "`" + path + "`")
         .forEach(
-            name ->
-                assertTrue(message.contains(name), () -> "should name " + name + ": " + message));
-  }
-
-  /** Returns the dotted path of every annotation field of a schema, at any depth. */
-  @Nonnull
-  private static List<String> annotationPaths(@Nonnull final StructType schema) {
-    return annotationPaths(schema, "").sorted().toList();
-  }
-
-  @Nonnull
-  private static Stream<String> annotationPaths(
-      @Nonnull final DataType type, @Nonnull final String prefix) {
-    if (type instanceof final StructType struct) {
-      return Arrays.stream(struct.fields()).flatMap(field -> annotationPaths(field, prefix));
-    } else if (type instanceof final ArrayType array) {
-      return annotationPaths(array.elementType(), prefix);
-    } else if (type instanceof final MapType map) {
-      return annotationPaths(map.valueType(), prefix);
-    }
-    return Stream.empty();
-  }
-
-  @Nonnull
-  private static Stream<String> annotationPaths(
-      @Nonnull final StructField field, @Nonnull final String prefix) {
-    final String path = prefix + field.name();
-    return AnnotationNames.isAnnotation(field.name())
-        ? Stream.of(path)
-        : annotationPaths(field.dataType(), path + ".");
+            path ->
+                assertTrue(message.contains(path), () -> "should name " + path + ": " + message));
   }
 }

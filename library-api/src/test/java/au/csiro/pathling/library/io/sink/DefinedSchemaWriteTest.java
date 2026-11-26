@@ -18,8 +18,10 @@
 package au.csiro.pathling.library.io.sink;
 
 import static au.csiro.pathling.library.io.DivergentBatches.byId;
+import static au.csiro.pathling.library.io.SchemaEquality.annotationPaths;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
@@ -125,6 +127,7 @@ class DefinedSchemaWriteTest {
         };
 
     assertSame(schema, stored.schema());
+    assertEquals(annotationPaths(annotatedSchema(schema)), annotationPaths(stored.schema()));
   }
 
   /**
@@ -155,7 +158,9 @@ class DefinedSchemaWriteTest {
         batch -> {
           load(batch, tableSchema).write().saveMode("append").delta(directory.toString());
 
-          assertSame(tableSchema, storedDelta().schema());
+          final StructType stored = storedDelta().schema();
+          assertSame(tableSchema, stored);
+          assertEquals(annotationPaths(tableSchema), annotationPaths(stored));
         });
     assertEquals(4, storedDelta().count());
   }
@@ -224,6 +229,32 @@ class DefinedSchemaWriteTest {
     assertEquals("male", byId(table, "gender").get("p1"));
   }
 
+  /**
+   * A Delta merge into a table whose field differs from the data's only in case fails, naming both
+   * paths, even when the data was loaded without a schema set: the merge projects the data with the
+   * same projection a source given a schema set does (spec edge case "A stored field whose name
+   * differs from the defined schema's only in case").
+   */
+  @Test
+  void aMergeIntoATableWhoseFieldDiffersOnlyInCaseFails() {
+    spark
+        .sql("SELECT 'Patient' AS resourceType, 'p1' AS id, 'male' AS Gender")
+        .write()
+        .format("delta")
+        .save(directory.resolve("Patient.parquet").toString());
+    final QueryableDataSource source =
+        load(List.of("{\"resourceType\":\"Patient\",\"id\":\"p1\",\"gender\":\"female\"}"));
+
+    final IllegalArgumentException failure =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> source.write().saveMode("merge").delta(directory.toString()));
+
+    final String message = failure.getMessage();
+    assertTrue(message.contains("`Gender`"), () -> "should name `Gender`: " + message);
+    assertTrue(message.contains("`gender`"), () -> "should name `gender`: " + message);
+  }
+
   /** Returns the PoF schema, without annotations, that a Patient is read with when inferred. */
   @Nonnull
   private static StructType schemaOf(@Nonnull final String patient) {
@@ -233,6 +264,24 @@ class DefinedSchemaWriteTest {
             context.getSchemaConfiguration())
         .json()
         .read(PATIENT, spark.createDataset(List.of(patient), Encoders.STRING()))
+        .schema();
+  }
+
+  /**
+   * Returns the schema that Patients loaded with a schema have under the context's configuration:
+   * the schema, annotated as the configuration says.
+   */
+  @Nonnull
+  private static StructType annotatedSchema(@Nonnull final StructType schema) {
+    return context
+        .annotate(
+            FhirReader.of(
+                    spark,
+                    FhirDefinitionContext.of(context.getFhirContext()),
+                    context.getSchemaConfiguration())
+                .json()
+                .read(PATIENT, spark.createDataset(List.<String>of(), Encoders.STRING()), schema),
+            PATIENT)
         .schema();
   }
 

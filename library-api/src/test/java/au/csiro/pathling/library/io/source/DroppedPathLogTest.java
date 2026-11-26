@@ -50,7 +50,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Tests the debug log of the stored paths a schema set drops (T067, FR-006a). The stored Patients
- * carry {@code active} and {@code name.given}, which the defined schema lacks.
+ * carry {@code active} and {@code name.given}, which the defined schema lacks. Paths are logged
+ * delimited by backticks.
  */
 class DroppedPathLogTest {
 
@@ -122,8 +123,8 @@ class DroppedPathLogTest {
 
     final List<String> messages = messages();
     assertTrue(defined <= inferred, () -> defined + " jobs, against " + inferred + " without");
-    assertTrue(mentions(messages, "active"), () -> "should log active: " + messages);
-    assertTrue(mentions(messages, "name.given"), () -> "should log name.given: " + messages);
+    assertTrue(mentions(messages, "`active`"), () -> "should log `active`: " + messages);
+    assertTrue(mentions(messages, "`name.given`"), () -> "should log `name.given`: " + messages);
     assertFalse(
         mentions(messages, AnnotationNames.PREFIX), () -> "should log no annotation: " + messages);
   }
@@ -168,9 +169,13 @@ class DroppedPathLogTest {
     return jobs.get();
   }
 
+  /** Returns the messages logged at debug level, which is the level dropped paths are logged at. */
   @Nonnull
   private List<String> messages() {
-    return logs.list.stream().map(ILoggingEvent::getFormattedMessage).toList();
+    return logs.list.stream()
+        .filter(event -> Level.DEBUG.equals(event.getLevel()))
+        .map(ILoggingEvent::getFormattedMessage)
+        .toList();
   }
 
   private static boolean mentions(

@@ -63,7 +63,8 @@ class ProjectionTest {
 
   /**
    * Asserts that projecting a dataset of the source schema onto the target fails when the
-   * projection is built, before any action, with a message naming each of the paths.
+   * projection is built, before any action, with a message naming each of the paths, delimited by
+   * backticks so that a path is not matched inside a longer name.
    */
   private static void assertRefused(
       @Nonnull final StructType source,
@@ -74,8 +75,8 @@ class ProjectionTest {
         assertThrows(IllegalArgumentException.class, () -> Projection.project(dataset, target));
     for (final String path : paths) {
       assertTrue(
-          error.getMessage().contains(path),
-          "Expected the message to name " + path + ": " + error.getMessage());
+          error.getMessage().contains("`" + path + "`"),
+          "Expected the message to name `" + path + "`: " + error.getMessage());
     }
   }
 
