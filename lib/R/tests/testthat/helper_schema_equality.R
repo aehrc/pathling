@@ -19,55 +19,75 @@
 # Two schemas are the same when their base schemas are equal field for field, in order at every
 # depth, ignoring nullability (of fields, array elements and map values) and field metadata.
 # Annotation fields are left out, since they are compared against the configuration, and so is a
-# group that holds only annotation fields.
+# group left with only annotation fields, at any depth. The prefix that marks an annotation is read
+# from Pathling's AnnotationNames, so a Spark connection must be open.
 
 same_schema <- function(left, right) {
+  prefix <- annotation_prefix()
   parse <- function(schema) jsonlite::fromJSON(schema, simplifyVector = FALSE)
-  identical(schema_base(parse(left)), schema_base(parse(right)))
+  identical(schema_base(parse(left), prefix), schema_base(parse(right), prefix))
 }
 
-# Two schema sets, named lists of schemas keyed by resource type, are the same when they name the
-# same types and the schemas of each type are the same.
+# Two schema sets, lists of schemas named by resource type, are the same when they name the same
+# types and the schemas of each type are the same. A list that does not name every schema is
+# refused.
 same_schema_set <- function(left, right) {
+  named <- function(set) !is.null(names(set)) && all(nzchar(names(set)))
+  if (!named(left) || !named(right)) {
+    stop("A schema set must name the resource type of every schema.")
+  }
   setequal(names(left), names(right)) &&
     length(left) == length(right) &&
     all(vapply(names(left), function(type) same_schema(left[[type]], right[[type]]), logical(1)))
 }
 
-is_annotation <- function(name) startsWith(name, "__")
+# The prefix that marks an annotation, from the JVM of the open Spark connection.
+annotation_prefix <- function() {
+  connections <- sparklyr::spark_connection_find()
+  if (length(connections) == 0) {
+    stop("Schema equality needs an open Spark connection.")
+  }
+  sparklyr::invoke_static(
+    connections[[1]], "au.csiro.pathling.utilities.AnnotationNames", "PREFIX"
+  )
+}
 
-# The base of a parsed type: nullable throughout, without metadata or annotation fields. A primitive
-# type is a string, and the rest are lists with a type member.
-schema_base <- function(type) {
+# The base of a parsed type: nullable throughout, without metadata, annotation fields or groups left
+# with only annotation fields at any depth. A primitive type is a string, and the rest are lists
+# with a type member.
+schema_base <- function(type, prefix) {
   if (is.character(type)) {
     return(type)
   }
   switch(type$type,
     struct = {
-      kept <- Filter(
-        function(field) !is_annotation(field$name) && !only_annotations(field$type),
-        type$fields
+      fields <- lapply(
+        Filter(function(field) !startsWith(field$name, prefix), type$fields),
+        function(field) {
+          base <- schema_base(field$type, prefix)
+          if (emptied(field$type, base)) NULL else list(name = field$name, type = base)
+        }
       )
-      list(type = "struct", fields = lapply(kept, function(field) {
-        list(name = field$name, type = schema_base(field$type))
-      }))
+      list(type = "struct", fields = Filter(Negate(is.null), fields))
     },
-    array = list(type = "array", elementType = schema_base(type$elementType)),
+    array = list(type = "array", elementType = schema_base(type$elementType, prefix)),
     map = list(
-      type = "map", keyType = schema_base(type$keyType), valueType = schema_base(type$valueType)
+      type = "map",
+      keyType = schema_base(type$keyType, prefix),
+      valueType = schema_base(type$valueType, prefix)
     ),
     type
   )
 }
 
-# Whether a parsed type is a group, or an array of groups, that holds only annotations.
-only_annotations <- function(type) {
-  if (is.character(type)) {
+# Whether a parsed group, or array of groups, that held fields has none left in its base.
+emptied <- function(original, base) {
+  if (is.character(original) || is.character(base)) {
     return(FALSE)
   }
-  if (type$type == "array") {
-    return(only_annotations(type$elementType))
+  if (original$type == "array" && base$type == "array") {
+    return(emptied(original$elementType, base$elementType))
   }
-  type$type == "struct" && length(type$fields) > 0 &&
-    all(vapply(type$fields, function(field) is_annotation(field$name), logical(1)))
+  original$type == "struct" && length(original$fields) > 0 &&
+    base$type == "struct" && length(base$fields) == 0
 }

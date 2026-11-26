@@ -106,6 +106,25 @@ class SchemaEqualityTest {
   }
 
   @Test
+  void dropsGroupLeftWithOnlyAnnotationFieldsAtAnyDepth() {
+    final StructType nested =
+        StructType.fromDDL(
+            "id STRING, _id STRUCT<_inner: ARRAY<STRUCT<__flag: BOOLEAN>>, __start: TIMESTAMP>,"
+                + " name ARRAY<STRUCT<family: STRING, given: ARRAY<STRING>>>,"
+                + " tags MAP<STRING, STRUCT<code: STRING>>");
+    final StructType nestedWithBaseField =
+        StructType.fromDDL(
+            "id STRING, _id STRUCT<_inner: STRUCT<id: STRING, __flag: BOOLEAN>>,"
+                + " name ARRAY<STRUCT<family: STRING, given: ARRAY<STRING>>>,"
+                + " tags MAP<STRING, STRUCT<code: STRING>>");
+
+    assertTrue(SchemaEquality.same(SCHEMA, nested));
+    assertTrue(SchemaEquality.same(nested, SCHEMA));
+    assertFalse(SchemaEquality.same(SCHEMA, nestedWithBaseField));
+    assertFalse(SchemaEquality.same(nestedWithBaseField, SCHEMA));
+  }
+
+  @Test
   void differsOnMissingOrExtraField() {
     final StructType missing =
         StructType.fromDDL(

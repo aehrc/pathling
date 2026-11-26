@@ -21,6 +21,7 @@ import au.csiro.pathling.utilities.AnnotationNames;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.stream.Stream;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.MapType;
@@ -32,7 +33,7 @@ import org.apache.spark.sql.types.StructType;
  * The schema equality of spec SC-002, which the tests of a schema that is "the same" or "equal"
  * use: base schemas equal field for field, in order at every depth, ignoring nullability and field
  * metadata. Annotation fields are left out, since they are compared against the configuration, and
- * so is a group that holds only annotation fields.
+ * so is a group left with only annotation fields, at any depth.
  */
 public final class SchemaEquality {
 
@@ -63,17 +64,17 @@ public final class SchemaEquality {
         && left.keySet().stream().allMatch(type -> same(left.get(type), right.get(type)));
   }
 
-  /** Returns the base of a type: nullable throughout, without metadata or annotation fields. */
+  /**
+   * Returns the base of a type: nullable throughout, without metadata, annotation fields or groups
+   * left with only annotation fields at any depth.
+   */
   @Nonnull
   private static DataType base(@Nonnull final DataType type) {
     if (type instanceof final StructType struct) {
       return new StructType(
           Arrays.stream(struct.fields())
               .filter(field -> !AnnotationNames.isAnnotation(field.name()))
-              .filter(field -> !onlyAnnotations(field.dataType()))
-              .map(
-                  field ->
-                      new StructField(field.name(), base(field.dataType()), true, Metadata.empty()))
+              .flatMap(SchemaEquality::baseField)
               .toArray(StructField[]::new));
     } else if (type instanceof final ArrayType array) {
       return new ArrayType(base(array.elementType()), true);
@@ -83,13 +84,26 @@ public final class SchemaEquality {
     return type;
   }
 
-  /** Returns whether a type is a group, or an array of groups, that holds only annotations. */
-  private static boolean onlyAnnotations(@Nonnull final DataType type) {
-    if (type instanceof final ArrayType array) {
-      return onlyAnnotations(array.elementType());
+  /** Returns the base of a field, or nothing where it is a group emptied by taking its base. */
+  @Nonnull
+  private static Stream<StructField> baseField(@Nonnull final StructField field) {
+    final DataType type = base(field.dataType());
+    return emptied(field.dataType(), type)
+        ? Stream.empty()
+        : Stream.of(new StructField(field.name(), type, true, Metadata.empty()));
+  }
+
+  /**
+   * Returns whether a group, or an array of groups, that held fields has none left in its base,
+   * because every field it held was an annotation or a group emptied in turn.
+   */
+  private static boolean emptied(@Nonnull final DataType original, @Nonnull final DataType base) {
+    if (original instanceof final ArrayType array && base instanceof final ArrayType baseArray) {
+      return emptied(array.elementType(), baseArray.elementType());
     }
-    return type instanceof final StructType struct
+    return original instanceof final StructType struct
         && struct.fields().length > 0
-        && Arrays.stream(struct.fieldNames()).allMatch(AnnotationNames::isAnnotation);
+        && base instanceof final StructType baseStruct
+        && baseStruct.fields().length == 0;
   }
 }

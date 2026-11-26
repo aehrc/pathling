@@ -15,6 +15,9 @@
 
 # Tests the schema equality of spec SC-002 (T011).
 
+# The helpers read the annotation prefix from the JVM of an open Spark connection.
+def_spark()
+
 sf <- function(name, type, nullable = TRUE, metadata = "{}") {
   sprintf(
     '{"name":"%s","type":%s,"nullable":%s,"metadata":%s}',
@@ -101,6 +104,29 @@ test_that("a group left with only annotation fields is dropped", {
   expect_false(same_schema(with_base_field, schema))
 })
 
+test_that("a group left with only annotation fields is dropped at any depth", {
+  rest <- c(
+    sf("name", arr(st(sf("family", '"string"'), sf("given", arr('"string"'))))),
+    sf("tags", map_of(st(sf("code", '"string"'))))
+  )
+  nested <- st(
+    sf("id", '"string"'),
+    sf("_id", st(
+      sf("_inner", arr(st(sf("__flag", '"boolean"')))), sf("__start", '"timestamp"')
+    )),
+    rest
+  )
+  nested_with_base_field <- st(
+    sf("id", '"string"'),
+    sf("_id", st(sf("_inner", st(sf("id", '"string"'), sf("__flag", '"boolean"'))))),
+    rest
+  )
+  expect_true(same_schema(schema, nested))
+  expect_true(same_schema(nested, schema))
+  expect_false(same_schema(schema, nested_with_base_field))
+  expect_false(same_schema(nested_with_base_field, schema))
+})
+
 test_that("a missing or extra field makes schemas differ", {
   missing <- st(
     sf("id", '"string"'),
@@ -163,4 +189,12 @@ test_that("schema sets are the same when their types and schemas are", {
   ))
   expect_false(same_schema_set(list(Patient = schema), list(Patient = observation)))
   expect_false(same_schema_set(list(Patient = schema), list(Condition = schema)))
+})
+
+test_that("a schema set that does not name every schema is refused", {
+  expect_error(same_schema_set(list(schema), list(schema)), "must name")
+  expect_error(same_schema_set(list(Patient = schema), list(schema)), "must name")
+  expect_error(
+    same_schema_set(list(Patient = schema, schema), list(Patient = schema, schema)), "must name"
+  )
 })

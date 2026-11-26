@@ -17,9 +17,13 @@
 
 """Tests the schema equality of spec SC-002 (T011)."""
 
+from typing import List, Optional
+
+from pytest import fixture
 from pyspark.sql.types import (
     ArrayType,
     BooleanType,
+    DataType,
     DecimalType,
     IntegerType,
     MapType,
@@ -32,12 +36,17 @@ from pyspark.sql.types import (
 from tests.schema_equality import same_schema, same_schema_set
 
 
+@fixture(autouse=True)
+def _spark_session(pathling_ctx) -> None:
+    """Start the Spark session that the helpers read the annotation prefix from."""
+
+
 def _schema(
     nullable: bool = True,
-    given_type=None,
-    name_fields=None,
-    code_fields=None,
-    top_fields=None,
+    given_type: Optional[DataType] = None,
+    name_fields: Optional[List[StructField]] = None,
+    code_fields: Optional[List[StructField]] = None,
+    top_fields: Optional[List[StructField]] = None,
 ) -> StructType:
     """Build the test schema, letting a test change one part of it."""
     metadata = {} if nullable else {"comment": "x"}
@@ -64,13 +73,13 @@ def _schema(
 SCHEMA = _schema()
 
 
-def test_ignores_nullability_and_metadata_at_every_depth():
+def test_ignores_nullability_and_metadata_at_every_depth() -> None:
     assert same_schema(SCHEMA, SCHEMA)
     assert same_schema(SCHEMA, _schema(nullable=False))
     assert same_schema(_schema(nullable=False), SCHEMA)
 
 
-def test_ignores_annotation_fields():
+def test_ignores_annotation_fields() -> None:
     annotated = _schema(
         name_fields=[
             StructField("family", StringType()),
@@ -91,7 +100,7 @@ def test_ignores_annotation_fields():
     assert same_schema(annotated, SCHEMA)
 
 
-def test_drops_group_left_with_only_annotation_fields():
+def test_drops_group_left_with_only_annotation_fields() -> None:
     grouped = _schema(
         name_fields=[
             StructField("family", StringType()),
@@ -138,7 +147,56 @@ def test_drops_group_left_with_only_annotation_fields():
     assert not same_schema(with_base_field, SCHEMA)
 
 
-def test_differs_on_missing_or_extra_field():
+def test_drops_group_left_with_only_annotation_fields_at_any_depth() -> None:
+    nested = StructType(
+        [
+            SCHEMA["id"],
+            StructField(
+                "_id",
+                StructType(
+                    [
+                        StructField(
+                            "_inner",
+                            ArrayType(
+                                StructType([StructField("__flag", BooleanType())])
+                            ),
+                        ),
+                        StructField("__start", TimestampType()),
+                    ]
+                ),
+            ),
+        ]
+        + SCHEMA.fields[1:]
+    )
+    nested_with_base_field = StructType(
+        [
+            SCHEMA["id"],
+            StructField(
+                "_id",
+                StructType(
+                    [
+                        StructField(
+                            "_inner",
+                            StructType(
+                                [
+                                    StructField("id", StringType()),
+                                    StructField("__flag", BooleanType()),
+                                ]
+                            ),
+                        )
+                    ]
+                ),
+            ),
+        ]
+        + SCHEMA.fields[1:]
+    )
+    assert same_schema(SCHEMA, nested)
+    assert same_schema(nested, SCHEMA)
+    assert not same_schema(SCHEMA, nested_with_base_field)
+    assert not same_schema(nested_with_base_field, SCHEMA)
+
+
+def test_differs_on_missing_or_extra_field() -> None:
     missing = _schema(name_fields=[StructField("family", StringType())])
     extra = _schema(
         code_fields=[
@@ -152,7 +210,7 @@ def test_differs_on_missing_or_extra_field():
     assert not same_schema(extra, SCHEMA)
 
 
-def test_differs_on_renamed_or_retyped_field():
+def test_differs_on_renamed_or_retyped_field() -> None:
     renamed = _schema(
         name_fields=[
             StructField("family", StringType()),
@@ -166,7 +224,7 @@ def test_differs_on_renamed_or_retyped_field():
     assert not same_schema(SCHEMA, retyped_leaf)
 
 
-def test_differs_on_field_order():
+def test_differs_on_field_order() -> None:
     top_level = StructType([SCHEMA["name"], SCHEMA["id"], SCHEMA["tags"]])
     nested = _schema(
         name_fields=[
@@ -178,7 +236,7 @@ def test_differs_on_field_order():
     assert not same_schema(SCHEMA, nested)
 
 
-def test_schema_sets_are_the_same_when_types_and_schemas_are():
+def test_schema_sets_are_the_same_when_types_and_schemas_are() -> None:
     observation = StructType(
         [StructField("id", StringType()), StructField("status", StringType())]
     )

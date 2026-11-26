@@ -20,19 +20,20 @@
 Two schemas are the same when their base schemas are equal field for field, in order at every
 depth, ignoring nullability (of fields, array elements and map values) and field metadata.
 Annotation fields are left out, since they are compared against the configuration, and so is a
-group that holds only annotation fields.
+group left with only annotation fields, at any depth. The prefix that marks an annotation is read
+from Pathling's `AnnotationNames`, so a Spark session must be running.
 """
 
-from typing import Mapping
+from typing import List, Mapping
 
+from pyspark import SparkContext
 from pyspark.sql.types import ArrayType, DataType, MapType, StructField, StructType
-
-ANNOTATION_PREFIX = "__"
 
 
 def same_schema(left: StructType, right: StructType) -> bool:
     """Return whether two schemas are the same."""
-    return _base(left) == _base(right)
+    prefix = _annotation_prefix()
+    return _base(left, prefix) == _base(right, prefix)
 
 
 def same_schema_set(
@@ -44,30 +45,45 @@ def same_schema_set(
     )
 
 
-def _base(type_: DataType) -> DataType:
-    """Return the base of a type: nullable throughout, without metadata or annotation fields."""
+def _annotation_prefix() -> str:
+    """Return the prefix that marks an annotation, from the running Spark session's JVM."""
+    jvm = SparkContext._jvm
+    if jvm is None:
+        raise RuntimeError("Schema equality needs a running Spark session.")
+    return jvm.au.csiro.pathling.utilities.AnnotationNames.PREFIX
+
+
+def _base(type_: DataType, prefix: str) -> DataType:
+    """Return the base of a type.
+
+    The base is nullable throughout, without metadata, annotation fields or groups left with only
+    annotation fields at any depth.
+    """
     if isinstance(type_, StructType):
-        return StructType(
-            [
-                StructField(field.name, _base(field.dataType), True)
-                for field in type_.fields
-                if not field.name.startswith(ANNOTATION_PREFIX)
-                and not _only_annotations(field.dataType)
-            ]
-        )
+        fields: List[StructField] = []
+        for field in type_.fields:
+            if field.name.startswith(prefix):
+                continue
+            base = _base(field.dataType, prefix)
+            if not _emptied(field.dataType, base):
+                fields.append(StructField(field.name, base, True))
+        return StructType(fields)
     if isinstance(type_, ArrayType):
-        return ArrayType(_base(type_.elementType), True)
+        return ArrayType(_base(type_.elementType, prefix), True)
     if isinstance(type_, MapType):
-        return MapType(_base(type_.keyType), _base(type_.valueType), True)
+        return MapType(
+            _base(type_.keyType, prefix), _base(type_.valueType, prefix), True
+        )
     return type_
 
 
-def _only_annotations(type_: DataType) -> bool:
-    """Return whether a type is a group, or an array of groups, that holds only annotations."""
-    if isinstance(type_, ArrayType):
-        return _only_annotations(type_.elementType)
+def _emptied(original: DataType, base: DataType) -> bool:
+    """Return whether a group, or an array of groups, that held fields has none left in its base."""
+    if isinstance(original, ArrayType) and isinstance(base, ArrayType):
+        return _emptied(original.elementType, base.elementType)
     return (
-        isinstance(type_, StructType)
-        and len(type_.fields) > 0
-        and all(name.startswith(ANNOTATION_PREFIX) for name in type_.names)
+        isinstance(original, StructType)
+        and len(original.fields) > 0
+        and isinstance(base, StructType)
+        and len(base.fields) == 0
     )
