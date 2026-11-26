@@ -20,7 +20,7 @@ The work is delivered as slices, each built from the tasks below and merged by a
 | B      | approved    | 2026-11-26 | Decimal read as text, equal in value      |
 | 01 G3  | approved    | 2026-11-26 | #3007, merged                             |
 | 02a G3 | approved    | 2026-11-26 | #3008, merged; split from 02 for size     |
-| 02b G3 | not started |            |                                           |
+| 02b G3 | approved    | 2026-11-26 | #3009, merged                             |
 | 03 G2  | approved    | 2026-11-26 | with review fixes; split into 03a/03b/03c |
 | 03 G3  | not started |            |                                           |
 | 04 G2  | not started |            |                                           |
