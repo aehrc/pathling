@@ -14,24 +14,24 @@ independently.
 The work is delivered as slices, each built from the tasks below and merged by a pull request into
 `issue/2881`. A final pull request takes `issue/2881` to `main`.
 
-| Gate   | Status      | Date       | Note                                       |
-| ------ | ----------- | ---------- | ------------------------------------------ |
-| A      | approved    | 2026-11-26 | Intent and design                          |
-| B      | approved    | 2026-11-26 | Decimal read as text, equal in value       |
-| 01 G3  | approved    | 2026-11-26 | #3007, merged                              |
-| 02a G3 | not started |            | Split from 02 for size (owner, 2026-11-26) |
-| 02b G3 | not started |            |                                            |
-| 03 G2  | not started |            |                                            |
-| 03 G3  | not started |            |                                            |
-| 04 G2  | not started |            |                                            |
-| 04 G3  | not started |            |                                            |
-| 05 G2  | not started |            |                                            |
-| 05 G3  | not started |            |                                            |
-| 06 G2  | not started |            |                                            |
-| 06 G3  | not started |            |                                            |
-| 07 G2  | not started |            |                                            |
-| 07 G3  | not started |            |                                            |
-| Final  | not started |            | `issue/2881` to `main`                     |
+| Gate   | Status      | Date       | Note                                  |
+| ------ | ----------- | ---------- | ------------------------------------- |
+| A      | approved    | 2026-11-26 | Intent and design                     |
+| B      | approved    | 2026-11-26 | Decimal read as text, equal in value  |
+| 01 G3  | approved    | 2026-11-26 | #3007, merged                         |
+| 02a G3 | approved    | 2026-11-26 | #3008, merged; split from 02 for size |
+| 02b G3 | not started |            |                                       |
+| 03 G2  | not started |            |                                       |
+| 03 G3  | not started |            |                                       |
+| 04 G2  | not started |            |                                       |
+| 04 G3  | not started |            |                                       |
+| 05 G2  | not started |            |                                       |
+| 05 G3  | not started |            |                                       |
+| 06 G2  | not started |            |                                       |
+| 06 G3  | not started |            |                                       |
+| 07 G2  | not started |            |                                       |
+| 07 G3  | not started |            |                                       |
+| Final  | not started |            | `issue/2881` to `main`                |
 
 G2 asks the owner whether the failing tests say what should happen, before the implementation. G3
 asks whether the pull request should merge.
