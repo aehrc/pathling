@@ -147,10 +147,12 @@ pathling:
       - Accept-Encoding
       - Prefer
       - Authorization
-    # A list of values to return within the Cache-Control header, for cacheable responses.
+    # A list of values to return within the Cache-Control header, for cacheable responses. A
+    # max-age of 0 makes browsers and intermediate caches revalidate a stored response on every
+    # request, so that a read made after a write is never answered with data from before it.
     cacheableControl:
       - must-revalidate
-      - max-age=1
+      - max-age=0
     # A list of values to return within the Cache-Control header, for uncacheable responses.
     uncacheableControl:
       - no-store
