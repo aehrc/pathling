@@ -20,6 +20,7 @@ package au.csiro.pathling.library.io.source;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 
+import au.csiro.pathling.io.SchemaSet;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.PersistenceError;
 import jakarta.annotation.Nonnull;
@@ -59,6 +60,9 @@ public class CatalogSource extends AbstractSource {
   /** Whether the layout of each table is classified as it is read. */
   private final boolean layoutDetection;
 
+  /** Projects each table of a type the schema set names onto the set's schema. */
+  @Nonnull private final DefinedSchemaReads reads;
+
   /**
    * Constructs a CatalogSource with the specified PathlingContext and an empty schema.
    *
@@ -71,6 +75,7 @@ public class CatalogSource extends AbstractSource {
     this.universalOperator = Optional.empty();
     this.filterResourcePredicate = Optional.empty();
     this.layoutDetection = true;
+    this.reads = DefinedSchemaReads.of(context, DefinedSchemaReads.noSchemas());
   }
 
   /**
@@ -86,6 +91,7 @@ public class CatalogSource extends AbstractSource {
     this.universalOperator = Optional.empty();
     this.filterResourcePredicate = Optional.empty();
     this.layoutDetection = true;
+    this.reads = DefinedSchemaReads.of(context, DefinedSchemaReads.noSchemas());
   }
 
   /**
@@ -131,11 +137,60 @@ public class CatalogSource extends AbstractSource {
       @Nonnull final Optional<BiFunction<String, Dataset<Row>, Dataset<Row>>> universalOperator,
       @Nonnull final Optional<Predicate<String>> filterResourcePredicate,
       final boolean layoutDetection) {
+    this(
+        context,
+        schema,
+        transformation,
+        universalOperator,
+        filterResourcePredicate,
+        DefinedSchemaReads.noSchemas(),
+        layoutDetection);
+  }
+
+  /**
+   * Constructs a CatalogSource as the full-control constructor does, projecting each table of a
+   * resource type a schema set names onto its schema as it is read.
+   *
+   * @param context the PathlingContext to use
+   * @param schema optional schema name for the catalog tables
+   * @param transformation optional transformation to apply to each dataset
+   * @param universalOperator optional operator to apply to each resource with its type
+   * @param filterResourcePredicate optional predicate to filter resource types
+   * @param schemaSet the schema set, which may be empty
+   * @param layoutDetection whether the layout of each table is classified as it is read
+   */
+  CatalogSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final Optional<String> schema,
+      @Nonnull final Optional<UnaryOperator<Dataset<Row>>> transformation,
+      @Nonnull final Optional<BiFunction<String, Dataset<Row>, Dataset<Row>>> universalOperator,
+      @Nonnull final Optional<Predicate<String>> filterResourcePredicate,
+      @Nonnull final SchemaSet schemaSet,
+      final boolean layoutDetection) {
+    this(
+        context,
+        schema,
+        transformation,
+        universalOperator,
+        filterResourcePredicate,
+        DefinedSchemaReads.of(context, schemaSet),
+        layoutDetection);
+  }
+
+  private CatalogSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final Optional<String> schema,
+      @Nonnull final Optional<UnaryOperator<Dataset<Row>>> transformation,
+      @Nonnull final Optional<BiFunction<String, Dataset<Row>, Dataset<Row>>> universalOperator,
+      @Nonnull final Optional<Predicate<String>> filterResourcePredicate,
+      @Nonnull final DefinedSchemaReads reads,
+      final boolean layoutDetection) {
     super(context);
     this.schema = schema;
     this.transformation = transformation;
     this.universalOperator = universalOperator;
     this.filterResourcePredicate = filterResourcePredicate;
+    this.reads = reads;
     this.layoutDetection = layoutDetection;
   }
 
@@ -154,6 +209,8 @@ public class CatalogSource extends AbstractSource {
     if (layoutDetection) {
       LayoutDetector.check(resourceCode, table.schema());
     }
+    // A table of a type the schema set names is projected onto its schema before any operator.
+    table = reads.project(table, resourceCode);
     if (universalOperator.isPresent()) {
       table = universalOperator.get().apply(resourceCode, table);
     }
@@ -222,6 +279,7 @@ public class CatalogSource extends AbstractSource {
         transformation,
         Optional.of(operator),
         filterResourcePredicate,
+        reads,
         layoutDetection);
   }
 
@@ -234,6 +292,7 @@ public class CatalogSource extends AbstractSource {
         transformation,
         universalOperator,
         Optional.of(resourceTypePredicate),
+        reads,
         layoutDetection);
   }
 

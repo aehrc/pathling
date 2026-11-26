@@ -233,7 +233,7 @@ set and appended to Delta, leave the table's schema equal to the set.
 
 ### Tests for User Story 1 ⚠️ write first, confirm failing
 
-- [ ] T019 [P] [US1] Test every source with a schema set in
+- [x] T019 [P] [US1] Test every source with a schema set in
       `library-api/src/test/java/au/csiro/pathling/library/io/source/DefinedSchemaSourceTest.java`.
       The sources are ndjson, bundles, parquet, delta, tables, bulk (through the existing bulk test
       fixture) and datasets. For each:
@@ -254,7 +254,7 @@ set and appended to Delta, leave the table's schema equal to the set.
     - `withSchemas` accepts a `Map<String, StructType>`, including more than ten types (FR-004,
       FR-005);
     - `parquetWithSchemas` is gone (FR-003).
-- [ ] T020 [P] [US1] Test writing data loaded with a schema set in
+- [x] T020 [P] [US1] Test writing data loaded with a schema set in
       `library-api/src/test/java/au/csiro/pathling/library/io/sink/DefinedSchemaWriteTest.java`:
     - parquet, delta and tables write each named type with the set's schema, compared with
       `SchemaEquality` (US1 scenario 5, SC-003);
@@ -274,7 +274,7 @@ set and appended to Delta, leave the table's schema equal to the set.
       not a struct type's JSON form with an error naming its key (FR-004), in
       `lib/R/tests/testthat/test-defined-schemas.R`.
       Compare output schemas with the helper of `lib/R/tests/testthat/helper_schema_equality.R`.
-- [ ] T067 [P] [US1] Test the debug log of dropped paths in
+- [x] T067 [P] [US1] Test the debug log of dropped paths in
       `library-api/src/test/java/au/csiro/pathling/library/io/source/DroppedPathLogTest.java`, with
       a Logback `ListAppender` on the sources' logger, as `TraceExpressionTest` captures its log:
       parquet, delta, tables and datasets read with a schema set narrower than the stored schema
@@ -283,14 +283,14 @@ set and appended to Delta, leave the table's schema equal to the set.
 
 ### Implementation for User Story 1
 
-- [ ] T023 [US1] Add `withSchemas(Map<String, StructType>)`, remove `parquetWithSchemas`, and pass
+- [x] T023 [US1] Add `withSchemas(Map<String, StructType>)`, remove `parquetWithSchemas`, and pass
       the `SchemaSet` built with `SchemaSet.of` to every source constructor, in
       `library-api/src/main/java/au/csiro/pathling/library/io/source/DataSourceBuilder.java`.
       Migrate the three `parquetWithSchemas` tests of
       `library-api/src/test/java/au/csiro/pathling/library/io/source/SchemaMergingTest.java`
       (:147, :169, :185) to `withSchemas`: a narrower schema is now projected to, not used as
       given, so their expectations follow the projection (FR-003, FR-006).
-- [ ] T024 [US1] Project each named type, with `Projection` then `Annotator`, in the transformer
+- [x] T024 [US1] Project each named type, with `Projection` then `Annotator`, in the transformer
       function that `ParquetSource` and `DeltaSource` pass to the `FileSource` constructor, today
       the identity `(sourceData, resourceType) -> sourceData`, in
       `library-api/src/main/java/au/csiro/pathling/library/io/source/ParquetSource.java` and
@@ -301,7 +301,7 @@ set and appended to Delta, leave the table's schema equal to the set.
       from `ParquetSource.readerFor`. Log at debug level the paths of the stored schema that the
       defined schema drops, found by comparing the two schemas only, with no Spark job and no
       per-row work (FR-006a), as T067 tests.
-- [ ] T025 [P] [US1] Project each named type the same way, after the check of the stored schema
+- [x] T025 [P] [US1] Project each named type the same way, after the check of the stored schema
       that #2884 adds (FR-006c), logging the dropped paths at debug level as T024 does (FR-006a): in `CatalogSource.read`, after `LayoutDetector.check` and
       before `universalOperator`, in
       `library-api/src/main/java/au/csiro/pathling/library/io/source/CatalogSource.java`; and in
@@ -309,7 +309,7 @@ set and appended to Delta, leave the table's schema equal to the set.
       `library-api/src/main/java/au/csiro/pathling/library/io/source/DatasetSource.java`. Not in
       `DatasetSource.read`, which `FileSource` inherits, so that NDJSON and bundle reads are not
       shaped twice.
-- [ ] T026 [P] [US1] Read each named type with the defined-schema reader in
+- [x] T026 [P] [US1] Read each named type with the defined-schema reader in
       `library-api/src/main/java/au/csiro/pathling/library/io/source/NdjsonSource.java`,
       `BundlesSource.java` and `BulkDataSource.java` (same directory). These reads do not detect
       or log dropped content (FR-006a).

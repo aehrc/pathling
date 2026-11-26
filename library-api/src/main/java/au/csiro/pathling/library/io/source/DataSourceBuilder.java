@@ -20,6 +20,8 @@ package au.csiro.pathling.library.io.source;
 import static au.csiro.pathling.utilities.Preconditions.checkArgumentNotNull;
 
 import au.csiro.fhir.export.BulkExportClient;
+import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
+import au.csiro.pathling.io.SchemaSet;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
@@ -47,21 +49,50 @@ import org.apache.spark.sql.types.StructType;
  * <p>Every argument to the methods of this builder must be non-null. A null argument is rejected
  * with an {@link IllegalArgumentException}.
  *
+ * <p>A builder given a schema set with {@link #withSchemas(Map)} reads each resource type the set
+ * names with the set's schema, in every source it creates, and infers every other type as usual.
+ *
  * @param context the {@link PathlingContext} to use for creating the data sources
  * @param layoutDetection whether the Parquet, Delta and catalog sources this builder creates
  *     classify the layout of the data they read
+ * @param schemaSet the schema of each resource type the sources this builder creates read with,
+ *     keyed by resource type code; an empty set means no schemas
  * @author Piotr Szul
  * @author John Grimes
  */
-public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layoutDetection) {
+public record DataSourceBuilder(
+    @Nonnull PathlingContext context,
+    boolean layoutDetection,
+    @Nonnull Map<String, StructType> schemaSet) {
 
   /**
-   * Creates a builder whose sources classify the layout of the data they read.
+   * Creates a builder, refusing a schema set that names something other than a resource type, or
+   * that has a null schema.
+   *
+   * @param context the {@link PathlingContext} to use for creating the data sources
+   * @param layoutDetection whether the Parquet, Delta and catalog sources this builder creates
+   *     classify the layout of the data they read
+   * @param schemaSet the schema of each resource type, keyed by resource type code
+   * @throws IllegalArgumentException if a key is not a resource type code, or its schema is null,
+   *     naming the key
+   */
+  public DataSourceBuilder {
+    checkArgumentNotNull(context);
+    final SchemaSet given = SchemaSet.of(checkArgumentNotNull(schemaSet));
+    // The definitions are only consulted when there is a key to check against them.
+    if (!given.isEmpty()) {
+      given.requireResourceTypes(FhirDefinitionContext.of(context.getFhirContext()));
+    }
+    schemaSet = given.schemas();
+  }
+
+  /**
+   * Creates a builder whose sources classify the layout of the data they read, with no schema set.
    *
    * @param context the {@link PathlingContext} to use for creating the data sources
    */
   public DataSourceBuilder(@Nonnull final PathlingContext context) {
-    this(context, true);
+    this(context, true, Map.of());
   }
 
   /**
@@ -75,19 +106,32 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
    */
   @Nonnull
   public DataSourceBuilder withLayoutDetection(final boolean layoutDetection) {
-    return new DataSourceBuilder(context, layoutDetection);
+    return new DataSourceBuilder(context, layoutDetection, schemaSet);
   }
 
   /**
    * Returns a builder whose every source projects each resource type the given schema set names to
    * its schema, and infers every other type as usual.
    *
+   * <p>A named type has the set's schema, in its order, with the annotations the configuration
+   * enables recomputed rather than taken from the given schema. Elements the schema lacks are
+   * dropped, and elements the data lacks are null. A stored field whose name differs from the
+   * schema's only in case fails the read, naming the resource type and both paths.
+   *
    * @param schemaSet the schema of each resource type to project, keyed by resource type code
-   * @return a builder with the given schema set
+   * @return a builder with the given schema set, in place of any this builder has
+   * @throws IllegalArgumentException if a key is not a resource type code, or its schema is null,
+   *     naming the key
    */
   @Nonnull
   public DataSourceBuilder withSchemas(@Nonnull final Map<String, StructType> schemaSet) {
-    throw new UnsupportedOperationException("Not implemented yet");
+    return new DataSourceBuilder(context, layoutDetection, schemaSet);
+  }
+
+  /** Returns the schema set of this builder in the form the sources take it. */
+  @Nonnull
+  private SchemaSet schemas() {
+    return SchemaSet.of(schemaSet);
   }
 
   /**
@@ -104,7 +148,12 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
    */
   @Nonnull
   public QueryableDataSource ndjson(@Nonnull final String ndjsonDir) {
-    return new NdjsonSource(context, checkArgumentNotNull(ndjsonDir));
+    return new NdjsonSource(
+        context,
+        checkArgumentNotNull(ndjsonDir),
+        "ndjson",
+        FileSource::resourceNameWithQualifierMapper,
+        schemas());
   }
 
   /**
@@ -125,7 +174,12 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
    */
   @Nonnull
   public QueryableDataSource ndjson(@Nonnull final String path, @Nonnull final String extension) {
-    return new NdjsonSource(context, checkArgumentNotNull(path), checkArgumentNotNull(extension));
+    return new NdjsonSource(
+        context,
+        checkArgumentNotNull(path),
+        checkArgumentNotNull(extension),
+        FileSource::resourceNameWithQualifierMapper,
+        schemas());
   }
 
   /**
@@ -149,7 +203,8 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
         context,
         checkArgumentNotNull(path),
         checkArgumentNotNull(extension),
-        checkArgumentNotNull(fileNameMapper));
+        checkArgumentNotNull(fileNameMapper),
+        schemas());
   }
 
   /**
@@ -176,7 +231,8 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
         context,
         checkArgumentNotNull(path),
         checkArgumentNotNull(mimeType),
-        checkArgumentNotNull(resourceTypes));
+        checkArgumentNotNull(resourceTypes),
+        schemas());
   }
 
   /**
@@ -187,7 +243,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
    */
   @Nonnull
   public DatasetSource datasets() {
-    return new DatasetSource(context);
+    return new DatasetSource(context, schemas());
   }
 
   /**
@@ -204,7 +260,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
         context,
         checkArgumentNotNull(path),
         FileSource::resourceNameWithQualifierMapper,
-        Map.of(),
+        schemas(),
         layoutDetection);
   }
 
@@ -223,34 +279,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
         context,
         checkArgumentNotNull(path),
         checkArgumentNotNull(fileNameMapper),
-        Map.of(),
-        layoutDetection);
-  }
-
-  /**
-   * Creates a new data source from a directory containing Parquet-encoded FHIR resource data, with
-   * filenames representing the resource type the file/directory contains, reading each resource
-   * type named in the given map with the schema it supplies.
-   *
-   * <p>By default the schemas of a resource type's files are merged into their union, which reads
-   * the footer of every file. A supplied schema is used as given instead, so it must cover the
-   * union of the type's files: columns it omits are not read, and it can lose whole rows, not just
-   * columns. A view unnesting a repeating element returns none of a file's rows for that element
-   * when the schema omits every field the file carries inside it. Resource types the map does not
-   * name are merged as usual.
-   *
-   * @param path the URI of the directory containing the Parquet files/directories
-   * @param schemas the schema to read each resource type with, keyed by resource type code
-   * @return the new data source
-   */
-  @Nonnull
-  public QueryableDataSource parquetWithSchemas(
-      @Nonnull final String path, @Nonnull final Map<String, StructType> schemas) {
-    return new ParquetSource(
-        context,
-        checkArgumentNotNull(path),
-        FileSource::resourceNameWithQualifierMapper,
-        checkArgumentNotNull(schemas),
+        schemas(),
         layoutDetection);
   }
 
@@ -262,7 +291,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
    */
   @Nonnull
   public QueryableDataSource delta(@Nonnull final String path) {
-    return new DeltaSource(context, checkArgumentNotNull(path), layoutDetection);
+    return new DeltaSource(context, checkArgumentNotNull(path), schemas(), layoutDetection);
   }
 
   /**
@@ -279,6 +308,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
         Optional.empty(),
         Optional.empty(),
         Optional.empty(),
+        schemas(),
         layoutDetection);
   }
 
@@ -298,6 +328,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
         Optional.empty(),
         Optional.empty(),
         Optional.empty(),
+        schemas(),
         layoutDetection);
   }
 
@@ -310,6 +341,6 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
    */
   @Nonnull
   public QueryableDataSource bulk(@Nonnull final BulkExportClient client) {
-    return new BulkDataSource(context, checkArgumentNotNull(client));
+    return new BulkDataSource(context, checkArgumentNotNull(client), schemas());
   }
 }

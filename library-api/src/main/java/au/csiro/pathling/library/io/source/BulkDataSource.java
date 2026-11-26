@@ -19,6 +19,7 @@ package au.csiro.pathling.library.io.source;
 
 import au.csiro.fhir.export.BulkExportClient;
 import au.csiro.fhir.export.BulkExportResult;
+import au.csiro.pathling.io.SchemaSet;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -51,6 +52,23 @@ public class BulkDataSource extends AbstractSource {
    */
   public BulkDataSource(
       @Nonnull final PathlingContext context, @Nonnull final BulkExportClient client) {
+    this(context, client, DefinedSchemaReads.noSchemas());
+  }
+
+  /**
+   * Creates a new bulk data source using the provided client configuration, reading each resource
+   * type a schema set names with its schema.
+   *
+   * @param context the Pathling context
+   * @param client the configured {@link BulkExportClient} that specifies the endpoint and export
+   *     parameters
+   * @param schemaSet the schema set, which may be empty
+   * @throws RuntimeException if the export fails or the source cannot be initialized
+   */
+  BulkDataSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final BulkExportClient client,
+      @Nonnull final SchemaSet schemaSet) {
     super(context);
 
     // Execute the export to the specified output directory
@@ -58,7 +76,13 @@ public class BulkDataSource extends AbstractSource {
     log.debug("Bulk export completed: {}", result);
 
     // Create NdjsonSource from the exported files
-    this.ndjsonSource = new NdjsonSource(context, client.getOutputDir());
+    this.ndjsonSource =
+        new NdjsonSource(
+            context,
+            client.getOutputDir(),
+            "ndjson",
+            FileSource::resourceNameWithQualifierMapper,
+            schemaSet);
   }
 
   private BulkDataSource(

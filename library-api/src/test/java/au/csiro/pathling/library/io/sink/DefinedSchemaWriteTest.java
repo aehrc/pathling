@@ -109,7 +109,8 @@ class DefinedSchemaWriteTest {
         switch (sink) {
           case "parquet" -> {
             source.write().parquet(directory.toString());
-            yield spark.read().parquet(directory.resolve("Patient.parquet").toString());
+            // The Parquet sink names each file of a type after the type and the write.
+            yield spark.read().parquet(directory.resolve("Patient.*.parquet").toString());
           }
           case "delta" -> {
             source.write().delta(directory.toString());

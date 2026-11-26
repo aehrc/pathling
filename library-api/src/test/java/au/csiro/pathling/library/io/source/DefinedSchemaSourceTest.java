@@ -181,13 +181,25 @@ class DefinedSchemaSourceTest {
 
     final Dataset<Row> expected =
         context.annotate(definedRead(kind, patients.inputFiles(), schema), PATIENT);
-    assertTrue(
-        patients.queryExecution().analyzed().sameResult(expected.queryExecution().analyzed()),
-        () ->
-            "expected the plan of the io defined read:\n"
-                + expected.queryExecution().analyzed()
-                + "\nbut got:\n"
-                + patients.queryExecution().analyzed());
+    assertEquals(
+        canonicalPlan(expected),
+        canonicalPlan(patients),
+        "expected the plan of the io defined read");
+  }
+
+  /**
+   * Returns the canonical form of a dataset's analysed plan, as {@code sameResult} compares it, but
+   * with the names of lambda variables normalised: each read names them from a counter, so two
+   * reads of the same input never have the same names.
+   */
+  @Nonnull
+  private static String canonicalPlan(@Nonnull final Dataset<Row> dataset) {
+    return dataset
+        .queryExecution()
+        .analyzed()
+        .canonicalized()
+        .toString()
+        .replaceAll("\\bx_\\d+", "x");
   }
 
   /**

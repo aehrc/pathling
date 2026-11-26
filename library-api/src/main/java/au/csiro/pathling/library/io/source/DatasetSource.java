@@ -19,6 +19,7 @@ package au.csiro.pathling.library.io.source;
 
 import static java.util.Objects.requireNonNull;
 
+import au.csiro.pathling.io.SchemaSet;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -50,34 +51,52 @@ public class DatasetSource extends AbstractSource {
    */
   @Nonnull protected Map<String, Dataset<Row>> resourceMap = new HashMap<>();
 
+  /** Projects each dataset added of a type the schema set names onto the set's schema. */
+  @Nonnull private final DefinedSchemaReads reads;
+
   /**
    * Constructs a DatasetSource with the specified PathlingContext.
    *
    * @param context the PathlingContext to use
    */
   public DatasetSource(@Nonnull final PathlingContext context) {
+    this(context, DefinedSchemaReads.noSchemas());
+  }
+
+  /**
+   * Constructs a DatasetSource with the specified PathlingContext, projecting each dataset added of
+   * a resource type a schema set names onto its schema.
+   *
+   * @param context the PathlingContext to use
+   * @param schemaSet the schema set, which may be empty
+   */
+  DatasetSource(@Nonnull final PathlingContext context, @Nonnull final SchemaSet schemaSet) {
     super(context);
+    this.reads = DefinedSchemaReads.of(context, schemaSet);
   }
 
   private DatasetSource(
       @Nonnull final PathlingContext context,
       @Nonnull final Map<String, Dataset<Row>> resourceMap) {
-    super(context);
+    this(context, DefinedSchemaReads.noSchemas());
     this.resourceMap = resourceMap;
   }
 
   /**
-   * Add a dataset to this source.
+   * Add a dataset to this source. A dataset of a resource type the source's schema set names is
+   * projected onto the set's schema as it is added.
    *
    * @param resourceType the resource code
    * @param dataset the dataset
    * @return this data source, for chaining
+   * @throws IllegalArgumentException if a field of the dataset differs from a field of the set's
+   *     schema only in case, or a struct of it holds two fields differing only in case
    */
   public DatasetSource dataset(
       @Nullable final String resourceType, @Nullable final Dataset<Row> dataset) {
     requireNonNull(resourceType);
     requireNonNull(dataset);
-    resourceMap.put(resourceType, dataset);
+    resourceMap.put(resourceType, reads.project(dataset, resourceType));
     return this;
   }
 

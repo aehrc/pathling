@@ -316,18 +316,6 @@ public abstract class FileSource extends DatasetSource {
   }
 
   /**
-   * Returns the reader to load the files of a resource type with. Subclasses override this to read
-   * a type differently from the others, for example with a schema supplied for it.
-   *
-   * @param resourceType the resource type being loaded
-   * @return the reader for that type
-   */
-  @Nonnull
-  protected DataFrameReader readerFor(@Nonnull final String resourceType) {
-    return reader;
-  }
-
-  /**
    * Builds the dataset of a resource type from its files, refusing it first if layout detection is
    * enabled and the stored data is in a layout this release does not read.
    *
@@ -342,7 +330,7 @@ public abstract class FileSource extends DatasetSource {
   private Dataset<Row> load(@Nonnull final String resourceType) {
     log.debug("Resolving resource type: {}", resourceType);
     final String[] paths = files.get(resourceType).toArray(new String[0]);
-    final Dataset<Row> stored = readerFor(resourceType).load(paths);
+    final Dataset<Row> stored = reader.load(paths);
     if (layoutDetection) {
       LayoutDetector.check(resourceType, stored.schema());
     }
