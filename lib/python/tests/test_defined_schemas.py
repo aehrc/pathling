@@ -1,0 +1,235 @@
+#
+# Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+# Organisation (CSIRO) ABN 41 687 119 230.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+"""Tests the sources of the Python API read with a schema set (T021, FR-001, FR-004)."""
+
+import os
+from typing import Dict, List
+from uuid import uuid4
+
+from flask import Response
+from pyspark.sql.types import ArrayType, StructField, StructType
+from pytest import fixture, mark, raises
+
+from pathling.datasource import DataSource
+from tests.schema_equality import _annotation_prefix, same_schema_set
+
+# Eleven resource types of the bundles test data, one more than the ten that an earlier binding
+# could pass.
+ELEVEN_TYPES = [
+    "CarePlan",
+    "CareTeam",
+    "Claim",
+    "Condition",
+    "DiagnosticReport",
+    "Encounter",
+    "Immunization",
+    "MedicationRequest",
+    "Observation",
+    "Patient",
+    "Procedure",
+]
+
+
+@fixture(scope="module")
+def ndjson_dir(test_data_dir):
+    return os.path.join(test_data_dir, "ndjson")
+
+
+@fixture(scope="module")
+def bundles_dir(test_data_dir):
+    return os.path.join(test_data_dir, "bundles")
+
+
+@fixture(scope="module")
+def inferred(pathling_ctx, ndjson_dir) -> DataSource:
+    """The NDJSON test data read without a schema set."""
+    return pathling_ctx.read.ndjson(ndjson_dir)
+
+
+@fixture(scope="module")
+def defined(inferred) -> Dict[str, StructType]:
+    """A schema set for Patient and Condition narrower than the data and in another order."""
+    return {
+        type_: narrow(inferred.read(type_).schema) for type_ in ["Patient", "Condition"]
+    }
+
+
+@fixture(scope="module")
+def tables_database(pathling_ctx, inferred) -> str:
+    """A database of its own holding the NDJSON test data as tables."""
+    database = "defined_" + uuid4().hex
+    pathling_ctx.spark.sql(f"CREATE DATABASE {database}")
+    inferred.write.tables(schema=database)
+    return database
+
+
+@fixture(scope="function")
+def bulk_server(mock_server, ndjson_dir):
+    """A bulk export server serving the Patient and Condition NDJSON test data."""
+
+    @mock_server.route("/fhir/$export", methods=["GET"])
+    def export():
+        resp = Response(status=202)
+        resp.headers["content-location"] = mock_server.url("/pool")
+        return resp
+
+    @mock_server.route("/pool", methods=["GET"])
+    def pool():
+        return dict(
+            transactionTime="1970-01-01T00:00:00.000Z",
+            output=[
+                dict(
+                    type=resource, url=mock_server.url(f"/download/{resource}"), count=1
+                )
+                for resource in ["Patient", "Condition"]
+            ],
+        )
+
+    @mock_server.route("/download/<resource>", methods=["GET"])
+    def download(resource):
+        with open(os.path.join(ndjson_dir, f"{resource}.ndjson"), "r") as f:
+            return f.read()
+
+    return mock_server
+
+
+def narrow(schema: StructType) -> StructType:
+    """Return a schema of the first three base fields of a schema, in reverse order.
+
+    A group, or an array of groups, among them keeps only its first base field, so that the
+    projection is exercised below the top level too.
+    """
+    prefix = _annotation_prefix()
+
+    def base_fields(struct: StructType) -> List[StructField]:
+        return [field for field in struct.fields if not field.name.startswith(prefix)]
+
+    def first_only(field: StructField) -> StructField:
+        type_ = field.dataType
+        if isinstance(type_, StructType):
+            return StructField(field.name, StructType(base_fields(type_)[:1]))
+        if isinstance(type_, ArrayType) and isinstance(type_.elementType, StructType):
+            element = StructType(base_fields(type_.elementType)[:1])
+            return StructField(field.name, ArrayType(element))
+        return field
+
+    return StructType(
+        [first_only(field) for field in reversed(base_fields(schema)[:3])]
+    )
+
+
+def schemas_of(data_source: DataSource, types) -> Dict[str, StructType]:
+    """Return the schema of each of the given types, as the data source reads it."""
+    return {type_: data_source.read(type_).schema for type_ in types}
+
+
+def open_source(kind: str, pathling_ctx, inferred, test_data_dir, database, schemas):
+    """Open a source of the given kind over the Patient and Condition test data."""
+    read = pathling_ctx.read
+    if kind == "ndjson":
+        return read.ndjson(os.path.join(test_data_dir, "ndjson"), schemas=schemas)
+    if kind == "bundles":
+        return read.bundles(
+            os.path.join(test_data_dir, "bundles"),
+            ["Patient", "Condition"],
+            schemas=schemas,
+        )
+    if kind == "datasets":
+        return read.datasets(
+            {type_: inferred.read(type_) for type_ in ["Patient", "Condition"]},
+            schemas=schemas,
+        )
+    if kind == "parquet":
+        return read.parquet(os.path.join(test_data_dir, "parquet"), schemas=schemas)
+    if kind == "delta":
+        return read.delta(os.path.join(test_data_dir, "delta"), schemas=schemas)
+    if kind == "tables":
+        return read.tables(schema=database(), schemas=schemas)
+    raise ValueError(f"Unknown source kind: {kind}")
+
+
+SOURCES = ["ndjson", "bundles", "datasets", "parquet", "delta", "tables"]
+
+
+@mark.parametrize("kind", SOURCES)
+def test_source_reads_with_the_given_schemas(
+    kind, pathling_ctx, inferred, defined, test_data_dir, request
+):
+    """Every source reads each type with the schema the set gives it (FR-001, FR-004).
+
+    The schemas are narrower than the data and in another field order, so the output has the
+    given schemas only if the source projects to them.
+    """
+    data_source = open_source(
+        kind,
+        pathling_ctx,
+        inferred,
+        test_data_dir,
+        lambda: request.getfixturevalue("tables_database"),
+        defined,
+    )
+
+    assert same_schema_set(schemas_of(data_source, defined), defined)
+
+
+def test_bulk_reads_with_the_given_schemas(pathling_ctx, defined, bulk_server):
+    """The bulk source reads each type with the schema the set gives it (FR-001, FR-004)."""
+    with bulk_server.run():
+        data_source = pathling_ctx.read.bulk(
+            fhir_endpoint_url=bulk_server.url("/fhir"), schemas=defined
+        )
+        assert same_schema_set(schemas_of(data_source, defined), defined)
+
+
+def test_more_than_ten_types_are_accepted(pathling_ctx, bundles_dir):
+    """A set of more than ten types is accepted, with no limit on its size (FR-004)."""
+    bundles = pathling_ctx.read.bundles(bundles_dir, ELEVEN_TYPES)
+    schemas = {
+        type_: narrow(schema)
+        for type_, schema in schemas_of(bundles, ELEVEN_TYPES).items()
+    }
+
+    data_source = pathling_ctx.read.bundles(bundles_dir, ELEVEN_TYPES, schemas=schemas)
+
+    assert same_schema_set(schemas_of(data_source, ELEVEN_TYPES), schemas)
+
+
+@mark.parametrize("kind", SOURCES)
+@mark.parametrize(
+    "value",
+    [
+        {"type": "struct", "fields": []},
+        '{"type":"struct","fields":[]}',
+    ],
+    ids=["dict", "json-string"],
+)
+def test_value_that_is_not_a_struct_type_is_refused(
+    kind, value, pathling_ctx, inferred, defined, test_data_dir
+):
+    """A schema that is not a StructType is refused with an error naming its key (FR-004)."""
+    schemas = {"Patient": defined["Patient"], "Condition": value}
+
+    with raises((TypeError, ValueError), match="Condition"):
+        open_source(
+            kind,
+            pathling_ctx,
+            inferred,
+            test_data_dir,
+            lambda: "default",
+            schemas,
+        )
