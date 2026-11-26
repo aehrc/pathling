@@ -234,10 +234,11 @@ data. Encode each micro-batch of the stream instead, for example with
 Streaming encode is tracked in
 [#2881](https://github.com/aehrc/pathling/issues/2881).
 
-## The schema is fitted to the data
+## Inferred schemas
 
-This is by design, not a defect. A table carries only the elements that the
-data populates. This has two consequences for anyone reading the files
+Unless you give Pathling a schema, the schema is fitted to the data. This is by
+design, not a defect. A table carries only the elements that the data
+populates. This has two consequences for anyone reading the files
 directly:
 
 - A column you expect may be absent, because nothing in the data populated it.
@@ -248,9 +249,9 @@ directly:
 The types and cardinality of the elements that are present never vary with the
 data, because they come from the FHIR definitions.
 
-A dense schema, carrying every element that the definitions describe whether
-the data populates it or not, is tracked in
-[#2881](https://github.com/aehrc/pathling/issues/2881).
+To get the same schema from every load, whatever the data populates, give the
+read a schema of your own, as described under
+[Defined schemas](#defined-schemas).
 
 ### Field order
 
@@ -265,10 +266,109 @@ schema assembled from several of them. When Spark merges the schemas of
 differing Parquet files, and when a Delta table is widened to hold new columns,
 a field that first appears later is placed at the end of its structure.
 
+Reading stored data without a schema keeps the order in which its fields are
+stored.
+
 Field order is part of a Parquet or Spark structure type, and some operations
 compare structures by position rather than by name. Do not assume that two
 structures of the same FHIR type have the same fields in the same positions:
 compare and combine them by field name.
+
+## Defined schemas
+
+A read can be given a schema for a resource type in place of the one fitted to
+the data. A schema set maps resource type codes, such as `Patient`, to schemas,
+and every data source takes one, as described under
+[Defined schemas](./index.md#defined-schemas). Each resource type that the set
+names is read with its schema, and every other resource type is read with a
+schema fitted to its data, as it is without a set. An empty set is the same as
+no set.
+
+Every load given the same schema gives data with the same schema, whatever the
+data populates. Data loaded at different times can then be appended to one
+table without widening it, and a query written against that schema runs on
+every load.
+
+### What a read with a schema gives
+
+- The base schema of the data, which is its schema leaving out annotations, is
+  the base schema of the given schema, with its fields in the order the given
+  schema has them.
+- An element that the schema names and the data lacks is present and null.
+- Content that the schema has no field for is dropped, with no error. A schema
+  that names only some elements therefore loses the others without warning. To
+  keep everything your data might carry, give a wide schema: one that names
+  every element the data could populate.
+- Every field is nullable, and the field metadata of the given schema is not
+  carried over.
+
+A read of Parquet files, Delta tables, catalog tables or datasets compares the
+stored schema with the given one, without reading any rows, and logs at debug
+level the stored paths that the read drops, through the logger
+`au.csiro.pathling.library.io.source.DefinedSchemaReads`. A read of NDJSON,
+bundles in JSON or XML, or a bulk export would have to examine every resource
+to find what it drops, so it drops content silently and logs nothing about it.
+
+### Annotations and primitive metadata
+
+[Annotation](#annotations) fields in the given schema are ignored. The data
+carries the annotations that the options of the Pathling context turn on,
+computed as they are for a read without a schema, and annotations stored with
+the data are computed again rather than kept. An annotation that the given
+schema lacks is placed last in its structure, and a `_`-prefixed structure that
+holds only annotations is placed immediately after its primitive.
+
+The [ids and extensions of primitive elements](#ids-and-extensions-of-primitive-elements)
+follow the schema, whatever the `store_primitive_metadata` option is set to:
+they are kept where the schema has a `_`-prefixed structure with fields for
+them, and dropped where it does not.
+
+A decimal read from JSON keeps about 17 significant digits, because it passes
+through a double as in an ordinary JSON read. Read from XML, it keeps its text.
+
+### Names that differ only in case
+
+A Parquet or Delta file holding columns whose names differ only in case fails
+to load with Spark's own `COLUMN_ALREADY_EXISTS` error, with or without a schema
+set.
+
+A read with a schema refuses data that has a field whose name differs only in
+case from a field of the schema, and data that has a structure with two fields
+whose names differ only in case. The error names the resource type and both
+paths, for example:
+
+```
+Cannot read Patient with its schema: The field `name.Family` differs only in
+case from the field `name.family` of the target schema
+```
+
+Merging resources into a Delta table that has a field whose name differs only
+in case from a field of the resources fails in the same way, with or without a
+schema set.
+
+### Writing data read with a schema
+
+Sinks take no schema: they write the data a source gives them, with its schema.
+Appending to a Delta table data that was read with the table's own schemas,
+taken from the table by a context with the same annotation options, leaves the
+table's schema unchanged. Appending data with any other schema widens the table
+to hold both.
+
+A merge replaces each matched resource in full. Merging data read with a
+narrower schema than the table's therefore leaves null, in each resource it
+matches, every element that the schema lacks, even where the earlier version of
+the resource carried it.
+
+### Taking a schema set from a sample
+
+To build a schema set, read a sample of data that is representative of the
+data you will load, without a schema, and take the schema of each resource type
+from it. Use that set for every later load, as shown under
+[Defined schemas](./index.md#defined-schemas). An element that the sample does
+not populate is not in its schema, so it is dropped from every later load that
+carries it. Choose a sample that populates every element you need, or take the
+schemas from data that has accumulated all of them, such as a Delta table that
+earlier loads have widened.
 
 ## Files within a table may differ
 

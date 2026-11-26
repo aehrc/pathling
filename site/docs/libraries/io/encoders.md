@@ -230,7 +230,7 @@ reading through any other data source that encodes FHIR JSON or XML.
 The schema of an encoded dataset carries only the elements that the encoded
 resources populate, so two datasets of the same resource type can have
 different columns. See
-[The schema is fitted to the data](./schema.md#the-schema-is-fitted-to-the-data).
+[Inferred schemas](./schema.md#inferred-schemas).
 FHIRPath expressions and SQL on FHIR views work over any such schema, as
 described under [FHIRPath](../fhirpath.md#absent-elements).
 

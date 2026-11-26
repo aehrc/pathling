@@ -435,7 +435,7 @@ Results in:
 
 ## Absent elements
 
-A column created from a FHIRPath expression does not depend on any particular dataset. It can be applied to any dataset of the resource type, whatever columns its [schema](./io/schema.md#the-schema-is-fitted-to-the-data) carries, and one column applied to two datasets that hold the same resources under schemas of different widths gives the same results, with the same type.
+A column created from a FHIRPath expression does not depend on any particular dataset. It can be applied to any dataset of the resource type, whatever columns its [schema](./io/schema.md#inferred-schemas) carries, and one column applied to two datasets that hold the same resources under schemas of different widths gives the same results, with the same type.
 
 Where an element that an expression refers to is absent from the schema of a dataset, it evaluates as empty. If the element is primitive, the column has the type that the FHIR definitions give the element, so `birthDate` gives a string column and `name.given` an array of strings, whether or not the data carries them. Such a column can be written to Parquet, and combined with the same column computed over other datasets.
 

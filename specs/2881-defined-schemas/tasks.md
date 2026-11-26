@@ -557,7 +557,7 @@ every source.
 
     Replace the "streaming dataset cannot be encoded" paragraph and the "fitted to the data" section.
 
-- [ ] T050 [P] Document the `schemas` option on sources, and that sinks keep the source's schema,
+- [x] T050 [P] Document the `schemas` option on sources, and that sinks keep the source's schema,
       in `site/docs/libraries/io/index.md`. Replace its Scala and Java `parquetWithSchemas`
       examples (:497-519) with `withSchemas`, and remove the claim that a supplied schema is used
       as given.
