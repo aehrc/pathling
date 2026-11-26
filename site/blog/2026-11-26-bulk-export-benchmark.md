@@ -77,13 +77,18 @@ settings that the benchmark uses for HAPI FHIR. Pathling keeps export output in
 its own storage rather than writing it to S3, so the size of the output was
 measured from the files listed in the manifest.
 
-We needed to make one change to the script. Pathling returns the completed
-export manifest as a FHIR Parameters resource, rather than the JSON document
-defined by the
-[Bulk Data Access](https://hl7.org/fhir/uv/bulkdata/export.html#response---complete-status)
-specification. We added a few lines to the script to read the list of output
-files from the Parameters resource. This does not affect the timing, but it is a
-departure from the specification that we need to fix.
+We needed to make one change to the script. It polls the status URL with
+`Accept: application/fhir+json`, the same header it sends with the kick-off
+request. The
+[Bulk Data Access](https://hl7.org/fhir/uv/bulkdata/STU3/en/export.html#bulk-data-status-request)
+specification says that a client should ask for `application/json` when
+requesting status. Pathling uses the header to choose between the JSON manifest
+and the same content as a FHIR Parameters resource, and returns the Parameters
+resource when `application/fhir+json` is requested. HAPI FHIR, whose output is
+measured from the manifest in the same way, returns the JSON manifest in
+response to the same header. We added a few lines to the script to read the
+list of output files from the Parameters resource. This does not affect the
+timing.
 
 ## Results
 
