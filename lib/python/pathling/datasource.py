@@ -125,21 +125,54 @@ class DataSources(SparkConversionsMixin):
     def _wrap_ds(self, jds: JavaObject) -> DataSource:
         return DataSource(jds, self._pc)
 
-    def _stored_sources(self, layout_detection: bool) -> JavaObject:
+    def _sources(
+        self,
+        schemas: Optional[Dict[str, StructType]] = None,
+        layout_detection: bool = True,
+    ) -> JavaObject:
         """
-        Returns the Java builder for a source reading stored data, with layout detection enabled
-        or disabled for the sources it creates.
+        Returns the Java builder for the sources a reader creates, reading each resource type the
+        schema set names with its schema, and with layout detection enabled or disabled.
 
+        :param schemas: An optional dictionary of the schema to read each resource type with,
+               keyed by resource type code.
         :param layout_detection: Whether the sources classify the layout of the data they read.
         :return: The Java data source builder.
+        :raises TypeError: If a schema in the set is not a StructType, naming its key.
         """
-        return self._jdataSources.withLayoutDetection(layout_detection)
+        sources = self._jdataSources.withLayoutDetection(layout_detection)
+        if schemas is None:
+            return sources
+        return sources.withSchemas(self._java_schemas(schemas))
+
+    def _java_schemas(self, schemas: Dict[str, StructType]) -> JavaObject:
+        """
+        Converts a schema set to the Java map that the data source builder takes.
+
+        :param schemas: A dictionary of schemas, keyed by resource type code.
+        :return: A Java map of the same schemas, as Spark struct types.
+        :raises TypeError: If a schema in the set is not a StructType, naming its key.
+        """
+        jvm = self.spark._jvm
+        jschemas = jvm.java.util.HashMap()
+        for resource_type, schema in schemas.items():
+            if not isinstance(schema, StructType):
+                raise TypeError(
+                    f"The schema for {resource_type} is not a StructType: "
+                    f"{type(schema).__name__}"
+                )
+            jschemas.put(
+                resource_type,
+                jvm.org.apache.spark.sql.types.DataType.fromJson(schema.json()),
+            )
+        return jschemas
 
     def ndjson(
         self,
         path,
         extension: Optional[str] = None,
         file_name_mapper: Callable[[str], Sequence[str]] = None,
+        schemas: Optional[Dict[str, StructType]] = None,
     ) -> DataSource:
         """
         Creates a data source from a directory containing NDJSON files. The files must be named with
@@ -150,26 +183,30 @@ class DataSources(SparkConversionsMixin):
         :param extension: The file extension to use when searching for files. Defaults to "ndjson".
         :param file_name_mapper: An optional function that maps a filename to the set of resource
                types that it contains.
+        :param schemas: An optional dictionary of the schema to read each resource type with, keyed
+               by resource type code. Each resource type it names is read with its schema, in
+               its order: elements the schema lacks are dropped, and elements the data lacks are
+               null. Resource types it does not name are read as usual.
         :return: A DataSource object that can be used to run queries against the data.
         """
 
         extension = extension or DataSources.NDJSON_EXTENSION
+        sources = self._sources(schemas)
 
         if file_name_mapper:
             wrapped_mapper = StringToStringSetMapper(
                 self.spark._jvm._gateway_client, file_name_mapper
             )
-            return self._wrap_ds(
-                self._jdataSources.ndjson(path, extension, wrapped_mapper)
-            )
+            return self._wrap_ds(sources.ndjson(path, extension, wrapped_mapper))
         else:
-            return self._wrap_ds(self._jdataSources.ndjson(path, extension))
+            return self._wrap_ds(sources.ndjson(path, extension))
 
     def bundles(
         self,
         path: str,
         resource_types: Sequence[str],
         mime_type: str = MimeType.FHIR_JSON,
+        schemas: Optional[Dict[str, StructType]] = None,
     ) -> DataSource:
         """
         Creates a data source from a directory containing FHIR bundles.
@@ -178,17 +215,25 @@ class DataSources(SparkConversionsMixin):
         :param resource_types: A sequence of resource type codes that should be extracted from the
                bundles.
         :param mime_type: The MIME type of the bundles. Defaults to `application/fhir+json`.
+        :param schemas: An optional dictionary of the schema to read each resource type with, keyed
+               by resource type code. Each resource type it names is read with its schema, in
+               its order: elements the schema lacks are dropped, and elements the data lacks are
+               null. Resource types it does not name are read as usual.
         :return: A DataSource object that can be used to run queries against the data.
         """
         return self._wrap_ds(
-            self._jdataSources.bundles(
+            self._sources(schemas).bundles(
                 path,
                 SetConverter().convert(resource_types, self.spark._jvm._gateway_client),
                 mime_type,
             )
         )
 
-    def datasets(self, resources: Dict[str, DataFrame]) -> DataSource:
+    def datasets(
+        self,
+        resources: Dict[str, DataFrame],
+        schemas: Optional[Dict[str, StructType]] = None,
+    ) -> DataSource:
         """
         Creates an immutable, ad-hoc data source from a dictionary of Spark DataFrames indexed with
         resource type codes.
@@ -199,9 +244,13 @@ class DataSources(SparkConversionsMixin):
 
         :param resources: A dictionary of Spark DataFrames, where the keys are resource type codes
                and the values are the data frames containing the resource data.
+        :param schemas: An optional dictionary of the schema to read each resource type with, keyed
+               by resource type code. Each resource type it names is read with its schema, in
+               its order: elements the schema lacks are dropped, and elements the data lacks are
+               null. Resource types it does not name are read as usual.
         :return: A DataSource object that can be used to run queries against the data.
         """
-        jbuilder = self._jdataSources.datasets()
+        jbuilder = self._sources(schemas).datasets()
         for resource_code, resource_data in resources.items():
             jbuilder.dataset(resource_code, resource_data._jdf)
         return self._wrap_ds(jbuilder)
@@ -217,13 +266,8 @@ class DataSources(SparkConversionsMixin):
         according to the name of the resource type that it stores.
 
         The files of a resource type may carry differing schemas, and are read as one dataset whose
-        schema is the union of theirs. Merging the schemas reads the footer of every file, so the
-        cost of it can be avoided by supplying the schema to read a resource type with. A supplied
-        schema is used as given, so it must cover the union of the type's files: columns it omits
-        are not read, and it can lose whole rows, not just columns. A view unnesting a repeating
-        element returns none of a file's rows for that element when the schema omits every field the
-        file carries inside it. The workable pattern is to merge once and persist the result, or to
-        take the writer's schema, and supply that.
+        schema is the union of theirs. A resource type named in the schema set is instead read with
+        the schema the set gives it: the data is projected to that schema, keeping every row.
 
         The layout of each resource type's data is classified as it is read, and data in the layout
         written by earlier releases of Pathling is refused with a message naming the remedy, which
@@ -233,7 +277,9 @@ class DataSources(SparkConversionsMixin):
 
         :param path: The URI of the directory containing the Parquet tables.
         :param schemas: An optional dictionary of the schema to read each resource type with, keyed
-               by resource type code. Resource types it does not name are merged as usual.
+               by resource type code. Each resource type it names is read with its schema, in
+               its order: elements the schema lacks are dropped, and elements the data lacks are
+               null. Resource types it does not name are read as usual.
         :param layout_detection: Whether to classify the layout of each resource type's data as
                it is read, refusing data in the layout written by earlier releases of Pathling.
                Defaults to True. Set it to False only for conforming data that the detector
@@ -242,22 +288,14 @@ class DataSources(SparkConversionsMixin):
                are undefined.
         :return: A DataSource object that can be used to run queries against the data.
         """
-        if schemas:
-            jvm = self.spark._jvm
-            jschemas = jvm.java.util.HashMap()
-            for resource_type, schema in schemas.items():
-                jschemas.put(
-                    resource_type,
-                    jvm.org.apache.spark.sql.types.DataType.fromJson(schema.json()),
-                )
-            return self._wrap_ds(
-                self._stored_sources(layout_detection)
-                .withSchemas(jschemas)
-                .parquet(path)
-            )
-        return self._wrap_ds(self._stored_sources(layout_detection).parquet(path))
+        return self._wrap_ds(self._sources(schemas, layout_detection).parquet(path))
 
-    def delta(self, path: str, layout_detection: bool = True) -> DataSource:
+    def delta(
+        self,
+        path: str,
+        schemas: Optional[Dict[str, StructType]] = None,
+        layout_detection: bool = True,
+    ) -> DataSource:
         """
         Creates a data source from a directory containing Delta tables, as used by Pathling Server
         for persistence. Each table must be named according to the name of the resource type that
@@ -270,6 +308,10 @@ class DataSources(SparkConversionsMixin):
         tool, described in the Pathling documentation on the storage layout.
 
         :param path: The URI of the directory containing the Delta tables.
+        :param schemas: An optional dictionary of the schema to read each resource type with, keyed
+               by resource type code. Each resource type it names is read with its schema, in
+               its order: elements the schema lacks are dropped, and elements the data lacks are
+               null. Resource types it does not name are read as usual.
         :param layout_detection: Whether to classify the layout of each resource type's data as
                it is read, refusing data in the layout written by earlier releases of Pathling.
                Defaults to True. Set it to False only for conforming data that the detector
@@ -278,11 +320,12 @@ class DataSources(SparkConversionsMixin):
                are undefined.
         :return: A DataSource object that can be used to run queries against the data.
         """
-        return self._wrap_ds(self._stored_sources(layout_detection).delta(path))
+        return self._wrap_ds(self._sources(schemas, layout_detection).delta(path))
 
     def tables(
         self,
         schema: Optional[str] = None,
+        schemas: Optional[Dict[str, StructType]] = None,
         layout_detection: bool = True,
     ) -> DataSource:
         """
@@ -296,6 +339,12 @@ class DataSources(SparkConversionsMixin):
         tool, described in the Pathling documentation on the storage layout.
 
         :param schema: An optional schema name that should be used to qualify the table names.
+               This is the catalog database to read the tables from, not a schema set, which is
+               given by `schemas`.
+        :param schemas: An optional schema set: a dictionary of the schema to read each resource
+               type with, keyed by resource type code. Each resource type it names is read with
+               its schema, in its order: elements the schema lacks are dropped, and elements the
+               data lacks are null. Resource types it does not name are read as usual.
         :param layout_detection: Whether to classify the layout of each resource type's data as
                it is read, refusing data in the layout written by earlier releases of Pathling.
                Defaults to True. Set it to False only for conforming data that the detector
@@ -304,7 +353,7 @@ class DataSources(SparkConversionsMixin):
                are undefined.
         :return: A DataSource object that can be used to run queries against the data.
         """
-        sources = self._stored_sources(layout_detection)
+        sources = self._sources(schemas, layout_detection)
         if schema:
             return self._wrap_ds(sources.tables(schema))
         else:
@@ -325,6 +374,7 @@ class DataSources(SparkConversionsMixin):
         timeout: Optional[int] = None,
         max_concurrent_downloads: int = 10,
         auth_config: Optional[Dict] = None,
+        schemas: Optional[Dict[str, StructType]] = None,
     ) -> DataSource:
         """
         Creates a data source from a FHIR Bulk Data Access API endpoint.
@@ -354,6 +404,10 @@ class DataSources(SparkConversionsMixin):
             - use_form_for_basic_auth: Whether to use form-based basic auth (default: False)
             - scope: The scope to request
             - token_expiry_tolerance: The token expiry tolerance in seconds (default: 120)
+        :param schemas: An optional dictionary of the schema to read each resource type with, keyed
+               by resource type code. Each resource type it names is read with its schema, in
+               its order: elements the schema lacks are dropped, and elements the data lacks are
+               null. Resource types it does not name are read as usual.
         :return: A DataSource object that can be used to run queries against the data
         """
         from pathling.bulk import BulkExportClient
@@ -427,4 +481,4 @@ class DataSources(SparkConversionsMixin):
         client.export()
 
         # Return a DataSource that reads from the exported files
-        return self.ndjson(output_dir)
+        return self.ndjson(output_dir, schemas=schemas)
