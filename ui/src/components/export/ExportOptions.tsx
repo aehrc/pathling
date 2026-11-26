@@ -25,6 +25,7 @@ import { Cross2Icon, PlusIcon } from "@radix-ui/react-icons";
 import { Box, Button, Card, Flex, IconButton, Select, TextField } from "@radix-ui/themes";
 
 import { ResourceTypePicker } from "./ResourceTypePicker";
+import { useFocusOnAdd } from "../../hooks/useFocusOnAdd";
 import { OUTPUT_FORMATS } from "../../types/exportOptions";
 import { FieldGuidance } from "../FieldGuidance";
 import { FieldLabel } from "../FieldLabel";
@@ -65,6 +66,8 @@ export function ExportOptions({
   hideOutputFormat = false,
   searchParams,
 }: Readonly<ExportOptionsProps>) {
+  const { focusOnRender, focusRef } = useFocusOnAdd<string>();
+
   /**
    * Updates a single option value.
    *
@@ -88,10 +91,9 @@ export function ExportOptions({
   };
 
   const addTypeFilter = () => {
-    updateTypeFilters((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), resourceType: "", rows: [createEmptyRow()] },
-    ]);
+    const id = crypto.randomUUID();
+    focusOnRender(id);
+    updateTypeFilters((prev) => [...prev, { id, resourceType: "", rows: [createEmptyRow()] }]);
   };
 
   const removeTypeFilter = (id: string) => {
@@ -191,6 +193,7 @@ export function ExportOptions({
                         onValueChange={(value) => updateTypeFilterResourceType(entry.id, value)}
                       >
                         <Select.Trigger
+                          ref={focusRef(entry.id)}
                           placeholder="Select resource type..."
                           style={{ width: "100%" }}
                         />
