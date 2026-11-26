@@ -1,0 +1,363 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package au.csiro.pathling.library.io.source;
+
+import static au.csiro.pathling.library.io.DivergentBatches.byId;
+import static au.csiro.pathling.library.io.source.SchemaSetSources.CONDITION;
+import static au.csiro.pathling.library.io.source.SchemaSetSources.PATIENT;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import au.csiro.pathling.io.FhirFormatReader;
+import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.TestHelpers;
+import au.csiro.pathling.library.io.SchemaEquality;
+import au.csiro.pathling.utilities.AnnotationNames;
+import jakarta.annotation.Nonnull;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Stream;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Encoders;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.MapType;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+/**
+ * Tests that every source given a schema set projects each resource type the set names to its
+ * schema, and infers every other type as it does without one (T019, US1).
+ */
+class DefinedSchemaSourceTest {
+
+  @TempDir static Path warehouse;
+
+  private static SparkSession spark;
+  private static PathlingContext context;
+
+  @TempDir Path directory;
+
+  private String database;
+
+  /** Set up Spark, with a warehouse in a temporary directory, and the Pathling context. */
+  @BeforeAll
+  static void setUp() {
+    spark =
+        TestHelpers.sparkBuilder()
+            .config("spark.sql.warehouse.dir", warehouse.resolve("spark-warehouse").toString())
+            .getOrCreate();
+    context = PathlingContext.create(spark);
+  }
+
+  /** Stop Spark. */
+  @AfterAll
+  static void tearDown() {
+    spark.stop();
+  }
+
+  /** Give each test a database of its own, so that tests do not share tables. */
+  @BeforeEach
+  void createDatabase() {
+    database = "db_" + UUID.randomUUID().toString().replace("-", "");
+    spark.sql("CREATE DATABASE " + database);
+  }
+
+  /**
+   * A named type has exactly the base schema of the set, plus the annotations the configuration
+   * enables, from a batch that lacks elements of the schema and carries elements it does not have:
+   * the missing elements are null and the extra content is dropped, with no error (FR-001,
+   * FR-006–FR-008, SC-003, US1 scenarios 2 and 3).
+   */
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "ndjson",
+        "bundlesJson",
+        "bundlesXml",
+        "parquet",
+        "delta",
+        "tables",
+        "bulk",
+        "datasets"
+      })
+  void aNamedTypeHasTheSchemaOfTheSetPlusTheConfiguredAnnotations(@Nonnull final String kind) {
+    final StructType schema = SchemaSetSources.definedPatientSchema(context);
+    SchemaSetSources.write(kind, context, directory, database);
+
+    final Dataset<Row> patients =
+        SchemaSetSources.open(kind, withSchemas(Map.of(PATIENT, schema)), directory, database)
+            .read(PATIENT);
+
+    assertTrue(
+        SchemaEquality.same(schema, patients.schema()),
+        () -> "expected " + schema.treeString() + " but got " + patients.schema().treeString());
+    assertEquals(
+        annotationPaths(SchemaSetSources.expectedSchema(context, PATIENT, schema)),
+        annotationPaths(patients.schema()));
+    final Map<String, String> genders = byId(patients, "gender");
+    final Map<String, String> birthDates = byId(patients, "birthDate");
+    assertEquals(List.of("p1", "p2"), genders.keySet().stream().sorted().toList());
+    assertEquals("female", genders.get("p1"));
+    assertNull(genders.get("p2"));
+    assertEquals("1990-01-01", birthDates.get("p2"));
+    assertNull(birthDates.get("p1"));
+  }
+
+  /**
+   * A type the set does not name is inferred, exactly as the same source infers it without a set,
+   * while the named type beside it is projected (FR-010, US1 scenario 7).
+   */
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "ndjson",
+        "bundlesJson",
+        "bundlesXml",
+        "parquet",
+        "delta",
+        "tables",
+        "bulk",
+        "datasets"
+      })
+  void aPartialSetProjectsTheNamedTypesAndInfersTheRest(@Nonnull final String kind) {
+    final StructType schema = SchemaSetSources.definedPatientSchema(context);
+    SchemaSetSources.write(kind, context, directory, database);
+
+    final QueryableDataSource defined =
+        SchemaSetSources.open(kind, withSchemas(Map.of(PATIENT, schema)), directory, database);
+    final QueryableDataSource inferred =
+        SchemaSetSources.open(kind, context.read(), directory, database);
+
+    assertEquals(inferred.read(CONDITION).schema(), defined.read(CONDITION).schema());
+    assertTrue(SchemaEquality.same(schema, defined.read(PATIENT).schema()));
+  }
+
+  /**
+   * A named type read from NDJSON or bundles is shaped once, by the io defined read: its plan is
+   * that of the io defined read of the same files with the same schema, annotated, with no
+   * projection on top (T019).
+   */
+  @ParameterizedTest
+  @ValueSource(strings = {"ndjson", "bundlesJson", "bundlesXml"})
+  void aTextReadIsShapedOnceByTheDefinedRead(@Nonnull final String kind) {
+    final StructType schema = SchemaSetSources.definedPatientSchema(context);
+    SchemaSetSources.write(kind, context, directory, database);
+
+    final Dataset<Row> patients =
+        SchemaSetSources.open(kind, withSchemas(Map.of(PATIENT, schema)), directory, database)
+            .read(PATIENT);
+
+    final Dataset<Row> expected =
+        context.annotate(definedRead(kind, patients.inputFiles(), schema), PATIENT);
+    assertTrue(
+        patients.queryExecution().analyzed().sameResult(expected.queryExecution().analyzed()),
+        () ->
+            "expected the plan of the io defined read:\n"
+                + expected.queryExecution().analyzed()
+                + "\nbut got:\n"
+                + patients.queryExecution().analyzed());
+  }
+
+  /**
+   * A schema set is a map, and is accepted with more types than {@code Map.of} can take (FR-004,
+   * FR-005).
+   */
+  @Test
+  void aSchemaSetOfMoreThanTenTypesIsAccepted() {
+    final StructType idOnly = new StructType().add("id", DataTypes.StringType);
+    final Map<String, StructType> schemaSet = new HashMap<>();
+    Stream.of(
+            "Observation",
+            "Encounter",
+            "Procedure",
+            "MedicationRequest",
+            "AllergyIntolerance",
+            "Immunization",
+            "DiagnosticReport",
+            "CarePlan",
+            "Claim",
+            "Organization",
+            CONDITION)
+        .forEach(type -> schemaSet.put(type, idOnly));
+    final StructType schema = SchemaSetSources.definedPatientSchema(context);
+    schemaSet.put(PATIENT, schema);
+    SchemaSetSources.write(SchemaSetSources.NDJSON, context, directory, database);
+
+    final QueryableDataSource source =
+        SchemaSetSources.open(SchemaSetSources.NDJSON, withSchemas(schemaSet), directory, database);
+
+    assertTrue(SchemaEquality.same(schema, source.read(PATIENT).schema()));
+    assertTrue(SchemaEquality.same(idOnly, source.read(CONDITION).schema()));
+  }
+
+  /** The Parquet source's own schema option is gone, replaced by the schema set (FR-003). */
+  @Test
+  void parquetWithSchemasIsGone() {
+    assertThrows(
+        NoSuchMethodException.class,
+        () -> DataSourceBuilder.class.getMethod("parquetWithSchemas", String.class, Map.class));
+  }
+
+  /**
+   * A stored field whose name differs from the schema's only in case fails the read, naming the
+   * resource type and both paths, rather than being read as a match or as an unrelated field (spec
+   * edge case "A stored field whose name differs from the defined schema's only in case").
+   */
+  @ParameterizedTest
+  @ValueSource(strings = {"parquet", "delta"})
+  void aStoredFieldDifferingOnlyInCaseFailsTheRead(@Nonnull final String kind) {
+    final StructType schema = SchemaSetSources.definedPatientSchema(context);
+    final Dataset<Row> stored =
+        spark.sql(
+            "SELECT 'Patient' AS resourceType, 'p1' AS id,"
+                + " array(named_struct('Family', 'Smith')) AS name");
+    store(kind, stored);
+    final QueryableDataSource source = open(kind, Map.of(PATIENT, schema));
+
+    final IllegalArgumentException failure =
+        assertThrows(IllegalArgumentException.class, () -> source.read(PATIENT));
+
+    assertNames(failure, PATIENT, "name.Family", "name.family");
+  }
+
+  /**
+   * A stored struct holding two fields whose names differ only in case fails the read, naming the
+   * resource type and both paths, rather than with Spark's ambiguous reference (spec edge case "A
+   * stored field whose name differs from the defined schema's only in case"). Delta refuses to
+   * store such a struct, so only Parquet can hold one.
+   */
+  @Test
+  void aStoredStructWithFieldsDifferingOnlyInCaseFailsTheRead() {
+    final StructType schema = SchemaSetSources.definedPatientSchema(context);
+    final String caseSensitive = spark.conf().get("spark.sql.caseSensitive");
+    spark.conf().set("spark.sql.caseSensitive", "true");
+    try {
+      store(
+          SchemaSetSources.PARQUET,
+          spark.sql("SELECT 'Patient' AS resourceType, 'p1' AS id, 'p2' AS ID, 'male' AS gender"));
+    } finally {
+      spark.conf().set("spark.sql.caseSensitive", caseSensitive);
+    }
+    final QueryableDataSource source = open(SchemaSetSources.PARQUET, Map.of(PATIENT, schema));
+
+    final IllegalArgumentException failure =
+        assertThrows(IllegalArgumentException.class, () -> source.read(PATIENT));
+
+    assertNames(failure, PATIENT, "id", "ID");
+  }
+
+  @Nonnull
+  private static DataSourceBuilder withSchemas(@Nonnull final Map<String, StructType> schemaSet) {
+    return context.read().withSchemas(schemaSet);
+  }
+
+  @Nonnull
+  private QueryableDataSource open(
+      @Nonnull final String kind, @Nonnull final Map<String, StructType> schemaSet) {
+    return SchemaSetSources.open(kind, withSchemas(schemaSet), directory, database);
+  }
+
+  private void store(@Nonnull final String kind, @Nonnull final Dataset<Row> patients) {
+    final String table = directory.resolve("Patient.parquet").toString();
+    if (SchemaSetSources.DELTA.equals(kind)) {
+      patients.write().format("delta").save(table);
+    } else {
+      patients.write().parquet(table);
+    }
+  }
+
+  /**
+   * Returns the io defined read of the files a text source read, as the source reads them: NDJSON
+   * as one document per line, selecting the documents of the type, and bundles as one document per
+   * file.
+   */
+  @Nonnull
+  private static Dataset<Row> definedRead(
+      @Nonnull final String kind, @Nonnull final String[] files, @Nonnull final StructType schema) {
+    final boolean xml = SchemaSetSources.BUNDLES_XML.equals(kind);
+    final FhirFormatReader reader =
+        SchemaSetSources.reader(context)
+            .format(xml ? PathlingContext.FHIR_XML : PathlingContext.FHIR_JSON);
+    if (SchemaSetSources.NDJSON.equals(kind)) {
+      final Dataset<String> lines = spark.read().format("text").load(files).as(Encoders.STRING());
+      final Column type =
+          functions.get_json_object(lines.col(lines.columns()[0]), "$.resourceType");
+      return reader.read(PATIENT, lines.filter(type.isNull().or(type.equalTo(PATIENT))), schema);
+    }
+    return reader.readBundles(
+        PATIENT,
+        spark.read().option("wholetext", true).format("text").load(files).as(Encoders.STRING()),
+        schema);
+  }
+
+  private static void assertNames(
+      @Nonnull final IllegalArgumentException failure, @Nonnull final String... names) {
+    final String message = failure.getMessage();
+    Arrays.stream(names)
+        .forEach(
+            name ->
+                assertTrue(message.contains(name), () -> "should name " + name + ": " + message));
+  }
+
+  /** Returns the dotted path of every annotation field of a schema, at any depth. */
+  @Nonnull
+  private static List<String> annotationPaths(@Nonnull final StructType schema) {
+    return annotationPaths(schema, "").sorted().toList();
+  }
+
+  @Nonnull
+  private static Stream<String> annotationPaths(
+      @Nonnull final DataType type, @Nonnull final String prefix) {
+    if (type instanceof final StructType struct) {
+      return Arrays.stream(struct.fields()).flatMap(field -> annotationPaths(field, prefix));
+    } else if (type instanceof final ArrayType array) {
+      return annotationPaths(array.elementType(), prefix);
+    } else if (type instanceof final MapType map) {
+      return annotationPaths(map.valueType(), prefix);
+    }
+    return Stream.empty();
+  }
+
+  @Nonnull
+  private static Stream<String> annotationPaths(
+      @Nonnull final StructField field, @Nonnull final String prefix) {
+    final String path = prefix + field.name();
+    return AnnotationNames.isAnnotation(field.name())
+        ? Stream.of(path)
+        : annotationPaths(field.dataType(), path + ".");
+  }
+}

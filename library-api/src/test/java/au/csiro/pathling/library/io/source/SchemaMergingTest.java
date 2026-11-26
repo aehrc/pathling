@@ -22,12 +22,14 @@ import static au.csiro.pathling.library.io.DivergentBatches.byId;
 import static au.csiro.pathling.library.io.DivergentBatches.nameFields;
 import static au.csiro.pathling.library.io.DivergentBatches.names;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.TestHelpers;
 import au.csiro.pathling.library.io.DivergentBatches;
+import au.csiro.pathling.library.io.SchemaEquality;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
@@ -36,6 +38,7 @@ import java.util.Set;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -133,56 +136,60 @@ class SchemaMergingTest {
   }
 
   /**
-   * A supplied schema is used as given, so the files' footers need not be merged on every read, and
-   * one that covers the union of the files returns everything a merge would (T118).
+   * A schema set naming a schema equal to the union of the files returns everything a merge would,
+   * with the union's schema (FR-003, FR-008).
    */
   @Test
-  void aSuppliedSchemaIsUsedInsteadOfMerging() {
+  void aSchemaSetEqualToTheUnionReturnsTheUnionsData() {
     final String table = DivergentBatches.writeParquet(context, warehouse.toString());
     final StructType union = spark.read().option("mergeSchema", "true").parquet(table).schema();
 
     final Dataset<Row> patients =
         context
             .read()
-            .parquetWithSchemas(warehouse.toString(), Map.of(RESOURCE_TYPE, union))
+            .withSchemas(Map.of(RESOURCE_TYPE, union))
+            .parquet(warehouse.toString())
             .read(RESOURCE_TYPE);
 
-    assertEquals(union, patients.schema());
+    assertTrue(SchemaEquality.same(union, patients.schema()));
     assertEquals(
         List.of("p1:Alpha:", "p1:Beta:", "p2:Gamma:", "p3::Delta", "p4::Epsilon Zeta", "p4::Eta"),
         names(patients));
   }
 
   /**
-   * A supplied schema narrower than the files is still used as given, and the columns it omits are
-   * not read. This is why the opt-out is safe only while the schema covers the union of the files:
-   * it trades the merge for the caller's guarantee, deterministically rather than by listing order.
+   * A schema set naming a schema narrower than the files is projected to: the output has exactly
+   * that schema, the columns it omits are dropped, and every resource of every file is kept
+   * (FR-003, FR-006, FR-008).
    */
   @Test
-  void aSuppliedSchemaNarrowerThanTheFilesIsUsedAsGiven() {
+  void aSchemaSetNarrowerThanTheFilesIsProjectedTo() {
     DivergentBatches.writeParquet(context, warehouse.toString());
     final StructType firstOnly = DivergentBatches.first(context).schema();
 
     final Dataset<Row> patients =
         context
             .read()
-            .parquetWithSchemas(warehouse.toString(), Map.of(RESOURCE_TYPE, firstOnly))
+            .withSchemas(Map.of(RESOURCE_TYPE, firstOnly))
+            .parquet(warehouse.toString())
             .read(RESOURCE_TYPE);
 
-    assertEquals(firstOnly, patients.schema());
+    assertTrue(SchemaEquality.same(firstOnly, patients.schema()));
+    assertFalse(Arrays.asList(patients.schema().fieldNames()).contains("birthDate"));
     assertEquals(Set.of("p1", "p2", "p3", "p4"), byId(patients, "gender").keySet());
   }
 
-  /** A resource type the supplied schemas do not name is merged as usual. */
+  /** A resource type the schema set does not name is merged as usual (FR-010). */
   @Test
-  void typesWithoutASuppliedSchemaAreMerged() {
+  void typesTheSchemaSetDoesNotNameAreMerged() {
     DivergentBatches.writeParquet(context, warehouse.toString());
-    final StructType unrelated = DivergentBatches.first(context).schema();
+    final StructType observation = new StructType().add("id", DataTypes.StringType);
 
     final Dataset<Row> patients =
         context
             .read()
-            .parquetWithSchemas(warehouse.toString(), Map.of("Observation", unrelated))
+            .withSchemas(Map.of("Observation", observation))
+            .parquet(warehouse.toString())
             .read(RESOURCE_TYPE);
 
     assertTrue(

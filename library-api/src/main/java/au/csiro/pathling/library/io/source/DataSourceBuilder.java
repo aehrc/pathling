@@ -79,6 +79,18 @@ public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layout
   }
 
   /**
+   * Returns a builder whose every source projects each resource type the given schema set names to
+   * its schema, and infers every other type as usual.
+   *
+   * @param schemaSet the schema of each resource type to project, keyed by resource type code
+   * @return a builder with the given schema set
+   */
+  @Nonnull
+  public DataSourceBuilder withSchemas(@Nonnull final Map<String, StructType> schemaSet) {
+    throw new UnsupportedOperationException("Not implemented yet");
+  }
+
+  /**
    * Creates a new data source from a directory containing NDJSON encoded FHIR resource data, with
    * filenames containing the resource type the file contains, e.g. "Patient.ndjson" should contain
    * only Patient resources.
