@@ -37,8 +37,8 @@ independently.
 - [x] T003 [P] Confirm which Spark type the inferred JSON read, with `FhirJsonReader`'s options,
       gives a FHIR decimal. Record the reproduction and the result in
       `specs/2881-defined-schemas/evidence/decimal-read.md`, and name that type in
-      `specs/2881-defined-schemas/research.md` R3. The defined read uses the same type (parity
-      wins over the lexical form).
+      `specs/2881-defined-schemas/research.md` R3. The type is data-dependent, so the owner fixed
+      the defined read's type at gate B: `string`, with a decimal's parity held in value (R3).
 - [x] T004 [P] Confirm with the Pathling owner how a resource type that the schema set names but
       the source lacks should behave. Decided: today's behaviour is kept, and an empty table is the
       follow-up #2997. No tasks are added.
@@ -97,8 +97,10 @@ uses.
     - a read without a schema is unchanged (FR-020).
 - [ ] T009 [P] Test path parity in `io/…/io/DefinedSchemaParityTest.java`:
     - the same resources as JSON, as XML, and as stored PoF Parquet projected through `Projection`
-      and `Annotator`, with the same schema, give equal data (FR-009, SC-004);
-    - a defined load whose schema equals the inferred schema gives the inferred load (FR-021a);
+      and `Annotator`, with the same schema, give equal data, a decimal equal in value (FR-009,
+      SC-004);
+    - a defined load whose schema equals the inferred schema gives the inferred load, a decimal
+      equal in value (FR-021a, R3);
     - JSON bundles and XML bundles read with and without a schema give equal data, including
       `urn:uuid` references between entries resolved by `BundleResource.resolve` (research R4).
 - [ ] T010 [P] Test that the defined reads of a streaming dataset (a `MemoryStream` of strings)

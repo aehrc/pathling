@@ -35,7 +35,7 @@
     - booleans stay boolean;
     - text, dates and codes become string;
     - `base64Binary` becomes string;
-    - decimal becomes the type the inferred JSON read gives it (see R3).
+    - decimal becomes string (see R3).
 
     Metadata groups `_name` become `{id, extension}` structs where the definitions allow them
     (`MetadataGroups.holdsMetadata`). Repeating elements become arrays, and complex elements become
@@ -52,20 +52,28 @@
 
 ## R3. Decimal read type
 
-- **Decision**: The derived shape reads a decimal exactly as the inferred JSON read does today,
-  with the same reader options from `FhirJsonReader.json(spark)`. Parity with the inferred load
-  wins over keeping the lexical form: if the inferred read gives a double, so does the defined
-  read. T003 only confirms which type the inferred read gives, recorded in
-  `evidence/decimal-read.md`.
+- **Decision** (owner, 2026-11-26, gate B): The derived shape reads a decimal as `string`, with the
+  same reader options from `FhirJsonReader.json(spark)`. `from_json` gives a number read as text
+  the text Spark makes of it, and `toLayout` stores that text. A decimal's parity with the inferred
+  load is equality in value, not in text (FR-009, FR-021a).
 - **Measured (T003)**: the inferred read gives a decimal `double` wherever a value of the element
   in the dataset has a fraction or an exponent, and otherwise `bigint`, or `decimal(p,0)` where an
-  integer is beyond the range of a long. It stores the text of that number as `string`. So the type
-  depends on the data, and a defined read given `double` stores `100.0` where the inferred read of
-  integer-only data stores `100` (`evidence/decimal-read.md`). This is open for the owner at gate B.
-- **Rationale**: FR-009 and FR-021a need the defined load to equal the inferred load of the same
-  data with the same schema. The survey could not confirm the reader's behaviour from code alone.
-- **Alternatives considered**: Always double. This would lose precision relative to the inferred
-  path if that path keeps text.
+  integer is beyond the range of a long. It stores the text of that number as `string`. The type
+  therefore depends on the data, and no fixed type stores the inferred read's text for every
+  dataset (`evidence/decimal-read.md`). With `string`, the defined read stores the same text as the
+  inferred read for integer-only and fraction-only data. On data mixing the two it keeps an
+  integer's digits (`100`) where the inferred read stores `100.0`, and keeps an integer whole where
+  the inferred read rounds it through a double. Neither keeps the lexical form: both store `1.1`
+  for `1.10`.
+- **Rationale**: Since the inferred type depends on the data, textual parity cannot hold for every
+  dataset. `string` departs from the inferred read only where that read went through a double, and
+  there it is nearer the source.
+- **Alternatives considered**:
+    - `double`, the earlier decision: the same text as the inferred read wherever the data holds a
+      fraction, but `100.0` for `100` in integer-only data, which small fixtures and YAML cases
+      often are, and an integer beyond a double's precision rounded.
+    - `bigint`: fails the read on any fraction.
+    - `decimal(38,18)`: pads every value to 18 places and fails beyond its precision.
 
 ## R4. Non-bundle JSON documents
 
@@ -82,8 +90,8 @@
     call in `FhirXmlReader`'s private `toLayout`. So `urn:uuid` references within a bundle resolve
     the same with and without a schema.
 
-- **Rationale**: `spark.read.json(Dataset)` goes through an RDD even when a schema is given, so it
-  is not stream-safe. T002 confirms this in `evidence/stream-safety.md`, together with the steps a
+- **Rationale**: `spark.read.json(Dataset)` fails over a streaming dataset even when a schema is
+  given: Spark's check of the query refuses it when it is built, without running a job. T002 confirms this in `evidence/stream-safety.md`, together with the steps a
   defined bundle read keeps: the bundle splitter UDF followed by `explode` over a streaming
   dataset, and `from_xml` over a streaming dataset.
 

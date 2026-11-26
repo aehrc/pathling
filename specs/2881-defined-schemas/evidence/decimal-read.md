@@ -51,7 +51,8 @@ resources it differs from the JSON read wherever the JSON read went through a do
   stores `100.0` where the inferred read of the same data stores `100`.
 - No one fixed type gives the defined read parity with the inferred read of the same data
   (FR-021a) for every dataset. Which type to fix, and what parity then means for a decimal, is the
-  owner's choice at gate B.
+  owner's choice at gate B. Decided on 2026-11-26: `string`, with a decimal's parity held in
+  value (research R3).
 - JSON and XML of the same resources already store different text for a decimal today (owner,
   2026-10-22). FR-009 requires equal data from JSON and XML loaded with the same schema, and no
   type given to the JSON read makes them equal: even `string` gives `1.1` for `1.10`.
