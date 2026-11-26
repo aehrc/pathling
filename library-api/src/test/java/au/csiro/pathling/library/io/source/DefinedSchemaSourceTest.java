@@ -407,6 +407,35 @@ class DefinedSchemaSourceTest {
     assertEquals(inferred, defined);
   }
 
+  /**
+   * A dataset source derived by mapping or filtering keeps the schema set, so a dataset added to it
+   * afterwards is projected onto the set's schema, plus the configured annotations.
+   */
+  @ParameterizedTest
+  @ValueSource(strings = {"map", "filter"})
+  void aDerivedDatasetSourceKeepsTheSchemaSet(@Nonnull final String derivation) {
+    final StructType schema = SchemaSetSources.definedPatientSchema(context);
+    final DatasetSource original =
+        withSchemas(Map.of(PATIENT, schema))
+            .datasets()
+            .dataset(CONDITION, SchemaSetSources.encodedConditions(context));
+    final DatasetSource derived =
+        (DatasetSource)
+            ("map".equals(derivation)
+                ? original.map((type, dataset) -> dataset)
+                : original.filterByResourceType(type -> true));
+
+    final Dataset<Row> patients =
+        derived.dataset(PATIENT, SchemaSetSources.encodedPatients(context)).read(PATIENT);
+
+    assertTrue(
+        SchemaEquality.same(schema, patients.schema()),
+        () -> "expected " + schema.treeString() + " but got " + patients.schema().treeString());
+    assertEquals(
+        annotationPaths(SchemaSetSources.expectedSchema(context, PATIENT, schema)),
+        annotationPaths(patients.schema()));
+  }
+
   /** A schema set with a null key is refused with an IllegalArgumentException. */
   @Test
   void aSchemaSetWithANullKeyIsRefused() {
