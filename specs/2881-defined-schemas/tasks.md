@@ -208,7 +208,7 @@ schema)` and `layoutSchema(type, schema)` in
       `io/src/main/java/au/csiro/pathling/io/XmlIngestShape.java` and skipping the inference read
       (research R5). The bundle overload keeps the splitter UDF, the references column and the
       `BundleResource.resolve` call of the private `toLayout`, as the inferred bundle read does.
-- [ ] T018 [P] Implement the schema-equality helpers that T011 tests:
+- [x] T018 [P] Implement the schema-equality helpers that T011 tests:
       `library-api/src/test/java/au/csiro/pathling/library/io/SchemaEquality.java` (removing
       annotation fields with `AnnotationNames.isAnnotation`),
       `lib/python/tests/schema_equality.py` (`same_schema`, `same_schema_set`, over `StructType`)
