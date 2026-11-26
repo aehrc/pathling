@@ -18,7 +18,6 @@
 package au.csiro.pathling.cache;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.spark.sql.functions.desc;
 
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
@@ -178,7 +177,8 @@ public class CacheableDatabase implements Cacheable {
   }
 
   /**
-   * Queries a Delta table for the latest update time.
+   * Queries a Delta table for the latest update time. Only the latest commit is read, rather than
+   * the whole history retained in the log.
    *
    * @param deltaTable the Delta table to query
    * @return the latest update time, or empty if no update time could be determined
@@ -186,8 +186,7 @@ public class CacheableDatabase implements Cacheable {
   @Nonnull
   private static Optional<Long> latestUpdateToTable(@Nonnull final DeltaTable deltaTable) {
     @SuppressWarnings("RedundantCast")
-    final Row[] head =
-        (Row[]) deltaTable.history().orderBy(desc("version")).select("timestamp").head(1);
+    final Row[] head = (Row[]) deltaTable.history(1).select("timestamp").head(1);
     if (head.length != 1) {
       return Optional.empty();
     } else {
