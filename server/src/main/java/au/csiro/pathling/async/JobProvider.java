@@ -19,6 +19,7 @@ package au.csiro.pathling.async;
 
 import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
+import static au.csiro.pathling.security.SecurityAspect.isOwner;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.config.ServerConfiguration;
@@ -49,7 +50,6 @@ import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.hl7.fhir.r4.model.Parameters;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -110,7 +110,7 @@ public class JobProvider {
       checkHasAuthority(PathlingAuthority.operationAccess(job.getOperation()));
       final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
       final Optional<String> currentUserId = getCurrentUserId(authentication);
-      if (!job.getOwnerId().equals(currentUserId)) {
+      if (!isOwner(job.getOwnerId(), currentUserId)) {
         throw new AccessDeniedError("The requested job is not owned by the current user");
       }
     }
@@ -153,14 +153,14 @@ public class JobProvider {
       // Check that the user requesting the job status is the same user that started the job.
       final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
       final Optional<String> currentUserId = getCurrentUserId(authentication);
-      if (!job.getOwnerId().equals(currentUserId)) {
+      if (!isOwner(job.getOwnerId(), currentUserId)) {
         throw new AccessDeniedError("The requested job is not owned by the current user");
       }
     }
     return handleJobGetRequest(request, response, job);
   }
 
-  private @NotNull Job<?> getJob(@Nullable final String id) {
+  private @Nonnull Job<?> getJob(@Nullable final String id) {
     // Validate that the ID looks reasonable.
     if (id == null || !ID_PATTERN.matcher(id).matches()) {
       throw new ResourceNotFoundError("Job ID not found");
@@ -268,9 +268,9 @@ public class JobProvider {
   }
 
   private IBaseResource handleJobGetRequest(
-      @NotNull final HttpServletRequest request,
+      @Nonnull final HttpServletRequest request,
       @Nullable final HttpServletResponse response,
-      @NotNull final Job<?> job) {
+      @Nonnull final Job<?> job) {
     if (job.getResult().isCancelled()) {
       throw handleCancelledJob();
     }

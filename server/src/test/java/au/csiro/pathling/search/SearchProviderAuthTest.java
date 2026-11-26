@@ -25,9 +25,9 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.PathlingContext;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Map;
 import org.apache.spark.sql.Dataset;
@@ -56,7 +56,7 @@ class SearchProviderAuthTest {
 
   @Mock private ServerConfiguration configuration;
   @Mock private DataSource dataSource;
-  @Mock private FhirEncoders fhirEncoders;
+  @Mock private PathlingContext pathlingContext;
   @Mock private Dataset<Row> dataset;
 
   private SearchProvider searchProvider;
@@ -74,7 +74,7 @@ class SearchProviderAuthTest {
     lenient().when(dataSource.read("Patient")).thenReturn(dataset);
 
     searchProvider =
-        new SearchProvider(configuration, fhirContext, dataSource, fhirEncoders, Patient.class);
+        new SearchProvider(configuration, fhirContext, dataSource, pathlingContext, Patient.class);
   }
 
   @AfterEach

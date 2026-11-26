@@ -24,13 +24,14 @@
  * reference. Also verifies the "Terminology" editor, whose rows bind a label to
  * a typed value set or concept map canonical URL, and that a parameter row
  * describes its parameter completely - name, type, value and remove - with no
- * default-value field, and that invalid values and duplicate names are marked
- * on the row.
+ * default-value field, that invalid values and duplicate names are marked on
+ * the row, and that adding a row moves focus to its first field.
  *
  * @author John Grimes
  */
 
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { render, screen } from "../../../test/testUtils";
@@ -80,10 +81,13 @@ function renderTab(
   const onTablesChange = vi.fn();
   const onTerminologyChange = vi.fn();
   const onParametersChange = vi.fn();
+  const onUrlChange = vi.fn();
   render(
     <SqlQueryInlineTab
       title=""
       onTitleChange={vi.fn()}
+      url=""
+      onUrlChange={onUrlChange}
       sql=""
       onSqlChange={vi.fn()}
       tables={overrides.tables ?? []}
@@ -97,7 +101,7 @@ function renderTab(
       sqlViews={overrides.sqlViews ?? SQL_VIEWS}
     />,
   );
-  return { user, onTablesChange, onTerminologyChange, onParametersChange };
+  return { user, onTablesChange, onTerminologyChange, onParametersChange, onUrlChange };
 }
 
 /**
@@ -413,5 +417,120 @@ describe("SqlQueryInlineTab parameter rows", () => {
     });
 
     expect(screen.queryByText(/duplicate parameter name/i)).toBeNull();
+  });
+});
+
+describe("SqlQueryInlineTab canonical URL", () => {
+  // The canonical URL is what other queries bind a saved SQL view by, so the
+  // tab offers a field for it and reports what is typed.
+  it("reports the typed canonical URL", async () => {
+    const { user, onUrlChange } = renderTab();
+
+    await user.type(screen.getByRole("textbox", { name: "Library canonical URL" }), "h");
+
+    expect(onUrlChange).toHaveBeenCalledWith("h");
+  });
+});
+
+/**
+ * Renders the inline tab with its rows held in real state, so that a row added
+ * through the tab is rendered back into it as the SQL query form does.
+ *
+ * @param initial - The rows present when the tab first renders.
+ * @param initial.tables - The initial view rows.
+ * @param initial.terminology - The initial terminology rows.
+ * @param initial.parameters - The initial parameter rows.
+ * @returns The userEvent instance.
+ */
+function renderStatefulTab(
+  initial: {
+    tables?: SqlQueryRelatedArtifact[];
+    terminology?: SqlQueryRelatedArtifact[];
+    parameters?: SqlQueryParameterDeclaration[];
+  } = {},
+) {
+  const user = userEvent.setup();
+
+  /**
+   * Holds the tab's rows in state.
+   *
+   * @returns The inline tab bound to state.
+   */
+  function Harness() {
+    const [tables, setTables] = useState(initial.tables ?? []);
+    const [terminology, setTerminology] = useState(initial.terminology ?? []);
+    const [parameters, setParameters] = useState(initial.parameters ?? []);
+    return (
+      <SqlQueryInlineTab
+        title=""
+        onTitleChange={vi.fn()}
+        url=""
+        onUrlChange={vi.fn()}
+        sql=""
+        onSqlChange={vi.fn()}
+        tables={tables}
+        onTablesChange={setTables}
+        terminology={terminology}
+        onTerminologyChange={setTerminology}
+        parameters={parameters}
+        onParametersChange={setParameters}
+        duplicateNames={new Set()}
+        viewDefinitions={VIEW_DEFINITIONS}
+        sqlViews={SQL_VIEWS}
+      />
+    );
+  }
+
+  render(<Harness />);
+  return { user };
+}
+
+describe("SqlQueryInlineTab focus on add", () => {
+  // Adding a view moves focus to its label, so the user can type straight away.
+  it("focuses the label of a newly added view", async () => {
+    const { user } = renderStatefulTab();
+
+    await user.click(screen.getByRole("button", { name: /add view/i }));
+
+    expect(screen.getByRole("textbox", { name: "Label for view 1" })).toHaveFocus();
+  });
+
+  // With existing rows, focus goes to the new row, not the first one.
+  it("focuses the label of the new view rather than an existing one", async () => {
+    const { user } = renderStatefulTab({ tables: [EMPTY_ROW] });
+
+    await user.click(screen.getByRole("button", { name: /add view/i }));
+
+    expect(screen.getByRole("textbox", { name: "Label for view 2" })).toHaveFocus();
+  });
+
+  // Adding a value set or concept map moves focus to its label.
+  it("focuses the label of a newly added terminology row", async () => {
+    const { user } = renderStatefulTab();
+
+    await user.click(screen.getByRole("button", { name: /add value set or concept map/i }));
+
+    expect(screen.getByRole("textbox", { name: "Label for terminology 1" })).toHaveFocus();
+  });
+
+  // Adding a parameter moves focus to its name.
+  it("focuses the name of a newly added parameter", async () => {
+    const { user } = renderStatefulTab({ parameters: [makeParam()] });
+
+    await user.click(screen.getByRole("button", { name: /add parameter/i }));
+
+    expect(screen.getByRole("textbox", { name: "Name for parameter 2" })).toHaveFocus();
+  });
+
+  // Rows loaded with the form, such as those of a stored query, were not added
+  // by the user, so rendering them leaves focus where it was.
+  it("does not focus rows present when the tab renders", () => {
+    renderStatefulTab({
+      tables: [EMPTY_ROW],
+      terminology: [{ rowId: "t1", label: "cvd", referenceUrl: "" }],
+      parameters: [makeParam()],
+    });
+
+    expect(document.body).toHaveFocus();
   });
 });

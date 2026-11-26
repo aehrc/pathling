@@ -137,6 +137,24 @@ describe("ExportForm type filters", () => {
       expect(screen.getAllByRole("combobox")).toHaveLength(4);
     });
 
+    // Adding a type filter moves focus to its resource type selector.
+    it("focuses the resource type selector of the new type filter", async () => {
+      const user = userEvent.setup();
+      render(
+        <ExportForm
+          onSubmit={mockOnSubmit}
+          resourceTypes={defaultResourceTypes}
+          searchParams={defaultSearchParams}
+        />,
+      );
+
+      await user.click(screen.getByRole("button", { name: /add type filter/i }));
+      expect(getCombobox(2)).toHaveFocus();
+
+      await user.click(screen.getByRole("button", { name: /add type filter/i }));
+      expect(getCombobox(3)).toHaveFocus();
+    });
+
     it("removes a type filter entry when the remove button is clicked", async () => {
       const user = userEvent.setup();
       render(

@@ -25,14 +25,19 @@ import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.util.TestDataSetup;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
@@ -49,15 +54,24 @@ import org.junit.jupiter.api.parallel.ResourceLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 /**
  * Integration tests for OAuth2 authentication in the $bulk-submit operation. Tests the SMART
  * Backend Services flow for authenticated file downloads.
+ *
+ * <p>Submitter credentials are only usable with authentication enabled, so the server runs with
+ * authentication enabled and a mocked JWT decoder. The submitter's own allowable sources cover the
+ * WireMock server that plays its FHIR server, while the shared allowable sources cover a second
+ * WireMock server that plays a different host.
  *
  * @author John Grimes
  * @see <a href="https://hl7.org/fhir/smart-app-launch/backend-services.html">SMART Backend
@@ -71,26 +85,28 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @TestPropertySource(
     properties = {
       "pathling.async.enabled=true",
-      // Configure submitter with OAuth credentials for symmetric (client_secret) auth.
-      "pathling.bulk-submit.allowed-submitters[0].system=http://example.org/submitters",
-      "pathling.bulk-submit.allowed-submitters[0].value=oauth-submitter",
-      "pathling.bulk-submit.allowed-submitters[0].clientId=test-client-id",
-      "pathling.bulk-submit.allowed-submitters[0].clientSecret=test-client-secret",
-      "pathling.bulk-submit.allowed-submitters[0].scope=system/*.read"
+      "pathling.auth.enabled=true",
+      "pathling.auth.issuer=https://pathling.acme.com/fhir"
     })
+@MockitoBean(types = OidcConfiguration.class)
 class BulkSubmitOAuthIT {
 
   private static final String SUBMITTER_SYSTEM = "http://example.org/submitters";
   private static final String SUBMITTER_VALUE = "oauth-submitter";
   private static final String TEST_ACCESS_TOKEN = "test-oauth-access-token-12345";
+  private static final String CALLER_ACCESS_TOKEN = "caller-access-token";
 
   private static WireMockServer wireMockServer;
+
+  private static WireMockServer otherHostServer;
 
   @LocalServerPort int port;
 
   @Autowired WebTestClient webTestClient;
 
   @Autowired BulkSubmitAuthProvider authProvider;
+
+  @MockitoBean private JwtDecoder jwtDecoder;
 
   @TempDir private static Path warehouseDir;
 
@@ -100,15 +116,20 @@ class BulkSubmitOAuthIT {
   static void setupWireMock() {
     wireMockServer = new WireMockServer(WireMockConfiguration.options().dynamicPort());
     wireMockServer.start();
-    log.info("WireMock server started on port: {}", wireMockServer.port());
+    otherHostServer = new WireMockServer(WireMockConfiguration.options().dynamicPort());
+    otherHostServer.start();
+    log.info(
+        "WireMock servers started on ports: {}, {}", wireMockServer.port(), otherHostServer.port());
   }
 
   @AfterAll
   static void tearDownWireMock() {
-    if (wireMockServer != null && wireMockServer.isRunning()) {
-      wireMockServer.stop();
-      log.info("WireMock server stopped");
+    for (final WireMockServer server : List.of(wireMockServer, otherHostServer)) {
+      if (server != null && server.isRunning()) {
+        server.stop();
+      }
     }
+    log.info("WireMock servers stopped");
   }
 
   @DynamicPropertySource
@@ -117,24 +138,49 @@ class BulkSubmitOAuthIT {
     TestDataSetup.copyTestDataToTempDir(warehouseDir, "Condition");
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir.toAbsolutePath());
     registry.add("pathling.bulk-submit.staging-directory", stagingDir::toString);
-    // The allowable source must include the WireMock port. Bare "http://localhost" (port 80)
-    // no longer matches "http://localhost:{port}" under the URI-aware UrlAllowlist matching.
+    // Configure submitter with OAuth credentials for symmetric (client_secret) auth. Spring binds a
+    // list from a single property source, so every property of the submitter is set here, where
+    // its allowable sources must be. The allowable sources must include the WireMock port. Bare
+    // "http://localhost" (port 80) does not match "http://localhost:{port}" under the URI-aware
+    // UrlAllowlist matching.
+    final String submitter = "pathling.bulk-submit.allowed-submitters[0].";
+    registry.add(submitter + "system", () -> SUBMITTER_SYSTEM);
+    registry.add(submitter + "value", () -> SUBMITTER_VALUE);
+    registry.add(submitter + "clientId", () -> "test-client-id");
+    registry.add(submitter + "clientSecret", () -> "test-client-secret");
+    registry.add(submitter + "scope", () -> "system/*.read");
+    registry.add(
+        submitter + "allowable-sources[0]", () -> "http://localhost:" + wireMockServer.port());
     registry.add(
         "pathling.bulk-submit.allowable-sources[0]",
-        () -> "http://localhost:" + wireMockServer.port());
+        () -> "http://localhost:" + otherHostServer.port());
   }
 
   @BeforeEach
   void setup() {
+    // The mocked decoder accepts the caller's token and grants it the super authority, so that the
+    // bulk submit, import and status operations are all permitted.
+    final Jwt jwt =
+        Jwt.withTokenValue(CALLER_ACCESS_TOKEN)
+            .header("alg", "none")
+            .subject("test-user")
+            .claim("authorities", List.of("pathling"))
+            .issuedAt(Instant.now())
+            .expiresAt(Instant.now().plusSeconds(3600))
+            .build();
+    when(jwtDecoder.decode(CALLER_ACCESS_TOKEN)).thenReturn(jwt);
+
     webTestClient =
         webTestClient
             .mutate()
+            .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + CALLER_ACCESS_TOKEN)
             .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
             .responseTimeout(Duration.ofMinutes(2))
             .build();
 
     // Reset WireMock stubs before each test.
     wireMockServer.resetAll();
+    otherHostServer.resetAll();
 
     // Clear the auth provider's token cache to ensure test isolation.
     authProvider.clearTokenCache();
@@ -553,6 +599,55 @@ class BulkSubmitOAuthIT {
         .is4xxClientError();
 
     log.info("Disallowed oauthMetadataUrl correctly rejected");
+  }
+
+  @Test
+  void rejectsManifestUrlAndFhirBaseUrlOnHostOutsideSubmitterSources() {
+    // The other host is covered by the shared allowable sources but not by the submitter's own.
+    // Requests that name the submitter with a manifestUrl or a fhirBaseUrl on the other host are
+    // rejected, no token is requested with the submitter's credentials, and the other host
+    // receives no requests.
+    setupSmartDiscoveryStub();
+    setupTokenEndpointStub();
+    final String submitterBase = "http://localhost:" + wireMockServer.port();
+    final String otherBase = "http://localhost:" + otherHostServer.port();
+
+    // A manifestUrl on the other host, with the submitter's own FHIR base.
+    postBulkSubmitExpectingRejection(
+        buildBulkSubmitRequest(
+            UUID.randomUUID().toString(), "in-progress", otherBase + "/m.json", submitterBase),
+        "manifestUrl");
+
+    // A fhirBaseUrl on the other host, with a manifest on the submitter's own host.
+    postBulkSubmitExpectingRejection(
+        buildBulkSubmitRequest(
+            UUID.randomUUID().toString(),
+            "in-progress",
+            submitterBase + "/manifest.json",
+            otherBase + "/fhir"),
+        "fhirBaseUrl");
+
+    wireMockServer.verify(0, postRequestedFor(urlEqualTo("/oauth/token")));
+    assertThat(otherHostServer.getAllServeEvents()).isEmpty();
+  }
+
+  private void postBulkSubmitExpectingRejection(
+      final String requestBody, final String rejectedParameter) {
+    webTestClient
+        .post()
+        .uri("http://localhost:" + port + "/fhir/$bulk-submit")
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .bodyValue(requestBody)
+        .exchange()
+        .expectStatus()
+        .isBadRequest()
+        .expectBody(String.class)
+        .value(
+            body ->
+                assertThat(body)
+                    .contains(rejectedParameter)
+                    .contains("does not match any allowed source prefixes"));
   }
 
   @Test

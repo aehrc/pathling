@@ -20,7 +20,6 @@ package au.csiro.pathling.search;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -36,7 +35,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
@@ -58,11 +56,7 @@ class SearchExecutorTest {
 
   @Autowired private FhirContext fhirContext;
 
-  @Autowired private SparkSession sparkSession;
-
   @Autowired private PathlingContext pathlingContext;
-
-  @Autowired private FhirEncoders fhirEncoders;
 
   private CustomObjectDataSource dataSource;
 
@@ -84,7 +78,7 @@ class SearchExecutorTest {
       patients.add(patient);
     }
 
-    dataSource = new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, patients);
+    dataSource = new CustomObjectDataSource(pathlingContext, patients);
   }
 
   @Test
@@ -92,7 +86,7 @@ class SearchExecutorTest {
     // When: search without any filters.
     final IBundleProvider result =
         new SearchExecutor(
-            fhirContext, dataSource, fhirEncoders, "Patient", null, Optional.empty(), false);
+            fhirContext, dataSource, pathlingContext, "Patient", null, Optional.empty(), false);
 
     // Then: returns all Patient resources.
     assertThat(result.size()).isEqualTo(50);
@@ -110,7 +104,7 @@ class SearchExecutorTest {
     // When: search with filter.
     final IBundleProvider result =
         new SearchExecutor(
-            fhirContext, dataSource, fhirEncoders, "Patient", null, Optional.of(filters), false);
+            fhirContext, dataSource, pathlingContext, "Patient", null, Optional.of(filters), false);
 
     // Then: returns only male patients (25 of 50).
     assertThat(result.size()).isEqualTo(25);
@@ -134,7 +128,7 @@ class SearchExecutorTest {
     // When: search with AND filters.
     final IBundleProvider result =
         new SearchExecutor(
-            fhirContext, dataSource, fhirEncoders, "Patient", null, Optional.of(filters), false);
+            fhirContext, dataSource, pathlingContext, "Patient", null, Optional.of(filters), false);
 
     // Then: returns patients matching both conditions (17 female AND active).
     assertThat(result.size()).isEqualTo(17);
@@ -162,7 +156,7 @@ class SearchExecutorTest {
     // When: search with OR filters.
     final IBundleProvider result =
         new SearchExecutor(
-            fhirContext, dataSource, fhirEncoders, "Patient", null, Optional.of(filters), false);
+            fhirContext, dataSource, pathlingContext, "Patient", null, Optional.of(filters), false);
 
     // Then: returns patients matching either condition (all 50).
     assertThat(result.size()).isEqualTo(50);
@@ -182,7 +176,7 @@ class SearchExecutorTest {
     // Given: a search that returns 50 patients.
     final IBundleProvider result =
         new SearchExecutor(
-            fhirContext, dataSource, fhirEncoders, "Patient", null, Optional.empty(), false);
+            fhirContext, dataSource, pathlingContext, "Patient", null, Optional.empty(), false);
 
     // When: retrieving pages of 10.
     final int pageSize = 10;
@@ -211,7 +205,7 @@ class SearchExecutorTest {
     // When: search with filter.
     final IBundleProvider result =
         new SearchExecutor(
-            fhirContext, dataSource, fhirEncoders, "Patient", null, Optional.of(filters), false);
+            fhirContext, dataSource, pathlingContext, "Patient", null, Optional.of(filters), false);
 
     // Then: returns empty result (not an error).
     assertThat(result.size()).isEqualTo(0);
@@ -226,7 +220,7 @@ class SearchExecutorTest {
     // When: search with filter.
     final IBundleProvider result =
         new SearchExecutor(
-            fhirContext, dataSource, fhirEncoders, "Patient", null, Optional.of(filters), false);
+            fhirContext, dataSource, pathlingContext, "Patient", null, Optional.of(filters), false);
 
     // Then: returns patients with given names (truthy semantics: non-empty = true).
     assertThat(result.size()).isEqualTo(50);
@@ -244,7 +238,7 @@ class SearchExecutorTest {
                 new SearchExecutor(
                     fhirContext,
                     dataSource,
-                    fhirEncoders,
+                    pathlingContext,
                     "Patient",
                     null,
                     Optional.of(filters),
@@ -264,12 +258,11 @@ class SearchExecutorTest {
         new SearchExecutor(
             fhirContext,
             dataSource,
-            fhirEncoders,
+            pathlingContext,
             "Patient",
             null,
             Optional.of(filters),
-            true // cacheResults enabled
-            );
+            true); // cacheResults enabled
 
     // Then: results are still correctly returned (25 male patients).
     assertThat(result.size()).isEqualTo(25);
@@ -286,7 +279,7 @@ class SearchExecutorTest {
         new SearchExecutor(
             fhirContext,
             dataSource,
-            fhirEncoders,
+            pathlingContext,
             "Patient",
             "gender=male",
             Optional.empty(),
@@ -306,7 +299,7 @@ class SearchExecutorTest {
         new SearchExecutor(
             fhirContext,
             dataSource,
-            fhirEncoders,
+            pathlingContext,
             "Patient",
             "birthdate=ge1990-01-01",
             Optional.empty(),
@@ -332,7 +325,7 @@ class SearchExecutorTest {
         new SearchExecutor(
             fhirContext,
             dataSource,
-            fhirEncoders,
+            pathlingContext,
             "Patient",
             "family=Family0",
             Optional.empty(),
@@ -349,7 +342,7 @@ class SearchExecutorTest {
         new SearchExecutor(
             fhirContext,
             dataSource,
-            fhirEncoders,
+            pathlingContext,
             "Patient",
             "gender=male&birthdate=ge1990-01-01",
             Optional.empty(),
@@ -374,7 +367,7 @@ class SearchExecutorTest {
         new SearchExecutor(
             fhirContext,
             dataSource,
-            fhirEncoders,
+            pathlingContext,
             "Patient",
             "gender=male,female",
             Optional.empty(),
@@ -394,7 +387,7 @@ class SearchExecutorTest {
         new SearchExecutor(
             fhirContext,
             dataSource,
-            fhirEncoders,
+            pathlingContext,
             "Patient",
             "gender=male",
             Optional.of(filters),
@@ -425,7 +418,7 @@ class SearchExecutorTest {
 
     final IBundleProvider result =
         new SearchExecutor(
-            fhirContext, dataSource, fhirEncoders, "Patient", null, Optional.of(filters), false);
+            fhirContext, dataSource, pathlingContext, "Patient", null, Optional.of(filters), false);
 
     // Same as before: male AND active patients = 16.
     assertThat(result.size()).isEqualTo(16);
@@ -439,7 +432,7 @@ class SearchExecutorTest {
                 new SearchExecutor(
                     fhirContext,
                     dataSource,
-                    fhirEncoders,
+                    pathlingContext,
                     "Patient",
                     "unknownparam=value",
                     Optional.empty(),
@@ -453,7 +446,7 @@ class SearchExecutorTest {
     // Verifies that an empty standard query string returns all resources.
     final IBundleProvider result =
         new SearchExecutor(
-            fhirContext, dataSource, fhirEncoders, "Patient", "", Optional.empty(), false);
+            fhirContext, dataSource, pathlingContext, "Patient", "", Optional.empty(), false);
 
     assertThat(result.size()).isEqualTo(50);
   }

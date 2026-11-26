@@ -88,6 +88,10 @@ public class FhirServerTestConfiguration {
                 "spark.sql.catalog.spark_catalog",
                 "org.apache.spark.sql.delta.catalog.DeltaCatalog")
             .config("spark.sql.catalogImplementation", "hive")
+            // Matches the server's session: the Parquet on FHIR layout stores timestamps as
+            // microsecond-precision int64, and ${...} references in SQL text are left unchanged.
+            .config("spark.sql.parquet.outputTimestampType", "TIMESTAMP_MICROS")
+            .config("spark.sql.variable.substitute", "false")
             .config(
                 "spark.sql.warehouse.dir",
                 "file://"
@@ -153,10 +157,8 @@ public class FhirServerTestConfiguration {
   @ConditionalOnMissingBean
   @Bean
   public CacheableDatabase cacheableDatabase(
-      SparkSession sparkSession,
-      @Value("${pathling.storage.warehouseUrl}") String warehouseUrl,
-      ThreadPoolTaskExecutor threadPoolTaskExecutor) {
-    return new CacheableDatabase(sparkSession, warehouseUrl, threadPoolTaskExecutor);
+      SparkSession sparkSession, @Value("${pathling.storage.warehouseUrl}") String warehouseUrl) {
+    return new CacheableDatabase(sparkSession, warehouseUrl);
   }
 
   @Primary

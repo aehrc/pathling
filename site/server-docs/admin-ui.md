@@ -29,6 +29,13 @@ When [authorization](./authorization) is enabled (`pathling.auth.enabled:
 true`), the admin UI requires authentication via SMART on FHIR. Users must log
 in before accessing protected features.
 
+The admin UI always signs in to the FHIR server it is configured with, using
+the authorization and token endpoints from that server's SMART configuration.
+SMART launch parameters in the page address (`iss`, `fhirServiceUrl`, `launch`,
+`patientId` and `clientId`) are removed before sign-in begins, and are not
+used. A sign-in is not completed if its stored server URL or token endpoint
+differs from the configured server and its SMART configuration.
+
 ### Client ID configuration
 
 The admin UI needs an OAuth client ID to initiate authentication flows. The

@@ -39,9 +39,11 @@ import org.springframework.stereotype.Component;
  * hdfs://}, and any other Spark-supported warehouse scheme.
  *
  * <p>All resolution goes through validated path construction that rejects path traversal (parent
- * segments, absolute paths, null bytes, backslashes) and verifies containment within the canonical
- * jobs directory. For the local {@code file://} scheme, symbolic links are also resolved before the
- * containment check, defeating symlink escapes.
+ * segments, absolute paths, null bytes, backslashes), rejects filenames that are not a single plain
+ * name (separators, URI schemes), and verifies containment within the directory of the named job.
+ * Job identifiers must also be a single plain path segment, with no separator, no scheme delimiter
+ * and no leading dot. For the local {@code file://} scheme, symbolic links are also resolved before
+ * the containment check, defeating symlink escapes.
  *
  * @author John Grimes
  */
@@ -98,35 +100,38 @@ public class JobDirectoryFileSystem {
    *
    * @param jobId the job identifier
    * @return the qualified path of the per-job directory
-   * @throws IllegalArgumentException if the job identifier contains traversal sequences
+   * @throws IllegalArgumentException if the job identifier is not a single plain path segment
    * @throws IOException if the file system cannot be obtained
    */
   @Nonnull
   public Path jobDirectory(@Nonnull final String jobId) throws IOException {
-    rejectInvalidComponent(jobId);
+    rejectInvalidJobId(jobId);
     return getFileSystem().makeQualified(new Path(jobsDirectoryRaw(), jobId));
   }
 
   /**
    * Resolves a filename within the per-job directory and validates that the resulting qualified
-   * path lies inside the jobs directory.
+   * path lies inside that job's directory, which in turn lies inside the jobs directory.
    *
    * @param jobId the job identifier
-   * @param filename the requested filename
+   * @param filename the requested filename, which must be a plain name without a separator or colon
    * @return the qualified Hadoop path of the requested file
-   * @throws IllegalArgumentException if the jobId or filename contains traversal sequences
-   * @throws IOException if the resolved path falls outside the jobs directory
+   * @throws IllegalArgumentException if the job identifier is not a single plain path segment, or
+   *     the filename is not a plain name
+   * @throws IOException if the resolved path falls outside the job directory
    */
   @Nonnull
   public Path resolveFile(@Nonnull final String jobId, @Nonnull final String filename)
       throws IOException {
-    rejectInvalidComponent(jobId);
-    rejectInvalidComponent(filename);
+    rejectInvalidJobId(jobId);
+    rejectInvalidFilename(filename);
     final FileSystem fs = getFileSystem();
     final Path qualifiedJobsDir = fs.makeQualified(jobsDirectoryRaw());
-    final Path resolved = fs.makeQualified(new Path(new Path(qualifiedJobsDir, jobId), filename));
-    if (!hasPathPrefix(resolved.toString(), qualifiedJobsDir.toString())) {
-      throw new IOException("Resolved path falls outside the jobs directory: " + resolved);
+    final Path qualifiedJobDir = fs.makeQualified(new Path(qualifiedJobsDir, jobId));
+    final Path resolved = fs.makeQualified(new Path(qualifiedJobDir, filename));
+    if (!hasPathPrefix(qualifiedJobDir.toString(), qualifiedJobsDir.toString())
+        || !hasPathPrefix(resolved.toString(), qualifiedJobDir.toString())) {
+      throw new IOException("Resolved path falls outside the job directory: " + resolved);
     }
     return resolved;
   }
@@ -153,7 +158,7 @@ public class JobDirectoryFileSystem {
    * (for example, removing a partial output directory after an export fails) catch and log.
    *
    * @param jobId the job identifier
-   * @throws IllegalArgumentException if the job identifier contains traversal sequences
+   * @throws IllegalArgumentException if the job identifier is not a single plain path segment
    * @throws IOException if the directory exists but could not be deleted
    */
   public void deleteJobDirectory(@Nonnull final String jobId) throws IOException {
@@ -204,7 +209,7 @@ public class JobDirectoryFileSystem {
     // For local file scheme, defeat symlink escapes by verifying canonical containment.
     if ("file".equals(resolved.toUri().getScheme())) {
       try {
-        if (!isSymlinkContained(resolved)) {
+        if (!isSymlinkContained(jobId, resolved)) {
           return Optional.empty();
         }
       } catch (final IOException e) {
@@ -243,15 +248,16 @@ public class JobDirectoryFileSystem {
   }
 
   /**
-   * Checks the canonical (symlink-resolved) containment of a {@code file://} path within the jobs
-   * directory.
+   * Checks the canonical (symlink-resolved) containment of a {@code file://} path within the
+   * directory of the named job, located beneath the canonical jobs directory.
    */
-  private boolean isSymlinkContained(@Nonnull final Path resolved) throws IOException {
+  private boolean isSymlinkContained(@Nonnull final String jobId, @Nonnull final Path resolved)
+      throws IOException {
     final java.nio.file.Path realFile = java.nio.file.Path.of(resolved.toUri()).toRealPath();
     final Path qualifiedJobsDir = getFileSystem().makeQualified(jobsDirectoryRaw());
-    final java.nio.file.Path realJobsDir =
-        java.nio.file.Path.of(qualifiedJobsDir.toUri()).toRealPath();
-    return realFile.startsWith(realJobsDir);
+    final java.nio.file.Path realJobDir =
+        java.nio.file.Path.of(qualifiedJobsDir.toUri()).toRealPath().resolve(jobId).normalize();
+    return realFile.startsWith(realJobDir);
   }
 
   /** Returns the jobs directory as a Hadoop path; not yet qualified by the file system. */
@@ -282,6 +288,32 @@ public class JobDirectoryFileSystem {
         || component.endsWith("/..")
         || component.contains("/../")) {
       throw new IllegalArgumentException("Invalid path component: " + component);
+    }
+  }
+
+  /**
+   * Rejects job identifiers that are not a single plain path segment. A job identifier names a
+   * directory directly beneath the jobs root, so beyond the checks applied to every path component
+   * it must not contain a separator or a scheme delimiter, and must not start with a dot. Otherwise
+   * an identifier such as {@code ./abc} would resolve to the directory of job {@code abc}, and one
+   * such as {@code file:/tmp/x} to a location outside the warehouse.
+   */
+  private static void rejectInvalidJobId(@Nonnull final String jobId) {
+    rejectInvalidComponent(jobId);
+    if (jobId.contains("/") || jobId.contains(":") || jobId.startsWith(".")) {
+      throw new IllegalArgumentException("Invalid job identifier: " + jobId);
+    }
+  }
+
+  /**
+   * Rejects a filename that is not a single plain name within the job directory. A separator would
+   * address a nested path, and a colon would let Hadoop parse the value as a URI with its own
+   * scheme, which resolves to that absolute location regardless of the job directory.
+   */
+  private static void rejectInvalidFilename(@Nonnull final String filename) {
+    rejectInvalidComponent(filename);
+    if (".".equals(filename) || filename.contains("/") || filename.contains(":")) {
+      throw new IllegalArgumentException("Invalid filename: " + filename);
     }
   }
 }

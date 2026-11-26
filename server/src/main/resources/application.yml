@@ -53,11 +53,6 @@ pathling:
     # prevents large numbers of small updates causing poor subsequent query performance.
     compactionThreshold: 10
 
-    # When enabled, Delta Lake merge operations will automatically evolve the table schema to
-    # accommodate new columns present in the incoming data. This is useful when the FHIR encoder
-    # adds new fields (e.g. synthetic columns) that are not yet present in an existing table.
-    schemaAutoMerge: false
-
   query:
     # Setting this option to true will enable additional logging relating to the query plan used to
     # execute queries.
@@ -118,6 +113,32 @@ pathling:
   # adminUi:
   #   clientId: [client ID]
 
+  # This section configures the Model Context Protocol (MCP) endpoint at /mcp, which gives AI
+  # assistants read-only access to the data through tools.
+  mcp:
+    # Enables the MCP endpoint.
+    enabled: false
+
+    # The public URL of the MCP endpoint, as users enter it into their MCP client. When unset, it
+    # is derived from each request's Host, Forwarded and X-Forwarded-* headers. Those headers are
+    # chosen by the caller, so set this wherever authorization is enabled.
+    # resourceUrl: [MCP endpoint URL]
+
+    # The largest number of resources that the search tool will return.
+    maxSearchCount: 100
+
+    # The largest number of rows that the view and SQL tools will return.
+    maxRows: 1000
+
+    auth:
+      # The issuer of access tokens accepted at the MCP endpoint, when authorization is enabled.
+      # Defaults to pathling.auth.issuer.
+      # issuer: [issuer]
+
+      # The scopes advertised in the protected resource metadata, which MCP clients request when
+      # they sign in.
+      scopesSupported: []
+
   # This section configures HTTP caching response headers.
   httpCaching:
     # A list of values to return within the Vary header.
@@ -126,10 +147,12 @@ pathling:
       - Accept-Encoding
       - Prefer
       - Authorization
-    # A list of values to return within the Cache-Control header, for cacheable responses.
+    # A list of values to return within the Cache-Control header, for cacheable responses. A
+    # max-age of 0 makes browsers and intermediate caches revalidate a stored response on every
+    # request, so that a read made after a write is never answered with data from before it.
     cacheableControl:
       - must-revalidate
-      - max-age=1
+      - max-age=0
     # A list of values to return within the Cache-Control header, for uncacheable responses.
     uncacheableControl:
       - no-store
@@ -159,7 +182,7 @@ pathling:
 
   import:
     allowableSources:
-      - "file:///usr/share/staging"
+      - "file:///usr/share/staging/"
     pnp:
       # Whether to allow exportUrl values that resolve to internal or private IP addresses.
       # Defaults to false for security.
@@ -167,9 +190,11 @@ pathling:
 
   # This section configures the $bulk-submit operation for receiving data from external systems.
   bulkSubmit:
-    # The list of allowed submitters (by system and value) that can use this operation.
+    # The list of allowed submitters (by system and value) that can use this operation. A submitter
+    # with OAuth credentials must have its own allowableSources, which replace the list below for
+    # that submitter, and can only be used when auth is enabled.
     allowedSubmitters: []
-    # URL prefixes that are allowed as sources for manifest and file URLs.
+    # URL prefixes that are allowed as sources for submitters without their own allowableSources.
     allowableSources:
       - "https://"
 
@@ -186,7 +211,7 @@ pathling:
       - Accept
       - Accept-Encoding
 
-    # Max-age in seconds for $job and $result endpoint responses.
+    # Max-age in seconds for $job, $job-result and $result endpoint responses.
     cacheMaxAge: 1
 
 # Use this section to set or override any Spark configuration parameter. Tuning these parameters is
@@ -202,6 +227,12 @@ spark:
     extensions: io.delta.sql.DeltaSparkSessionExtension
     catalog:
       spark_catalog: org.apache.spark.sql.delta.catalog.DeltaCatalog
+    optimizer:
+      # Works around SPARK-59042, in which this rule fails on a correlated subquery over the output
+      # of a UNION ALL. Column pruning through a union is done by a separate rule, so excluding it
+      # does not stop unneeded columns from being read. The workaround does not cover such a query
+      # when it is itself a branch of another union, as CombineUnions makes the same faulty rewrite.
+      excludedRules: org.apache.spark.sql.catalyst.optimizer.PushProjectionThroughUnion
   databricks:
     delta:
       schema:

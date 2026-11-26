@@ -100,7 +100,7 @@ pathling:
     # A list of values to return within the Cache-Control header, for cacheable responses.
     cacheableControl:
       - must-revalidate
-      - max-age=1
+      - max-age=0
     # A list of values to return within the Cache-Control header, for uncacheable responses.
     uncacheableControl:
       - no-store

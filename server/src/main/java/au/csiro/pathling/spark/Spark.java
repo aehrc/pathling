@@ -24,6 +24,7 @@ import au.csiro.pathling.config.ServerConfiguration;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +47,22 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 public class Spark {
+
+  /** The session setting that determines the Parquet type of stored timestamps. */
+  static final String OUTPUT_TIMESTAMP_TYPE = "spark.sql.parquet.outputTimestampType";
+
+  /** The timestamp type required by the Parquet on FHIR layout. */
+  static final String TIMESTAMP_MICROS = "TIMESTAMP_MICROS";
+
+  /** The text logged in place of the value of a property that may hold a credential. */
+  static final String MASKED_VALUE = "********";
+
+  /** Words in a property name that indicate that its value may hold a credential. */
+  private static final List<String> SENSITIVE_NAME_PARTS =
+      List.of("secret", "key", "token", "password");
+
+  /** The session setting that determines whether {@code ${...}} references in SQL are replaced. */
+  static final String VARIABLE_SUBSTITUTE = "spark.sql.variable.substitute";
 
   private Spark() {}
 
@@ -85,6 +102,14 @@ public class Spark {
                 "spark.sql.catalog.spark_catalog",
                 "org.apache.spark.sql.delta.catalog.DeltaCatalog")
             .getOrCreate();
+    // The Parquet on FHIR layout stores timestamps as microsecond-precision int64, and Spark takes
+    // that type from the session rather than from writer options. Spark also replaces ${...}
+    // references in SQL text before parsing it unless told not to. The server runs SQL as it was
+    // submitted, and the SQL on FHIR operations edit SQL text at the offsets Spark's parser reports
+    // for it, which hold only if the parser sees the text as it was written. Both are set after the
+    // session is built, so that no Spark configuration in a profile can change them.
+    spark.conf().set(OUTPUT_TIMESTAMP_TYPE, TIMESTAMP_MICROS);
+    spark.conf().set(VARIABLE_SUBSTITUTE, false);
     sparkListener.ifPresent(l -> spark.sparkContext().addSparkListener(l));
 
     // Configure user defined strategy and functions.
@@ -98,7 +123,8 @@ public class Spark {
         List.of("fs.s3a.", "fs.http.", "fs.https."),
         property -> {
           final String value = requireNonNull(environment.getProperty(property));
-          log.debug("Setting Hadoop configuration: {} = {}", property, value);
+          log.debug(
+              "Setting Hadoop configuration: {} = {}", property, loggableValue(property, value));
           spark.sparkContext().hadoopConfiguration().set(property, value);
         });
 
@@ -135,5 +161,20 @@ public class Spark {
                 Arrays.stream(((EnumerablePropertySource<?>) propertySource).getPropertyNames()))
         .filter(property -> prefixes.stream().anyMatch(property::startsWith))
         .forEach(setter);
+  }
+
+  /**
+   * Returns the form of a property value that is safe to write to the log. The value is masked if
+   * the property name contains {@code secret}, {@code key}, {@code token} or {@code password},
+   * ignoring case, so that credentials such as {@code fs.s3a.secret.key} are never logged.
+   *
+   * @param property the name of the property
+   * @param value the value of the property
+   * @return {@link #MASKED_VALUE} if the property may hold a credential, otherwise the value
+   */
+  @Nonnull
+  static String loggableValue(@Nonnull final String property, @Nonnull final String value) {
+    final String name = property.toLowerCase(Locale.ROOT);
+    return SENSITIVE_NAME_PARTS.stream().anyMatch(name::contains) ? MASKED_VALUE : value;
   }
 }

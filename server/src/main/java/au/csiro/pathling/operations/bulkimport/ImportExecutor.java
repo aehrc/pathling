@@ -21,7 +21,9 @@ import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.UrlAllowlist;
 import au.csiro.pathling.errors.AccessDeniedError;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.io.DynamicDeltaSource;
+import au.csiro.pathling.io.LegacyLayoutConversion;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
@@ -29,6 +31,7 @@ import au.csiro.pathling.library.io.sink.WriteDetails;
 import au.csiro.pathling.library.io.source.NdjsonSource;
 import au.csiro.pathling.library.io.source.ParquetSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.library.io.source.UnsupportedLayoutException;
 import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess.AccessType;
 import au.csiro.pathling.security.SecurityAspect;
@@ -39,9 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -145,9 +146,7 @@ public class ImportExecutor {
     final DataSource importSource =
         switch (request.importFormat()) {
           case NDJSON -> new NdjsonSource(pathlingContext, resourcesWithAuthority, "ndjson");
-          case PARQUET ->
-              new ParquetSource(
-                  pathlingContext, resourcesWithAuthority, (Predicate<String>) ignored -> true);
+          case PARQUET -> parquetSource(resourcesWithAuthority);
         };
 
     // Always write to Delta format regardless of source format.
@@ -170,7 +169,31 @@ public class ImportExecutor {
     return writeDetails;
   }
 
-  private @NotNull Map<String, Collection<String>> checkAuthority(
+  /**
+   * Reads Parquet supplied by the client, converting any resource type in the layout written before
+   * Parquet on FHIR. The library's own layout check is disabled so that the legacy layout reaches
+   * the conversion rather than being refused.
+   *
+   * @param files the Parquet files to read, keyed by resource type
+   * @return the data in the Parquet on FHIR layout
+   * @throws InvalidUserInputError if the data of a resource type is in a layout that can be neither
+   *     read nor converted, such as one that mixes the two layouts
+   */
+  @Nonnull
+  private QueryableDataSource parquetSource(@Nonnull final Map<String, Collection<String>> files) {
+    try {
+      // The mapping is applied to every resource type here, before anything is written, so a
+      // refusal raised from it always concerns the client's data rather than the warehouse.
+      return new ParquetSource(pathlingContext, files, ignored -> true, false)
+          .map(
+              (resourceType, data) ->
+                  LegacyLayoutConversion.convertIfLegacy(pathlingContext, resourceType, data));
+    } catch (final UnsupportedLayoutException e) {
+      throw new InvalidUserInputError(e.getMessage(), e);
+    }
+  }
+
+  private @Nonnull Map<String, Collection<String>> checkAuthority(
       final ImportRequest request, @Nullable final List<String> customAllowableSources) {
     if (serverConfiguration.getAuth().isEnabled()) {
       // Check global write authority.

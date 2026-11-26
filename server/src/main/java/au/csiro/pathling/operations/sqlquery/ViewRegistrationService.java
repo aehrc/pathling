@@ -33,6 +33,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
@@ -106,21 +107,26 @@ public class ViewRegistrationService {
 
   @Nonnull private final QueryConfiguration queryConfiguration;
 
+  @Nonnull private final SqlValidator sqlValidator;
+
   /**
    * Constructs a new ViewRegistrationService.
    *
    * @param sparkSession the Spark session
    * @param fhirContext the FHIR context
    * @param serverConfiguration the server configuration
+   * @param sqlValidator validates the rewritten SQL of a SQLView before it is run
    */
   @Autowired
   public ViewRegistrationService(
       @Nonnull final SparkSession sparkSession,
       @Nonnull final FhirContext fhirContext,
-      @Nonnull final ServerConfiguration serverConfiguration) {
+      @Nonnull final ServerConfiguration serverConfiguration,
+      @Nonnull final SqlValidator sqlValidator) {
     this.sparkSession = sparkSession;
     this.fhirContext = fhirContext;
     this.queryConfiguration = serverConfiguration.getQuery();
+    this.sqlValidator = sqlValidator;
   }
 
   /**
@@ -185,13 +191,16 @@ public class ViewRegistrationService {
   /**
    * Builds the dataset for a resolved {@code SQLView} node by rewriting its SQL so each of its
    * table labels points at the already-registered temp view of the child it resolves to, then
-   * running that SQL. The result is not registered; the caller validates the analysed plan and then
-   * registers it.
+   * running that SQL. The rewritten SQL is validated against the child temp views before it is run,
+   * because Spark runs a command eagerly as soon as it is given one, so the text that runs is the
+   * text that was validated. The result is not registered; the caller validates the analysed plan
+   * and then registers it.
    *
    * @param node the resolved SQLView node
    * @param registeredByKey the temp view names of already-materialised nodes, keyed by canonical
    *     key
    * @return the SQLView's result dataset
+   * @throws InvalidRequestException if the rewritten SQL fails validation
    */
   @Nonnull
   public Dataset<Row> buildSqlView(
@@ -214,6 +223,7 @@ public class ViewRegistrationService {
               labelToViewName.put(label, viewName);
             });
     final String rewrittenSql = rewriteSql(node.getSql(), labelToViewName);
+    sqlValidator.validate(rewrittenSql, Set.copyOf(labelToViewName.values()));
     return sparkSession.sql(rewrittenSql);
   }
 

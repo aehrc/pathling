@@ -19,7 +19,6 @@ package au.csiro.pathling.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -56,8 +55,6 @@ class ReadProviderFactoryTest {
 
   @Autowired private PathlingContext pathlingContext;
 
-  @Autowired private FhirEncoders fhirEncoders;
-
   @Autowired private au.csiro.pathling.config.ServerConfiguration configuration;
 
   @Autowired private ApplicationContext applicationContext;
@@ -69,11 +66,11 @@ class ReadProviderFactoryTest {
     // Create a minimal data source for testing factory creation.
     final List<IBaseResource> resources = new ArrayList<>();
     final CustomObjectDataSource dataSource =
-        new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, resources);
+        new CustomObjectDataSource(pathlingContext, resources);
 
     readProviderFactory =
         new ReadProviderFactory(
-            applicationContext, configuration, fhirContext, dataSource, fhirEncoders);
+            applicationContext, configuration, fhirContext, dataSource, pathlingContext);
   }
 
   // -------------------------------------------------------------------------

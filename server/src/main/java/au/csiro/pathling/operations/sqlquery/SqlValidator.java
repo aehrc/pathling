@@ -21,6 +21,7 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +35,8 @@ import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.catalyst.expressions.ExpressionInfo;
 import org.apache.spark.sql.catalyst.expressions.SubqueryExpression;
 import org.apache.spark.sql.catalyst.expressions.WindowSpecDefinition;
+import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression;
+import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateFunction;
 import org.apache.spark.sql.catalyst.plans.logical.Command;
 import org.apache.spark.sql.catalyst.plans.logical.DescribeRelation;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
@@ -46,7 +49,7 @@ import org.apache.spark.sql.execution.datasources.LogicalRelation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import scala.Option;
-import scala.Tuple2;
+import scala.Tuple3;
 import scala.jdk.javaapi.CollectionConverters;
 
 /**
@@ -79,14 +82,20 @@ import scala.jdk.javaapi.CollectionConverters;
  *       single-part identifier present in the declared label set or among the CTEs defined within
  *       the query. This rejects datasource short-name file reads such as {@code
  *       parquet.`/etc/passwd`}, which would otherwise be resolved by Spark to a direct file read.
- *   <li><strong>Expression allow-list</strong> — only safe expression types are permitted.
- *   <li><strong>Built-in functions only</strong> — every {@link UnresolvedFunction} in user SQL
- *       must resolve to a built-in Spark function. Pathling-registered UDFs (terminology, FHIRPath
- *       helpers, etc.) are intended for use within ViewDefinitions; the {@code $sql-run} surface
- *       stays portable and implementation-agnostic. UDFs introduced by referenced views are
- *       unaffected because they appear in the analyzed plan, not in the unresolved tree this rule
- *       walks.
+ *   <li><strong>Expression allow-list</strong> — only safe expression types are permitted. An
+ *       aggregate that the parser builds directly ({@code first}, {@code last}, {@code any_value})
+ *       is permitted only when its aggregate function is on a separate allow-list.
+ *   <li><strong>Function allow-list</strong> — every {@link UnresolvedFunction} in user SQL must
+ *       name a built-in Spark function on {@link SqlFunctionAllowList#ALLOWED_FUNCTION_NAMES}.
+ *       Built-ins that open a caller-chosen file or URL, invoke arbitrary code or disclose storage
+ *       paths are withheld. Pathling-registered UDFs (terminology, FHIRPath helpers, etc.) are
+ *       intended for use within ViewDefinitions; the {@code $sql-run} surface stays portable and
+ *       implementation-agnostic. UDFs introduced by referenced views are unaffected because they
+ *       appear in the analyzed plan, not in the unresolved tree this rule walks.
  * </ol>
+ *
+ * <p>Before any of these, {@link #validate(String, Set)} rejects SQL text that contains the <code>
+ * ${</code> character sequence, which Spark's parser would otherwise replace before parsing.
  *
  * <p>Two schema-introspection statements are carved out of the blanket {@link Command} rejection:
  * {@code DESCRIBE [TABLE] <label>} and {@code DESCRIBE [QUERY] <query>}. Because Spark executes
@@ -99,6 +108,7 @@ import scala.jdk.javaapi.CollectionConverters;
  * confirms the resolved target is one of the registered temp views. Every other DESCRIBE / SHOW
  * variant remains rejected.
  *
+ * @author John Grimes
  * @see <a
  *     href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/OperationDefinition-SQLQueryRun.html">SQLQueryRun</a>
  */
@@ -174,18 +184,6 @@ public class SqlValidator {
           "org.apache.spark.sql.catalyst.plans.logical.DescribeRelation",
           "org.apache.spark.sql.execution.command.DescribeTableCommand",
           "org.apache.spark.sql.execution.command.DescribeQueryCommand");
-
-  // Function names rejected outright: the reflection functions enable arbitrary code execution, and
-  // the input file functions disclose the storage path of a scanned file, which for an external
-  // table is the operator's configured path.
-  private static final Set<String> REJECTED_FUNCTION_NAMES =
-      Set.of(
-          "reflect",
-          "java_method",
-          "try_reflect",
-          "input_file_name",
-          "input_file_block_start",
-          "input_file_block_length");
 
   // Source marker used by Spark's ExpressionInfo for built-in functions. Anything else (scala_udf,
   // hive, python_udf, sql_udf, java_udf, ...) is implementation-specific and rejected from user
@@ -342,6 +340,17 @@ public class SqlValidator {
           "org.apache.spark.sql.catalyst.expressions.BitwiseXor",
           "org.apache.spark.sql.catalyst.expressions.BitwiseNot");
 
+  // Fully-qualified aggregate function class names that are permitted inside an
+  // AggregateExpression. Spark's grammar has dedicated rules for first(), last() and any_value(),
+  // so the parser builds an AggregateExpression over these directly rather than an
+  // UnresolvedFunction that is checked by name. They are built-in aggregates, and are what the
+  // first_value() and last_value() functions already resolve to.
+  private static final Set<String> ALLOWED_AGGREGATE_FUNCTION_NAMES =
+      Set.of(
+          "org.apache.spark.sql.catalyst.expressions.aggregate.First",
+          "org.apache.spark.sql.catalyst.expressions.aggregate.Last",
+          "org.apache.spark.sql.catalyst.expressions.aggregate.AnyValue");
+
   // Fully-qualified expression class names that are explicitly rejected.
   private static final Set<String> REJECTED_EXPRESSION_NAMES =
       Set.of(
@@ -372,6 +381,13 @@ public class SqlValidator {
   private static final Pattern LABEL_PATTERN = Pattern.compile("^[A-Za-z]\\w*$");
 
   /**
+   * Character sequence that SQL must not contain. Spark's parser replaces {@code ${...}} references
+   * in SQL text before parsing it unless the session disables this, so the sequence is refused
+   * wherever it appears rather than relying on the session configuration alone.
+   */
+  private static final String DOLLAR_BRACE = "${";
+
+  /**
    * Validates that the given SQL parses to an unresolved logical plan that contains only allowed
    * operations and that every relation reference resolves to either a declared label or a CTE
    * defined within the same query. Suitable for early rejection before any temp views are
@@ -380,10 +396,14 @@ public class SqlValidator {
    * @param sql the SQL query to validate
    * @param allowedLabels the set of relation labels declared in the request (i.e. the labels of the
    *     {@code Library.relatedArtifact} entries) that may appear as relation references
-   * @throws InvalidRequestException if the query contains disallowed operations or references an
-   *     undeclared table
+   * @throws InvalidRequestException if the query contains the <code>${</code> character sequence,
+   *     contains disallowed operations or references an undeclared table
    */
   public void validate(@Nonnull final String sql, @Nonnull final Set<String> allowedLabels) {
+    if (sql.contains(DOLLAR_BRACE)) {
+      throw new InvalidRequestException(
+          "SQL must not contain the character sequence " + DOLLAR_BRACE);
+    }
     final LogicalPlan plan;
     try {
       plan = sparkSession.sessionState().sqlParser().parsePlan(sql);
@@ -429,9 +449,9 @@ public class SqlValidator {
   private static void collectCteNames(
       @Nonnull final LogicalPlan plan, @Nonnull final Set<String> out) {
     if (plan instanceof final UnresolvedWith with) {
-      final List<Tuple2<String, SubqueryAlias>> ctes =
+      final List<Tuple3<String, SubqueryAlias, Option<Object>>> ctes =
           CollectionConverters.asJava(with.cteRelations());
-      for (final Tuple2<String, SubqueryAlias> cte : ctes) {
+      for (final Tuple3<String, SubqueryAlias, Option<Object>> cte : ctes) {
         out.add(cte._1());
         collectCteNames(cte._2(), out);
       }
@@ -479,9 +499,9 @@ public class SqlValidator {
     // CTE names themselves are already in allowedLabels (collectCteNames runs first), so a CTE body
     // may legitimately reference a sibling or declared label but not an undeclared external table.
     if (plan instanceof final UnresolvedWith with) {
-      final List<Tuple2<String, SubqueryAlias>> ctes =
+      final List<Tuple3<String, SubqueryAlias, Option<Object>>> ctes =
           CollectionConverters.asJava(with.cteRelations());
-      for (final Tuple2<String, SubqueryAlias> cte : ctes) {
+      for (final Tuple3<String, SubqueryAlias, Option<Object>> cte : ctes) {
         walkPlanStrict(cte._2(), allowedLabels);
       }
     }
@@ -775,8 +795,10 @@ public class SqlValidator {
 
   /**
    * Validates an expression. In both modes, explicitly rejected expression types and disallowed
-   * function names are caught. In strict mode, the expression allow-list is additionally enforced
-   * and {@link UnresolvedFunction}s are required to resolve to a built-in Spark function.
+   * function names are caught. In strict mode, the expression allow-list is additionally enforced,
+   * {@link UnresolvedFunction}s are required to name a built-in Spark function on the function
+   * allow-list, and {@link AggregateExpression}s are required to wrap an allowed aggregate
+   * function.
    */
   private void validateExpression(@Nonnull final Expression expr, final boolean strict) {
     final String fqn = canonicalClassName(expr);
@@ -799,30 +821,54 @@ public class SqlValidator {
       return;
     }
 
-    if (!ALLOWED_EXPRESSION_NAMES.contains(fqn)) {
+    if (expr instanceof final AggregateExpression aggregate) {
+      validateAggregateExpression(aggregate);
+      return;
+    }
+
+    if (!ALLOWED_EXPRESSION_NAMES.contains(fqn)
+        && !ALLOWED_AGGREGATE_FUNCTION_NAMES.contains(fqn)) {
       throw new InvalidRequestException(
           "SQL contains a disallowed expression: " + expr.getClass().getSimpleName());
     }
   }
 
   /**
-   * Validates an unresolved function reference from user SQL. Rejects known-dangerous names
-   * (reflection-style functions) and any function whose Spark registry entry is not flagged as
-   * built-in - that is, any UDF (Pathling-registered terminology and FHIRPath helpers, Hive UDFs,
-   * Python/SQL/Java UDFs). Pathling UDFs belong in ViewDefinitions; user SQL should remain portable
-   * and implementation-agnostic. Unknown function names are left alone here so that Spark's
-   * analyser produces its standard "function not found" error, which is more helpful than a
-   * synthetic rejection.
+   * Validates an {@link AggregateExpression} built directly by the parser, which happens for the
+   * aggregates that have dedicated grammar rules ({@code first}, {@code last} and {@code
+   * any_value}). The wrapped aggregate function must be on the aggregate allow-list. The rejection
+   * names the SQL function rather than the Catalyst class, as the caller has no way to relate
+   * {@code AggregateExpression} to the function they wrote. The function's arguments are validated
+   * separately as the expression walk descends into them.
+   *
+   * @param aggregate the aggregate expression to validate
+   * @throws InvalidRequestException if the wrapped aggregate function is not allowed
+   */
+  static void validateAggregateExpression(@Nonnull final AggregateExpression aggregate) {
+    final AggregateFunction function = aggregate.aggregateFunction();
+    if (!ALLOWED_AGGREGATE_FUNCTION_NAMES.contains(canonicalClassName(function))) {
+      throw new InvalidRequestException(
+          "SQL contains a disallowed aggregate function: " + function.prettyName());
+    }
+  }
+
+  /**
+   * Validates an unresolved function reference from user SQL. A function whose Spark registry entry
+   * is not flagged as built-in - any UDF (Pathling-registered terminology and FHIRPath helpers,
+   * Hive UDFs, Python/SQL/Java UDFs) - is rejected, as Pathling UDFs belong in ViewDefinitions and
+   * user SQL should remain portable and implementation-agnostic. Any other function is rejected
+   * unless its name is on {@link SqlFunctionAllowList#ALLOWED_FUNCTION_NAMES}. The name is matched
+   * on its last part, so qualifying a built-in (for example {@code system.builtin.from_xml}) does
+   * not get it past the check.
+   *
+   * <p>A name that is neither allowed nor a known function is left alone, so that Spark's analyser
+   * produces its standard "function not found" error, which is more helpful than a synthetic
+   * rejection.
    */
   private void validateFunctionName(@Nonnull final UnresolvedFunction func) {
     final List<String> nameParts = CollectionConverters.asJava(func.nameParts());
     if (nameParts.isEmpty()) {
       return;
-    }
-    final String simpleName = nameParts.getLast().toLowerCase();
-    if (REJECTED_FUNCTION_NAMES.contains(simpleName)) {
-      throw new InvalidRequestException(
-          "SQL contains a disallowed function: " + String.join(".", nameParts));
     }
     if (isNonBuiltInFunction(nameParts)) {
       throw new InvalidRequestException(
@@ -830,6 +876,23 @@ public class SqlValidator {
               + String.join(".", nameParts)
               + ". Implementation-specific functions belong in ViewDefinitions, not in user SQL.");
     }
+    final String simpleName = nameParts.getLast().toLowerCase(Locale.ROOT);
+    if (!SqlFunctionAllowList.ALLOWED_FUNCTION_NAMES.contains(simpleName)
+        && isKnownFunction(simpleName)) {
+      throw new InvalidRequestException(
+          "SQL contains a disallowed function: " + String.join(".", nameParts));
+    }
+  }
+
+  /**
+   * Returns {@code true} if the unqualified name is a function in the session's registry, which
+   * holds every Spark built-in function as well as any registered UDF.
+   */
+  private boolean isKnownFunction(@Nonnull final String simpleName) {
+    return sparkSession
+        .sessionState()
+        .functionRegistry()
+        .functionExists(new FunctionIdentifier(simpleName));
   }
 
   /**
@@ -888,6 +951,12 @@ public class SqlValidator {
   @Nonnull
   static Set<String> allowedExpressionNames() {
     return ALLOWED_EXPRESSION_NAMES;
+  }
+
+  /** Aggregate function allow-list entries, exposed for build-time integrity tests. */
+  @Nonnull
+  static Set<String> allowedAggregateFunctionNames() {
+    return ALLOWED_AGGREGATE_FUNCTION_NAMES;
   }
 
   /** Reject-list entries, exposed for build-time integrity tests. */

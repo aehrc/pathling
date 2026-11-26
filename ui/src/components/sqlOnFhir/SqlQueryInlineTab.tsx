@@ -26,6 +26,7 @@ import { PlusIcon, TrashIcon } from "@radix-ui/react-icons";
 import { Box, Button, Flex, IconButton, Select, Text, TextArea, TextField } from "@radix-ui/themes";
 
 import { findSourceByUrl } from "../../hooks/sqlQueryHelpers";
+import { useFocusOnAdd } from "../../hooks/useFocusOnAdd";
 import { FieldGuidance } from "../FieldGuidance";
 import { FieldLabel } from "../FieldLabel";
 import { ParameterValueInput } from "./ParameterValueInput";
@@ -94,6 +95,10 @@ interface SqlQueryInlineTabProps {
   title: string;
   /** Callback fired when the title changes. */
   onTitleChange: (title: string) => void;
+  /** Library canonical URL (used for `Library.url` on save). */
+  url: string;
+  /** Callback fired when the canonical URL changes. */
+  onUrlChange: (url: string) => void;
   /** SQL text. */
   sql: string;
   /** Callback fired when the SQL changes. */
@@ -126,6 +131,8 @@ interface SqlQueryInlineTabProps {
  * @param props - The component props.
  * @param props.title - Library title (used for `Library.title` on save).
  * @param props.onTitleChange - Callback fired when the title changes.
+ * @param props.url - Library canonical URL (used for `Library.url` on save).
+ * @param props.onUrlChange - Callback fired when the canonical URL changes.
  * @param props.sql - SQL text.
  * @param props.onSqlChange - Callback fired when the SQL changes.
  * @param props.tables - Configured view rows (related artefacts).
@@ -143,6 +150,8 @@ interface SqlQueryInlineTabProps {
 export function SqlQueryInlineTab({
   title,
   onTitleChange,
+  url,
+  onUrlChange,
   sql,
   onSqlChange,
   tables,
@@ -160,16 +169,12 @@ export function SqlQueryInlineTab({
   const sqlViewSources = sqlViews.filter(isReferenceable);
   const allSources = [...viewDefinitionSources, ...sqlViewSources];
   const hasSources = allSources.length > 0;
+  const { focusOnRender, focusRef } = useFocusOnAdd<string>();
 
   const handleAddTable = () => {
-    onTablesChange([
-      ...tables,
-      {
-        rowId: crypto.randomUUID(),
-        label: "",
-        referenceUrl: "",
-      },
-    ]);
+    const rowId = crypto.randomUUID();
+    focusOnRender(rowId);
+    onTablesChange([...tables, { rowId, label: "", referenceUrl: "" }]);
   };
 
   const handleRemoveTable = (rowId: string) => {
@@ -181,10 +186,9 @@ export function SqlQueryInlineTab({
   };
 
   const handleAddTerminology = () => {
-    onTerminologyChange([
-      ...terminology,
-      { rowId: crypto.randomUUID(), label: "", referenceUrl: "" },
-    ]);
+    const rowId = crypto.randomUUID();
+    focusOnRender(rowId);
+    onTerminologyChange([...terminology, { rowId, label: "", referenceUrl: "" }]);
   };
 
   const handleRemoveTerminology = (rowId: string) => {
@@ -196,15 +200,9 @@ export function SqlQueryInlineTab({
   };
 
   const handleAddParameter = () => {
-    onParametersChange([
-      ...parameters,
-      {
-        rowId: crypto.randomUUID(),
-        name: "",
-        type: "string",
-        value: "",
-      },
-    ]);
+    const rowId = crypto.randomUUID();
+    focusOnRender(rowId);
+    onParametersChange([...parameters, { rowId, name: "", type: "string", value: "" }]);
   };
 
   const handleRemoveParameter = (rowId: string) => {
@@ -230,6 +228,23 @@ export function SqlQueryInlineTab({
         />
         <FieldGuidance>
           Used as `Library.title` when saving to the server. Required to enable the Save action.
+        </FieldGuidance>
+      </Box>
+
+      <Box>
+        <FieldLabel mb="1" optional>
+          Canonical URL
+        </FieldLabel>
+        <TextField.Root
+          value={url}
+          placeholder="e.g. https://example.org/Library/patients-by-condition"
+          onChange={(e) => onUrlChange(e.target.value)}
+          disabled={disabled}
+          aria-label="Library canonical URL"
+        />
+        <FieldGuidance>
+          Used as `Library.url` when saving to the server. A query without parameters is saved as a
+          SQL view, which other queries can use as a source only if it has a canonical URL.
         </FieldGuidance>
       </Box>
 
@@ -268,6 +283,7 @@ export function SqlQueryInlineTab({
                   </Text>
                 )}
                 <TextField.Root
+                  ref={focusRef(table.rowId)}
                   value={table.label}
                   placeholder="e.g. patients"
                   onChange={(e) => handleUpdateTable(table.rowId, { label: e.target.value })}
@@ -343,6 +359,7 @@ export function SqlQueryInlineTab({
                   </Text>
                 )}
                 <TextField.Root
+                  ref={focusRef(row.rowId)}
                   value={row.label}
                   placeholder="e.g. cvd_codes"
                   onChange={(e) => handleUpdateTerminology(row.rowId, { label: e.target.value })}
@@ -411,6 +428,7 @@ export function SqlQueryInlineTab({
                     </Text>
                   )}
                   <TextField.Root
+                    ref={focusRef(param.rowId)}
                     value={param.name}
                     placeholder="e.g. patient_id"
                     onChange={(e) =>

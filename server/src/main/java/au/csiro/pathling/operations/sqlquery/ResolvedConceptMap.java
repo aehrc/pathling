@@ -45,7 +45,10 @@ public class ResolvedConceptMap implements ResolvedDependency {
   /** Terminates each mapping within the hashed content description. */
   private static final char ROW_SEPARATOR = '\n';
 
-  /** Stands in for a null column value within the hashed content description. */
+  /**
+   * Stands in for a null column value within the hashed content description. Column values are
+   * encoded with {@link ContentDescriptions#escape(String)}, so no value can contain it.
+   */
   private static final String NULL_VALUE = "\u0000";
 
   /** Orders nullable columns with null before any value. */
@@ -94,18 +97,19 @@ public class ResolvedConceptMap implements ResolvedDependency {
   }
 
   /**
-   * Renders one mapping as its nine columns, with a sentinel for null.
+   * Renders one mapping as its nine columns, each encoded so that no value can contain a separator,
+   * with a sentinel for null.
    *
    * @param mapping the mapping
    * @return the rendered row
    */
   @Nonnull
   private static String render(@Nonnull final ConceptMapping mapping) {
-    return mapping.getSourceSystem()
+    return orNull(mapping.getSourceSystem())
         + COLUMN_SEPARATOR
         + orNull(mapping.getSourceVersion())
         + COLUMN_SEPARATOR
-        + mapping.getSourceCode()
+        + orNull(mapping.getSourceCode())
         + COLUMN_SEPARATOR
         + orNull(mapping.getSourceDisplay())
         + COLUMN_SEPARATOR
@@ -122,14 +126,14 @@ public class ResolvedConceptMap implements ResolvedDependency {
   }
 
   /**
-   * Renders a nullable column value, substituting the null sentinel.
+   * Renders a nullable column value, encoding a value and substituting the null sentinel for null.
    *
    * @param value the value
    * @return the rendered value
    */
   @Nonnull
   private static String orNull(@Nullable final String value) {
-    return value == null ? NULL_VALUE : value;
+    return value == null ? NULL_VALUE : ContentDescriptions.escape(value);
   }
 
   /**

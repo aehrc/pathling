@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Represents a bulk submission throughout its lifecycle.
@@ -36,7 +37,12 @@ import java.util.Optional;
  * <p>Timestamps are stored as ISO-8601 strings for JSON serialisation compatibility with the shaded
  * Jackson library.
  *
- * @param submissionId The unique identifier for this submission.
+ * @param submissionId The identifier of this submission, chosen by the submitter. It is unique only
+ *     in combination with the submitter.
+ * @param stagingId The server-generated identifier that names the directory in which the files of
+ *     this submission are staged, and under which they are registered for retrieval through {@code
+ *     $result}. It is never derived from client input, so that one submission cannot address the
+ *     files of another.
  * @param submitter The identifier of the submitting system.
  * @param state The current state of the submission.
  * @param manifestJobs The list of manifest jobs associated with this submission.
@@ -50,6 +56,7 @@ import java.util.Optional;
  */
 public record Submission(
     @Nonnull String submissionId,
+    @Nonnull String stagingId,
     @Nonnull SubmitterIdentifier submitter,
     @Nonnull SubmissionState state,
     @Nonnull List<ManifestJob> manifestJobs,
@@ -72,9 +79,9 @@ public record Submission(
   }
 
   /**
-   * Creates a new submission in PENDING state.
+   * Creates a new submission in PENDING state, with a newly generated staging identifier.
    *
-   * @param submissionId The unique identifier for this submission.
+   * @param submissionId The identifier for this submission, chosen by the submitter.
    * @param submitter The identifier of the submitting system.
    * @param ownerId The optional identifier of the user who owns this submission.
    * @return A new submission in PENDING state.
@@ -86,6 +93,7 @@ public record Submission(
       @Nonnull final Optional<String> ownerId) {
     return new Submission(
         submissionId,
+        UUID.randomUUID().toString(),
         submitter,
         SubmissionState.PENDING,
         new ArrayList<>(),
@@ -112,6 +120,7 @@ public record Submission(
             : this.completedAt;
     return new Submission(
         submissionId,
+        stagingId,
         submitter,
         newState,
         manifestJobs,
@@ -134,6 +143,7 @@ public record Submission(
     newManifestJobs.add(manifestJob);
     return new Submission(
         submissionId,
+        stagingId,
         submitter,
         state,
         newManifestJobs,
@@ -164,6 +174,7 @@ public record Submission(
     }
     return new Submission(
         submissionId,
+        stagingId,
         submitter,
         state,
         newManifestJobs,
@@ -184,6 +195,7 @@ public record Submission(
   public Submission withMetadata(@Nullable final SubmissionMetadata metadata) {
     return new Submission(
         submissionId,
+        stagingId,
         submitter,
         state,
         manifestJobs,
@@ -204,6 +216,7 @@ public record Submission(
   public Submission withError(@Nonnull final String errorMessage) {
     return new Submission(
         submissionId,
+        stagingId,
         submitter,
         SubmissionState.COMPLETED_WITH_ERRORS,
         manifestJobs,
@@ -303,6 +316,7 @@ public record Submission(
         manifestJobs.stream().filter(job -> !job.manifestJobId().equals(manifestJobId)).toList();
     return new Submission(
         submissionId,
+        stagingId,
         submitter,
         state,
         new ArrayList<>(newManifestJobs),
@@ -311,6 +325,17 @@ public record Submission(
         ownerId,
         metadata,
         errorMessage);
+  }
+
+  /**
+   * Checks whether this submission belongs to a user. A submission created without an authenticated
+   * user belongs only to callers without one, as with asynchronous jobs.
+   *
+   * @param userId The identifier of the calling user, if authenticated.
+   * @return True if the user is the owner of this submission.
+   */
+  public boolean isOwnedBy(@Nonnull final Optional<String> userId) {
+    return Optional.ofNullable(ownerId).equals(userId);
   }
 
   /**

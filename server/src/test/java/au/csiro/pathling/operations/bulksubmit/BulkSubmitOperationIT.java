@@ -23,18 +23,29 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.head;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.util.TestDataSetup;
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.FhirVersionEnum;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
+import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -52,6 +63,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * Integration test for the $bulk-submit operation.
@@ -68,12 +80,16 @@ import org.springframework.test.web.reactive.server.WebTestClient;
     properties = {
       "pathling.async.enabled=true",
       "pathling.bulk-submit.allowed-submitters[0].system=http://example.org/submitters",
-      "pathling.bulk-submit.allowed-submitters[0].value=test-submitter"
+      "pathling.bulk-submit.allowed-submitters[0].value=test-submitter",
+      "pathling.bulk-submit.allowed-submitters[1].system=http://example.org/submitters",
+      "pathling.bulk-submit.allowed-submitters[1].value=other-submitter"
     })
 class BulkSubmitOperationIT {
 
   private static final String SUBMITTER_SYSTEM = "http://example.org/submitters";
   private static final String SUBMITTER_VALUE = "test-submitter";
+  private static final String OTHER_SUBMITTER_VALUE = "other-submitter";
+  private static final FhirContext FHIR_CONTEXT = FhirEncoders.contextFor(FhirVersionEnum.R4);
 
   private static WireMockServer wireMockServer;
 
@@ -111,6 +127,11 @@ class BulkSubmitOperationIT {
     registry.add(
         "pathling.bulk-submit.allowable-sources[0]",
         () -> "http://localhost:" + wireMockServer.port());
+    // The import of downloaded files is checked against the bulk-submit allowable sources, so the
+    // warehouse must be allowed for the import to succeed. The downloaded files are referred to by
+    // their Hadoop URIs, which take the form "file:/path". See #2962.
+    registry.add(
+        "pathling.bulk-submit.allowable-sources[1]", () -> "file:" + warehouseDir.toAbsolutePath());
   }
 
   @BeforeEach
@@ -218,6 +239,25 @@ class BulkSubmitOperationIT {
       final String status,
       final String manifestUrl,
       final String fhirBaseUrl) {
+    return buildBulkSubmitRequest(SUBMITTER_VALUE, submissionId, status, manifestUrl, fhirBaseUrl);
+  }
+
+  /**
+   * Builds a $bulk-submit request Parameters resource on behalf of a given submitter.
+   *
+   * @param submitterValue The value of the submitter identifier.
+   * @param submissionId The submission ID.
+   * @param status The submission status (in-progress, complete, or aborted).
+   * @param manifestUrl Optional manifest URL (null if not provided).
+   * @param fhirBaseUrl Optional FHIR base URL (null if not provided).
+   * @return JSON string representation of the Parameters resource.
+   */
+  private String buildBulkSubmitRequest(
+      final String submitterValue,
+      final String submissionId,
+      final String status,
+      final String manifestUrl,
+      final String fhirBaseUrl) {
     final StringBuilder params = new StringBuilder();
     params.append(
         """
@@ -237,7 +277,7 @@ class BulkSubmitOperationIT {
               "valueCoding": {"code": "%s"}
             }
         """
-            .formatted(SUBMITTER_SYSTEM, SUBMITTER_VALUE, submissionId, status));
+            .formatted(SUBMITTER_SYSTEM, submitterValue, submissionId, status));
 
     if (manifestUrl != null) {
       params.append(
@@ -320,6 +360,18 @@ class BulkSubmitOperationIT {
    * @return JSON string representation of the Parameters resource.
    */
   private String buildBulkSubmitStatusRequest(final String submissionId) {
+    return buildBulkSubmitStatusRequest(SUBMITTER_VALUE, submissionId);
+  }
+
+  /**
+   * Builds a $bulk-submit-status request on behalf of a given submitter.
+   *
+   * @param submitterValue The value of the submitter identifier.
+   * @param submissionId The submission ID to check status for.
+   * @return JSON string representation of the Parameters resource.
+   */
+  private String buildBulkSubmitStatusRequest(
+      final String submitterValue, final String submissionId) {
     return """
     {
       "resourceType": "Parameters",
@@ -335,7 +387,7 @@ class BulkSubmitOperationIT {
       ]
     }
     """
-        .formatted(submissionId, SUBMITTER_SYSTEM, SUBMITTER_VALUE);
+        .formatted(submissionId, SUBMITTER_SYSTEM, submitterValue);
   }
 
   @Test
@@ -574,5 +626,408 @@ class BulkSubmitOperationIT {
             .withHeader("Authorization", equalTo("Bearer test-token-12345")));
 
     log.info("Verified that custom headers were passed to manifest and data file requests");
+  }
+
+  @Test
+  void testUnexpectedResourceTypesAreReportedInStatusManifest() {
+    // This test reproduces issue #2528: a file declared as AllergyIntolerance contains a Patient.
+    // The Patient is reported in the error section of the status manifest, and the matching
+    // resources are still imported. A second manifest, submitted after the first has been
+    // downloaded, has its own error reported before the submission is complete.
+    final String baseUrl = "http://localhost:" + wireMockServer.port();
+    final String manifest =
+        """
+        {
+          "transactionTime": "2025-11-28T00:00:00Z",
+          "request": "%s/fhir/$export",
+          "requiresAccessToken": false,
+          "output": [
+            {"type": "AllergyIntolerance", "url": "%s/data/AllergyIntolerance.ndjson"}
+          ],
+          "error": []
+        }
+        """
+            .formatted(baseUrl, baseUrl);
+    wireMockServer.stubFor(
+        get(urlEqualTo("/manifest.json"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(manifest)));
+    final String allergyNdjson =
+        """
+        {"resourceType":"AllergyIntolerance","id":"allergy1","patient":{"reference":"Patient/p1"}}
+        {"resourceType":"AllergyIntolerance","id":"allergy2","patient":{"reference":"Patient/p1"}}
+        {"resourceType":"Patient","id":"stray-patient"}
+        """;
+    wireMockServer.stubFor(
+        get(urlEqualTo("/data/AllergyIntolerance.ndjson"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/fhir+ndjson")
+                    .withBody(allergyNdjson)));
+
+    final String submissionId = UUID.randomUUID().toString();
+    final String manifestUrl = baseUrl + "/manifest.json";
+    final String uri = "http://localhost:" + port + "/fhir/$bulk-submit";
+
+    // Step 1: Submit the manifest.
+    webTestClient
+        .post()
+        .uri(uri)
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .bodyValue(
+            buildBulkSubmitRequest(submissionId, "in-progress", manifestUrl, baseUrl + "/fhir"))
+        .exchange()
+        .expectStatus()
+        .isOk();
+
+    // Step 2: Poll the status until the download has finished, and take the status manifest.
+    final String statusRequest = buildBulkSubmitStatusRequest(submissionId);
+    final Parameters statusManifest = awaitStatusManifest(statusRequest, 1);
+
+    // Then: the error section has one entry, linked to the submitted manifest.
+    final List<ParametersParameterComponent> errors = errorParameters(statusManifest);
+    assertThat(errors).hasSize(1);
+    final ParametersParameterComponent error = errors.getFirst();
+    assertThat(error.getPart())
+        .anySatisfy(
+            part -> {
+              assertThat(part.getName()).isEqualTo("type");
+              assertThat(part.getValue().primitiveValue()).isEqualTo("OperationOutcome");
+            });
+    assertThat(error.getPart())
+        .anySatisfy(
+            part -> {
+              assertThat(part.getName()).isEqualTo("extension");
+              assertThat(part.getPart())
+                  .extracting(p -> p.getValue().primitiveValue())
+                  .containsExactly("manifestUrl", manifestUrl);
+            });
+    final String errorFileUrl =
+        error.getPart().stream()
+            .filter(part -> "url".equals(part.getName()))
+            .map(part -> part.getValue().primitiveValue())
+            .findFirst()
+            .orElseThrow();
+
+    // And: the error file describes the Patient that will not be imported.
+    final String errorFile =
+        webTestClient
+            .get()
+            .uri(errorFileUrl)
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody(String.class)
+            .returnResult()
+            .getResponseBody();
+    assertThat(errorFile).isNotNull();
+    final List<OperationOutcome> outcomes =
+        errorFile
+            .lines()
+            .filter(line -> !line.isBlank())
+            .map(line -> FHIR_CONTEXT.newJsonParser().parseResource(OperationOutcome.class, line))
+            .toList();
+    assertThat(outcomes).hasSize(1);
+    assertThat(outcomes.getFirst().getIssueFirstRep().getSeverity()).isEqualTo(IssueSeverity.ERROR);
+    assertThat(outcomes.getFirst().getIssueFirstRep().getDiagnostics())
+        .isEqualTo(
+            "File "
+                + baseUrl
+                + "/data/AllergyIntolerance.ndjson declared as AllergyIntolerance contains 1"
+                + " resource of type Patient, which will not be imported.");
+
+    // Step 3: Submit a second manifest, whose Observation file contains a Condition.
+    final String secondManifest =
+        """
+        {
+          "transactionTime": "2025-11-28T00:00:00Z",
+          "request": "%s/fhir/$export",
+          "requiresAccessToken": false,
+          "output": [
+            {"type": "Observation", "url": "%s/data/Observation-2.ndjson"}
+          ],
+          "error": []
+        }
+        """
+            .formatted(baseUrl, baseUrl);
+    wireMockServer.stubFor(
+        get(urlEqualTo("/manifest-2.json"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(secondManifest)));
+    wireMockServer.stubFor(
+        get(urlEqualTo("/data/Observation-2.ndjson"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/fhir+ndjson")
+                    .withBody(
+                        """
+                        {"resourceType":"Observation","id":"obs-a","status":"final","code":{"text":"a"}}
+                        {"resourceType":"Condition","id":"stray-condition"}
+                        """)));
+    final String secondManifestUrl = baseUrl + "/manifest-2.json";
+    webTestClient
+        .post()
+        .uri(uri)
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .bodyValue(
+            buildBulkSubmitRequest(
+                submissionId, "in-progress", secondManifestUrl, baseUrl + "/fhir"))
+        .exchange()
+        .expectStatus()
+        .isOk();
+
+    // Then: once the second manifest has been downloaded, the status manifest reports the errors
+    // for both manifests, each linked to its own manifest.
+    assertThat(errorParameters(awaitStatusManifest(statusRequest, 2)))
+        .extracting(BulkSubmitOperationIT::manifestUrlOf)
+        .containsExactlyInAnyOrder(manifestUrl, secondManifestUrl);
+
+    // Step 4: Complete the submission to trigger the import.
+    webTestClient
+        .post()
+        .uri(uri)
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .bodyValue(buildBulkSubmitRequest(submissionId, "complete", null, null))
+        .exchange()
+        .expectStatus()
+        .isOk();
+
+    // Then: the AllergyIntolerance resources are imported.
+    final String allergySearchUri = "http://localhost:" + port + "/fhir/AllergyIntolerance";
+    await()
+        .atMost(60, TimeUnit.SECONDS)
+        .pollInterval(1, TimeUnit.SECONDS)
+        .untilAsserted(
+            () -> {
+              final String body =
+                  webTestClient
+                      .get()
+                      .uri(allergySearchUri)
+                      .header("Accept", "application/fhir+json")
+                      .exchange()
+                      .expectStatus()
+                      .isOk()
+                      .expectBody(String.class)
+                      .returnResult()
+                      .getResponseBody();
+              final Bundle bundle = FHIR_CONTEXT.newJsonParser().parseResource(Bundle.class, body);
+              assertThat(bundle.getTotal()).isEqualTo(2);
+            });
+
+    // And: the Patient was not imported.
+    webTestClient
+        .get()
+        .uri("http://localhost:" + port + "/fhir/Patient/stray-patient")
+        .header("Accept", "application/fhir+json")
+        .exchange()
+        .expectStatus()
+        .isNotFound();
+
+    // And: the errors are still reported once the submission is complete.
+    assertThat(errorParameters(awaitStatusManifest(statusRequest, 2))).hasSize(2);
+  }
+
+  // Reproduces #2982. A second allowed submitter reuses the submission ID of another submitter,
+  // with a manifest that cannot be downloaded. The first submission's files must stay reachable
+  // through its own result URLs only, and must not become reachable through the shared ID.
+  @Test
+  void submissionIdReusedByAnotherSubmitterDoesNotExposeStagedFiles() {
+    setupSuccessfulManifestStubs();
+    final String baseUrl = "http://localhost:" + wireMockServer.port();
+    wireMockServer.stubFor(
+        get(urlEqualTo("/missing-manifest.json")).willReturn(aResponse().withStatus(404)));
+    final String submissionId = "S" + UUID.randomUUID().toString().replace("-", "");
+    final String uri = "http://localhost:" + port + "/fhir/$bulk-submit";
+
+    // Given: the first submitter's files have been staged.
+    webTestClient
+        .post()
+        .uri(uri)
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .bodyValue(
+            buildBulkSubmitRequest(
+                SUBMITTER_VALUE,
+                submissionId,
+                "in-progress",
+                baseUrl + "/manifest.json",
+                baseUrl + "/fhir"))
+        .exchange()
+        .expectStatus()
+        .isOk();
+    final Parameters originalManifest =
+        awaitStatusManifest(
+            buildBulkSubmitStatusRequest(SUBMITTER_VALUE, submissionId),
+            manifest -> !outputUrls(manifest).isEmpty());
+    final String originalResultUrl = outputUrls(originalManifest).getFirst();
+    final String stagedFile = queryParameter(originalResultUrl, "file");
+    final String originalJob = queryParameter(originalResultUrl, "job");
+
+    // When: the second submitter submits the same submission ID with a manifest that fails.
+    webTestClient
+        .post()
+        .uri(uri)
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .bodyValue(
+            buildBulkSubmitRequest(
+                OTHER_SUBMITTER_VALUE,
+                submissionId,
+                "in-progress",
+                baseUrl + "/missing-manifest.json",
+                baseUrl + "/fhir"))
+        .exchange()
+        .expectStatus()
+        .isOk();
+    final Parameters otherManifest =
+        awaitStatusManifest(
+            buildBulkSubmitStatusRequest(OTHER_SUBMITTER_VALUE, submissionId),
+            manifest -> errorParameters(manifest).size() == 1);
+
+    // Then: the result URLs of both submissions refer to server-generated identifiers that differ
+    // from each other and from the client-chosen submission ID.
+    final String otherJob =
+        queryParameter(
+            errorParameters(otherManifest).getFirst().getPart().stream()
+                .filter(part -> "url".equals(part.getName()))
+                .map(part -> part.getValue().primitiveValue())
+                .findFirst()
+                .orElseThrow(),
+            "job");
+    assertThat(originalJob).isNotEqualTo(submissionId);
+    assertThat(otherJob).isNotIn(submissionId, originalJob);
+
+    // And: the staged file cannot be retrieved through the shared submission ID.
+    webTestClient
+        .get()
+        .uri(
+            "http://localhost:{port}/fhir/$result?job={job}&file={file}",
+            port,
+            submissionId,
+            stagedFile)
+        .exchange()
+        .expectStatus()
+        .isNotFound();
+
+    // And: the staged file cannot be retrieved through the second submission's identifier.
+    webTestClient
+        .get()
+        .uri(
+            "http://localhost:{port}/fhir/$result?job={job}&file={file}",
+            port,
+            otherJob,
+            stagedFile)
+        .exchange()
+        .expectStatus()
+        .isNotFound();
+
+    // And: the first submission's result URL still returns its file.
+    webTestClient.get().uri(originalResultUrl).exchange().expectStatus().isOk();
+  }
+
+  // Reproduces #2982. Submission IDs that are path-like or scheme-qualified are rejected before any
+  // directory is created for them.
+  @Test
+  void submissionIdThatIsNotAPlainIdentifierIsRejected() {
+    final String baseUrl = "http://localhost:" + wireMockServer.port();
+    wireMockServer.stubFor(
+        get(urlEqualTo("/missing-manifest.json")).willReturn(aResponse().withStatus(404)));
+    final Path escape = stagingDir.resolve("bs-escape");
+    final String uri = "http://localhost:" + port + "/fhir/$bulk-submit";
+
+    for (final String submissionId : List.of("./S1", "S1/../S2", "file:" + escape)) {
+      webTestClient
+          .post()
+          .uri(uri)
+          .header("Content-Type", "application/fhir+json")
+          .header("Accept", "application/fhir+json")
+          .bodyValue(
+              buildBulkSubmitRequest(
+                  SUBMITTER_VALUE,
+                  submissionId,
+                  "in-progress",
+                  baseUrl + "/missing-manifest.json",
+                  baseUrl + "/fhir"))
+          .exchange()
+          .expectStatus()
+          .isBadRequest();
+    }
+    assertThat(escape).doesNotExist();
+  }
+
+  /**
+   * Polls the status of a submission until it returns a status manifest with the expected number of
+   * error entries.
+   */
+  private Parameters awaitStatusManifest(final String statusRequest, final int expectedErrors) {
+    return awaitStatusManifest(
+        statusRequest, manifest -> errorParameters(manifest).size() == expectedErrors);
+  }
+
+  /** Polls the status of a submission until it returns a status manifest matching a condition. */
+  private Parameters awaitStatusManifest(
+      final String statusRequest, final Predicate<Parameters> condition) {
+    final String statusUri = "http://localhost:" + port + "/fhir/$bulk-submit-status";
+    return await()
+        .atMost(60, TimeUnit.SECONDS)
+        .pollInterval(1, TimeUnit.SECONDS)
+        .until(
+            () -> {
+              final var result =
+                  webTestClient
+                      .post()
+                      .uri(statusUri)
+                      .header("Content-Type", "application/fhir+json")
+                      .header("Accept", "application/fhir+json")
+                      .header("Prefer", "respond-async")
+                      .bodyValue(statusRequest)
+                      .exchange()
+                      .expectBody(String.class)
+                      .returnResult();
+              return result.getStatus().value() == 200
+                  ? FHIR_CONTEXT
+                      .newJsonParser()
+                      .parseResource(Parameters.class, result.getResponseBody())
+                  : null;
+            },
+            manifest -> manifest != null && condition.test(manifest));
+  }
+
+  private static List<String> outputUrls(final Parameters manifest) {
+    return manifest.getParameter().stream()
+        .filter(p -> "output".equals(p.getName()))
+        .flatMap(p -> p.getPart().stream())
+        .filter(part -> "url".equals(part.getName()))
+        .map(part -> part.getValue().primitiveValue())
+        .toList();
+  }
+
+  private static String queryParameter(final String url, final String name) {
+    return UriComponentsBuilder.fromUriString(url).build().getQueryParams().getFirst(name);
+  }
+
+  private static List<ParametersParameterComponent> errorParameters(final Parameters manifest) {
+    return manifest.getParameter().stream().filter(p -> "error".equals(p.getName())).toList();
+  }
+
+  private static String manifestUrlOf(final ParametersParameterComponent error) {
+    return error.getPart().stream()
+        .filter(part -> "extension".equals(part.getName()))
+        .flatMap(part -> part.getPart().stream())
+        .filter(part -> "valueUrl".equals(part.getName()))
+        .map(part -> part.getValue().primitiveValue())
+        .findFirst()
+        .orElseThrow();
   }
 }

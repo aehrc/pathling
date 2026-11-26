@@ -25,14 +25,16 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.ResourceNotFoundError;
+import au.csiro.pathling.io.ResourceEncoding;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.operations.sqlquery.SqlLibraryFixtures;
 import au.csiro.pathling.read.ReadExecutor;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.util.FhirServerTestConfiguration;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
@@ -42,7 +44,6 @@ import jakarta.annotation.Nullable;
 import java.util.List;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Library;
@@ -53,6 +54,7 @@ import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
 
 /**
  * Unit tests for {@link SubjectResolver}, covering the naming-form exclusivity rule, canonical and
@@ -61,15 +63,14 @@ import org.springframework.beans.factory.annotation.Autowired;
  *
  * @author John Grimes
  */
+@Import(FhirServerTestConfiguration.class)
 @SpringBootUnitTest
 class SubjectResolverTest {
 
   private static final String VIEW_URL = SqlLibraryFixtures.viewDefinitionUrl("demographics");
   private static final String LIBRARY_URL = SqlLibraryFixtures.sqlViewUrl("bp-summary");
 
-  @Autowired private SparkSession spark;
-
-  @Autowired private FhirEncoders fhirEncoders;
+  @Autowired private PathlingContext pathlingContext;
 
   private ReadExecutor readExecutor;
   private DataSource dataSource;
@@ -423,20 +424,18 @@ class SubjectResolverTest {
     final AuthorizationConfiguration auth = new AuthorizationConfiguration();
     auth.setEnabled(authEnabled);
     configuration.setAuth(auth);
-    return new SubjectResolver(readExecutor, dataSource, fhirEncoders, configuration);
+    return new SubjectResolver(readExecutor, dataSource, pathlingContext, configuration);
   }
 
   private void stubViewDefinitions(@Nonnull final ViewDefinitionResource... viewDefinitions) {
     when(dataSource.read("ViewDefinition"))
         .thenReturn(
-            spark
-                .createDataset(List.of(viewDefinitions), fhirEncoders.of("ViewDefinition"))
-                .toDF());
+            ResourceEncoding.encode(pathlingContext, "ViewDefinition", List.of(viewDefinitions)));
   }
 
   private void stubLibraries(@Nonnull final Library... libraries) {
     final Dataset<Row> dataset =
-        spark.createDataset(List.of(libraries), fhirEncoders.of("Library")).toDF();
+        ResourceEncoding.encode(pathlingContext, "Library", List.of(libraries));
     when(dataSource.read("Library")).thenReturn(dataset);
   }
 

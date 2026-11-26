@@ -19,12 +19,17 @@ package au.csiro.pathling.operations.sqlquery;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.test.SpringBootUnitTest;
 import jakarta.annotation.Nonnull;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.catalyst.parser.ParseException;
 import org.apache.spark.sql.catalyst.parser.ParserInterface;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,6 +55,9 @@ class SqlLabelRewriterTest {
 
   /** The temporary view name the {@code patients} label is taken to be materialised under. */
   private static final String PATIENTS_VIEW = "sqlquery_req1_patients";
+
+  /** A character outside the Basic Multilingual Plane (U+1F600), two UTF-16 code units long. */
+  private static final String SUPPLEMENTARY = "\uD83D\uDE00";
 
   @Autowired private SparkSession spark;
 
@@ -515,6 +523,103 @@ class SqlLabelRewriterTest {
         "WITH RECURSIVE age AS (SELECT 1 AS v UNION ALL SELECT v + 1 FROM age WHERE v < 3)"
             + " SELECT v FROM age";
     assertThat(rewriteAge(sql)).isEqualTo(sql);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Characters outside the Basic Multilingual Plane.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void rewritesRelationFollowingLiteralOfSupplementaryCharacters() {
+    // Each supplementary character is one code point but two UTF-16 code units, so the relation
+    // sits at a different offset in each count.
+    final String literal = "'" + SUPPLEMENTARY.repeat(3) + "'";
+    assertThat(rewriteAge("SELECT " + literal + " AS e FROM age"))
+        .isEqualTo("SELECT " + literal + " AS e FROM " + AGE_VIEW + " AS age");
+  }
+
+  @Test
+  void preservesCommentsAroundRelationFollowingBlockCommentOfSupplementaryCharacters() {
+    // The line comment after the relation contains a block comment terminator. The block comment
+    // ahead of the query must stay closed where it was written, and the line comment must stay a
+    // comment.
+    final String blockComment = "/*" + SUPPLEMENTARY.repeat(17) + "*/";
+    assertThat(rewriteAge(blockComment + " SELECT * FROM age --*/ note"))
+        .isEqualTo(blockComment + " SELECT * FROM " + AGE_VIEW + " AS age --*/ note");
+  }
+
+  @Test
+  void injectsAliasAfterSampleClauseOfRelationFollowingSupplementaryCharacters() {
+    // The sample clause between the identifier and the alias slot is carried over intact.
+    final String literal = "'" + SUPPLEMENTARY + "'";
+    assertThat(rewriteAge("SELECT " + literal + " AS e FROM age TABLESAMPLE (10 PERCENT)"))
+        .isEqualTo(
+            "SELECT " + literal + " AS e FROM " + AGE_VIEW + " TABLESAMPLE (10 PERCENT) AS age");
+  }
+
+  @Test
+  void rewritesEachRelationWhenSupplementaryCharactersSeparateThem() {
+    final Map<String, String> labels = new LinkedHashMap<>();
+    labels.put("age", AGE_VIEW);
+    labels.put("patients", PATIENTS_VIEW);
+    final String one = "/* " + SUPPLEMENTARY + " */";
+    final String two = "/* " + SUPPLEMENTARY.repeat(2) + " */";
+    assertThat(
+            rewrite(
+                "SELECT * FROM age " + one + " JOIN patients " + two + " ON age.id = patients.id",
+                labels))
+        .isEqualTo(
+            "SELECT * FROM "
+                + AGE_VIEW
+                + " AS age "
+                + one
+                + " JOIN "
+                + PATIENTS_VIEW
+                + " AS patients "
+                + two
+                + " ON age.id = patients.id");
+  }
+
+  @Test
+  void rewritesBacktickQuotedRelationFollowingSupplementaryCharacters() {
+    final String comment = "/* " + SUPPLEMENTARY + " */";
+    assertThat(rewriteAge(comment + " SELECT * FROM `age`"))
+        .isEqualTo(comment + " SELECT * FROM " + AGE_VIEW + " AS age");
+  }
+
+  @Test
+  void rewritesDescribeTargetFollowingSupplementaryCharacters() {
+    final String comment = "/* " + SUPPLEMENTARY + " */";
+    assertThat(rewriteAge(comment + " DESCRIBE age")).isEqualTo(comment + " DESCRIBE " + AGE_VIEW);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Parsed spans that do not hold the label.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void rejectsRelationSpanThatDoesNotHoldTheLabel() throws ParseException {
+    // The parser reports a relation named "age" at a span of the text that holds "xyz". Nothing is
+    // replaced, and the rewrite fails.
+    final ParserInterface mismatched = mock(ParserInterface.class);
+    when(mismatched.parsePlan(anyString())).thenReturn(parser.parsePlan("SELECT * FROM age"));
+
+    assertThatThrownBy(
+            () ->
+                SqlLabelRewriter.rewrite(mismatched, "SELECT * FROM xyz", Map.of("age", AGE_VIEW)))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("age");
+  }
+
+  @Test
+  void rejectsDescribeTargetSpanThatDoesNotHoldTheLabel() throws ParseException {
+    final ParserInterface mismatched = mock(ParserInterface.class);
+    when(mismatched.parsePlan(anyString())).thenReturn(parser.parsePlan("DESCRIBE age"));
+
+    assertThatThrownBy(
+            () -> SqlLabelRewriter.rewrite(mismatched, "DESCRIBE xyz", Map.of("age", AGE_VIEW)))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("age");
   }
 
   // ---------------------------------------------------------------------------

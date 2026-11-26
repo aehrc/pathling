@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.bulksubmit;
 import au.csiro.pathling.ParamUtil;
 import au.csiro.pathling.config.BulkSubmitConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.SubmitterConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import jakarta.annotation.Nonnull;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Identifier;
@@ -52,6 +54,13 @@ public class BulkSubmitValidator {
           BulkSubmitRequest.STATUS_IN_PROGRESS,
           BulkSubmitRequest.STATUS_COMPLETE,
           BulkSubmitRequest.STATUS_ABORTED);
+
+  /**
+   * The permitted form of a client-chosen submission identifier. Submission identifiers appear in
+   * logs and URLs, so they are limited to a conservative set of characters that cannot express a
+   * path, a URI or a hidden file.
+   */
+  private static final Pattern SUBMISSION_ID_PATTERN = Pattern.compile("[A-Za-z0-9_-]{1,64}");
 
   @Nonnull private final ServerConfiguration serverConfiguration;
 
@@ -85,16 +94,14 @@ public class BulkSubmitValidator {
 
     // Extract submissionId (required).
     final String submissionId = extractRequiredString(parameters, "submissionId");
-
-    // Extract submitter (required).
-    final SubmitterIdentifier submitter = extractSubmitter(parameters);
-
-    // Validate submitter is allowed.
-    if (!config.isSubmitterAllowed(submitter)) {
+    if (!SUBMISSION_ID_PATTERN.matcher(submissionId).matches()) {
       throw new InvalidUserInputError(
-          "Submitter %s|%s is not in the list of allowed submitters."
-              .formatted(submitter.system(), submitter.value()));
+          "submissionId must consist of between 1 and 64 letters, digits, hyphens or underscores.");
     }
+
+    // Extract submitter (required) and validate that it is allowed.
+    final SubmitterIdentifier submitter = extractSubmitter(parameters);
+    validateCredentialUse(validateSubmitterAllowed(submitter));
 
     // Extract submissionStatus (required).
     final String submissionStatus = extractSubmissionStatus(parameters);
@@ -117,8 +124,8 @@ public class BulkSubmitValidator {
       if (fhirBaseUrl == null) {
         throw new InvalidUserInputError("fhirBaseUrl is required when manifestUrl is present.");
       }
-      validateUrl(manifestUrl, "manifestUrl", config);
-      validateUrl(fhirBaseUrl, "fhirBaseUrl", config);
+      validateUrl(manifestUrl, "manifestUrl", config, submitter);
+      validateUrl(fhirBaseUrl, "fhirBaseUrl", config, submitter);
     }
 
     // Extract replacesManifestUrl (optional).
@@ -127,7 +134,7 @@ public class BulkSubmitValidator {
     // Extract oauthMetadataUrl (optional).
     final String oauthMetadataUrl = extractOptionalUrl(parameters, "oauthMetadataUrl");
     if (oauthMetadataUrl != null) {
-      validateUrl(oauthMetadataUrl, "oauthMetadataUrl", config);
+      validateUrl(oauthMetadataUrl, "oauthMetadataUrl", config, submitter);
     }
 
     // Extract metadata (optional).
@@ -149,6 +156,25 @@ public class BulkSubmitValidator {
         fileRequestHeaders);
   }
 
+  /**
+   * Validates that a submitter is in the list of allowed submitters.
+   *
+   * @param submitter The submitter identifier to check.
+   * @return The configuration of the submitter.
+   * @throws InvalidUserInputError If bulk submit is not configured or the submitter is not allowed.
+   */
+  @Nonnull
+  public SubmitterConfiguration validateSubmitterAllowed(
+      @Nonnull final SubmitterIdentifier submitter) {
+    return getBulkSubmitConfig()
+        .findSubmitterConfig(submitter)
+        .orElseThrow(
+            () ->
+                new InvalidUserInputError(
+                    "Submitter %s|%s is not in the list of allowed submitters."
+                        .formatted(submitter.system(), submitter.value())));
+  }
+
   @Nonnull
   private BulkSubmitConfiguration getBulkSubmitConfig() {
     final BulkSubmitConfiguration config = serverConfiguration.getBulkSubmit();
@@ -156,6 +182,31 @@ public class BulkSubmitValidator {
       throw new InvalidUserInputError("The $bulk-submit operation is not configured.");
     }
     return config;
+  }
+
+  /**
+   * Validates that the submitter's OAuth credentials, if it has any, can be used. Credentials are
+   * only used when authentication is enabled on this server, and only with URLs within the
+   * submitter's own allowable sources, which must therefore be configured.
+   *
+   * @param submitterConfig the configuration of the submitter named in the request.
+   * @throws InvalidUserInputError if the submitter has credentials that cannot be used.
+   */
+  private void validateCredentialUse(@Nonnull final SubmitterConfiguration submitterConfig) {
+    if (!submitterConfig.hasCredentials()) {
+      return;
+    }
+    final String submitterKey = submitterConfig.toIdentifier().toKey();
+    if (!serverConfiguration.getAuth().isEnabled()) {
+      throw new InvalidUserInputError(
+          "Submitter %s has OAuth credentials configured, which requires pathling.auth.enabled to be true."
+              .formatted(submitterKey));
+    }
+    if (submitterConfig.allowableSources().isEmpty()) {
+      throw new InvalidUserInputError(
+          "Submitter %s has OAuth credentials configured, which requires its own allowableSources."
+              .formatted(submitterKey));
+    }
   }
 
   @Nonnull
@@ -246,8 +297,9 @@ public class BulkSubmitValidator {
   private void validateUrl(
       @Nonnull final String url,
       @Nonnull final String paramName,
-      @Nonnull final BulkSubmitConfiguration config) {
-    if (!config.isSourceAllowed(url, allowInsecureUrls)) {
+      @Nonnull final BulkSubmitConfiguration config,
+      @Nonnull final SubmitterIdentifier submitter) {
+    if (!config.isSourceAllowed(submitter, url, allowInsecureUrls)) {
       throw new InvalidUserInputError(
           "%s '%s' does not match any allowed source prefixes.".formatted(paramName, url));
     }

@@ -39,7 +39,8 @@ import org.apache.spark.sql.catalyst.plans.logical.SubqueryAlias;
 import org.apache.spark.sql.catalyst.plans.logical.UnresolvedWith;
 import org.apache.spark.sql.catalyst.trees.Origin;
 import org.apache.spark.sql.execution.command.DescribeQueryCommand;
-import scala.Tuple2;
+import scala.Option;
+import scala.Tuple3;
 import scala.collection.immutable.Seq;
 import scala.jdk.javaapi.CollectionConverters;
 
@@ -59,6 +60,10 @@ import scala.jdk.javaapi.CollectionConverters;
  * <p>A reference is left alone when a common table expression of the same name is in scope: the
  * query author's definition shadows the label, per standard SQL scoping. Scope follows Spark's own
  * {@code CTESubstitution}, and the names are compared case-sensitively, exactly as the labels are.
+ *
+ * <p>Spark reports the span of a reference as code point offsets, which are converted into indices
+ * into the query text before any edit is made. The text at each span is checked to be the label,
+ * bare or back-quoted, before it is replaced.
  *
  * @author John Grimes
  */
@@ -134,7 +139,7 @@ public final class SqlLabelRewriter {
     if (plan instanceof final UnresolvedRelation relation) {
       collectRelationEdit(sql, relation, labelToViewName, cteScope, aliased, edits);
     } else if (plan instanceof final UnresolvedTableOrView target) {
-      collectDescribeTargetEdit(target, labelToViewName, edits);
+      collectDescribeTargetEdit(sql, target, labelToViewName, edits);
     }
 
     // A subquery expression holds its plan outside the tree's children.
@@ -208,10 +213,10 @@ public final class SqlLabelRewriter {
       @Nonnull final Set<LogicalPlan> visited,
       @Nonnull final List<SqlEdit> edits) {
 
-    final List<Tuple2<String, SubqueryAlias>> ctes =
+    final List<Tuple3<String, SubqueryAlias, Option<Object>>> ctes =
         CollectionConverters.asJava(with.cteRelations());
     final Set<String> scope = new HashSet<>(cteScope);
-    for (final Tuple2<String, SubqueryAlias> cte : ctes) {
+    for (final Tuple3<String, SubqueryAlias, Option<Object>> cte : ctes) {
       if (with.allowRecursion()) {
         // A RECURSIVE clause puts a definition's own name in scope for its body, so a
         // self-reference there is the recursion rather than a label of the same name.
@@ -243,20 +248,23 @@ public final class SqlLabelRewriter {
     final String viewName = labelToViewName.get(label);
     final int start = spanStart(relation.origin(), label);
     final int stop = spanStop(relation.origin(), label);
+    requireLabelInSpan(sql, start, stop, label);
 
     final int insertion = aliased ? SqlSource.NO_ALIAS : sql.aliasInsertionPoint(start, stop);
     if (insertion == SqlSource.NO_ALIAS) {
       // Only the identifier is replaced, because no alias can be added here. Either the reference
       // already carries one, in which case standard SQL scoping makes the original name unavailable
       // as a qualifier anyway, or the grammar offers no alias slot at all.
-      edits.add(new SqlEdit(start, stop + 1, viewName));
+      edits.add(new SqlEdit(sql.index(start), sql.index(stop + 1), viewName));
       return;
     }
     // Any options and sample clauses between the identifier and the alias slot are carried over
     // unchanged, because the grammar orders the alias after them.
     edits.add(
         new SqlEdit(
-            start, insertion, viewName + sql.substring(stop + 1, insertion) + " AS " + label));
+            sql.index(start),
+            sql.index(insertion),
+            viewName + sql.substring(stop + 1, insertion) + " AS " + label));
   }
 
   /**
@@ -264,6 +272,7 @@ public final class SqlLabelRewriter {
    * injected: the grammar does not permit one there, and there is nothing to qualify.
    */
   private static void collectDescribeTargetEdit(
+      @Nonnull final SqlSource sql,
       @Nonnull final UnresolvedTableOrView target,
       @Nonnull final Map<String, String> labelToViewName,
       @Nonnull final List<SqlEdit> edits) {
@@ -272,11 +281,25 @@ public final class SqlLabelRewriter {
     if (label == null) {
       return;
     }
-    edits.add(
-        new SqlEdit(
-            spanStart(target.origin(), label),
-            spanStop(target.origin(), label) + 1,
-            labelToViewName.get(label)));
+    final int start = spanStart(target.origin(), label);
+    final int stop = spanStop(target.origin(), label);
+    requireLabelInSpan(sql, start, stop, label);
+    edits.add(new SqlEdit(sql.index(start), sql.index(stop + 1), labelToViewName.get(label)));
+  }
+
+  /**
+   * Confirms that the span the parser reported for a reference holds the label itself, bare or
+   * back-quoted, so that an edit can only ever replace the identifier it was computed for.
+   *
+   * @throws IllegalStateException if the span holds anything else
+   */
+  private static void requireLabelInSpan(
+      @Nonnull final SqlSource sql, final int start, final int stop, @Nonnull final String label) {
+    final String span = sql.substring(start, stop + 1);
+    if (!span.equals(label) && !span.equals("`" + label + "`")) {
+      throw new IllegalStateException(
+          "Parsed reference to label '" + label + "' does not match the query text at its span");
+    }
   }
 
   /**

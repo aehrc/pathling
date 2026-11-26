@@ -36,6 +36,7 @@ import {
 import { useRef, useState } from "react";
 
 import { SaveModeField } from "./SaveModeField";
+import { useFocusOnAdd } from "../../hooks/useFocusOnAdd";
 import { IMPORT_FORMATS } from "../../types/import";
 import { FieldGuidance } from "../FieldGuidance";
 import { FieldLabel } from "../FieldLabel";
@@ -70,6 +71,7 @@ export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
   const [inputFormat, setInputFormat] = useState<ImportFormat>("application/fhir+ndjson");
   const [saveMode, setSaveMode] = useState<SaveMode>("overwrite");
   const [inputs, setInputs] = useState<ImportInputWithId[]>([{ id: 0, type: "Patient", url: "" }]);
+  const { focusOnRender, focusRef } = useFocusOnAdd<number>();
 
   const handleSubmit = () => {
     const request: ImportRequest = {
@@ -83,7 +85,9 @@ export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
   };
 
   const addInput = () => {
-    setInputs([...inputs, { id: idCounter.current++, type: "Patient", url: "" }]);
+    const id = idCounter.current++;
+    focusOnRender(id);
+    setInputs([...inputs, { id, type: "Patient", url: "" }]);
   };
 
   const removeInput = (id: number) => {
@@ -141,7 +145,7 @@ export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
                     value={input.type}
                     onValueChange={(value) => updateInput(input.id, "type", value)}
                   >
-                    <Select.Trigger style={{ width: "100%" }} />
+                    <Select.Trigger ref={focusRef(input.id)} style={{ width: "100%" }} />
                     <Select.Content>
                       {resourceTypes.map((type) => (
                         <Select.Item key={type} value={type}>

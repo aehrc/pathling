@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
+import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.BulkSubmitConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.SubmitterConfiguration;
@@ -34,6 +35,8 @@ import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Tests for BulkSubmitValidator.
@@ -54,7 +57,7 @@ class BulkSubmitValidatorTest {
     bulkSubmitConfig.setAllowedSubmitters(
         List.of(
             new SubmitterConfiguration(
-                SUBMITTER_SYSTEM, SUBMITTER_VALUE, null, null, null, null, null, null)));
+                SUBMITTER_SYSTEM, SUBMITTER_VALUE, null, null, null, null, null, null, List.of())));
     bulkSubmitConfig.setAllowableSources(List.of("https://example.org/"));
 
     serverConfiguration = new ServerConfiguration();
@@ -125,6 +128,55 @@ class BulkSubmitValidatorTest {
     assertThatCode(() -> validator.validateAndExtract(mockRequest, params))
         .isInstanceOf(InvalidUserInputError.class)
         .hasMessageContaining("submissionId");
+  }
+
+  // The submission identifier is chosen by the client, so it is restricted to a conservative set
+  // of characters. Path-like values, URIs and dot-prefixed names are rejected outright.
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "./S1",
+        "../S1",
+        "S1/../S2",
+        "a/b",
+        ".hidden",
+        "file:/tmp/escape",
+        "S1 ",
+        "S1\u0000",
+        "S1\\S2",
+        "s1.v2",
+        "sübmission",
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      })
+  void rejectsSubmissionIdOutsidePermittedPattern(final String submissionId) {
+    final Parameters params = paramsWithSubmissionId(submissionId);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
+
+    assertThatCode(() -> validator.validateAndExtract(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("submissionId");
+  }
+
+  // Identifiers made of letters, digits, hyphens and underscores, up to 64 characters long, are
+  // accepted. This includes UUIDs, which is what most clients generate.
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "S1",
+        "a",
+        "test_submission-1",
+        "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      })
+  void acceptsSubmissionIdWithinPermittedPattern(final String submissionId) {
+    final Parameters params = paramsWithSubmissionId(submissionId);
+    final RequestDetails mockRequest =
+        MockUtil.mockRequest("application/fhir+json", "respond-async", false);
+
+    final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
+
+    assertThat(result.submissionId()).isEqualTo(submissionId);
   }
 
   @Test
@@ -228,12 +280,34 @@ class BulkSubmitValidatorTest {
   }
 
   @Test
+  void validateSubmitterAllowedAcceptsConfiguredSubmitter() {
+    // A submitter in the allowed submitters list passes the standalone check used by
+    // $bulk-submit-status.
+    assertThatNoException()
+        .isThrownBy(
+            () ->
+                validator.validateSubmitterAllowed(
+                    new SubmitterIdentifier(SUBMITTER_SYSTEM, SUBMITTER_VALUE)));
+  }
+
+  @Test
+  void validateSubmitterAllowedRejectsUnknownSubmitter() {
+    // A submitter that is not configured is rejected with the same error as $bulk-submit.
+    assertThatCode(
+            () ->
+                validator.validateSubmitterAllowed(
+                    new SubmitterIdentifier(SUBMITTER_SYSTEM, "unauthorised-submitter")))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("not in the list of allowed submitters");
+  }
+
+  @Test
   void invalidManifestUrlPrefix() {
     final BulkSubmitConfiguration config = new BulkSubmitConfiguration();
     config.setAllowedSubmitters(
         List.of(
             new SubmitterConfiguration(
-                SUBMITTER_SYSTEM, SUBMITTER_VALUE, null, null, null, null, null, null)));
+                SUBMITTER_SYSTEM, SUBMITTER_VALUE, null, null, null, null, null, null, List.of())));
     config.setAllowableSources(List.of("https://allowed.org/"));
     serverConfiguration.setBulkSubmit(config);
 
@@ -307,7 +381,7 @@ class BulkSubmitValidatorTest {
     config.setAllowedSubmitters(
         List.of(
             new SubmitterConfiguration(
-                SUBMITTER_SYSTEM, SUBMITTER_VALUE, null, null, null, null, null, null)));
+                SUBMITTER_SYSTEM, SUBMITTER_VALUE, null, null, null, null, null, null, List.of())));
     config.setAllowableSources(List.of("https://allowed.org/"));
     serverConfiguration.setBulkSubmit(config);
 
@@ -332,7 +406,7 @@ class BulkSubmitValidatorTest {
     config.setAllowedSubmitters(
         List.of(
             new SubmitterConfiguration(
-                SUBMITTER_SYSTEM, SUBMITTER_VALUE, null, null, null, null, null, null)));
+                SUBMITTER_SYSTEM, SUBMITTER_VALUE, null, null, null, null, null, null, List.of())));
     config.setAllowableSources(List.of("https://allowed.org/"));
     serverConfiguration.setBulkSubmit(config);
 
@@ -348,6 +422,137 @@ class BulkSubmitValidatorTest {
     final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
     assertThat(result.oauthMetadataUrl())
         .isEqualTo("https://allowed.org/.well-known/smart-configuration");
+  }
+
+  // ========================================
+  // Submitter-level allowable sources and credentials
+  // ========================================
+
+  @Test
+  void rejectsManifestUrlOutsideSubmitterSources() {
+    // The shared list covers both hosts, but the submitter's own list covers only one, so a
+    // manifestUrl on the other host is rejected.
+    configureCredentialedSubmitter(true);
+
+    final Parameters params =
+        inProgressParamsWithUrls(
+            "https://other.example.org/m.json", "https://submitter.example.org/fhir");
+
+    assertThatCode(() -> validator.validateAndExtract(mockAsyncRequest(), params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("manifestUrl")
+        .hasMessageContaining("does not match any allowed source prefixes");
+  }
+
+  @Test
+  void rejectsFhirBaseUrlOutsideSubmitterSources() {
+    // A fhirBaseUrl on a host that only the shared list covers is rejected for this submitter.
+    configureCredentialedSubmitter(true);
+
+    final Parameters params =
+        inProgressParamsWithUrls(
+            "https://submitter.example.org/m.json", "https://other.example.org/fhir");
+
+    assertThatCode(() -> validator.validateAndExtract(mockAsyncRequest(), params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("fhirBaseUrl")
+        .hasMessageContaining("does not match any allowed source prefixes");
+  }
+
+  @Test
+  void rejectsOauthMetadataUrlOutsideSubmitterSources() {
+    // An oauthMetadataUrl on a host that only the shared list covers is rejected for this
+    // submitter.
+    configureCredentialedSubmitter(true);
+
+    final Parameters params =
+        inProgressParamsWithUrls(
+            "https://submitter.example.org/m.json", "https://submitter.example.org/fhir");
+    params
+        .addParameter()
+        .setName("oauthMetadataUrl")
+        .setValue(new StringType("https://other.example.org/.well-known/smart-configuration"));
+
+    assertThatCode(() -> validator.validateAndExtract(mockAsyncRequest(), params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("oauthMetadataUrl")
+        .hasMessageContaining("does not match any allowed source prefixes");
+  }
+
+  @Test
+  void acceptsUrlsWithinSubmitterSources() {
+    // A submitter with credentials, its own sources and authentication enabled is accepted when
+    // every URL is within its own sources.
+    configureCredentialedSubmitter(true);
+
+    final Parameters params =
+        inProgressParamsWithUrls(
+            "https://submitter.example.org/m.json", "https://submitter.example.org/fhir");
+    params
+        .addParameter()
+        .setName("oauthMetadataUrl")
+        .setValue(new StringType("https://submitter.example.org/.well-known/smart-configuration"));
+
+    final BulkSubmitRequest result = validator.validateAndExtract(mockAsyncRequest(), params);
+    assertThat(result.manifestUrl()).isEqualTo("https://submitter.example.org/m.json");
+    assertThat(result.fhirBaseUrl()).isEqualTo("https://submitter.example.org/fhir");
+  }
+
+  @Test
+  void rejectsSubmitterWithCredentialsWhenAuthDisabled() {
+    // Submitter credentials are only usable when authentication is enabled on this server.
+    configureCredentialedSubmitter(false);
+
+    final Parameters params =
+        inProgressParamsWithUrls(
+            "https://submitter.example.org/m.json", "https://submitter.example.org/fhir");
+
+    assertThatCode(() -> validator.validateAndExtract(mockAsyncRequest(), params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("pathling.auth.enabled");
+  }
+
+  @Test
+  void rejectsSubmitterWithCredentialsAndNoOwnSources() {
+    // A submitter with credentials must have its own allowableSources; the shared list alone is
+    // not enough, even when the URLs match it.
+    final BulkSubmitConfiguration config = new BulkSubmitConfiguration();
+    config.setAllowedSubmitters(
+        List.of(
+            new SubmitterConfiguration(
+                SUBMITTER_SYSTEM,
+                SUBMITTER_VALUE,
+                "client-id",
+                "client-secret",
+                null,
+                null,
+                null,
+                null,
+                List.of())));
+    config.setAllowableSources(List.of("https://submitter.example.org/"));
+    serverConfiguration.setBulkSubmit(config);
+    serverConfiguration.setAuth(authConfiguration(true));
+
+    final Parameters params =
+        inProgressParamsWithUrls(
+            "https://submitter.example.org/m.json", "https://submitter.example.org/fhir");
+
+    assertThatCode(() -> validator.validateAndExtract(mockAsyncRequest(), params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("allowableSources");
+  }
+
+  @Test
+  void acceptsSubmitterWithoutCredentialsWhenAuthDisabled() {
+    // A submitter without credentials, relying on the shared list, is unaffected by the
+    // authentication setting.
+    serverConfiguration.setAuth(authConfiguration(false));
+
+    final Parameters params =
+        inProgressParamsWithUrls("https://example.org/m.json", "https://example.org/fhir");
+
+    final BulkSubmitRequest result = validator.validateAndExtract(mockAsyncRequest(), params);
+    assertThat(result.manifestUrl()).isEqualTo("https://example.org/m.json");
   }
 
   @Test
@@ -443,8 +648,12 @@ class BulkSubmitValidatorTest {
   // ========================================
 
   private Parameters minimalInProgressParams() {
+    return paramsWithSubmissionId("test-submission-id");
+  }
+
+  private Parameters paramsWithSubmissionId(final String submissionId) {
     final Parameters params = new Parameters();
-    params.addParameter().setName("submissionId").setValue(new StringType("test-submission-id"));
+    params.addParameter().setName("submissionId").setValue(new StringType(submissionId));
     addSubmitter(params, SUBMITTER_SYSTEM, SUBMITTER_VALUE);
     addSubmissionStatus(params, BulkSubmitRequest.STATUS_IN_PROGRESS);
     return params;
@@ -492,5 +701,46 @@ class BulkSubmitValidatorTest {
         params.addParameter().setName("fileRequestHeader");
     headerParam.addPart().setName("headerName").setValue(new StringType(name));
     headerParam.addPart().setName("headerValue").setValue(new StringType(value));
+  }
+
+  /**
+   * Configures a submitter with OAuth credentials whose own sources cover only
+   * submitter.example.org, while the shared list also covers other.example.org.
+   */
+  private void configureCredentialedSubmitter(final boolean authEnabled) {
+    final BulkSubmitConfiguration config = new BulkSubmitConfiguration();
+    config.setAllowedSubmitters(
+        List.of(
+            new SubmitterConfiguration(
+                SUBMITTER_SYSTEM,
+                SUBMITTER_VALUE,
+                "client-id",
+                "client-secret",
+                null,
+                null,
+                null,
+                null,
+                List.of("https://submitter.example.org/"))));
+    config.setAllowableSources(
+        List.of("https://submitter.example.org/", "https://other.example.org/"));
+    serverConfiguration.setBulkSubmit(config);
+    serverConfiguration.setAuth(authConfiguration(authEnabled));
+  }
+
+  private static AuthorizationConfiguration authConfiguration(final boolean enabled) {
+    final AuthorizationConfiguration auth = new AuthorizationConfiguration();
+    auth.setEnabled(enabled);
+    return auth;
+  }
+
+  private Parameters inProgressParamsWithUrls(final String manifestUrl, final String fhirBaseUrl) {
+    final Parameters params = minimalInProgressParams();
+    params.addParameter().setName("manifestUrl").setValue(new StringType(manifestUrl));
+    params.addParameter().setName("fhirBaseUrl").setValue(new StringType(fhirBaseUrl));
+    return params;
+  }
+
+  private static RequestDetails mockAsyncRequest() {
+    return MockUtil.mockRequest("application/fhir+json", "respond-async", false);
   }
 }

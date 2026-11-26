@@ -21,12 +21,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import au.csiro.pathling.FhirServer;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ConstantComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.SelectComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.WhereComponent;
+import au.csiro.pathling.io.ResourceEncoding;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
@@ -65,8 +65,6 @@ class ViewDefinitionUpdateTest {
 
   @Autowired private PathlingContext pathlingContext;
 
-  @Autowired private FhirEncoders fhirEncoders;
-
   private Path tempDatabasePath;
 
   @BeforeEach
@@ -91,33 +89,31 @@ class ViewDefinitionUpdateTest {
   // -------------------------------------------------------------------------
 
   @Test
-  void fhirEncoderSupportsViewDefinition() {
+  void encodingSupportsViewDefinition() {
     // Given: a ViewDefinition resource.
     final ViewDefinitionResource view =
         createViewDefinition("test-view-1", "patient_demographics", "Patient", "active");
 
-    // When: encoding the resource using FhirEncoders.
-    // Then: the encoder should successfully encode ViewDefinition resources.
+    // When: encoding the resource in the Parquet on FHIR layout.
+    // Then: ViewDefinition resources should encode successfully.
     assertThatNoException()
         .isThrownBy(
             () -> {
               final Dataset<Row> dataset =
-                  sparkSession
-                      .createDataset(List.of(view), fhirEncoders.of("ViewDefinition"))
-                      .toDF();
+                  ResourceEncoding.encode(pathlingContext, "ViewDefinition", List.of(view));
               assertThat(dataset.count()).isEqualTo(1);
             });
   }
 
   @Test
-  void fhirEncoderPreservesViewDefinitionFields() {
+  void encodingPreservesViewDefinitionFields() {
     // Given: a comprehensive ViewDefinition resource.
     final ViewDefinitionResource view =
         createComprehensiveViewDefinition("test-view-2", "patient_contacts");
 
     // When: encoding and then accessing the dataset.
     final Dataset<Row> dataset =
-        sparkSession.createDataset(List.of(view), fhirEncoders.of("ViewDefinition")).toDF();
+        ResourceEncoding.encode(pathlingContext, "ViewDefinition", List.of(view));
 
     // Then: the dataset should contain the expected fields.
     final Row row = dataset.first();
@@ -128,7 +124,7 @@ class ViewDefinitionUpdateTest {
   }
 
   @Test
-  void fhirEncoderHandlesMultipleViewDefinitions() {
+  void encodingHandlesMultipleViewDefinitions() {
     // Given: multiple ViewDefinition resources.
     final List<ViewDefinitionResource> views =
         List.of(
@@ -137,8 +133,7 @@ class ViewDefinitionUpdateTest {
             createViewDefinition("view-3", "condition_view", "Condition", "draft"));
 
     // When: encoding multiple resources.
-    final Dataset<Row> dataset =
-        sparkSession.createDataset(views, fhirEncoders.of("ViewDefinition")).toDF();
+    final Dataset<Row> dataset = ResourceEncoding.encode(pathlingContext, "ViewDefinition", views);
 
     // Then: all resources should be encoded.
     assertThat(dataset.count()).isEqualTo(3);
@@ -171,7 +166,7 @@ class ViewDefinitionUpdateTest {
     // When: saving to a Delta table.
     final String tablePath = tempDatabasePath.resolve("ViewDefinition.parquet").toString();
     final Dataset<Row> dataset =
-        sparkSession.createDataset(List.of(view), fhirEncoders.of("ViewDefinition")).toDF();
+        ResourceEncoding.encode(pathlingContext, "ViewDefinition", List.of(view));
 
     // Then: the save operation should succeed.
     assertThatNoException()
@@ -193,14 +188,14 @@ class ViewDefinitionUpdateTest {
     final String tablePath = tempDatabasePath.resolve("ViewDefinition.parquet").toString();
 
     final Dataset<Row> initialDataset =
-        sparkSession.createDataset(List.of(initialView), fhirEncoders.of("ViewDefinition")).toDF();
+        ResourceEncoding.encode(pathlingContext, "ViewDefinition", List.of(initialView));
     initialDataset.write().format("delta").mode("overwrite").save(tablePath);
 
     // When: merging an updated ViewDefinition with the same ID.
     final ViewDefinitionResource updatedView =
         createViewDefinition("merge-test-1", "updated_name", "Patient", "active");
     final Dataset<Row> updateDataset =
-        sparkSession.createDataset(List.of(updatedView), fhirEncoders.of("ViewDefinition")).toDF();
+        ResourceEncoding.encode(pathlingContext, "ViewDefinition", List.of(updatedView));
 
     // Then: the merge should update the existing row.
     assertThatNoException()
@@ -232,14 +227,14 @@ class ViewDefinitionUpdateTest {
     final String tablePath = tempDatabasePath.resolve("ViewDefinition.parquet").toString();
 
     final Dataset<Row> existingDataset =
-        sparkSession.createDataset(List.of(existingView), fhirEncoders.of("ViewDefinition")).toDF();
+        ResourceEncoding.encode(pathlingContext, "ViewDefinition", List.of(existingView));
     existingDataset.write().format("delta").mode("overwrite").save(tablePath);
 
     // When: merging a new ViewDefinition with a different ID.
     final ViewDefinitionResource newView =
         createViewDefinition("new-1", "new_view", "Observation", "active");
     final Dataset<Row> newDataset =
-        sparkSession.createDataset(List.of(newView), fhirEncoders.of("ViewDefinition")).toDF();
+        ResourceEncoding.encode(pathlingContext, "ViewDefinition", List.of(newView));
 
     io.delta.tables.DeltaTable.forPath(sparkSession, tablePath)
         .as("original")
@@ -268,7 +263,7 @@ class ViewDefinitionUpdateTest {
     // When: encoding to Spark Dataset and reading back.
     final String tablePath = tempDatabasePath.resolve("ViewDefinition.parquet").toString();
     final Dataset<Row> dataset =
-        sparkSession.createDataset(List.of(view), fhirEncoders.of("ViewDefinition")).toDF();
+        ResourceEncoding.encode(pathlingContext, "ViewDefinition", List.of(view));
     dataset.write().format("delta").mode("overwrite").save(tablePath);
 
     // Then: the comprehensive structure should be preserved.

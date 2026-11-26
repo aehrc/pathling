@@ -18,10 +18,11 @@
 package au.csiro.pathling.operations.sql;
 
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.errors.ResourceNotFoundError;
+import au.csiro.pathling.io.ResourceEncoding;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.operations.sqlquery.CanonicalReference;
 import au.csiro.pathling.operations.sqlquery.SqlLibraryParser;
 import au.csiro.pathling.read.ReadExecutor;
@@ -34,8 +35,6 @@ import java.util.List;
 import java.util.Objects;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
@@ -81,7 +80,7 @@ public class SubjectResolver {
 
   @Nonnull private final DataSource dataSource;
 
-  @Nonnull private final FhirEncoders fhirEncoders;
+  @Nonnull private final PathlingContext pathlingContext;
 
   @Nonnull private final ServerConfiguration serverConfiguration;
 
@@ -90,18 +89,18 @@ public class SubjectResolver {
    *
    * @param readExecutor reads stored artefacts by logical id, for literal references
    * @param dataSource the data source searched when matching a canonical URL
-   * @param fhirEncoders FHIR encoders used to decode the matched rows
+   * @param pathlingContext the Pathling context, used to decode the matched rows
    * @param serverConfiguration the server configuration, consulted for the authorisation toggle
    */
   @Autowired
   public SubjectResolver(
       @Nonnull final ReadExecutor readExecutor,
       @Nonnull final DataSource dataSource,
-      @Nonnull final FhirEncoders fhirEncoders,
+      @Nonnull final PathlingContext pathlingContext,
       @Nonnull final ServerConfiguration serverConfiguration) {
     this.readExecutor = readExecutor;
     this.dataSource = dataSource;
-    this.fhirEncoders = fhirEncoders;
+    this.pathlingContext = pathlingContext;
     this.serverConfiguration = serverConfiguration;
   }
 
@@ -268,12 +267,7 @@ public class SubjectResolver {
       }
       throw e;
     }
-    Dataset<Row> filtered = all.filter(all.col("url").equalTo(canonical.getUrl()));
-    if (canonical.hasVersion()) {
-      filtered = filtered.filter(functions.col("version").equalTo(canonical.getVersion()));
-    }
-    final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(resourceType);
-    return filtered.as(encoder).collectAsList();
+    return ResourceEncoding.decode(pathlingContext, resourceType, canonical.match(all));
   }
 
   /**

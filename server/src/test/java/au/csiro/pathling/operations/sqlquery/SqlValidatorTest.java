@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.operations.sqlquery;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -28,9 +29,14 @@ import java.util.Set;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.catalyst.expressions.Expression;
+import org.apache.spark.sql.catalyst.expressions.Literal;
+import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression;
+import org.apache.spark.sql.catalyst.expressions.aggregate.Max;
 import org.apache.spark.sql.catalyst.parser.ParseException;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.catalyst.plans.logical.WithWindowDefinition;
+import org.apache.spark.sql.types.DataTypes;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -424,6 +430,109 @@ class SqlValidatorTest {
   }
 
   // -------------------------------------------------------------------------
+  // first(), last() and any_value(). Spark's grammar has dedicated rules for
+  // these three aggregates, so AstBuilder builds an AggregateExpression
+  // wrapping a First, Last or AnyValue directly, rather than an
+  // UnresolvedFunction that is checked by name. They are built-in aggregates,
+  // so they must be accepted like any other (issue 2867).
+  // -------------------------------------------------------------------------
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "first(gender)",
+        "last(gender)",
+        "any_value(gender)",
+        "first(gender IGNORE NULLS)",
+        "first(gender) IGNORE NULLS",
+        "last(gender) IGNORE NULLS",
+        "any_value(gender) IGNORE NULLS"
+      })
+  void acceptsFirstLastAndAnyValueInEverySpelling(final String call) {
+    // An IGNORE NULLS inside the parentheses uses the dedicated grammar rule, while a trailing one
+    // parses as an ordinary function call. Both spellings must be accepted.
+    assertThatCode(() -> validate("SELECT " + call + " AS g FROM t", "t"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsFirstAndLastWithGroupBy() {
+    assertThatCode(
+            () ->
+                validate(
+                    "SELECT id, first(gender) AS f, last(gender) AS l FROM t GROUP BY id", "t"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void runsFirstLastAndAnyValueThroughBothValidationModes() {
+    // The values within each group are identical, so the result is deterministic despite first(),
+    // last() and any_value() being order-dependent.
+    sparkSession
+        .sql("SELECT * FROM VALUES (1, 'female'), (1, 'female'), (2, 'male') AS v(id, gender)")
+        .createOrReplaceTempView(VIEW_NAME);
+    final String sql =
+        "SELECT id, first(gender) AS f, last(gender) AS l, any_value(gender) AS a FROM "
+            + VIEW_NAME
+            + " GROUP BY id ORDER BY id";
+
+    validate(sql, VIEW_NAME);
+    final Dataset<Row> result = sparkSession.sql(sql);
+    sqlValidator.validateAnalyzed(result.queryExecution().analyzed(), Set.of(VIEW_NAME));
+
+    assertThat(result.collectAsList())
+        .extracting(Row::toString)
+        .containsExactly("[1,female,female,female]", "[2,male,male,male]");
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"first", "last", "any_value"})
+  void rejectsDisallowedFunctionInsideAggregateArgument(final String aggregate) {
+    // The argument of the aggregate is still walked, so a dangerous call cannot hide inside it.
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "SELECT " + aggregate + "(reflect('java.lang.Runtime', 'getRuntime')) FROM t",
+                    "t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed function: reflect");
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"first", "last", "any_value"})
+  void rejectsNonBuiltInFunctionInsideAggregateArgument(final String aggregate) {
+    assertThatThrownBy(
+            () -> validate("SELECT " + aggregate + "(string_to_quantity(value)) FROM t", "t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("non-built-in function: string_to_quantity");
+  }
+
+  @Test
+  void rejectsAggregateExpressionOverAnUnlistedFunctionNamingTheSqlFunction() {
+    // No grammar rule currently builds an AggregateExpression over any other function, but if one
+    // appears it must be rejected, and the message must name the SQL function rather than the
+    // Catalyst class.
+    final AggregateExpression aggregate =
+        new Max(Literal.create(1, DataTypes.IntegerType)).toAggregateExpression();
+
+    assertThatThrownBy(() -> SqlValidator.validateAggregateExpression(aggregate))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessage("SQL contains a disallowed aggregate function: max");
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"first", "last", "any_value"})
+  void acceptsAggregateExpressionOverAllowedFunction(final String aggregate) throws ParseException {
+    // The parser's own output for each function passes the aggregate check directly.
+    final Expression parsed =
+        sparkSession.sessionState().sqlParser().parseExpression(aggregate + "(x)");
+
+    assertThat(parsed).isInstanceOf(AggregateExpression.class);
+    assertThatCode(() -> SqlValidator.validateAggregateExpression((AggregateExpression) parsed))
+        .doesNotThrowAnyException();
+  }
+
+  // -------------------------------------------------------------------------
   // Invalid SQL — should reject DDL and DML.
   // -------------------------------------------------------------------------
 
@@ -488,6 +597,14 @@ class SqlValidatorTest {
         .hasMessageContaining("disallowed function");
   }
 
+  @Test
+  void rejectsTryReflectFunction() {
+    assertThatThrownBy(
+            () -> validate("SELECT try_reflect('java.lang.Runtime', 'getRuntime') FROM t", "t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessage("SQL contains a disallowed function: try_reflect");
+  }
+
   // The input file functions expose the storage path of a scanned file, which for an external
   // table is the operator's configured path that responses must never disclose (spec 060 FR-012).
   @ParameterizedTest
@@ -497,6 +614,112 @@ class SqlValidatorTest {
     assertThatThrownBy(() -> validate("SELECT " + call + " FROM t", "t"))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("disallowed function");
+  }
+
+  // The query from issue 2978. The rowValidationXSDPath option of from_xml is opened through the
+  // Hadoop file system API, so the caller chooses the scheme and host of a request that the server
+  // makes. It must be rejected before the query runs.
+  @Test
+  void rejectsFromXmlWithValidationSchemaUrl() {
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "SELECT from_xml('<a/>', 'a STRING',"
+                        + " map('rowValidationXSDPath','http://127.0.0.1:18777/latest/meta-data/'))"
+                        + " AS x"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessage("SQL contains a disallowed function: from_xml");
+  }
+
+  // Built-in functions that open a path or URL chosen by the caller: through an option
+  // (rowValidationXSDPath, avroSchemaUrl), an argument (a protobuf descriptor file), or the
+  // external DTD named by the document they parse (the xpath family). The function name is the
+  // text before the first parenthesis.
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "schema_of_xml('<a/>', map('rowValidationXSDPath', 'http://127.0.0.1:18777/'))",
+        "xpath('<!DOCTYPE a SYSTEM \"http://127.0.0.1:18777/\"><a/>', 'a')",
+        "xpath_boolean('<!DOCTYPE a SYSTEM \"http://127.0.0.1:18777/\"><a/>', 'a')",
+        "xpath_double('<!DOCTYPE a SYSTEM \"http://127.0.0.1:18777/\"><a/>', 'a')",
+        "xpath_float('<!DOCTYPE a SYSTEM \"http://127.0.0.1:18777/\"><a/>', 'a')",
+        "xpath_int('<!DOCTYPE a SYSTEM \"http://127.0.0.1:18777/\"><a/>', 'a')",
+        "xpath_long('<!DOCTYPE a SYSTEM \"http://127.0.0.1:18777/\"><a/>', 'a')",
+        "xpath_number('<!DOCTYPE a SYSTEM \"http://127.0.0.1:18777/\"><a/>', 'a')",
+        "xpath_short('<!DOCTYPE a SYSTEM \"http://127.0.0.1:18777/\"><a/>', 'a')",
+        "xpath_string('<!DOCTYPE a SYSTEM \"http://127.0.0.1:18777/\"><a/>', 'a')",
+        "from_avro(x, '{}', map('avroSchemaUrl', 'http://127.0.0.1:18777/'))",
+        "schema_of_avro('{}', map('avroSchemaUrl', 'http://127.0.0.1:18777/'))",
+        "to_avro(x)",
+        "from_protobuf(x, 'Message', '/etc/passwd')",
+        "to_protobuf(x, 'Message', '/etc/passwd')"
+      })
+  void rejectsFunctionsThatOpenACallerChosenLocation(final String call) {
+    final String name = call.substring(0, call.indexOf('('));
+    assertThatThrownBy(() -> validate("SELECT " + call + " FROM t", "t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessage("SQL contains a disallowed function: " + name);
+  }
+
+  // The function name is matched case-insensitively and on its last part, so neither a change of
+  // case nor a qualifier naming the built-in namespace gets a rejected function past the check.
+  @ParameterizedTest
+  @ValueSource(strings = {"FROM_XML", "From_Xml", "builtin.from_xml", "system.builtin.from_xml"})
+  void rejectsDisallowedFunctionWhateverItsSpelling(final String name) {
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "SELECT "
+                        + name
+                        + "('<a/>', 'a STRING', map('rowValidationXSDPath', 'http://127.0.0.1/'))"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed function");
+  }
+
+  @Test
+  void rejectsDisallowedFunctionNamedThroughIdentifierClause() {
+    // IDENTIFIER('from_xml')(...) names the function with a string that is only resolved during
+    // analysis, so the call cannot be checked by name and is rejected outright.
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "SELECT IDENTIFIER('from_xml')('<a/>', 'a STRING',"
+                        + " map('rowValidationXSDPath', 'http://127.0.0.1/'))"))
+        .isInstanceOf(InvalidRequestException.class);
+  }
+
+  @Test
+  void rejectsDisallowedFunctionNestedInsideAllowedFunction() {
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "SELECT upper(xpath_string('<!DOCTYPE a SYSTEM \"http://127.0.0.1/\"><a/>',"
+                        + " 'a'))"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessage("SQL contains a disallowed function: xpath_string");
+  }
+
+  // Functions that parse or produce a structured string without opening anything remain available.
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "from_json('{\"a\": 1}', 'a INT')",
+        "schema_of_json('{\"a\": 1}')",
+        "to_json(named_struct('a', 1))",
+        "from_csv('1', 'a INT')",
+        "to_xml(named_struct('a', 1))",
+        "parse_json('{\"a\": 1}')",
+        "parse_url('http://example.org/a?b=c', 'HOST')"
+      })
+  void acceptsFunctionsThatDoNotOpenALocation(final String call) {
+    assertThatCode(() -> validate("SELECT " + call)).doesNotThrowAnyException();
+  }
+
+  @Test
+  void leavesAnUnknownFunctionNameForTheAnalyser() {
+    // A name that is not a function at all is left for Spark's analyser, whose "routine not found"
+    // message, with its suggestions, is more helpful than a synthetic rejection.
+    assertThatCode(() -> validate("SELECT no_such_fn(id) FROM t", "t")).doesNotThrowAnyException();
   }
 
   // -------------------------------------------------------------------------
@@ -1036,6 +1259,46 @@ class SqlValidatorTest {
     assertThatThrownBy(() -> validate("NOT VALID SQL AT ALL"))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("Invalid SQL syntax");
+  }
+
+  // -------------------------------------------------------------------------
+  // The ${ character sequence. Spark's parser replaces ${...} references in SQL
+  // text before parsing it, so SQL containing the sequence anywhere - in a
+  // string literal, an identifier or a comment - is rejected, whatever form the
+  // reference takes.
+  // -------------------------------------------------------------------------
+
+  @ParameterizedTest(name = "rejects: {0}")
+  @ValueSource(
+      strings = {
+        "SELECT '${env:HOME}' AS home",
+        "SELECT '${system:user.dir}' AS dir",
+        "SELECT '${spark:spark.app.name}' AS app",
+        "SELECT '${sparkconf:spark.app.name}' AS app",
+        "SELECT '${spark.app.name}' AS app",
+        "SELECT \"${env:HOME}\" AS home",
+        "SELECT 1 AS `${env:HOME}`",
+        "SELECT 1 -- ${env:HOME}",
+        "SELECT 1 /* ${env:HOME} */",
+        "SELECT id FROM t WHERE name = '${'"
+      })
+  void rejectsSqlContainingDollarBrace(final String sql) {
+    assertThatThrownBy(() -> validate(sql, "t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("${");
+  }
+
+  @ParameterizedTest(name = "accepts: {0}")
+  @ValueSource(
+      strings = {
+        "SELECT '$5' AS price",
+        "SELECT '{x}' AS braces",
+        "SELECT '$ {x}' AS spaced",
+        "SELECT concat('$', '{x}') AS joined"
+      })
+  void acceptsDollarSignNotImmediatelyFollowedByBrace(final String sql) {
+    // A dollar sign or a brace on its own is ordinary text.
+    assertThatCode(() -> validate(sql)).doesNotThrowAnyException();
   }
 
   // -------------------------------------------------------------------------

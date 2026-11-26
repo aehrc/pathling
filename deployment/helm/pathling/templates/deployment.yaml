@@ -3,6 +3,7 @@
 {{- $tsFilePath := printf "%s/%s" $tsMountPath .Values.pathling.truststore.key }}
 {{- $tsOptions := printf "-Djavax.net.ssl.trustStore=%s -Djavax.net.ssl.trustStorePassword=%s -Djavax.net.ssl.trustStoreType=%s" $tsFilePath .Values.pathling.truststore.password .Values.pathling.truststore.type }}
 {{- $tsJavaOpts := ternary (printf " %s" $tsOptions) "" $truststoreEnabled }}
+{{- $clusterMode := include "pathling.clusterMode" . }}
 kind: Deployment
 apiVersion: apps/v1
 metadata:
@@ -23,9 +24,13 @@ spec:
           ports:
             - containerPort: 8080
             - containerPort: 8081
+            {{- if include "pathling.sparkUiEnabled" . }}
             - containerPort: 4040
+            {{- end }}
+            {{- if $clusterMode }}
             - containerPort: 7077
             - containerPort: 7078
+            {{- end }}
           resources:
             requests: {{ toJson .Values.pathling.resources.requests }}
             limits: {{ toJson .Values.pathling.resources.limits }}
@@ -34,7 +39,7 @@ spec:
               path: /actuator/health/liveness
               port: 8081
             periodSeconds: 5
-            failureThreshold: 36
+            failureThreshold: {{ .Values.pathling.deployment.startupProbeFailureThreshold | default 36 }}
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
@@ -55,6 +60,9 @@ spec:
           env:
             - name: JAVA_TOOL_OPTIONS
               value: {{ printf "-Xmx%s --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED %s%s" .Values.pathling.resources.maxHeapSize .Values.pathling.additionalJavaOptions $tsJavaOpts | quote }}
+            {{- if $clusterMode }}
+            # Executors reach the driver through the pathling-driver Service, on
+            # fixed ports that the Service and the NetworkPolicy can name.
             - name: spark.driver.host
               value: pathling-driver
             - name: spark.driver.port
@@ -63,6 +71,15 @@ spec:
               value: "7078"
             - name: spark.driver.bindAddress
               value: 0.0.0.0
+            {{- if eq (include "pathling.configValue" (list . "spark.network.crypto.enabled" "")) "" }}
+            # Traffic between the driver and executor pods crosses the network, so
+            # it is encrypted unless the user configures otherwise. In local mode
+            # it stays inside the pod, and encryption can deadlock the executor's
+            # class loading against the driver's RPC server.
+            - name: spark.network.crypto.enabled
+              value: "true"
+            {{- end }}
+            {{- end }}
             # In client mode, Spark only sets an ownerReference on executor
             # pods when it knows the driver pod's name. This allows Kubernetes
             # garbage collection to remove executor pods (and their on-demand

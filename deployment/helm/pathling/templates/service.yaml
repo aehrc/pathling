@@ -21,6 +21,7 @@ spec:
       targetPort: 8081
   selector:
     app: pathling-server
+{{- if include "pathling.sparkUiEnabled" . }}
 ---
 kind: Service
 apiVersion: v1
@@ -33,6 +34,8 @@ spec:
       targetPort: 4040
   selector:
     app: pathling-server
+{{- end }}
+{{- if include "pathling.clusterMode" . }}
 ---
 kind: Service
 apiVersion: v1
@@ -50,3 +53,4 @@ spec:
   selector:
     app: pathling-server
   publishNotReadyAddresses: true
+{{- end }}

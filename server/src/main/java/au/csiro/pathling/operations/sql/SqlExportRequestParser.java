@@ -35,6 +35,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
@@ -70,6 +71,10 @@ public class SqlExportRequestParser {
   private static final String LIMIT_PARAMETER = "_limit";
 
   private static final String SOURCE_PARAMETER = "source";
+
+  /** The rule every output name must satisfy, since it becomes the base name of output files. */
+  private static final Pattern OUTPUT_NAME_PATTERN =
+      Pattern.compile("[A-Za-z0-9][A-Za-z0-9_-]{0,127}");
 
   @Nonnull private final SubjectResolver subjectResolver;
 
@@ -228,6 +233,7 @@ public class SqlExportRequestParser {
     }
 
     final String name = subject.getEffectiveName(index);
+    requireValidOutputName(name, suppliedName);
     if (!usedNames.add(name)) {
       throw SqlOperationError.badRequest(
           IssueType.INVALID,
@@ -246,6 +252,29 @@ public class SqlExportRequestParser {
 
     return SubjectInput.ofSql(
         subject.getKind(), name, prepare(subject, bindings, supplied, nodesByKey));
+  }
+
+  /**
+   * Rejects an output name that is not a plain file name: it must start with a letter or digit and
+   * contain only letters, digits, hyphens and underscores, up to 128 characters. The name becomes
+   * the base name of the subject's output files, so it must not carry path syntax.
+   */
+  private static void requireValidOutputName(
+      @Nonnull final String name, @Nullable final String suppliedName) {
+    if (OUTPUT_NAME_PATTERN.matcher(name).matches()) {
+      return;
+    }
+    final String remedy =
+        suppliedName == null || suppliedName.isBlank()
+            ? " The name was taken from the artefact; supply a 'name' part to use another."
+            : "";
+    throw SqlOperationError.badRequest(
+        IssueType.INVALID,
+        SUBJECT_EXPRESSION,
+        ("The output name '%s' is not valid: it must start with a letter or digit, contain only"
+                + " letters, digits, hyphens and underscores, and be at most 128 characters"
+                + " long.%s")
+            .formatted(name, remedy));
   }
 
   /** Prepares a SQL subject, relabelling a binding failure onto the {@code parameters} part. */

@@ -115,12 +115,107 @@ class UrlAllowlistTest {
         .isFalse();
   }
 
-  // Non-HTTP schemes (e.g. s3://) fall back to case-sensitive string prefix matching.
+  // Non-HTTP prefixes match a candidate whose path equals the prefix path or extends it at a
+  // path-segment boundary.
   @Test
-  void usesStringPrefixForNonHttpSchemes() {
-    assertThat(UrlAllowlist.matches("s3://my-bucket/", "s3://my-bucket/file.ndjson")).isTrue();
-    assertThat(UrlAllowlist.matches("s3://my-bucket/", "s3://other-bucket/file.ndjson")).isFalse();
+  void matchesNonHttpSchemesOnPathSegmentBoundary() {
+    assertThat(UrlAllowlist.matches("s3a://my-bucket/", "s3a://my-bucket/file.ndjson")).isTrue();
     assertThat(UrlAllowlist.matches("file:///staging/", "file:///staging/data.ndjson")).isTrue();
+    assertThat(UrlAllowlist.matches("file:///staging", "file:///staging/data.ndjson")).isTrue();
+    assertThat(UrlAllowlist.matches("file:///staging", "file:///staging/sub/data.ndjson")).isTrue();
+    assertThat(UrlAllowlist.matches("hdfs://namenode:8020/data", "hdfs://namenode:8020/data/x"))
+        .isTrue();
+  }
+
+  // A sibling path that shares the prefix as a string is not inside the prefix. This is the
+  // first bypass reported in issue #2979, where the shipped default had no trailing slash.
+  @Test
+  void rejectsNonHttpSiblingPathSharingPrefix() {
+    assertThat(
+            UrlAllowlist.matches(
+                "file:///tmp/audit/staging", "file:///tmp/audit/staging-evil/Patient.ndjson"))
+        .isFalse();
+    assertThat(UrlAllowlist.matches("s3a://bucket/data", "s3a://bucket/data-other/x.ndjson"))
+        .isFalse();
+  }
+
+  // A ".." segment is resolved by the file system after the check, so it can lead outside the
+  // prefix. Any candidate containing one is rejected, whether or not the prefix has a trailing
+  // slash. This is the second bypass reported in issue #2979.
+  @Test
+  void rejectsDotDotSegmentsInNonHttpCandidates() {
+    for (final String prefix : List.of("file:///tmp/audit/staging", "file:///tmp/audit/staging/")) {
+      assertThat(UrlAllowlist.matches(prefix, "file:///tmp/audit/staging/../other/Patient.ndjson"))
+          .isFalse();
+      assertThat(UrlAllowlist.matches(prefix, "file:///tmp/audit/staging/a/../../other/x"))
+          .isFalse();
+      assertThat(UrlAllowlist.matches(prefix, "file:///tmp/audit/staging/..")).isFalse();
+    }
+    // A ".." that stays inside the prefix is rejected too, as the check does not resolve paths.
+    assertThat(UrlAllowlist.matches("file:///staging/", "file:///staging/a/../b.ndjson")).isFalse();
+    assertThat(UrlAllowlist.matches("s3a://bucket/data/", "s3a://bucket/data/../secret/x"))
+        .isFalse();
+    assertThat(UrlAllowlist.matches("hdfs://namenode:8020/data", "hdfs://namenode:8020/data/../x"))
+        .isFalse();
+  }
+
+  // Spark expands glob patterns in import paths. A backslash escape ("\.\.") or a brace
+  // alternative containing a slash ("{../other}") becomes a ".." segment only after expansion, so
+  // these characters are rejected in non-HTTP candidates.
+  @Test
+  void rejectsGlobConstructsThatCanProduceDotDotSegments() {
+    final String prefix = "file:///tmp/audit/staging/";
+    assertThat(UrlAllowlist.matches(prefix, "file:///tmp/audit/staging/\\.\\./other/x.ndjson"))
+        .isFalse();
+    assertThat(UrlAllowlist.matches(prefix, "file:///tmp/audit/staging/{../other}/x.ndjson"))
+        .isFalse();
+    assertThat(UrlAllowlist.matches(prefix, "file:///tmp/audit/staging/{a,b}/x.ndjson")).isFalse();
+  }
+
+  // Names that merely contain dots, and wildcards that cannot leave a directory, are allowed.
+  @Test
+  void allowsDotsAndWildcardsWithinNonHttpPrefix() {
+    final String prefix = "file:///staging/";
+    assertThat(UrlAllowlist.matches(prefix, "file:///staging/..hidden/x.ndjson")).isTrue();
+    assertThat(UrlAllowlist.matches(prefix, "file:///staging/a..b.ndjson")).isTrue();
+    assertThat(UrlAllowlist.matches(prefix, "file:///staging/./x.ndjson")).isTrue();
+    assertThat(UrlAllowlist.matches(prefix, "file:///staging/*.ndjson")).isTrue();
+    assertThat(UrlAllowlist.matches(prefix, "file:///staging/Patient?.ndjson")).isTrue();
+  }
+
+  // Percent-decoded URLs reach the allowlist, so a path containing a space must still match.
+  @Test
+  void allowsNonHttpPathsWithCharactersIllegalInUris() {
+    assertThat(UrlAllowlist.matches("file:///staging/", "file:///staging/my data/x.ndjson"))
+        .isTrue();
+  }
+
+  // The authority (bucket, host and port, or empty for local files) must match exactly.
+  @Test
+  void comparesNonHttpAuthorityExactly() {
+    assertThat(UrlAllowlist.matches("s3a://my-bucket/", "s3a://other-bucket/file.ndjson"))
+        .isFalse();
+    assertThat(UrlAllowlist.matches("s3a://my-bucket", "s3a://my-bucket-other/file.ndjson"))
+        .isFalse();
+    assertThat(UrlAllowlist.matches("hdfs://namenode:8020/data", "hdfs://namenode:9000/data/x"))
+        .isFalse();
+    assertThat(UrlAllowlist.matches("file:///staging/", "file://host/staging/x.ndjson")).isFalse();
+  }
+
+  // A file URL with no authority ("file:/path") and one with an empty authority
+  // ("file:///path") name the same file, as they do in Hadoop.
+  @Test
+  void treatsAbsentAndEmptyNonHttpAuthorityAsEquivalent() {
+    assertThat(UrlAllowlist.matches("file:///staging/", "file:/staging/x.ndjson")).isTrue();
+    assertThat(UrlAllowlist.matches("file:/staging/", "file:///staging/x.ndjson")).isTrue();
+  }
+
+  // The scheme must match, case-insensitively, and a candidate without a scheme is rejected.
+  @Test
+  void comparesNonHttpSchemeCaseInsensitively() {
+    assertThat(UrlAllowlist.matches("S3A://bucket/", "s3a://bucket/x.ndjson")).isTrue();
+    assertThat(UrlAllowlist.matches("file:///staging/", "s3a:///staging/x.ndjson")).isFalse();
+    assertThat(UrlAllowlist.matches("file:///staging/", "/staging/x.ndjson")).isFalse();
   }
 
   // A bare-scheme prefix on a non-HTTP scheme (e.g. "file://" or "s3://") admits any URL on

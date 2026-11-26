@@ -31,6 +31,7 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +49,10 @@ import org.springframework.stereotype.Component;
 public class EntityTagInterceptor {
 
   private static final String ASYNC_ETAG_PREFIX = "~";
+
+  /** Operations that serve job status or job output, and so are never validated by ETag. */
+  private static final Set<String> ASYNC_OPERATIONS =
+      Set.of("$job", "$jobs", "$job-result", "$result");
 
   @Nonnull private final ServerConfiguration configuration;
 
@@ -113,12 +118,12 @@ public class EntityTagInterceptor {
         return;
       }
 
-      // Skip ETag validation for async endpoints - they use TTL-based caching instead. The $jobs
-      // list is a live snapshot of registry state, not data state, so it must not be validated
-      // against the database ETag (which would serve a stale 304 when jobs change but data does
-      // not).
+      // Skip ETag validation for async endpoints - they use TTL-based caching instead. Their
+      // responses depend on the state of a job, not the state of the data, so validating them
+      // against the database ETag would serve a stale 304 when a job changes but the data does not,
+      // and would give every job ID the same tag.
       final String operation = requestDetails.getOperation();
-      if ("$job".equals(operation) || "$jobs".equals(operation) || "$result".equals(operation)) {
+      if (operation != null && ASYNC_OPERATIONS.contains(operation)) {
         log.debug("Async endpoint {}, skipping ETag validation", operation);
         setMissResponseHeaders(response);
         return;

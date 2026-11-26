@@ -21,11 +21,12 @@ import { create } from "../api";
 import { config } from "../config";
 import { libraryToSummary } from "./sqlQueryHelpers";
 import { SQL_QUERY_LIBRARIES_QUERY_KEY } from "./useSqlQueryLibraries";
+import { SQL_VIEWS_QUERY_KEY } from "./useSqlViews";
 import { useAuth } from "../contexts/AuthContext";
 
 import type {
-  SaveSqlQueryLibraryResult,
   SqlQueryLibrary,
+  SqlQueryLibrarySummary,
 } from "../types/sqlQuery";
 import type { UseMutationResult } from "@tanstack/react-query";
 import type { Library } from "fhir/r4";
@@ -35,7 +36,7 @@ import type { Library } from "fhir/r4";
  */
 export interface UseSaveSqlQueryLibraryOptions {
   /** Callback fired on a successful save. */
-  onSuccess?: (result: SaveSqlQueryLibraryResult) => void;
+  onSuccess?: (summary: SqlQueryLibrarySummary) => void;
   /** Callback fired on error. */
   onError?: (error: Error) => void;
 }
@@ -44,20 +45,22 @@ export interface UseSaveSqlQueryLibraryOptions {
  * Result type for {@link useSaveSqlQueryLibrary}.
  */
 export type UseSaveSqlQueryLibraryResult = UseMutationResult<
-  SaveSqlQueryLibraryResult,
+  SqlQueryLibrarySummary,
   Error,
   SqlQueryLibrary
 >;
 
 /**
- * Saves an inline SQLQuery Library to the server.
+ * Saves an inline SQLQuery or SQLView Library to the server.
  *
- * On success, the new resource is appended to the cached
- * `SQL_QUERY_LIBRARIES_QUERY_KEY` list and a background refresh is
- * triggered so other consumers see the update.
+ * On success, the summary of the created resource is added to the cached list
+ * matching its type code - `SQL_VIEWS_QUERY_KEY` for a SQLView,
+ * `SQL_QUERY_LIBRARIES_QUERY_KEY` for a SQLQuery - before the mutation
+ * resolves, so a caller can select it straight away, and a background refresh
+ * of that list is triggered so it catches up with the server.
  *
  * @param options - Optional callbacks for success and error.
- * @returns Mutation result for saving SQLQuery Libraries.
+ * @returns Mutation result resolving with the summary of the saved Library.
  */
 export function useSaveSqlQueryLibrary(
   options?: UseSaveSqlQueryLibraryOptions,
@@ -67,7 +70,7 @@ export function useSaveSqlQueryLibrary(
   const accessToken = client?.state.tokenResponse?.access_token;
   const queryClient = useQueryClient();
 
-  return useMutation<SaveSqlQueryLibraryResult, Error, SqlQueryLibrary>({
+  return useMutation<SqlQueryLibrarySummary, Error, SqlQueryLibrary>({
     mutationFn: async (library) => {
       const created = (await create(fhirBaseUrl!, {
         resourceType: "Library",
@@ -75,19 +78,29 @@ export function useSaveSqlQueryLibrary(
         accessToken,
       })) as Library;
       const summary = libraryToSummary(created);
-      const id = created.id;
-      if (!id || !summary) {
+      if (!summary) {
         throw new Error(
           "Server returned a Library without an ID or content; cannot reference it.",
         );
       }
-      return { id, title: summary.title };
+      return summary;
     },
-    onSuccess: (result) => {
-      void queryClient.invalidateQueries({
-        queryKey: SQL_QUERY_LIBRARIES_QUERY_KEY,
-      });
-      options?.onSuccess?.(result);
+    onSuccess: (summary, library) => {
+      const queryKey =
+        library.type.coding[0].code === "sql-view"
+          ? SQL_VIEWS_QUERY_KEY
+          : SQL_QUERY_LIBRARIES_QUERY_KEY;
+      // Replace rather than append when the list already holds this ID, so a
+      // refetch that landed first does not leave the Library listed twice.
+      queryClient.setQueryData<SqlQueryLibrarySummary[]>(
+        queryKey,
+        (cached = []) =>
+          cached.some((lib) => lib.id === summary.id)
+            ? cached.map((lib) => (lib.id === summary.id ? summary : lib))
+            : [...cached, summary],
+      );
+      void queryClient.invalidateQueries({ queryKey });
+      options?.onSuccess?.(summary);
     },
     onError: options?.onError,
   });

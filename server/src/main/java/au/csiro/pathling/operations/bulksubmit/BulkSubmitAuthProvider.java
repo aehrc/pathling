@@ -123,14 +123,14 @@ public class BulkSubmitAuthProvider implements Closeable {
     final String tokenEndpoint = discoverTokenEndpoint(fhirBaseUrl, oauthMetadataUrl);
     log.debug("Using token endpoint: {} for submitter: {}", tokenEndpoint, submitter.toKey());
 
-    // Re-validate the discovered token endpoint against the configured allowlist before sending
-    // any credentials to it. The allowlist on oauthMetadataUrl and fhirBaseUrl only controls where
-    // the discovery document is fetched from; the discovered token_endpoint is the actual
+    // Re-validate the discovered token endpoint against the submitter's allowable sources before
+    // sending any credentials to it. The checks on oauthMetadataUrl and fhirBaseUrl only control
+    // where the discovery document is fetched from; the discovered token_endpoint is the actual
     // credential destination and so must be subject to the same policy. Without this check, a
-    // legitimate but compromised or misconfigured discovery document could redirect Pathling's
-    // OAuth client credentials (clientSecret or signed JWT assertion) to an attacker-controlled
-    // host.
-    requireAllowedTokenEndpoint(tokenEndpoint);
+    // compromised or misconfigured discovery document could send the submitter's OAuth client
+    // credentials (clientSecret or signed JWT assertion) to a host that the submitter does not
+    // control.
+    requireAllowedTokenEndpoint(submitter, tokenEndpoint);
 
     // Create AuthConfig and get token via shared library.
     final AuthConfig authConfig = submitterConfig.get().toAuthConfig(tokenEndpoint);
@@ -189,13 +189,13 @@ public class BulkSubmitAuthProvider implements Closeable {
   }
 
   /**
-   * Rejects a discovered token endpoint that is not covered by {@code
-   * pathling.bulkSubmit.allowableSources}, or that uses plain {@code http} when {@code
-   * pathling.allowInsecureUrls} is false.
+   * Rejects a discovered token endpoint that is not covered by the submitter's allowable sources,
+   * or that uses plain {@code http} when {@code pathling.allowInsecureUrls} is false.
    *
    * @throws InvalidUserInputError if the endpoint fails the policy check.
    */
-  private void requireAllowedTokenEndpoint(@Nullable final String tokenEndpoint) {
+  private void requireAllowedTokenEndpoint(
+      @Nonnull final SubmitterIdentifier submitter, @Nullable final String tokenEndpoint) {
     final BulkSubmitConfiguration bulkSubmitConfig = serverConfiguration.getBulkSubmit();
     if (bulkSubmitConfig == null) {
       throw new InvalidUserInputError(
@@ -206,7 +206,7 @@ public class BulkSubmitAuthProvider implements Closeable {
       throw new InvalidUserInputError(
           "OAuth metadata response did not contain a usable token_endpoint.");
     }
-    if (!bulkSubmitConfig.isSourceAllowed(tokenEndpoint, allowInsecureUrls)) {
+    if (!bulkSubmitConfig.isSourceAllowed(submitter, tokenEndpoint, allowInsecureUrls)) {
       throw new InvalidUserInputError(
           "Discovered OAuth token endpoint '%s' does not match any allowed source prefixes."
               .formatted(tokenEndpoint));

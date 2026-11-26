@@ -21,8 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.cache.CacheableDatabase;
-import au.csiro.pathling.config.StorageConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.SelectComponent;
@@ -66,8 +64,6 @@ class ViewDefinitionCreateTest {
 
   @Autowired private PathlingContext pathlingContext;
 
-  @Autowired private FhirEncoders fhirEncoders;
-
   @Autowired private FhirContext fhirContext;
 
   @Autowired private au.csiro.pathling.config.ServerConfiguration configuration;
@@ -86,10 +82,8 @@ class ViewDefinitionCreateTest {
     final UpdateExecutor updateExecutor =
         new UpdateExecutor(
             pathlingContext,
-            fhirEncoders,
             tempDatabasePath.toAbsolutePath().toString(),
             cacheableDatabase,
-            new StorageConfiguration(),
             mock(QueryableDataSource.class));
 
     // Create the CreateProvider for ViewDefinition.

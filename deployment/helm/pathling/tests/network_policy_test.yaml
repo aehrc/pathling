@@ -1,0 +1,161 @@
+# Tests for the NetworkPolicy that limits ingress to the server pod.
+#
+# Author: John Grimes
+
+suite: Network policy
+templates:
+  - network-policy.yaml
+tests:
+  # The policy selects the server pod and only governs ingress.
+  - it: selects the server pod for ingress by default
+    asserts:
+      - containsDocument:
+          kind: NetworkPolicy
+          apiVersion: networking.k8s.io/v1
+          name: pathling-server
+      - equal:
+          path: spec.podSelector
+          value:
+            matchLabels:
+              app: pathling-server
+      - equal:
+          path: spec.policyTypes
+          value:
+            - Ingress
+
+  # By default the FHIR API is the only port open to other pods. Kubelet probes come from the node,
+  # which a NetworkPolicy always allows.
+  - it: admits only the FHIR API by default
+    asserts:
+      - equal:
+          path: spec.ingress
+          value:
+            - ports:
+                - port: 8080
+                  protocol: TCP
+
+  # The policy can be left out for clusters that manage their own.
+  - it: is not created when disabled
+    set:
+      pathling:
+        networkPolicy:
+          enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # The management port is opened to the peers that scrape it.
+  - it: admits the configured peers to the management port
+    set:
+      pathling:
+        networkPolicy:
+          managementFrom:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: monitoring
+    asserts:
+      - contains:
+          path: spec.ingress
+          content:
+            from:
+              - namespaceSelector:
+                  matchLabels:
+                    kubernetes.io/metadata.name: monitoring
+            ports:
+              - port: 8081
+                protocol: TCP
+
+  # Executors in the default Spark namespace reach the driver and block manager ports.
+  - it: admits executor pods to the driver ports when a cluster manager is configured
+    set:
+      pathling:
+        config:
+          spark.master: k8s://https://kubernetes.default.svc
+    asserts:
+      - contains:
+          path: spec.ingress
+          content:
+            from:
+              - namespaceSelector:
+                  matchLabels:
+                    kubernetes.io/metadata.name: default
+                podSelector:
+                  matchLabels:
+                    spark-role: executor
+            ports:
+              - port: 7077
+                protocol: TCP
+              - port: 7078
+                protocol: TCP
+
+  # Executors are created in the namespace that Spark is configured to use.
+  - it: admits executor pods from the configured Spark namespace
+    set:
+      pathling:
+        config:
+          spark.master: k8s://https://kubernetes.default.svc
+          spark.kubernetes.namespace: pathling
+    asserts:
+      - contains:
+          path: spec.ingress
+          content:
+            from:
+              - namespaceSelector:
+                  matchLabels:
+                    kubernetes.io/metadata.name: pathling
+                podSelector:
+                  matchLabels:
+                    spark-role: executor
+            ports:
+              - port: 7077
+                protocol: TCP
+              - port: 7078
+                protocol: TCP
+
+  # The UI port is opened to the configured peers only when the UI is enabled.
+  - it: admits the configured peers to the Spark UI when it is enabled
+    set:
+      pathling:
+        config:
+          spark.ui.enabled: "true"
+        networkPolicy:
+          sparkUiFrom:
+            - podSelector:
+                matchLabels:
+                  app: ops
+    asserts:
+      - contains:
+          path: spec.ingress
+          content:
+            from:
+              - podSelector:
+                  matchLabels:
+                    app: ops
+            ports:
+              - port: 4040
+                protocol: TCP
+
+  # Peers for the UI are ignored while the UI is disabled.
+  - it: does not open the Spark UI port while the UI is disabled
+    set:
+      pathling:
+        networkPolicy:
+          sparkUiFrom:
+            - podSelector:
+                matchLabels:
+                  app: ops
+    asserts:
+      - lengthEqual:
+          path: spec.ingress
+          count: 1
+
+  # An enabled UI with no peers stays closed to other pods.
+  - it: does not open the Spark UI port when no peers are configured
+    set:
+      pathling:
+        config:
+          spark.ui.enabled: "true"
+    asserts:
+      - lengthEqual:
+          path: spec.ingress
+          count: 1

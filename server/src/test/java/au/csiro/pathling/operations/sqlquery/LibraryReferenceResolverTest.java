@@ -23,19 +23,21 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.io.ResourceEncoding;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.util.FhirServerTestConfiguration;
 import java.util.List;
 import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Library;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
 
 /**
  * Tests for {@link LibraryReferenceResolver#tryResolveSqlViewLibrary}, covering canonical matching
@@ -43,13 +45,13 @@ import org.springframework.beans.factory.annotation.Autowired;
  *
  * @author John Grimes
  */
+@Import(FhirServerTestConfiguration.class)
 @SpringBootUnitTest
 class LibraryReferenceResolverTest {
 
   private static final String FOO_URL = "https://example.org/Library/foo";
 
-  @Autowired private SparkSession spark;
-  @Autowired private FhirEncoders fhirEncoders;
+  @Autowired private PathlingContext pathlingContext;
 
   private DataSource dataSource;
   private LibraryReferenceResolver resolver;
@@ -57,7 +59,7 @@ class LibraryReferenceResolverTest {
   @BeforeEach
   void setUp() {
     dataSource = mock(DataSource.class);
-    resolver = new LibraryReferenceResolver(dataSource, fhirEncoders, authDisabledConfig());
+    resolver = new LibraryReferenceResolver(dataSource, pathlingContext, authDisabledConfig());
   }
 
   @Test
@@ -141,7 +143,7 @@ class LibraryReferenceResolverTest {
   }
 
   private Dataset<Row> libraryDataset(final Library... libraries) {
-    return spark.createDataset(List.of(libraries), fhirEncoders.of("Library")).toDF();
+    return ResourceEncoding.encode(pathlingContext, "Library", List.of(libraries));
   }
 
   /** Builds a server configuration with authorisation disabled, so no metadata READ is enforced. */

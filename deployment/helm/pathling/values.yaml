@@ -11,6 +11,10 @@ pathling:
   deployment:
     strategy: Recreate
     imagePullPolicy: Always
+    # The number of five-second startup probe failures tolerated before the container is
+    # restarted. Raise this for the first start of a server that has to migrate a warehouse
+    # written by an earlier version.
+    startupProbeFailureThreshold: 36
   volumes: []
   volumeMounts: []
   serviceAccount: ~
@@ -18,8 +22,25 @@ pathling:
   tolerations: []
   affinity: ~
   securityContext: ~
-  config: {}
+  # Configuration passed to the server as environment variables. Helm merges
+  # user-supplied entries over these defaults, so each can be overridden, or
+  # removed by setting it to null. The defaults require Spark's internal
+  # connections to authenticate with a shared secret, and turn off the Spark
+  # UI. When spark.master names a cluster manager, the chart also sets
+  # spark.network.crypto.enabled to "true" unless it is set here. The chart
+  # also reads spark.master, spark.ui.enabled and spark.kubernetes.namespace
+  # from here to decide which Services and NetworkPolicy rules to create.
+  config:
+    spark.authenticate: "true"
+    spark.ui.enabled: "false"
   secretConfig: {}
+  # A NetworkPolicy that admits all clients to the FHIR API, executor pods to
+  # the Spark driver ports, and only the listed peers to the management port
+  # and the Spark UI. Each list holds NetworkPolicy "from" entries.
+  networkPolicy:
+    enabled: true
+    managementFrom: []
+    sparkUiFrom: []
   # Full JVM trust store (JKS or PKCS12) containing every CA that the server
   # and its Spark executors must trust, e.g. the base JDK cacerts merged with
   # any internal roots. Merging is out of scope: provide a complete store as a

@@ -20,15 +20,22 @@ package au.csiro.pathling.operations.sqlquery;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.test.SpringBootUnitTest;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.spark.sql.catalyst.FunctionIdentifier;
+import org.apache.spark.sql.catalyst.analysis.FunctionRegistry;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.context.annotation.Import;
 
 /**
  * Build-time integrity checks for {@link SqlValidator}. Every entry in the allow-list / reject-list
- * must resolve to a class on the classpath (catches typos and Spark renames).
+ * must resolve to a class on the classpath (catches typos and Spark renames), and every Spark
+ * built-in function must be classified by {@link SqlFunctionAllowList}.
  */
 @Import(SqlValidator.class)
 @SpringBootUnitTest
@@ -48,6 +55,13 @@ class SqlValidatorIntegrityTest {
     assertThat(resolves(fqn)).as("FQN '%s' did not resolve on the classpath", fqn).isTrue();
   }
 
+  @ParameterizedTest(name = "aggregate function: {0}")
+  @MethodSource("aggregateFunctionFqns")
+  @DisplayName("Every allowed aggregate function FQN resolves to a class on the classpath")
+  void allowedAggregateFunctionFqnResolves(final String fqn) {
+    assertThat(resolves(fqn)).as("FQN '%s' did not resolve on the classpath", fqn).isTrue();
+  }
+
   @ParameterizedTest(name = "rejected expression: {0}")
   @MethodSource("rejectedExpressionFqns")
   @DisplayName("Every rejected expression FQN resolves to a class on the classpath")
@@ -62,6 +76,27 @@ class SqlValidatorIntegrityTest {
     assertThat(resolves(fqn)).as("FQN '%s' did not resolve on the classpath", fqn).isTrue();
   }
 
+  // A Spark upgrade that adds a built-in function fails this test until the function has been
+  // vetted and placed on one list or the other. A function that has been removed or renamed fails
+  // it too, so that neither list carries stale entries.
+  @Test
+  @DisplayName("Every Spark built-in function is classified as either allowed or rejected")
+  void everyBuiltInFunctionIsClassified() {
+    final Set<String> classified = new HashSet<>(SqlFunctionAllowList.ALLOWED_FUNCTION_NAMES);
+    classified.addAll(SqlFunctionAllowList.REJECTED_FUNCTION_NAMES);
+
+    assertThat(classified)
+        .as("built-in functions not classified, or classified names that are not built-ins")
+        .containsExactlyInAnyOrderElementsOf(builtInFunctionNames());
+  }
+
+  @Test
+  @DisplayName("No function is both allowed and rejected")
+  void noFunctionIsBothAllowedAndRejected() {
+    assertThat(SqlFunctionAllowList.ALLOWED_FUNCTION_NAMES)
+        .doesNotContainAnyElementsOf(SqlFunctionAllowList.REJECTED_FUNCTION_NAMES);
+  }
+
   static Stream<String> planNodeFqns() {
     return SqlValidator.allowedPlanNodes().stream();
   }
@@ -70,12 +105,24 @@ class SqlValidatorIntegrityTest {
     return SqlValidator.allowedExpressionNames().stream();
   }
 
+  static Stream<String> aggregateFunctionFqns() {
+    return SqlValidator.allowedAggregateFunctionNames().stream();
+  }
+
   static Stream<String> rejectedExpressionFqns() {
     return SqlValidator.rejectedExpressionNames().stream();
   }
 
   static Stream<String> describeCommandFqns() {
     return SqlValidator.describeCommandNames().stream();
+  }
+
+  /** Returns the names of all functions in Spark's built-in function registry. */
+  private static Set<String> builtInFunctionNames() {
+    return scala.jdk.javaapi.CollectionConverters.asJava(FunctionRegistry.builtin().listFunction())
+        .stream()
+        .map(FunctionIdentifier::funcName)
+        .collect(Collectors.toSet());
   }
 
   /**

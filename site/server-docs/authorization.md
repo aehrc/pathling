@@ -100,11 +100,26 @@ version 3.0.0 of the server.
 The import, delete, batch, and bulk submit operations require `write` authority
 for all resource types that are referenced within the request.
 
+The group-level export operation (`GET [base]/Group/[id]/$export`) also
+requires `pathling:read:Group` authority, because resolving the group reveals
+whether it exists and which patients are its members. The authority is checked
+before the group is read, so a caller without it receives `403 Forbidden`
+whether or not the group exists.
+
 The SQL on FHIR data operations (`sql-run` and `sql-export`) require `read`
 authority for the resource type a ViewDefinition subject projects, named in its
 `resource` element. For example, a ViewDefinition targeting `Patient` resources
 requires `pathling:read:Patient` authority in addition to the operation
 authority.
+
+The `patient` and `group` filters of the SQL on FHIR data operations read
+stored data to resolve their values, so each requires `read` authority for the
+type it names: the `patient` filter requires `pathling:read:Patient`, which is
+needed to check that each named patient exists, and the `group` filter requires
+`pathling:read:Group`. This applies whatever resource type the subject
+projects. As with group-level export, the authority is checked before anything
+is read, so a caller without it receives `403 Forbidden` rather than an error
+naming a value that does not exist.
 
 A configured [external table](configuration#sql-query) referenced as a
 dependency of a SQL subject requires only the operation authority. It is
@@ -137,13 +152,27 @@ operation authority is refused as for any other request.
 
 ### Job ownership
 
-Asynchronous jobs are owned by the token subject that started them. When
-authorisation is enabled, the [jobs](operations/jobs) list operation
+Asynchronous jobs are owned by the token subject (the `sub` claim) that started
+them. When authorisation is enabled, the [jobs](operations/jobs) list operation
 (`pathling:jobs`) returns only the caller's own jobs, and both polling a job's
 status and cancelling it (via `GET` and `DELETE` on the job's URL) require the
 caller to be the job's owner and to hold the authority for the operation that
-started the job. A request to cancel a job owned by a different subject is
-refused with an access-denied error and the job is left unaffected.
+started the job. Retrieving a job's result, including downloading its output
+files, also requires the caller to be the job's owner. A request to cancel a job
+owned by a different subject is refused with an access-denied error and the job
+is left unaffected.
+
+A caller whose token has no `sub` claim, as some identity providers issue for
+the client credentials grant, owns no jobs. Such a caller cannot poll, cancel or
+retrieve the result of any asynchronous job, including one it started itself,
+and any `$sql-export` or `$import-pnp` job it starts fails with an access-denied
+error. Configure the identity provider to include a `sub` claim in access tokens
+used for asynchronous operations.
+
+Bulk submit submissions are owned in the same way. A `$bulk-submit` or
+`$bulk-submit-status` request for a submission created by a different subject
+receives a `404` response, and the submission is left unaffected. See
+[bulk submit](operations/bulk-submit#submission-ownership).
 
 ### Reading subjects and dependencies from storage
 
@@ -187,3 +216,12 @@ from the OIDC discovery document:
 - `grant_types_supported` (via `pathling.auth.grantTypesSupported`)
 - `code_challenge_methods_supported` (via
   `pathling.auth.codeChallengeMethodsSupported`)
+
+## Model Context Protocol
+
+The [Model Context Protocol](mcp) endpoint is authorized separately from the
+FHIR API: it accepts tokens from the MCP issuer, which may differ from the FHIR
+API's issuer, only when they were issued for the MCP endpoint itself. It also
+publishes the metadata that MCP clients use to find that issuer.
+The authorities in its tokens are applied as described above. See
+[Authorization](mcp#authorization) on the MCP page.

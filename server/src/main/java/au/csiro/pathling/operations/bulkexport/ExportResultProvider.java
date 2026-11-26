@@ -18,6 +18,7 @@
 package au.csiro.pathling.operations.bulkexport;
 
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
+import static au.csiro.pathling.security.SecurityAspect.isOwner;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.config.ServerConfiguration;
@@ -107,9 +108,9 @@ public class ExportResultProvider {
     final Optional<String> ownerId = exportResult.ownerId();
 
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    // Check that the user requesting the result is the same user that started the job.
+    // When authorisation is enabled, only the user that started the job may download its result.
     final Optional<String> currentUserId = getCurrentUserId(authentication);
-    if (currentUserId.isPresent() && !ownerId.equals(currentUserId)) {
+    if (configuration.getAuth().isEnabled() && !isOwner(ownerId, currentUserId)) {
       response.setStatus(HttpServletResponse.SC_NOT_FOUND);
       throw new AccessDeniedError(
           "The requested result is not owned by the current user '%s'."

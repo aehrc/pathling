@@ -56,9 +56,16 @@ sub vcl_backend_response {
     set beresp.uncacheable = true;
     return (deliver);
   }
+  // Store the response but let it go stale after 1ms, so that every later
+  // request is revalidated with the backend using the stored ETag. The backend
+  // answers 304 when the data has not changed, and Varnish then serves the
+  // stored body. Serving a stored response without revalidation, even for a
+  // second, can return data from before a write that has already completed.
+  // The TTL is not zero because Varnish does not revalidate an object stored
+  // with a TTL of zero, and fetches the whole response from the backend again.
   set beresp.grace = 0s;
   set beresp.keep = 365d;
-  set beresp.ttl = 1s;
+  set beresp.ttl = 1ms;
   set beresp.do_gzip = true;
   if (beresp.status == 202) {
     set beresp.http.x-original-status = beresp.status;

@@ -364,6 +364,57 @@ describe("SqlQueryForm stored execution", () => {
   });
 });
 
+describe("SqlQueryForm save classification", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // A query with no declared parameters is saved as a SQLView carrying the
+  // typed canonical URL, so other queries can select it as a source.
+  it("saves a parameterless query as a SQLView with its canonical URL", async () => {
+    const onSaveToServer = vi.fn().mockResolvedValue({ id: "saved-view", title: "Totals" });
+    const { user } = renderForm({ onSaveToServer });
+
+    await authorInlineQuery(user, { title: "Totals" });
+    await user.type(
+      screen.getByRole("textbox", { name: "Library canonical URL" }),
+      " https://example.org/Library/totals ",
+    );
+    await user.click(screen.getByRole("button", { name: /save to server/i }));
+
+    expect(onSaveToServer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "https://example.org/Library/totals",
+        meta: { profile: ["https://sql-on-fhir.org/ig/StructureDefinition/SQLView"] },
+        type: {
+          coding: [
+            {
+              system: "https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes",
+              code: "sql-view",
+            },
+          ],
+        },
+      }),
+    );
+  });
+
+  // A declared parameter makes the saved Library a SQLQuery.
+  it("saves a query declaring a parameter as a SQLQuery", async () => {
+    const onSaveToServer = vi.fn().mockResolvedValue({ id: "saved-query", title: "Since" });
+    const { user } = renderForm({ onSaveToServer });
+
+    await authorInlineQuery(user, {
+      title: "Since",
+      parameter: { name: "since", type: "date", value: "2025-01-01" },
+    });
+    await user.click(screen.getByRole("button", { name: /save to server/i }));
+
+    const saved = onSaveToServer.mock.calls[0][0] as SqlQueryLibrary;
+    expect(saved.type.coding[0].code).toBe("sql-query");
+    expect(saved.url).toBeUndefined();
+  });
+});
+
 describe("SqlQueryForm inline execution", () => {
   beforeEach(() => {
     vi.clearAllMocks();

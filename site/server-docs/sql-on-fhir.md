@@ -202,6 +202,15 @@ it is validated before it runs:
   as its terminology functions, belong in a ViewDefinition and are rejected in
   SQL: membership and translation in SQL are expressed with joins to a
   [value set](#value-sets) or [concept map](#concept-maps) instead.
+- A small number of built-in functions are also rejected, because they open a
+  file or URL chosen by the caller, invoke arbitrary Java code, or disclose
+  where data is stored. These are `from_xml`, `schema_of_xml`, the `xpath`
+  functions, the Avro and Protobuf functions, `reflect`, `java_method`,
+  `try_reflect` and the `input_file_*` functions. A built-in function added in a
+  later version of Spark is rejected until it has been reviewed.
+- It must not contain the character sequence `${` anywhere, including in string
+  literals and comments. The text is run as submitted, and Spark's `${...}`
+  reference syntax is not supported.
 
 A fault in the SQL that only Spark's analyser can catch - an unresolved column,
 an unknown function, a missing `GROUP BY`, an ambiguous reference - is a `422`,
@@ -213,6 +222,18 @@ column position can differ from the position in the submitted text, and a
 qualified suggestion can name one of those internal views. Only table
 references are replaced, so a column, alias or function that happens to share a
 label's name is left as submitted.
+
+In [`$sql-run`](operations/sql-run.md#status-codes), a fault that Spark raises
+while it evaluates rows is also a `422` when it is a data exception: a failure
+with a SQLSTATE in class `22`, such as a string that cannot be cast to a number
+or a division by zero. Its diagnostics carry Spark's own message, which quotes
+the value that could not be processed and the fragment of the rewritten query
+that raised it. This can only be reported as a status while no rows have been
+sent. A common cause is comparing a `decimal` column with an integer literal:
+the column is a string under the default type mappings, so Spark casts it to an
+integer type for the comparison, and the cast fails on the first value that is
+not a whole number. Casting the column first, as in
+`CAST(value AS DECIMAL(18, 6)) >= 90`, avoids this.
 
 ### Parameters
 

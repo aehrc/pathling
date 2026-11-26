@@ -1,0 +1,50 @@
+{{- /*
+Limits ingress to the server pod. The FHIR API is open to all clients; the management port, the
+Spark UI and the Spark driver ports are open only to the peers that need them. Traffic from the
+pod's own node, which includes kubelet probes, is always allowed by Kubernetes.
+*/}}
+{{- if .Values.pathling.networkPolicy.enabled }}
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: pathling-server
+spec:
+  podSelector:
+    matchLabels:
+      app: pathling-server
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: 8080
+          protocol: TCP
+    {{- with .Values.pathling.networkPolicy.managementFrom }}
+    - from: {{ toJson . }}
+      ports:
+        - port: 8081
+          protocol: TCP
+    {{- end }}
+    {{- if include "pathling.sparkUiEnabled" . }}
+    {{- with .Values.pathling.networkPolicy.sparkUiFrom }}
+    - from: {{ toJson . }}
+      ports:
+        - port: 4040
+          protocol: TCP
+    {{- end }}
+    {{- end }}
+    {{- if include "pathling.clusterMode" . }}
+    # Spark labels the executor pods it creates in its configured namespace.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ include "pathling.configValue" (list . "spark.kubernetes.namespace" "default") | quote }}
+          podSelector:
+            matchLabels:
+              spark-role: executor
+      ports:
+        - port: 7077
+          protocol: TCP
+        - port: 7078
+          protocol: TCP
+    {{- end }}
+{{- end }}

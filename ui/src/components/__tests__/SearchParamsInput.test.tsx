@@ -27,6 +27,7 @@
  */
 
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { render, screen } from "../../test/testUtils";
@@ -147,6 +148,46 @@ describe("SearchParamsInput", () => {
       // Second row should be empty with a new ID.
       expect(newRows[1].paramName).toBe("");
       expect(newRows[1].value).toBe("");
+    });
+
+    // Adding a row moves focus to its parameter selector, so the user can pick
+    // a parameter from the keyboard straight away.
+    it("focuses the parameter selector of the new row", async () => {
+      const user = userEvent.setup();
+
+      /**
+       * Holds the rows in state, as the forms using this component do.
+       *
+       * @returns The search parameters input bound to state.
+       */
+      function Harness() {
+        const [rows, setRows] = useState<SearchParamRowData[]>([
+          { id: 1, paramName: "gender", value: "male" },
+        ]);
+        return (
+          <SearchParamsInput availableParams={mockAvailableParams} rows={rows} onChange={setRows} />
+        );
+      }
+      render(<Harness />);
+
+      await user.click(screen.getByRole("button", { name: /add parameter/i }));
+
+      const selectors = screen.getAllByRole("combobox");
+      expect(selectors).toHaveLength(2);
+      expect(selectors[1]).toHaveFocus();
+    });
+
+    // Rows passed in on render were not added by the user, so focus stays put.
+    it("does not focus rows present on render", () => {
+      render(
+        <SearchParamsInput
+          availableParams={mockAvailableParams}
+          rows={[{ id: 1, paramName: "", value: "" }]}
+          onChange={mockOnChange}
+        />,
+      );
+
+      expect(document.body).toHaveFocus();
     });
   });
 

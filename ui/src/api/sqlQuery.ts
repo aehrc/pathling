@@ -60,10 +60,16 @@ const LIBRARY_TYPE_FILTERS: Record<SqlOnFhirLibraryTypeCode, string> = {
 };
 
 /**
- * Profile URL applied to inline SQLQuery Library resources.
+ * Profile URL applied to inline Library resources that declare parameters.
  */
 export const SQL_QUERY_LIBRARY_PROFILE =
   "https://sql-on-fhir.org/ig/StructureDefinition/SQLQuery";
+
+/**
+ * Profile URL applied to inline Library resources that declare no parameters.
+ */
+export const SQL_VIEW_LIBRARY_PROFILE =
+  "https://sql-on-fhir.org/ig/StructureDefinition/SQLView";
 
 /**
  * Searches the FHIR server for stored SQL on FHIR Library resources of a

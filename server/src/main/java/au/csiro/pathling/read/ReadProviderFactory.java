@@ -18,8 +18,8 @@
 package au.csiro.pathling.read;
 
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.PathlingContext;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -45,7 +45,7 @@ public class ReadProviderFactory {
 
   @Nonnull private final DataSource dataSource;
 
-  @Nonnull private final FhirEncoders fhirEncoders;
+  @Nonnull private final PathlingContext pathlingContext;
 
   /**
    * Constructs a new ReadProviderFactory.
@@ -54,19 +54,19 @@ public class ReadProviderFactory {
    * @param configuration the server configuration
    * @param fhirContext the FHIR context for resource definitions
    * @param dataSource the data source containing the resources to read
-   * @param fhirEncoders the encoders for converting Spark rows to FHIR resources
+   * @param pathlingContext the Pathling context, used to decode rows into FHIR resources
    */
   public ReadProviderFactory(
       @Nonnull final ApplicationContext applicationContext,
       @Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final DataSource dataSource,
-      @Nonnull final FhirEncoders fhirEncoders) {
+      @Nonnull final PathlingContext pathlingContext) {
     this.applicationContext = applicationContext;
     this.configuration = configuration;
     this.fhirContext = fhirContext;
     this.dataSource = dataSource;
-    this.fhirEncoders = fhirEncoders;
+    this.pathlingContext = pathlingContext;
   }
 
   /**
@@ -80,7 +80,7 @@ public class ReadProviderFactory {
     final Class<? extends IBaseResource> resourceTypeClass =
         fhirContext.getResourceDefinition(resourceType.name()).getImplementingClass();
 
-    final ReadExecutor readExecutor = new ReadExecutor(dataSource, fhirEncoders);
+    final ReadExecutor readExecutor = new ReadExecutor(dataSource, pathlingContext);
     return applicationContext.getBean(
         ReadProvider.class, configuration, readExecutor, fhirContext, resourceTypeClass);
   }
@@ -97,7 +97,7 @@ public class ReadProviderFactory {
     final Class<? extends IBaseResource> resourceTypeClass =
         fhirContext.getResourceDefinition(resourceTypeCode).getImplementingClass();
 
-    final ReadExecutor readExecutor = new ReadExecutor(dataSource, fhirEncoders);
+    final ReadExecutor readExecutor = new ReadExecutor(dataSource, pathlingContext);
     return applicationContext.getBean(
         ReadProvider.class, configuration, readExecutor, fhirContext, resourceTypeClass);
   }

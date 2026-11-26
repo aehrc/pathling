@@ -26,6 +26,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
 import { ErrorCallout } from "../components/error/ErrorCallout";
+import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { clearReturnUrl, completeAuth, getReturnUrl } from "../services/auth";
 
@@ -48,7 +49,7 @@ export function Callback() {
       hasProcessed.current = true;
 
       try {
-        const client = await completeAuth();
+        const client = await completeAuth(config.fhirBaseUrl);
         setClient(client);
         // Get return URL before clearing - safe to call multiple times.
         const returnUrl = getReturnUrl();

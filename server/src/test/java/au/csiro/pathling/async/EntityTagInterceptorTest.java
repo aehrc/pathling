@@ -276,4 +276,21 @@ class EntityTagInterceptorTest {
     verifyCacheableResponseHeaders();
     verify(response).setHeader(eq("Cache-Control"), eq("must-revalidate,max-age=1"));
   }
+
+  @Test
+  void jobResultEndpointSkipsEtagValidation() {
+    // $job-result must not be validated against the database ETag. That tag is shared by every job
+    // ID, so a 304 would let a cached response for one job, or a stale "not yet complete" error,
+    // stand in for the current result (issue #2529).
+    setupCacheableRequest("GET", TAG, "$job-result");
+
+    interceptor.checkIncomingTag(request, requestDetails, response);
+
+    verify(database, org.mockito.Mockito.never())
+        .cacheKeyMatches(org.mockito.ArgumentMatchers.anyString());
+    verify(response, org.mockito.Mockito.never())
+        .setHeader(eq("ETag"), org.mockito.ArgumentMatchers.anyString());
+    verifyCacheableResponseHeaders();
+    verify(response).setHeader(eq("Cache-Control"), eq("must-revalidate,max-age=1"));
+  }
 }

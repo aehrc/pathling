@@ -20,7 +20,6 @@ package au.csiro.pathling.read;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.SelectComponent;
@@ -32,7 +31,6 @@ import au.csiro.pathling.util.FhirServerTestConfiguration;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
@@ -54,11 +52,7 @@ import org.springframework.context.annotation.Import;
 @SpringBootUnitTest
 class ReadExecutorTest {
 
-  @Autowired private SparkSession sparkSession;
-
   @Autowired private PathlingContext pathlingContext;
-
-  @Autowired private FhirEncoders fhirEncoders;
 
   private CustomObjectDataSource dataSource;
   private ReadExecutor readExecutor;
@@ -81,8 +75,8 @@ class ReadExecutorTest {
     resources.add(createViewDefinition("view-1", "patient_view", "Patient"));
     resources.add(createViewDefinition("view-2", "observation_view", "Observation"));
 
-    dataSource = new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, resources);
-    readExecutor = new ReadExecutor(dataSource, fhirEncoders);
+    dataSource = new CustomObjectDataSource(pathlingContext, resources);
+    readExecutor = new ReadExecutor(dataSource, pathlingContext);
   }
 
   // -------------------------------------------------------------------------

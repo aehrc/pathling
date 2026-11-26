@@ -179,7 +179,7 @@ GET [base]/$sql-run?subjectReference=ViewDefinition/demographics&patient=Patient
 | Status                      | Condition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `200 OK`                    | Successful execution, in the negotiated format.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `400 Bad Request`           | No subject or more than one; an inapplicable conditional parameter; an unsupported `_format`; `source`; an unresolvable filter value; a `context` entry, of any kind, without a `url`, sharing its `url` with another entry, or matching no dependency.                                                                                                                                                                                                                                                                                                        |
+| `400 Bad Request`           | No subject or more than one; an inapplicable conditional parameter; an unsupported `_format`; `source`; an unresolvable filter value; a `context` entry, of any kind, without a `url`, sharing its `url` with another entry, or matching no dependency; a ViewDefinition, as the subject or in `context`, with a column whose declared `type` differs from the type of its `path`.                                                                                                                                                                             |
 | `404 Not Found`             | The subject's canonical or reference resolves to nothing, or a dependency matches no ViewDefinition, SQLView, external table, concept map or value set. The issue names the label and the reference.                                                                                                                                                                                                                                                                                                                                                           |
 | `404 Not Found`             | In `server` terminology mode, a SNOMED CT implicit concept map URL (`http://snomed.info/sct?fhir_cm=...`) that the terminology server's ConceptMap search does not return; the issue adds that such maps are resolved only in local terminology mode.                                                                                                                                                                                                                                                                                                          |
 | `404 Not Found`             | An unpinned concept map held in several versions with no determinable latest, or a pinned one held twice at that version; the issue states that the version to use cannot be determined, and why.                                                                                                                                                                                                                                                                                                                                                              |
@@ -206,18 +206,25 @@ An unbound [parameter](../sql-on-fhir.md#parameters) is a `400`, and a fault
 in the subject's SQL that only Spark's analyser can catch is a `422`; see
 [The SQL](../sql-on-fhir.md#the-sql).
 
-A fault that only appears when rows are evaluated - for example a column
-declared as singular that yields more than one value for some resource - is
-reported the same way as it is by `$sql-export`: `400` for a failure raised by
-the query itself, `500` for anything else. The result is streamed, so this is
-only possible while no rows have been sent. Rows are evaluated in batches, and
-the first batch is evaluated before anything is written; with `_limit`,
-`_format=json` or `_format=parquet`, every row that could be returned is
-evaluated first. Without `_limit`, a failure in a later batch can arrive after
-the `200` status and the earlier rows. The server then closes the connection
-without completing the response, so an HTTP/1.1 client reports an incomplete
-transfer rather than a result that is silently missing rows. Use `$sql-export`
-to have every failure reported as a status.
+A fault that only appears when rows are evaluated is reported with a status
+while no rows have been sent. For a SQL subject, a data exception - a failure
+Spark reports with a SQLSTATE in class `22`, such as a string that cannot be
+cast to a number or a division by zero - is a `422` naming `subject`, and its
+diagnostics carry Spark's own message; see [The SQL](../sql-on-fhir.md#the-sql).
+Any other such fault - for example a column declared as singular that yields
+more than one value for some resource - is reported the same way as it is by
+`$sql-export`: `400` for a failure raised by the query itself, `500` for
+anything else.
+
+The result is streamed, so a fault can only be reported with a status while no
+rows have been sent. Rows are evaluated in batches, and the first batch is
+evaluated before anything is written; with `_limit`, `_format=json` or
+`_format=parquet`, every row that could be returned is evaluated first. Without
+`_limit`, a failure in a later batch can arrive after the `200` status and the
+earlier rows. The server then closes the connection without completing the
+response, so an HTTP/1.1 client reports an incomplete transfer rather than a
+result that is silently missing rows. Use `$sql-export` to have every failure
+reported as a status.
 
 ## Conformance
 
@@ -232,9 +239,10 @@ declines. Pathling serves no OperationDefinition of its own for it.
 The operation is enabled by `pathling.operations.sqlRunEnabled` (default
 `true`) and guarded by the `pathling:sql-run` authority. Running a subject also
 requires `read` authority for the resource type it projects, and reading a
-stored subject requires `read` authority for `ViewDefinition` or `Library`. A
-value set or concept map dependency requires only the operation authority. See
-[authorization](../authorization.md).
+stored subject requires `read` authority for `ViewDefinition` or `Library`. The
+`patient` filter requires `read` authority for `Patient`, and the `group` filter
+`read` authority for `Group`. A value set or concept map dependency requires
+only the operation authority. See [authorization](../authorization.md).
 
 ## Python client
 

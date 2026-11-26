@@ -273,6 +273,65 @@ describe("buildInlineSqlQueryLibrary", () => {
     expect(library.title).toBe("Patients By Condition");
     expect(library.name).toBe("patients-by-condition");
   });
+
+  // A query with no declared parameters is a SQLView, so it is listed with the
+  // stored views and can be referenced as a source by other queries.
+  it("assembles a SQLView when no parameters are declared", () => {
+    const library = buildInlineSqlQueryLibrary({
+      sql: "SELECT 1",
+      tables: [],
+      terminology: [],
+      parameters: [],
+    });
+
+    expect(library.meta?.profile).toEqual([
+      "https://sql-on-fhir.org/ig/StructureDefinition/SQLView",
+    ]);
+    expect(library.type.coding).toEqual([
+      {
+        system: "https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes",
+        code: "sql-view",
+      },
+    ]);
+  });
+
+  // Empty-name rows are not declarations, so a form holding only such rows
+  // still produces a SQLView rather than a SQLQuery.
+  it("assembles a SQLView when every parameter row has an empty name", () => {
+    const library = buildInlineSqlQueryLibrary({
+      sql: "SELECT 1",
+      tables: [],
+      terminology: [],
+      parameters: [row("", "string", "x"), row("  ", "date", "")],
+    });
+
+    expect(library.meta?.profile).toEqual([
+      "https://sql-on-fhir.org/ig/StructureDefinition/SQLView",
+    ]);
+    expect(library.type.coding[0].code).toBe("sql-view");
+    expect(library.parameter).toBeUndefined();
+  });
+
+  // A single named row alongside empty-name rows is enough to make the
+  // Library a SQLQuery.
+  it("assembles a SQLQuery when at least one parameter is declared", () => {
+    const library = buildInlineSqlQueryLibrary({
+      sql: "SELECT 1",
+      tables: [],
+      terminology: [],
+      parameters: [row("", "string", ""), row("since", "date", "")],
+    });
+
+    expect(library.meta?.profile).toEqual([
+      "https://sql-on-fhir.org/ig/StructureDefinition/SQLQuery",
+    ]);
+    expect(library.type.coding).toEqual([
+      {
+        system: "https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes",
+        code: "sql-query",
+      },
+    ]);
+  });
 });
 
 describe("canExecuteInlineForm", () => {

@@ -21,13 +21,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.async.Job;
 import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.async.ProcessingNotCompletedException;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
@@ -40,8 +43,13 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.context.SecurityContextImpl;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 /**
  * Unit tests for BulkSubmitStatusProvider.
@@ -54,6 +62,8 @@ class BulkSubmitStatusProviderTest {
   private static final String SUBMITTER_VALUE = "test-submitter";
   private static final String SUBMISSION_ID = "test-submission-123";
   private static final String FHIR_SERVER_BASE = "http://localhost:8080/fhir";
+  private static final String OWNER = "hospital-user";
+  private static final String OTHER_USER = "mallory";
 
   private SubmissionRegistry submissionRegistry;
   private BulkSubmitResultBuilder resultBuilder;
@@ -82,6 +92,11 @@ class BulkSubmitStatusProviderTest {
     when(requestDetails.getServletRequest()).thenReturn(servletRequest);
     when(requestDetails.getRequestPath()).thenReturn("/$bulk-submit-status");
     when(servletRequest.getQueryString()).thenReturn("submissionId=" + SUBMISSION_ID);
+  }
+
+  @AfterEach
+  void tearDown() {
+    SecurityContextHolder.clearContext();
   }
 
   @Test
@@ -257,6 +272,7 @@ class BulkSubmitStatusProviderTest {
     final Submission pendingSubmission =
         new Submission(
             SUBMISSION_ID,
+            "staging-1",
             submitterIdentifier,
             SubmissionState.PROCESSING,
             List.of(manifestJob),
@@ -287,52 +303,57 @@ class BulkSubmitStatusProviderTest {
   }
 
   @Test
-  void returnsJobResultWhenJobIsComplete() {
-    // Given: a pending submission with a completed job.
+  void returnsCurrentManifestWhenJobIsComplete() {
+    // Given: a processing submission whose only download job has completed.
     final StringType submissionId = new StringType(SUBMISSION_ID);
     final Identifier submitter = createSubmitterIdentifier();
-    final SubmitterIdentifier submitterIdentifier =
-        new SubmitterIdentifier(SUBMITTER_SYSTEM, SUBMITTER_VALUE);
-    final String jobId = "job-123";
-
-    final ManifestJob manifestJob =
-        ManifestJob.createPending(
-                "manifest-job-123",
-                "https://example.org/manifest.json",
-                "https://example.org/fhir",
-                null)
-            .withState(ManifestJobState.PROCESSING)
-            .withJobId(jobId);
-    final Submission pendingSubmission =
-        new Submission(
-            SUBMISSION_ID,
-            submitterIdentifier,
-            SubmissionState.PROCESSING,
-            List.of(manifestJob),
-            "2024-01-01T00:00:00Z",
-            null,
-            null,
-            null,
-            null);
-
+    final ManifestJob manifestJob = downloadedManifestJob("manifest-job-123", "job-123");
+    final Submission submission = processingSubmission(List.of(manifestJob));
     when(submissionRegistry.get(any(SubmitterIdentifier.class), eq(SUBMISSION_ID)))
-        .thenReturn(Optional.of(pendingSubmission));
+        .thenReturn(Optional.of(submission));
+    registerCompletedJob("job-123", new Parameters());
 
-    @SuppressWarnings("unchecked")
-    final Job<IBaseResource> job = mock(Job.class);
-    final Parameters completedResult = new Parameters();
-    completedResult.addParameter().setName("status").setValue(new StringType("complete"));
-    final CompletableFuture<IBaseResource> completedFuture =
-        CompletableFuture.completedFuture(completedResult);
-    when(job.getResult()).thenReturn(completedFuture);
-    when(jobRegistry.get(jobId)).thenAnswer(inv -> job);
+    final Parameters currentManifest = new Parameters();
+    when(resultBuilder.buildStatusManifest(eq(submission), any(), eq(FHIR_SERVER_BASE)))
+        .thenReturn(currentManifest);
 
     // When: calling the operation.
     final Parameters result =
         provider.bulkSubmitStatusOperation(submissionId, submitter, requestDetails);
 
-    // Then: should return the job result.
-    assertThat(result).isEqualTo(completedResult);
+    // Then: the manifest is built from the current state of the submission.
+    assertThat(result).isSameAs(currentManifest);
+  }
+
+  @Test
+  void includesLaterManifestsWhenAllJobsAreComplete() {
+    // Given: a submission with two manifests, both downloaded. Each download job stores the
+    // manifest as it was when that job finished, so the first job's copy does not include the
+    // second manifest.
+    final StringType submissionId = new StringType(SUBMISSION_ID);
+    final Identifier submitter = createSubmitterIdentifier();
+    final Submission submission =
+        processingSubmission(
+            List.of(
+                downloadedManifestJob("manifest-job-1", "job-1"),
+                downloadedManifestJob("manifest-job-2", "job-2")));
+    when(submissionRegistry.get(any(SubmitterIdentifier.class), eq(SUBMISSION_ID)))
+        .thenReturn(Optional.of(submission));
+    final Parameters staleManifest = new Parameters();
+    registerCompletedJob("job-1", staleManifest);
+    registerCompletedJob("job-2", new Parameters());
+
+    final Parameters currentManifest = new Parameters();
+    when(resultBuilder.buildStatusManifest(eq(submission), any(), eq(FHIR_SERVER_BASE)))
+        .thenReturn(currentManifest);
+
+    // When: calling the operation.
+    final Parameters result =
+        provider.bulkSubmitStatusOperation(submissionId, submitter, requestDetails);
+
+    // Then: the manifest reflects both manifest jobs, rather than the first job's stored copy.
+    assertThat(result).isSameAs(currentManifest).isNotSameAs(staleManifest);
+    verify(resultBuilder).buildStatusManifest(eq(submission), any(), eq(FHIR_SERVER_BASE));
   }
 
   @Test
@@ -354,6 +375,7 @@ class BulkSubmitStatusProviderTest {
     final Submission pendingSubmission =
         new Submission(
             SUBMISSION_ID,
+            "staging-1",
             submitterIdentifier,
             SubmissionState.PROCESSING,
             List.of(manifestJob),
@@ -378,8 +400,146 @@ class BulkSubmitStatusProviderTest {
   }
 
   // ========================================
+  // Ownership and Submitter Tests
+  // ========================================
+
+  @Test
+  void returnsNotFoundForCompletedSubmissionWhenCallerIsNotOwner() {
+    // Given: a completed submission owned by another user.
+    givenExistingSubmission(submissionOwnedBy(OWNER).withState(SubmissionState.COMPLETED));
+    authenticateAs(OTHER_USER);
+
+    // When/Then: the caller is told the submission does not exist, and no manifest is built.
+    assertThatThrownBy(
+            () ->
+                provider.bulkSubmitStatusOperation(
+                    new StringType(SUBMISSION_ID), createSubmitterIdentifier(), requestDetails))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessage("Submission not found: " + SUBMISSION_ID);
+    verify(resultBuilder, never()).buildStatusManifest(any(), any(), any());
+  }
+
+  @Test
+  void returnsNotFoundForProcessingSubmissionWhenCallerIsNotOwner() {
+    // Given: a submission owned by another user with a running job.
+    givenExistingSubmission(
+        submissionOwnedBy(OWNER).withManifestJob(downloadedManifestJob("manifest-1", "job-1")));
+    authenticateAs(OTHER_USER);
+
+    // When/Then: the caller is not redirected to the job, and no progress is disclosed.
+    assertThatThrownBy(
+            () ->
+                provider.bulkSubmitStatusOperation(
+                    new StringType(SUBMISSION_ID), createSubmitterIdentifier(), requestDetails))
+        .isInstanceOf(ResourceNotFoundException.class);
+    verify(jobRegistry, never()).get(any(String.class));
+    verify(servletResponse, never()).setHeader(any(), any());
+  }
+
+  @Test
+  void returnsNotFoundForSubmissionWithoutOwnerWhenCallerIsAuthenticated() {
+    // Given: a submission created by a caller without a subject.
+    givenExistingSubmission(
+        Submission.createPending(
+                SUBMISSION_ID,
+                new SubmitterIdentifier(SUBMITTER_SYSTEM, SUBMITTER_VALUE),
+                Optional.empty())
+            .withState(SubmissionState.COMPLETED));
+    authenticateAs(OTHER_USER);
+
+    // When/Then: the authenticated caller does not own the submission.
+    assertThatThrownBy(
+            () ->
+                provider.bulkSubmitStatusOperation(
+                    new StringType(SUBMISSION_ID), createSubmitterIdentifier(), requestDetails))
+        .isInstanceOf(ResourceNotFoundException.class);
+  }
+
+  @Test
+  void returnsStatusManifestToOwner() {
+    // Given: a completed submission owned by the caller.
+    final Submission submission = submissionOwnedBy(OWNER).withState(SubmissionState.COMPLETED);
+    givenExistingSubmission(submission);
+    authenticateAs(OWNER);
+    final Parameters expectedResult = new Parameters();
+    when(resultBuilder.buildStatusManifest(any(), any(), any())).thenReturn(expectedResult);
+
+    // When: calling the operation.
+    final Parameters result =
+        provider.bulkSubmitStatusOperation(
+            new StringType(SUBMISSION_ID), createSubmitterIdentifier(), requestDetails);
+
+    // Then: the owner receives the status manifest.
+    assertThat(result).isSameAs(expectedResult);
+    verify(resultBuilder).buildStatusManifest(eq(submission), any(), eq(FHIR_SERVER_BASE));
+  }
+
+  @Test
+  void rejectsSubmitterThatIsNotAllowed() {
+    // Given: a submitter that the validator rejects.
+    doThrow(new InvalidUserInputError("Submitter is not in the list of allowed submitters."))
+        .when(validator)
+        .validateSubmitterAllowed(new SubmitterIdentifier(SUBMITTER_SYSTEM, SUBMITTER_VALUE));
+
+    // When/Then: the request is rejected before the submission is looked up.
+    assertThatThrownBy(
+            () ->
+                provider.bulkSubmitStatusOperation(
+                    new StringType(SUBMISSION_ID), createSubmitterIdentifier(), requestDetails))
+        .isInstanceOf(InvalidUserInputError.class);
+    verify(submissionRegistry, never()).get(any(), any());
+  }
+
+  // ========================================
   // Helper Methods
   // ========================================
+
+  private ManifestJob downloadedManifestJob(final String manifestJobId, final String jobId) {
+    return ManifestJob.createPending(
+            manifestJobId, "https://example.org/" + manifestJobId + ".json", null, null)
+        .withState(ManifestJobState.DOWNLOADED)
+        .withJobId(jobId);
+  }
+
+  private Submission processingSubmission(final List<ManifestJob> manifestJobs) {
+    return new Submission(
+        SUBMISSION_ID,
+        "staging-1",
+        new SubmitterIdentifier(SUBMITTER_SYSTEM, SUBMITTER_VALUE),
+        SubmissionState.PROCESSING,
+        manifestJobs,
+        "2024-01-01T00:00:00Z",
+        null,
+        null,
+        null,
+        null);
+  }
+
+  private Submission submissionOwnedBy(final String owner) {
+    return Submission.createPending(
+            SUBMISSION_ID,
+            new SubmitterIdentifier(SUBMITTER_SYSTEM, SUBMITTER_VALUE),
+            Optional.of(owner))
+        .withState(SubmissionState.PROCESSING);
+  }
+
+  private void givenExistingSubmission(final Submission submission) {
+    when(submissionRegistry.get(any(SubmitterIdentifier.class), eq(SUBMISSION_ID)))
+        .thenReturn(Optional.of(submission));
+  }
+
+  private static void authenticateAs(final String subject) {
+    final Jwt jwt =
+        Jwt.withTokenValue("mock-token").header("alg", "none").claim("sub", subject).build();
+    SecurityContextHolder.setContext(new SecurityContextImpl(new JwtAuthenticationToken(jwt)));
+  }
+
+  @SuppressWarnings("unchecked")
+  private void registerCompletedJob(final String jobId, final Parameters storedResult) {
+    final Job<IBaseResource> job = mock(Job.class);
+    when(job.getResult()).thenReturn(CompletableFuture.completedFuture(storedResult));
+    when(jobRegistry.get(jobId)).thenAnswer(inv -> job);
+  }
 
   private Identifier createSubmitterIdentifier() {
     final Identifier identifier = new Identifier();

@@ -41,18 +41,22 @@ Additionally, you can set any variable supported by Spring Boot, see
 
 ### Import
 
-- `pathling.import.allowableSources` - (default: `file:///usr/share/staging`) A
-  set of URL prefixes which are allowable for use within the import operation.
-  HTTP(S) prefixes are matched with proper URI semantics: scheme,
+- `pathling.import.allowableSources` - (default: `file:///usr/share/staging/`)
+  A set of URL prefixes which are allowable for use within the import
+  operation. HTTP(S) prefixes are matched with proper URI semantics: scheme,
   host (case-insensitive), effective port (default 80 or 443) and a
   path-segment boundary must all match, and any candidate that contains a
   userinfo component is rejected. So `https://example.com` admits
   `https://example.com/foo` but not `https://example.com.evil.com/foo` or
-  `https://example.com@evil.com/foo`. Non-HTTP prefixes (e.g. `s3://`,
-  `file://`) are matched by case-sensitive string prefix; for these,
-  **a trailing slash should be used in cases where an attacker could create
-  an alternative URL with the same prefix**, e.g. `s3://some-bucket` would
-  also match `s3://some-bucket-alternative`.
+  `https://example.com@evil.com/foo`. Non-HTTP prefixes (e.g. `file://`,
+  `s3a://`, `hdfs://`) must match the scheme (case-insensitive), the
+  authority (exactly) and the path on a path-segment boundary, so
+  `s3a://some-bucket/data` admits `s3a://some-bucket/data/Patient.ndjson`
+  but not `s3a://some-bucket/data-other/Patient.ndjson`. A non-HTTP candidate
+  whose path contains a `..` segment, a backslash or a curly brace is
+  rejected, as these can lead outside the prefix once the path is resolved or
+  expanded as a glob pattern. A bare scheme such as `file://` admits every URL
+  with that scheme.
 
 #### Ping and pull
 
@@ -120,13 +124,24 @@ and rejects all `$import-pnp` requests.
 
 - `pathling.bulkSubmit.allowedSubmitters` - (default: `[]`) The list of allowed
   submitters (by system and value) that can use the $bulk-submit operation.
+  See the [$bulk-submit](./operations/bulk-submit#submitter-configuration)
+  documentation for the properties of each submitter.
+- `pathling.bulkSubmit.allowedSubmitters.N.allowableSources` - (default: `[]`)
+  URL prefixes that are allowed as sources for this submitter. When not empty,
+  this list replaces `pathling.bulkSubmit.allowableSources` for requests that
+  name the submitter. It is required for a submitter that has OAuth
+  credentials (`clientId` with `clientSecret` or `privateKeyJwk`), because the
+  credentials and the access tokens obtained with them are only ever sent to
+  URLs within this list. A submitter with credentials can also only be used
+  when `pathling.auth.enabled` is `true`.
 - `pathling.bulkSubmit.allowableSources` - (default: `[]`) URL prefixes that
-  are allowed as sources for manifest and file URLs. This list is mandatory:
-  when it is empty every URL is rejected and the operation cannot be used.
-  This applies to the `manifestUrl` parameter, every `output[].url` discovered
-  within fetched manifests, and the `oauthMetadataUrl` parameter. HTTP(S)
-  prefixes are matched with proper URI semantics (see
-  `pathling.import.allowableSources` above for the full rules).
+  are allowed as sources for submitters that do not have their own
+  `allowableSources`. This list is mandatory for such submitters: when it is
+  empty every URL is rejected. This applies to the `manifestUrl`,
+  `fhirBaseUrl` and `oauthMetadataUrl` parameters, the token endpoint
+  discovered from the OAuth metadata, and every `output[].url` discovered
+  within fetched manifests. HTTP(S) prefixes are matched with proper URI
+  semantics (see `pathling.import.allowableSources` above for the full rules).
 
 ### Asynchronous processing
 
@@ -137,10 +152,11 @@ and rejects all `$import-pnp` requests.
   which should be excluded from determining that asynchronous requests are
   equivalent and can be routed to the same asynchronous job.
 - `pathling.async.cacheMaxAge` - (default: `1`) The max-age value (in seconds)
-  for `Cache-Control` headers on async endpoint responses (`$job` and
-  `$result`). This value should be configured to match your strategy for
-  cleaning up job result files, such as an S3 bucket lifecycle policy. For
-  example, if job files are retained for 24 hours, set this to `86400`.
+  for `Cache-Control` headers on async endpoint responses (`$job`,
+  `$job-result` and `$result`). This value should be configured to match your
+  strategy for cleaning up job result files, such as an S3 bucket lifecycle
+  policy. For example, if job files are retained for 24 hours, set this to
+  `86400`.
 
 ### Operations
 
@@ -366,34 +382,90 @@ is converted without the terminology layer.
   threshold, the table will be repartitioned back to the default number of
   partitions. This prevents large numbers of small updates causing poor
   subsequent query performance.
-- `pathling.storage.schemaAutoMerge` - (default: `false`) When enabled, the
-  schema of an existing Delta table is automatically evolved to accommodate new
-  fields produced by the FHIR encoder. This is useful when upgrading to a
-  Pathling version whose encoder emits additional columns or nested struct
-  fields that are not yet present in tables written by an earlier version.
-  Evolution happens in two places: at startup, every table in the warehouse
-  whose schema is missing encoder fields is migrated before it is served; and
-  on update, a table whose schema is behind the incoming data is evolved before
-  the merge, with the in-memory dataset refreshed so subsequent reads see the
-  new schema without a restart. Migration is additive only - no existing field
-  or row is modified, and existing rows present newly added fields as absent
-  values. When no table has drifted, startup adds only the cost of comparing
-  schemas. When the setting is disabled and a drifted table is detected, the
-  server logs a warning naming the table, the missing fields, and the remedy,
-  and requests against that resource type return an error that describes the
-  condition rather than a generic failure. In multi-replica deployments, a
-  runtime schema evolution is only visible to the replica that performed it;
-  other replicas require a restart, although redeploys (which replace all
-  replicas and re-run startup migration) are self-correcting.
 
-    Where a stored table and the running encoders cannot be reconciled at all, the
-    request fails with an error that describes the condition rather than a generic
-    one. The message names the resource type, which direction the two schemas
-    differ in, the field paths involved, and the remedy - enabling this setting
-    where the table is behind the encoders, or restoring the encoding
-    configuration the table was written with where it is ahead of them. It
-    deliberately excludes the underlying schema definitions and warehouse paths,
-    so the full detail remains in the server log alone.
+Resources are stored as [Delta Lake](https://delta.io/) tables, one per
+resource type, in the
+[Parquet on FHIR layout](/docs/libraries/io/schema). The schema of each table
+is fitted to the data it holds, so a table gains columns when a create, update
+or import introduces an element that it has not stored before. This happens
+automatically and needs no configuration. In multi-replica deployments, a
+replica that did not perform the write sees the new columns once it is
+restarted.
+
+The `pathling.storage.schemaAutoMerge` setting of earlier versions is no longer
+used. It is accepted and has no effect.
+
+#### Upgrading a warehouse written by an earlier version
+
+Versions of the server before 3.2.0 stored resources in an earlier layout,
+which the current version does not read. When the server starts, it checks the
+layout of every table in the warehouse, and converts each table in the earlier
+layout to the Parquet on FHIR layout before it serves any request. Tables
+already in the Parquet on FHIR layout are left as they are, so the conversion
+runs once per table.
+
+Each table is converted by decoding its resources and storing them again, and
+the table is overwritten with the result. The conversion keeps what the earlier
+layout stored, which is not everything the original resources held: digits of
+decimals beyond the sixth decimal place, the offset and sub-millisecond
+precision of instants, modifier extensions, the ids and extensions of primitive
+elements, contained resources, and content beyond the earlier layout's nesting,
+extension and open type limits remain absent. See
+[what the legacy export loses](/docs/libraries/io/schema#what-the-legacy-export-loses)
+for the full list. If the original FHIR data is still available, importing it
+again with this version recovers the decimal digits, the precision and offsets
+of instants, the modifier extensions and the content beyond the earlier limits.
+Contained resources and the ids and extensions of primitive elements are not
+stored by this version either, as described under
+[what is not stored](/docs/libraries/io/schema#what-is-not-stored).
+
+The text of a decimal can change in the conversion while its value stays the
+same: for example, `100` may be returned as `100.0`, and `-71.093930` as
+`-71.09393`.
+
+Before it overwrites a table, the server keeps the table as it was as a Delta
+[shallow clone](https://docs.delta.io/latest/delta-utility.html#shallow-clone-a-delta-table)
+beside it, named `<resource type>.legacy-layout` (for example,
+`Patient.legacy-layout`), and logs a warning naming the clone. A shallow clone
+has a transaction log of its own and refers to the table's data files by their
+full paths rather than copying them, so the clone only works while the table
+stays where it is. It stays readable until the table is vacuumed.
+
+To recover a table for use with an earlier version of the server, stop the
+server and overwrite the table from its clone with Spark and Delta Lake, for
+example:
+
+```python
+spark.read.format("delta").load("<database>/Patient.legacy-layout") \
+    .write.format("delta").mode("overwrite") \
+    .option("overwriteSchema", "true") \
+    .save("<database>/Patient.parquet")
+```
+
+Do not copy, move or delete the table or clone directories with file system
+tools to do this: the clone holds only a transaction log, and its data files are
+in the table directory. A table recovered in this way is converted again the
+next time this version starts. Once the conversion has been checked, the clones
+can be deleted. Do not vacuum a converted table while its clone may still be
+needed, as vacuuming removes the data files that the clone refers to.
+
+If a table cannot be converted, the server stops with an error naming the table
+and the cause. Tables converted before the failure stay converted, and the next
+start continues with the rest.
+
+The conversion runs before the server starts to answer requests, including
+health checks, and its duration depends on the size of the warehouse. When the
+server runs on Kubernetes, allow for it in the startup probe: the
+[Helm chart](./deployment/kubernetes) tolerates three minutes by default, which
+can be raised with `pathling.deployment.startupProbeFailureThreshold`. The
+conversion also uses more memory outside the Java heap than normal operation.
+In one deployment, converting a table of about 840,000 Observations exceeded a
+container memory limit 2 GB above the maximum heap size, and completed with a
+limit 6 GB above it. Raise the memory limit for the first start if the
+warehouse holds large tables.
+
+In multi-replica deployments, start a single replica against an earlier
+warehouse and let it complete the conversion before starting the others.
 
 Pathling will automatically detect AWS authentication details within the
 environment and use them to access S3 buckets. It uses a chain of authentication
@@ -490,6 +562,17 @@ Here are a few that you might be particularly interested in:
   number of data partitions used to distribute data between child tasks. This
   can be tuned to higher numbers for larger data sets. It also controls the
   granularity of requests made to the configured terminology service.
+- `spark.sql.optimizer.excludedRules` - (default:
+  `org.apache.spark.sql.catalyst.optimizer.PushProjectionThroughUnion`) A
+  comma-separated list of Spark optimiser rules to disable. The default works
+  around [SPARK-59042](https://issues.apache.org/jira/browse/SPARK-59042), in
+  which a SQL query with a correlated subquery over the output of a `UNION ALL`
+  fails to plan. It does not cover such a query when it is itself one branch of
+  a further `UNION` or `UNION ALL`. If you set this option, include the default
+  rule in the list unless you are running a Spark version that fixes that bug.
+
+The server always sets `spark.sql.variable.substitute` to `false`, so that SQL
+is run as it was submitted. Setting it in configuration has no effect.
 
 This is the default Spark configuration:
 
@@ -504,6 +587,8 @@ spark:
         extensions: io.delta.sql.DeltaSparkSessionExtension
         catalog:
             spark_catalog: org.apache.spark.sql.delta.catalog.DeltaCatalog
+        optimizer:
+            excludedRules: org.apache.spark.sql.catalyst.optimizer.PushProjectionThroughUnion
     databricks:
         delta:
             schema:
@@ -689,6 +774,32 @@ a particular language through the language argument of `display` or
   `PS256`, `PS384`, `PS512`, `ES256`, `ES256K`, `ES384`, `ES512` and `EdDSA` are
   permitted; any other value fails validation at startup.
 
+### Model Context Protocol
+
+These settings control the [Model Context Protocol](./mcp) (MCP) endpoint at
+`/mcp`.
+
+- `pathling.mcp.enabled` - (default: `false`) Enables the MCP endpoint.
+- `pathling.mcp.resourceUrl` - The public URL of the MCP endpoint, exactly as
+  users enter it into their MCP client, e.g.
+  `https://pathling.example.com/mcp`. It is advertised in the protected resource
+  metadata and is the audience that access tokens must carry. When not set, it
+  is derived from each request's `Host`, `Forwarded` and `X-Forwarded-*`
+  headers. Those headers are chosen by the caller, so set this wherever
+  authorization is enabled, other than for local development. See
+  [Authorization](mcp#authorization).
+- `pathling.mcp.maxSearchCount` - (default: `100`) The largest number of
+  resources that the `search` tool will return.
+- `pathling.mcp.maxRows` - (default: `1000`) The largest number of rows that the
+  `run_view_definition` and `run_sql_query` tools will return.
+- `pathling.mcp.auth.issuer` - The issuer of access tokens accepted at the MCP
+  endpoint, when `pathling.auth.enabled` is `true`. Defaults to
+  `pathling.auth.issuer`. The issuer must provide an OpenID Connect Discovery
+  endpoint that is accessible to the Pathling server.
+- `pathling.mcp.auth.scopesSupported` - (default: `[empty]`) The scopes
+  advertised in the protected resource metadata and in the authentication
+  challenge, which MCP clients request when they sign in.
+
 ### Admin UI
 
 - `pathling.adminUi.clientId` - The OAuth client ID for the admin UI. When set,
@@ -703,8 +814,9 @@ a particular language through the language argument of `display` or
 - `pathling.httpCaching.vary` - (default: `Accept`, `Accept-Encoding`, `Prefer`,
   `Authorization`) A list of values to return within the `Vary` header.
 - `pathling.httpCaching.cacheableControl` - (default: `must-revalidate`,
-  `max-age=1`) A list of values to return within the `Cache-Control` header, for
-  cacheable responses.
+  `max-age=0`) A list of values to return within the `Cache-Control` header, for
+  cacheable responses. With the default, browsers and intermediate caches can
+  store a response but must revalidate it on every request.
 - `pathling.httpCaching.uncacheableControl` - (default: `no-store`) A list of
   values to return within the `Cache-Control` header, for uncacheable responses.
 

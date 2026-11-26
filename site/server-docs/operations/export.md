@@ -97,9 +97,11 @@ queried directly using tools like Apache Spark, DuckDB, or pandas.
 
 Use `application/vnd.apache.parquet` or `parquet` as the `_outputFormat` value.
 
-The Parquet output follows the
-[Pathling Parquet specification](/docs/libraries/io/schema), which defines how
-FHIR resources are represented in the Parquet schema.
+The Parquet output is in the
+[Parquet on FHIR layout](/docs/libraries/io/schema), which defines how FHIR
+resources are represented in the Parquet schema. Versions of the server before
+3.2.0 wrote Parquet in an earlier layout, which differs in the representation of
+decimals, extensions and several other elements.
 
 ## Asynchronous processing
 
@@ -233,9 +235,10 @@ Accept: application/vnd.apache.parquet
 
 The file extension in the manifest URLs reflects the requested output format.
 
-The `file` parameter is validated to ensure that the requested path stays within
-the job's output directory. Requests that attempt directory traversal using
-`..`, absolute paths, or path separators are rejected with a 404 response.
+The `file` parameter must be the plain name of a file in the output directory of
+the job named by `job`. Requests whose `file` contains `..`, a path separator, a
+colon (such as a `file:` URI) or an absolute path are rejected with a 404
+response.
 
 ## Python example
 

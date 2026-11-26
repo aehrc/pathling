@@ -23,12 +23,14 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.SelectComponent;
+import au.csiro.pathling.io.ResourceEncoding;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.util.FhirServerTestConfiguration;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -36,12 +38,12 @@ import java.util.List;
 import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
 
 /**
  * Unit tests for {@link ViewResolver}, verifying that a {@code ViewDefinition} dependency resolves
@@ -50,13 +52,13 @@ import org.springframework.beans.factory.annotation.Autowired;
  *
  * @author John Grimes
  */
+@Import(FhirServerTestConfiguration.class)
 @SpringBootUnitTest
 class ViewResolverTest {
 
   private static final String PATIENTS_URL = "https://example.org/Patients";
 
-  @Autowired private SparkSession spark;
-  @Autowired private FhirEncoders fhirEncoders;
+  @Autowired private PathlingContext pathlingContext;
   @Autowired private FhirContext fhirContext;
 
   private DataSource dataSource;
@@ -69,7 +71,7 @@ class ViewResolverTest {
     final AuthorizationConfiguration auth = new AuthorizationConfiguration();
     auth.setEnabled(false);
     serverConfiguration.setAuth(auth);
-    resolver = new ViewResolver(dataSource, fhirEncoders, serverConfiguration, fhirContext);
+    resolver = new ViewResolver(dataSource, pathlingContext, serverConfiguration, fhirContext);
   }
 
   @Test
@@ -136,9 +138,7 @@ class ViewResolverTest {
 
   @Nonnull
   private Dataset<Row> dataset(@Nonnull final ViewDefinitionResource... views) {
-    return spark
-        .createDataset(List.of(views), fhirEncoders.of(ViewDefinitionResource.class))
-        .toDF();
+    return ResourceEncoding.encode(pathlingContext, "ViewDefinition", List.of(views));
   }
 
   @Nonnull

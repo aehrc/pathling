@@ -22,8 +22,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.cache.CacheableDatabase;
-import au.csiro.pathling.config.StorageConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.SelectComponent;
@@ -73,8 +71,6 @@ class UpdateExecutorConcurrentCreateTest {
   private static final String RESOURCE_CODE = "ViewDefinition";
 
   @Autowired private PathlingContext pathlingContext;
-
-  @Autowired private FhirEncoders fhirEncoders;
 
   @Autowired private CacheableDatabase cacheableDatabase;
 
@@ -206,14 +202,8 @@ class UpdateExecutorConcurrentCreateTest {
 
   @Nonnull
   private UpdateExecutor newExecutor(@Nonnull final String databasePath) {
-    final StorageConfiguration storageConfiguration = new StorageConfiguration();
     return new UpdateExecutor(
-        pathlingContext,
-        fhirEncoders,
-        databasePath,
-        cacheableDatabase,
-        storageConfiguration,
-        mock(QueryableDataSource.class));
+        pathlingContext, databasePath, cacheableDatabase, mock(QueryableDataSource.class));
   }
 
   @Nonnull

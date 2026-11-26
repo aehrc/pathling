@@ -25,6 +25,7 @@ import { Cross2Icon, MagnifyingGlassIcon, PlusIcon } from "@radix-ui/react-icons
 import { Box, Button, Card, Flex, Heading, IconButton, Select, TextField } from "@radix-ui/themes";
 import { useRef, useState } from "react";
 
+import { useFocusOnAdd } from "../../hooks/useFocusOnAdd";
 import { FieldGuidance } from "../FieldGuidance";
 import { FieldLabel } from "../FieldLabel";
 import { SearchParamsInput, createEmptyRow } from "../SearchParamsInput";
@@ -72,6 +73,7 @@ export function ResourceSearchForm({
   const [paramRows, setParamRows] = useState<SearchParamRowData[]>([
     { id: 0, paramName: "", value: "" },
   ]);
+  const { focusOnRender, focusRef } = useFocusOnAdd<number>();
 
   // Available search parameters for the currently selected resource type.
   const availableParams = searchParams?.[resourceType] ?? [];
@@ -107,7 +109,9 @@ export function ResourceSearchForm({
   };
 
   const addFilter = () => {
-    setFilters([...filters, { id: idCounter.current++, expression: "" }]);
+    const id = idCounter.current++;
+    focusOnRender(id);
+    setFilters([...filters, { id, expression: "" }]);
   };
 
   const removeFilter = (id: number) => {
@@ -167,6 +171,7 @@ export function ResourceSearchForm({
               <Flex key={filter.id} gap="2" align="center">
                 <Box style={{ flex: 1 }}>
                   <TextField.Root
+                    ref={focusRef(filter.id)}
                     placeholder="e.g., gender = 'female'"
                     value={filter.expression}
                     onChange={(e) => updateFilter(filter.id, e.target.value)}

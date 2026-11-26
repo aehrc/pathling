@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.config;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -25,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.fhir.auth.AuthConfig;
 import au.csiro.pathling.operations.bulksubmit.SubmitterIdentifier;
+import java.util.List;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -43,7 +45,7 @@ class SubmitterConfigurationTest {
     // The toIdentifier method should create a SubmitterIdentifier from system and value.
     final SubmitterConfiguration config =
         new SubmitterConfiguration(
-            "http://system.org", "sub-1", null, null, null, null, null, null);
+            "http://system.org", "sub-1", null, null, null, null, null, null, List.of());
     final SubmitterIdentifier identifier = config.toIdentifier();
     assertEquals("http://system.org", identifier.system());
     assertEquals("sub-1", identifier.value());
@@ -56,7 +58,15 @@ class SubmitterConfigurationTest {
     // A configuration with clientId and clientSecret should have credentials.
     final SubmitterConfiguration config =
         new SubmitterConfiguration(
-            "http://system.org", "sub-1", "client-id", "client-secret", null, null, null, null);
+            "http://system.org",
+            "sub-1",
+            "client-id",
+            "client-secret",
+            null,
+            null,
+            null,
+            null,
+            List.of());
     assertTrue(config.hasCredentials());
   }
 
@@ -65,7 +75,15 @@ class SubmitterConfigurationTest {
     // A configuration with clientId and privateKeyJwk should have credentials.
     final SubmitterConfiguration config =
         new SubmitterConfiguration(
-            "http://system.org", "sub-1", "client-id", null, "{\"kty\":\"RSA\"}", null, null, null);
+            "http://system.org",
+            "sub-1",
+            "client-id",
+            null,
+            "{\"kty\":\"RSA\"}",
+            null,
+            null,
+            null,
+            List.of());
     assertTrue(config.hasCredentials());
   }
 
@@ -74,7 +92,7 @@ class SubmitterConfigurationTest {
     // A configuration without a clientId should not have credentials.
     final SubmitterConfiguration config =
         new SubmitterConfiguration(
-            "http://system.org", "sub-1", null, "client-secret", null, null, null, null);
+            "http://system.org", "sub-1", null, "client-secret", null, null, null, null, List.of());
     assertFalse(config.hasCredentials());
   }
 
@@ -83,7 +101,7 @@ class SubmitterConfigurationTest {
     // A configuration with only a clientId (no secret or key) should not have credentials.
     final SubmitterConfiguration config =
         new SubmitterConfiguration(
-            "http://system.org", "sub-1", "client-id", null, null, null, null, null);
+            "http://system.org", "sub-1", "client-id", null, null, null, null, null, List.of());
     assertFalse(config.hasCredentials());
   }
 
@@ -101,7 +119,8 @@ class SubmitterConfigurationTest {
             "{\"kty\":\"RSA\"}",
             "openid profile",
             60L,
-            false);
+            false,
+            List.of());
 
     final AuthConfig authConfig = config.toAuthConfig("http://token.example.com");
 
@@ -121,7 +140,7 @@ class SubmitterConfigurationTest {
     // When tokenExpiryTolerance is null, the default (120 seconds) should be used.
     final SubmitterConfiguration config =
         new SubmitterConfiguration(
-            "http://system.org", "sub-1", "client-id", "secret", null, null, null, null);
+            "http://system.org", "sub-1", "client-id", "secret", null, null, null, null, List.of());
 
     final AuthConfig authConfig = config.toAuthConfig("http://token.example.com");
 
@@ -135,7 +154,7 @@ class SubmitterConfigurationTest {
     // When useFormForBasicAuth is null, it should default to true.
     final SubmitterConfiguration config =
         new SubmitterConfiguration(
-            "http://system.org", "sub-1", "client-id", "secret", null, null, null, null);
+            "http://system.org", "sub-1", "client-id", "secret", null, null, null, null, List.of());
 
     final AuthConfig authConfig = config.toAuthConfig("http://token.example.com");
 
@@ -147,7 +166,7 @@ class SubmitterConfigurationTest {
     // The toAuthConfig method should handle null optional fields gracefully.
     final SubmitterConfiguration config =
         new SubmitterConfiguration(
-            "http://system.org", "sub-1", null, null, null, null, null, null);
+            "http://system.org", "sub-1", null, null, null, null, null, null, List.of());
 
     final AuthConfig authConfig = config.toAuthConfig("http://token.example.com");
 
@@ -156,5 +175,58 @@ class SubmitterConfigurationTest {
     assertNull(authConfig.getClientSecret());
     assertNull(authConfig.getPrivateKeyJWK());
     assertNull(authConfig.getScope());
+  }
+
+  // -- toString --
+
+  @Test
+  void toStringOmitsClientSecretAndPrivateKey() {
+    // The string form is written to the log when the server configuration is logged, so it must
+    // not carry either credential.
+    final SubmitterConfiguration config =
+        new SubmitterConfiguration(
+            "http://system.org",
+            "sub-1",
+            "client-id",
+            "top-secret-value",
+            "{\"kty\":\"RSA\",\"d\":\"private-exponent\"}",
+            "system/*.read",
+            60L,
+            false,
+            List.of());
+
+    final String string = config.toString();
+
+    assertThat(string)
+        .doesNotContain("top-secret-value")
+        .doesNotContain("private-exponent")
+        .doesNotContain("clientSecret")
+        .doesNotContain("privateKeyJwk");
+  }
+
+  @Test
+  void toStringIncludesNonSecretComponents() {
+    // The remaining components still identify the submitter in the log.
+    final SubmitterConfiguration config =
+        new SubmitterConfiguration(
+            "http://system.org",
+            "sub-1",
+            "client-id",
+            "secret",
+            null,
+            "system/*.read",
+            60L,
+            false,
+            List.of("https://a.example.org/"));
+
+    assertThat(config.toString())
+        .startsWith("SubmitterConfiguration[")
+        .contains("system=http://system.org")
+        .contains("value=sub-1")
+        .contains("clientId=client-id")
+        .contains("scope=system/*.read")
+        .contains("tokenExpiryTolerance=60")
+        .contains("useFormForBasicAuth=false")
+        .contains("allowableSources=[https://a.example.org/]");
   }
 }

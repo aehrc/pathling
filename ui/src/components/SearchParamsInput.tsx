@@ -26,6 +26,7 @@ import { Badge, Box, Button, Flex, IconButton, Select, TextField } from "@radix-
 
 import { FieldGuidance } from "./FieldGuidance";
 import { FieldLabel } from "./FieldLabel";
+import { useFocusOnAdd } from "../hooks/useFocusOnAdd";
 
 import type { SearchParamCapability } from "../hooks/useServerCapabilities";
 
@@ -91,8 +92,12 @@ export function SearchParamsInput({
   onChange,
   onKeyDown,
 }: Readonly<SearchParamsInputProps>) {
+  const { focusOnRender, focusRef } = useFocusOnAdd<number>();
+
   const addRow = () => {
-    onChange([...rows, createEmptyRow()]);
+    const row = createEmptyRow();
+    focusOnRender(row.id);
+    onChange([...rows, row]);
   };
 
   const removeRow = (id: number) => {
@@ -122,7 +127,11 @@ export function SearchParamsInput({
                 value={row.paramName}
                 onValueChange={(val) => updateRow(row.id, "paramName", val)}
               >
-                <Select.Trigger placeholder="Select parameter..." style={{ width: "100%" }} />
+                <Select.Trigger
+                  ref={focusRef(row.id)}
+                  placeholder="Select parameter..."
+                  style={{ width: "100%" }}
+                />
                 <Select.Content>
                   {availableParams.map((param) => (
                     <Select.Item key={param.name} value={param.name}>

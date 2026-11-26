@@ -19,6 +19,7 @@ package au.csiro.pathling.async;
 
 import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
+import static au.csiro.pathling.security.SecurityAspect.isOwner;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
@@ -103,7 +104,7 @@ public class JobResultProvider {
       // Check that the user requesting the job result is the same user that started the job.
       final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
       final Optional<String> currentUserId = getCurrentUserId(authentication);
-      if (!job.getOwnerId().equals(currentUserId)) {
+      if (!isOwner(job.getOwnerId(), currentUserId)) {
         throw new AccessDeniedError("The requested job is not owned by the current user");
       }
     }

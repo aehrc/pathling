@@ -44,11 +44,18 @@ sequenceDiagram
 
 Web browsers already implement this behaviour, and if your application runs in
 the browser you will get the benefits without any extra implementation effort.
+Cacheable responses are returned with `Cache-Control: must-revalidate,max-age=0`,
+so the browser revalidates a stored response on every request rather than
+reusing it without asking the server.
 
 The current limitation of this implementation within Pathling is that caching is
 done over the entire database, not scoped to individual resource types. This
 means that updates to any resource will invalidate the cache for the entire
 database.
+
+The cache key is updated before the response to a create, update or delete is
+sent, so a request that revalidates a cached response after the write returns
+receives the new data rather than `304 Not Modified`.
 
 Cache keys persist across restarts of the server, as they are derived from state
 that is persisted along with the data.
@@ -79,14 +86,18 @@ A [Helm chart](https://artifacthub.io/packages/helm/pathling/pathling-cache) is 
 
 ## Asynchronous endpoint caching
 
-The `$job` and `$result` endpoints use a different caching strategy from other
-Pathling endpoints. Instead of ETag-based revalidation, these endpoints use
-simple TTL-based caching with `Cache-Control: max-age=X`.
+The `$job`, `$job-result` and `$result` endpoints use a different caching
+strategy from other Pathling endpoints. Instead of ETag-based revalidation,
+these endpoints use simple TTL-based caching with `Cache-Control: max-age=X`,
+and do not return an `ETag` header.
 
 This approach ensures that:
 
 - Polling the `$job` endpoint returns fresh job status without stale cached
   responses from previous jobs
+- Fetching from `$job-result` returns the result of the requested job, rather
+  than a cached response for another job or an earlier "not yet complete"
+  error
 - Download URLs from `$result` remain cacheable for an appropriate duration
 
 ### How async operations determine request equivalence
@@ -104,6 +115,9 @@ cache key from the following components:
    covers the resolved content of every dependency the job's subjects reach -
    ViewDefinitions, SQLViews and external tables alike - so two kick-offs that
    inline different definitions at the same canonical URL are not equivalent.
+   Each value taken from the request, such as SQL text or a canonical URL, is
+   percent-encoded before it is added to the key, so no value can be written to
+   make the key of one request match that of a structurally different request.
 
 If two requests produce the same cache key, they are considered equivalent and
 will share the same async job. This allows multiple clients making identical

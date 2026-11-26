@@ -19,7 +19,6 @@ package au.csiro.pathling.operations.view;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ConstantComponent;
@@ -38,7 +37,6 @@ import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.StringType;
@@ -62,11 +60,7 @@ class ViewDefinitionSearchTest {
 
   @Autowired private FhirContext fhirContext;
 
-  @Autowired private SparkSession sparkSession;
-
   @Autowired private PathlingContext pathlingContext;
-
-  @Autowired private FhirEncoders fhirEncoders;
 
   private CustomObjectDataSource dataSource;
 
@@ -97,8 +91,7 @@ class ViewDefinitionSearchTest {
     // Complex Patient view with nested structure.
     viewDefinitions.add(createComprehensiveViewDefinition("view-6", "patient_contacts"));
 
-    dataSource =
-        new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, viewDefinitions);
+    dataSource = new CustomObjectDataSource(pathlingContext, viewDefinitions);
   }
 
   // -------------------------------------------------------------------------
@@ -308,7 +301,7 @@ class ViewDefinitionSearchTest {
   private IBundleProvider createSearchExecutor(
       @Nonnull final Optional<StringAndListParam> filters) {
     return new SearchExecutor(
-        fhirContext, dataSource, fhirEncoders, "ViewDefinition", null, filters, false);
+        fhirContext, dataSource, pathlingContext, "ViewDefinition", null, filters, false);
   }
 
   @Nonnull

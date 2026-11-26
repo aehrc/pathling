@@ -20,8 +20,12 @@ package au.csiro.pathling.config;
 import jakarta.annotation.Nonnull;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * URL allowlist matching with proper URI semantics. Replaces naive prefix string matching, which is
@@ -31,8 +35,7 @@ import java.util.Locale;
  * https://allowed.example.com/} matches the candidate {@code
  * https://allowed.example.com@evil.com/foo}, whose effective host is {@code evil.com}).
  *
- * <p>A candidate URL is considered allowed when, for at least one configured prefix, all of the
- * following hold:
+ * <p>For an HTTP(S) prefix, a candidate URL is considered allowed when all of the following hold:
  *
  * <ul>
  *   <li>The scheme matches case-insensitively. Only {@code http} and {@code https} are accepted.
@@ -45,12 +48,35 @@ import java.util.Locale;
  *       "/"} are treated as equivalent.
  * </ul>
  *
- * <p>S3-style URLs (e.g. {@code s3://bucket/}) are matched by case-sensitive string prefix because
- * they do not share HTTP's host/userinfo/path semantics.
+ * <p>For any other prefix (e.g. {@code file:///staging/}, {@code s3a://bucket/data/} or {@code
+ * hdfs://namenode:8020/data/}), the URL is split into scheme, authority and path in the way that
+ * Hadoop does, without percent-decoding and without treating {@code ?} or {@code #} as delimiters.
+ * A candidate is allowed when all of the following hold:
+ *
+ * <ul>
+ *   <li>The scheme matches case-insensitively.
+ *   <li>The authority matches exactly. An absent authority ({@code file:/path}) and an empty one
+ *       ({@code file:///path}) are equivalent.
+ *   <li>The candidate path contains no {@code ..} segment. The path is resolved by the file system
+ *       after this check, so such a segment could lead outside the prefix.
+ *   <li>The candidate path contains no {@code \}, <code>{</code> or <code>}</code>. Spark expands
+ *       import paths as Hadoop glob patterns, and an escape such as {@code \.\.} or a brace
+ *       alternative such as <code>{../other}</code> becomes a {@code ..} segment only after
+ *       expansion.
+ *   <li>The candidate path equals the prefix path or extends it at a path-segment boundary, as for
+ *       HTTP(S).
+ * </ul>
  *
  * @author John Grimes
  */
 public final class UrlAllowlist {
+
+  /** Splits a URL into scheme, optional authority and path, as Hadoop's {@code Path} does. */
+  private static final Pattern URL_PARTS =
+      Pattern.compile("^([A-Za-z][A-Za-z0-9+.-]*):(?://([^/]*))?(.*)$", Pattern.DOTALL);
+
+  /** Characters that Hadoop glob expansion can turn into a {@code ..} path segment. */
+  private static final String GLOB_TRAVERSAL_CHARACTERS = "\\{}";
 
   private UrlAllowlist() {
     // Utility class.
@@ -101,19 +127,38 @@ public final class UrlAllowlist {
       }
       return url.toLowerCase(Locale.ROOT).startsWith(bareScheme + "://");
     }
-    final URI prefixUri = parse(prefix);
-    if (prefixUri == null) {
+    final Matcher prefixParts = URL_PARTS.matcher(prefix);
+    if (!prefixParts.matches()) {
       return false;
     }
-    final String scheme = prefixUri.getScheme();
-    if (scheme == null) {
+    if (isHttp(prefixParts.group(1))) {
+      final URI prefixUri = parse(prefix);
+      return prefixUri != null && matchesHttp(prefixUri, url);
+    }
+    return matchesNonHttp(prefixParts, url);
+  }
+
+  private static boolean matchesNonHttp(
+      @Nonnull final Matcher prefixParts, @Nonnull final String url) {
+    final Matcher candidateParts = URL_PARTS.matcher(url);
+    if (!candidateParts.matches()) {
       return false;
     }
-    if (isHttp(scheme)) {
-      return matchesHttp(prefixUri, url);
-    }
-    // For non-HTTP(S) schemes (e.g. s3://), fall back to case-sensitive string prefix matching.
-    return url.startsWith(prefix);
+    final String candidatePath = candidateParts.group(3);
+    return prefixParts.group(1).equalsIgnoreCase(candidateParts.group(1))
+        && authorityOf(prefixParts).equals(authorityOf(candidateParts))
+        && !canTraverse(candidatePath)
+        && pathContains(prefixParts.group(3), candidatePath);
+  }
+
+  @Nonnull
+  private static String authorityOf(@Nonnull final Matcher urlParts) {
+    return Objects.requireNonNullElse(urlParts.group(2), "");
+  }
+
+  private static boolean canTraverse(@Nonnull final String path) {
+    return path.chars().anyMatch(c -> GLOB_TRAVERSAL_CHARACTERS.indexOf(c) >= 0)
+        || Arrays.asList(path.split("/")).contains("..");
   }
 
   private static boolean isPlainHttp(@Nonnull final String url) {
