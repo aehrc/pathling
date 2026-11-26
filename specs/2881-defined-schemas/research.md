@@ -57,6 +57,11 @@
   wins over keeping the lexical form: if the inferred read gives a double, so does the defined
   read. T003 only confirms which type the inferred read gives, recorded in
   `evidence/decimal-read.md`.
+- **Measured (T003)**: the inferred read gives a decimal `double` wherever a value of the element
+  in the dataset has a fraction or an exponent, and otherwise `bigint`, or `decimal(p,0)` where an
+  integer is beyond the range of a long. It stores the text of that number as `string`. So the type
+  depends on the data, and a defined read given `double` stores `100.0` where the inferred read of
+  integer-only data stores `100` (`evidence/decimal-read.md`). This is open for the owner at gate B.
 - **Rationale**: FR-009 and FR-021a need the defined load to equal the inferred load of the same
   data with the same schema. The survey could not confirm the reader's behaviour from code alone.
 - **Alternatives considered**: Always double. This would lose precision relative to the inferred

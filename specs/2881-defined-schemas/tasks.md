@@ -26,7 +26,7 @@ independently.
 
 - [ ] T001 Create the evidence index `specs/2881-defined-schemas/evidence/README.md`, listing each
       measurement and the decision it supports.
-- [ ] T002 [P] Measure whether each step of a defined read needs an action, or fails, over a
+- [x] T002 [P] Measure whether each step of a defined read needs an action, or fails, over a
       streaming dataset. Record a runnable reproduction and the result of each in
       `specs/2881-defined-schemas/evidence/stream-safety.md` (research R4, R5):
     - `spark.read().json(Dataset<String>)` with a given schema;
@@ -34,7 +34,7 @@ independently.
     - the bundle splitter UDF (`BundleResource.resources` with `FhirJsonReader`'s and
       `FhirXmlReader`'s `SPLIT`) followed by `explode`, over a streaming dataset;
     - `from_xml` over a streaming dataset.
-- [ ] T003 [P] Confirm which Spark type the inferred JSON read, with `FhirJsonReader`'s options,
+- [x] T003 [P] Confirm which Spark type the inferred JSON read, with `FhirJsonReader`'s options,
       gives a FHIR decimal. Record the reproduction and the result in
       `specs/2881-defined-schemas/evidence/decimal-read.md`, and name that type in
       `specs/2881-defined-schemas/research.md` R3. The defined read uses the same type (parity
