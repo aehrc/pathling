@@ -268,7 +268,7 @@ val data = pc.read().ndjson("/usr/share/staging/ndjson")
 <TabItem value="java" label="Java">
 
 ```java
-NdjsonSource data = pc.read().ndjson("/usr/share/staging/ndjson");
+QueryableDataSource data = pc.read().ndjson("/usr/share/staging/ndjson");
 ```
 
 </TabItem>
@@ -323,15 +323,15 @@ data <- pc %>% pathling_read_bundles("/usr/share/staging/bundles",
 
 ```scala
 val data = pc.read().bundles("/usr/share/staging/bundles",
-    Set("Patient", "Condition", "Immunization").asJava, FhirMimeTypes.FHIR_JSON)
+    Set("Patient", "Condition", "Immunization").asJava, PathlingContext.FHIR_JSON)
 ```
 
 </TabItem>
 <TabItem value="java" label="Java">
 
 ```java
-BundlesSource data = pc.read().bundles("/usr/share/staging/bundles",
-        Set.of("Patient", "Condition", "Immunization"), FhirMimeTypes.FHIR_JSON)
+QueryableDataSource data = pc.read().bundles("/usr/share/staging/bundles",
+        Set.of("Patient", "Condition", "Immunization"), PathlingContext.FHIR_JSON);
 ```
 
 </TabItem>
