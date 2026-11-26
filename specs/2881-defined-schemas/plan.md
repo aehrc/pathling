@@ -1,6 +1,6 @@
 # Implementation Plan: Load FHIR resources with a schema defined up front
 
-**Feature**: `2881_defined-schemas` | **Date**: 2026-11-25 | **Spec**: [spec.md](spec.md)
+**Feature**: `2881-defined-schemas` | **Date**: 2026-11-25 | **Spec**: [spec.md](spec.md)
 
 ## Summary
 
@@ -126,7 +126,7 @@ There are no violations to justify.
 ### Documentation (this feature)
 
 ```text
-specs/2881_defined-schemas/
+specs/2881-defined-schemas/
 ├── spec.md
 ├── plan.md            # This file.
 ├── research.md

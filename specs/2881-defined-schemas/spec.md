@@ -1,6 +1,6 @@
 # Feature Specification: Load FHIR resources with a schema defined up front
 
-**Feature**: `2881_defined-schemas`
+**Feature**: `2881-defined-schemas`
 **Created**: 2026-11-25
 **Status**: Draft
 **Issue**: [#2881](https://github.com/aehrc/pathling/issues/2881) (Load FHIR resources with a

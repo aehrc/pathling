@@ -45,8 +45,8 @@ Tooling:
   worktrees live under `.claude/worktrees/`, and Maven in a linked worktree runs through
   `scripts/mvn-isolated.sh`.
 
-- **Specifications live under `specs/`**, tracked, one `NNN-short-name` directory per spec with
-  `archive/` holding the implemented ones. This overrides the `ssh:spec` and `ssh:build` skills,
+- **Specifications live under `specs/`**, tracked, one `<issue>-short-name` directory per spec,
+  named by its GitHub issue, with `archive/` holding the implemented ones. This overrides the `ssh:spec` and `ssh:build` skills,
   which default to a gitignored `.local/specs/` — read and write `specs/` here instead. Each spec
   carries an `evidence/` subdirectory with the measurements its decisions rest on and runnable
   reproductions, because requirements that exist only because a measurement ruled out the obvious

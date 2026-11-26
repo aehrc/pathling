@@ -509,7 +509,7 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   a cast ([ADR-0002](../../docs/adr/0002-reconcile-shapes-by-name.md)).
 - **FR-057**: Every struct type Pathling produces MUST be in canonical field
   order, except the output of a read with a defined schema, which follows that
-  schema's order (FR-008 of `specs/2881_defined-schemas/`, ADR-0008). A schema
+  schema's order (FR-008 of `specs/2881-defined-schemas/`, ADR-0008). A schema
   obtained from storage may carry any order; FR-056 reconciles it by name.
   Operands that already share a type are left unprojected.
 - **FR-058**: The merged type MUST be the recursive field-wise union of the

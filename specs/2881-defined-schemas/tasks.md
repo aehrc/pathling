@@ -1,6 +1,6 @@
 # Tasks: Load FHIR resources with a schema defined up front
 
-**Input**: Design documents in `specs/2881_defined-schemas/`
+**Input**: Design documents in `specs/2881-defined-schemas/`
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/
 
 **Tests**: Test-driven development is mandatory. Every behaviour is covered by a test task that
@@ -24,11 +24,11 @@ independently.
 
 **Purpose**: Settle the two facts the read rests on, and the open product question.
 
-- [ ] T001 Create the evidence index `specs/2881_defined-schemas/evidence/README.md`, listing each
+- [ ] T001 Create the evidence index `specs/2881-defined-schemas/evidence/README.md`, listing each
       measurement and the decision it supports.
 - [ ] T002 [P] Measure whether each step of a defined read needs an action, or fails, over a
       streaming dataset. Record a runnable reproduction and the result of each in
-      `specs/2881_defined-schemas/evidence/stream-safety.md` (research R4, R5):
+      `specs/2881-defined-schemas/evidence/stream-safety.md` (research R4, R5):
     - `spark.read().json(Dataset<String>)` with a given schema;
     - `from_json` over a streaming dataset;
     - the bundle splitter UDF (`BundleResource.resources` with `FhirJsonReader`'s and
@@ -36,8 +36,8 @@ independently.
     - `from_xml` over a streaming dataset.
 - [ ] T003 [P] Confirm which Spark type the inferred JSON read, with `FhirJsonReader`'s options,
       gives a FHIR decimal. Record the reproduction and the result in
-      `specs/2881_defined-schemas/evidence/decimal-read.md`, and name that type in
-      `specs/2881_defined-schemas/research.md` R3. The defined read uses the same type (parity
+      `specs/2881-defined-schemas/evidence/decimal-read.md`, and name that type in
+      `specs/2881-defined-schemas/research.md` R3. The defined read uses the same type (parity
       wins over the lexical form).
 - [x] T004 [P] Confirm with the Pathling owner how a resource type that the schema set names but
       the source lacks should behave. Decided: today's behaviour is kept, and an empty table is the
@@ -424,7 +424,7 @@ every source.
 (ADR-0007).
 
 - [ ] T041 Map every position kind of SC-005 to the existing absence tests named in the survey,
-      and record the matrix and its gaps in `specs/2881_defined-schemas/evidence/absence-coverage.md`.
+      and record the matrix and its gaps in `specs/2881-defined-schemas/evidence/absence-coverage.md`.
 - [ ] T042 Add failing-first tests for each gap found by T041 in
       `fhirpath/src/test/java/au/csiro/pathling/fhirpath/AbsentElementTest.java`. The gaps include:
     - a repeating complex element absent on both sides of a combination;
@@ -434,7 +434,7 @@ every source.
 
 - [ ] T043 Record the baseline: run `YamlReferenceImplTest` and `YamlFhirPathTest` with today's
       loads, and record each case's result in
-      `specs/2881_defined-schemas/evidence/yaml-defined-run.md`, under a baseline heading.
+      `specs/2881-defined-schemas/evidence/yaml-defined-run.md`, under a baseline heading.
 - [ ] T044 [P] Test the load of a case whose subject is not a FHIR resource (path 2) in
       `fhirpath/src/test/java/au/csiro/pathling/test/yaml/resolver/ArbitraryObjectResolverFactoryTest.java`:
       for subjects with primitive, complex, repeating and missing elements, the resolved dataset
@@ -473,7 +473,7 @@ every source.
       `fhirpath/src/test/resources/fhirpath-js/config.yaml` or
       `fhirpath/src/test/resources/fhirpath-ptl/config.yaml` per the `pathling-yaml-exclusions`
       skill. Record the comparison and each disposition in
-      `specs/2881_defined-schemas/evidence/yaml-defined-run.md` (FR-021b, SC-005).
+      `specs/2881-defined-schemas/evidence/yaml-defined-run.md` (FR-021b, SC-005).
 
 ---
 
@@ -506,11 +506,11 @@ every source.
       `foreachBatch` example, in Python and Java. State that a write with Spark's own
       `writeStream` skips the checks a Pathling sink makes (FR-024).
 - [ ] T052 Run the streaming example of T051 against a file-based stream and record that it runs
-      in `specs/2881_defined-schemas/evidence/streaming-example.md` (SC-008).
+      in `specs/2881-defined-schemas/evidence/streaming-example.md` (SC-008).
 - [ ] T053 [P] File GitHub issues for the schema generator (including the 10.x shaping options as
       shortcuts) and Delta idempotent writes, with the PoF_line label. Checking a schema against
       the uber-schema is #2884's work, once it is re-scoped, not a follow-up. Record
-      their numbers under Out of Scope in `specs/2881_defined-schemas/spec.md` (FR-025).
+      their numbers under Out of Scope in `specs/2881-defined-schemas/spec.md` (FR-025).
 - [ ] T054 [P] Point 001's dense-mode tickets, and its FR-009 dense schema, FR-010, FR-016
       exception 4, FR-017, FR-043 streaming clause, FR-044, FR-047 schema modes, User Story 4
       scenario 7, the dense subset of SC-002 and SC-010, at this specification or the generator
@@ -523,14 +523,14 @@ every source.
       `fhirpath/src/test/java/au/csiro/pathling/test/layout/TestDimensionsTest.java`.
 - [ ] T068 Measure the regular build time of `fhirpath` before and after Phase 6, on the same
       machine, and record the growth, with the time the new tests and the derivation of each YAML
-      suite's schemas take, in `specs/2881_defined-schemas/evidence/build-time.md` (SC-005).
+      suite's schemas take, in `specs/2881-defined-schemas/evidence/build-time.md` (SC-005).
 - [ ] T069 [P] Write the release note that FR-022a requires: a Parquet read with a defined schema
       merges every file's footer, as a read without a schema does, so it loses the saving that the
       former `schemas` option of the Parquet source gave. Put it in the pull request description
       under a release-note heading, from which the release notes are drafted (FR-022a).
 - [ ] T055 Run `mvn install -pl lib/python,lib/R -am` through `scripts/mvn-isolated.sh`, so that
       every existing test passing no schema passes unchanged (FR-020, SC-006).
-- [ ] T056 Run the scenarios of `specs/2881_defined-schemas/quickstart.md`.
+- [ ] T056 Run the scenarios of `specs/2881-defined-schemas/quickstart.md`.
 
 ---
 

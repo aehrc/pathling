@@ -1,27 +1,29 @@
 # Specifications
 
-One directory per specification, `NNN-short-name`, numbered in the order they
-were written. Numbers are never reused: a completed specification keeps its
-number after it moves to `archive/`.
+One directory per specification, `<issue>-short-name`, named by the number of
+the GitHub issue it specifies, such as `2881-defined-schemas`. Specifications
+written before this convention keep their sequence numbers, such as
+`001-parquet-on-fhir`. A completed specification keeps its name after it moves
+to `archive/`.
 
 A directory sitting directly under `specs/` is outstanding work — not built yet,
 or being built now. `archive/` is the record of what has been implemented.
 
 Each directory holds:
 
-| File | Contents |
-| --- | --- |
-| `spec.md` | What is being built and why. Requirements and success criteria, no implementation detail. |
-| `plan.md` | Technical context, module structure, phases. |
-| `research.md` | Each resolved technical question: decision, rationale, rejected alternatives. |
-| `data-model.md` | Entities and their rules, where the feature involves data. |
-| `design/` | Design proposals for a decision still open, with options and open questions. The chosen option is recorded in `research.md`. |
-| `contracts/` | Interface contracts, where the feature exposes an interface. |
-| `quickstart.md` | End-to-end scenarios that validate the feature. |
-| `tasks.md` | Dependency-ordered tasks with traceability back to the requirements. |
-| `checklists/` | Quality checks applied to the specification itself, with findings recorded. |
-| `evidence/` | The measurements the decisions rest on, and scripts that reproduce them. |
-| `issues/` | The tickets for the work that remains, one file each, with a `README.md` grouping them into stages. Kept as the record once the specification is archived. |
+| File            | Contents                                                                                                                                                   |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `spec.md`       | What is being built and why. Requirements and success criteria, no implementation detail.                                                                  |
+| `plan.md`       | Technical context, module structure, phases.                                                                                                               |
+| `research.md`   | Each resolved technical question: decision, rationale, rejected alternatives.                                                                              |
+| `data-model.md` | Entities and their rules, where the feature involves data.                                                                                                 |
+| `design/`       | Design proposals for a decision still open, with options and open questions. The chosen option is recorded in `research.md`.                               |
+| `contracts/`    | Interface contracts, where the feature exposes an interface.                                                                                               |
+| `quickstart.md` | End-to-end scenarios that validate the feature.                                                                                                            |
+| `tasks.md`      | Dependency-ordered tasks with traceability back to the requirements.                                                                                       |
+| `checklists/`   | Quality checks applied to the specification itself, with findings recorded.                                                                                |
+| `evidence/`     | The measurements the decisions rest on, and scripts that reproduce them.                                                                                   |
+| `issues/`       | The tickets for the work that remains, one file each, with a `README.md` grouping them into stages. Kept as the record once the specification is archived. |
 
 `evidence/` matters as much as the rest. Several requirements exist because a
 measurement ruled out the obvious alternative, and a decision whose evidence has
