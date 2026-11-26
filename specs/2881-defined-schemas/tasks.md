@@ -164,7 +164,7 @@ uses.
       return a streaming dataset with the layout schema, in
       `io/…/io/DefinedSchemaStreamingReadTest.java`, for JSON documents, XML documents, JSON
       bundles and XML bundles.
-- [ ] T011 [P] Test the schema-equality helpers of spec SC-002, one per binding, in
+- [x] T011 [P] Test the schema-equality helpers of spec SC-002, one per binding, in
       `library-api/src/test/java/au/csiro/pathling/library/io/SchemaEqualityTest.java`,
       `lib/python/tests/test_schema_equality.py` and
       `lib/R/tests/testthat/test-schema-equality.R`:
