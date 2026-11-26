@@ -29,7 +29,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import lombok.Getter;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -62,9 +62,9 @@ public class CacheableDatabase implements Cacheable {
 
   private final String databasePath;
 
-  // Volatile because the key is replaced by the thread that performed a write, and read by the
-  // threads serving other requests.
-  @Nonnull @Getter private volatile Optional<String> cacheKey;
+  // The key is replaced by the thread that performed a write, and read by the threads serving
+  // other requests.
+  @Nonnull private final AtomicReference<Optional<String>> cacheKey;
 
   /**
    * Creates a new cacheable database instance.
@@ -79,7 +79,7 @@ public class CacheableDatabase implements Cacheable {
           final String databasePath) {
     this.spark = spark;
     this.databasePath = convertS3ToS3aUrl(databasePath);
-    this.cacheKey = buildCacheKeyFromStorage();
+    this.cacheKey = new AtomicReference<>(buildCacheKeyFromStorage());
   }
 
   /**
@@ -217,8 +217,14 @@ public class CacheableDatabase implements Cacheable {
   }
 
   @Override
+  @Nonnull
+  public Optional<String> getCacheKey() {
+    return cacheKey.get();
+  }
+
+  @Override
   public boolean cacheKeyMatches(@Nonnull final String otherKey) {
-    return cacheKey.map(key -> key.equals(otherKey)).orElse(false);
+    return cacheKey.get().map(key -> key.equals(otherKey)).orElse(false);
   }
 
   /**
@@ -228,7 +234,7 @@ public class CacheableDatabase implements Cacheable {
    * #invalidate(String)} instead.
    */
   public void invalidate() {
-    cacheKey = buildCacheKeyFromStorage();
+    cacheKey.set(buildCacheKeyFromStorage());
     spark.sqlContext().clearCache();
   }
 
@@ -242,7 +248,7 @@ public class CacheableDatabase implements Cacheable {
   public void invalidate(@Nonnull final String tablePath) {
     try {
       final DeltaTable table = DeltaTable.forPath(spark, tablePath);
-      cacheKey = buildCacheKeyFromTable(table);
+      cacheKey.set(buildCacheKeyFromTable(table));
     } catch (final Exception e) {
       log.debug("Unable to access table for cache invalidation, clearing cache: {}", tablePath, e);
     }

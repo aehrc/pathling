@@ -25,6 +25,7 @@ import au.csiro.pathling.util.FhirServerTestConfiguration;
 import au.csiro.pathling.util.TestDataSetup;
 import io.delta.tables.DeltaTable;
 import java.nio.file.Path;
+import java.util.Optional;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -120,6 +121,21 @@ class CacheableDatabaseTest {
 
     assertThat(duration).isLessThan(1000);
     assertThat(cacheableDatabase.getCacheKey()).isPresent();
+  }
+
+  @Test
+  void invalidateWithInaccessibleTableKeepsCacheKey() {
+    // The write has already succeeded by the time the cache is invalidated, so a table that cannot
+    // be read must not cause the invalidation to throw. The previous cache key is kept.
+    TestDataSetup.copyTestDataToTempDir(tempDir);
+    final String databasePath = "file://" + tempDir.resolve("delta");
+    cacheableDatabase = new CacheableDatabase(sparkSession, databasePath);
+    final Optional<String> originalCacheKey = cacheableDatabase.getCacheKey();
+    assertThat(originalCacheKey).isPresent();
+
+    cacheableDatabase.invalidate(databasePath + "/Missing.parquet");
+
+    assertThat(cacheableDatabase.getCacheKey()).isEqualTo(originalCacheKey);
   }
 
   /**
