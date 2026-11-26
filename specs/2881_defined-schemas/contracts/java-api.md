@@ -22,7 +22,8 @@ gains an accessor for it, with `equals`, `hashCode` and `toString` following. Th
 The set applies to `ndjson`, `bundles`, `datasets`, `parquet`, `delta`, `tables` and `bulk`.
 Errors are `IllegalArgumentException` naming the offending key: an unknown resource type, or a
 null schema. A schema that is not a PoF schema fails the read, `encode` or `encodeBundle` with the
-error of the check #2884 adds, naming the resource type and path (FR-006b).
+error of the check of a schema against the uber-schema that #2884 adds, naming the resource type
+and path (FR-006b).
 
 ## Schemas from data: `QueryableDataSource`
 

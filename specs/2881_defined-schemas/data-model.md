@@ -12,8 +12,8 @@
 - **Validation**:
     - Must be a struct type (in Python a `StructType`; in R a string that parses as a struct
       type's JSON form). Otherwise it is refused, with an error naming the resource type.
-    - Must be a PoF schema for its resource type, by the check #2884 (the fail-fast check of a
-      data schema against the uber-schema) adds for inferred schemas. A field the definitions do not
+    - Must be a PoF schema for its resource type, by the check of a schema against the
+      uber-schema that #2884 adds for inferred schemas, once it is re-scoped. A field the definitions do not
       describe, or one whose type or cardinality contradicts them, is refused with an error naming
       the resource type and path (FR-006b, ADR-0008). Annotation fields are not checked.
 - **Field order**: the user's. The output keeps it at every depth (FR-008); canonicalisation
@@ -66,7 +66,12 @@ read by the others (spec FR-028).
       and writes the file.
     - Python: `write_schemas(schemas, path)` and `read_schemas(path)` in the `pathling` package,
       in pure Python (`StructType.json()`, `StructType.fromJson`), with no JVM.
-    - R: `pathling_write_schemas(schemas, path)` and `pathling_read_schemas(path)`.
+    - R: `pathling_write_schemas(sc, schemas, path)` and `pathling_read_schemas(sc, path)`, which
+      take a Spark connection and delegate to `SchemaSets.toJson` and `SchemaSets.fromJson`, so
+      the JSON is never parsed or rebuilt in R. Reading passes the file's text to `fromJson` and
+      takes each schema's JSON form from the JVM with `StructType.json()`. Writing joins the
+      strings into the file's content under their keys, checks it with `fromJson`, and writes what
+      `toJson` returns.
 - **Validation** on reading: a file that is not a JSON object is refused with an error naming the
   file; a value that is not a struct type is refused with an error naming its key; a key that is
   not a resource type code is refused when the set is given to a source, as for any set.
@@ -91,8 +96,10 @@ to. It equals the given schema's base schema (FR-008).
 The given schema set with every schema reordered into canonical field order at every depth, names
 and types of the fields it keeps unchanged (FR-027). It is computed from the schemas and the
 definition set alone, with no Spark job: each struct's fields are sorted by the position the
-canonical structure gives their names, with annotations last. Fields the definitions do not
-describe are dropped, until #2925 gives them a place.
+canonical structure gives their names. Fields the definitions do not describe are dropped, until
+#2925 gives them a place. A field whose type or cardinality contradicts the definitions is refused
+with an error naming the resource type and path. Annotation fields are kept, in their canonical
+places: last in their struct, a primitive's in its metadata group.
 
 ## Schema equality (tests)
 

@@ -8,9 +8,13 @@ schema defined up front), with its
 [notes](https://github.com/aehrc/pathling/issues/2881#issuecomment-7150594803).
 **Follows**: `specs/001-parquet-on-fhir/` (#2367). It replaces that specification's dense mode
 (tickets 18 and 19). The inferred schema here is 001's fitted schema.
-**Depends on**: [#2884](https://github.com/aehrc/pathling/issues/2884), which adds the fail-fast
-check of a data schema against the uber-schema at ingest. This feature applies that check to defined
-schemas, and to stored schemas read with a defined schema.
+**Depends on**: [#2884](https://github.com/aehrc/pathling/issues/2884), which is to add the
+fail-fast check of a data schema against the uber-schema at ingest. #2884's issue and specification
+are being re-scoped to include that check: as written today, they treat non-conformant data as
+empty and validate nothing. This feature applies the check to defined schemas, and to stored
+schemas read with a defined schema. How a stored schema's departures from the definitions are
+handled, whether the read fails or a value is cast or made absent, is #2884's to decide (its
+OQ-B); this feature's projection itself never casts.
 
 ## Context
 
@@ -102,8 +106,7 @@ through Pathling.
    **Then** the same holds.
 3. **Given** a streaming dataset and no schema, **When** the user encodes it, **Then** the encode is
    refused with a message telling the user to supply a schema.
-4. Removed with FR-014. A raw `writeStream` is neither promised nor tested.
-5. **Given** the streaming example in the documentation, **When** it is run, **Then** it works.
+4. **Given** the streaming example in the documentation, **When** it is run, **Then** it works.
 
 ---
 
@@ -143,7 +146,7 @@ with the binding's write and read functions, and pass it to every source.
 ### Edge Cases
 
 - **A defined schema that is not a PoF schema** for its resource type is refused, as an inferred
-  schema that is not one is refused (#2884). A field the definitions do not describe, or a field
+  schema that is not one is to be refused by the check #2884 adds. A field the definitions do not describe, or a field
   whose type or cardinality contradicts them, fails the read, `encode` or `encodeBundle` with an
   error naming the resource type and the field's path. Annotation fields are not checked (FR-007).
 - **A defined schema whose fields are not in canonical field order** is a PoF schema all the same.
@@ -169,12 +172,14 @@ with the binding's write and read functions, and pass it to every source.
 - **An append through a Pathling sink of data whose schema differs from the table's** widens the
   table, as an inferred append does today.
 - **A stored type that clashes with the definitions**, such as a Parquet `Patient.birthDate` stored
-  as `int`, fails a read with a defined schema with an error naming the resource type and path, as
-  it fails a read without one (#2884). A defined schema does not bypass the check of the stored
-  schema, and nothing is cast.
+  as `int`, is handled in a read with a defined schema exactly as in a read without one, by the
+  check of the stored schema that #2884 adds: a defined schema does not bypass it. This
+  specification assumes that the check fails the read with an error naming the resource type and
+  path; if #2884 decides otherwise (its OQ-B), a read with a defined schema follows it. The
+  projection of this feature casts nothing.
 - **NDJSON, bundle, XML and streaming input carrying content the defined schema has no field for**
   loses that content silently, with no error, even where a read of the same data without a schema
-  fails fast (#2884). A read with a defined schema runs no inference, so it does not look at the
+  fails by the check #2884 adds. A read with a defined schema runs no inference, so it does not look at the
   data's own shape (FR-006a).
 
 ## Requirements _(mandatory)_
@@ -213,11 +218,13 @@ Projection:
 - **FR-006b**: A defined schema that is not a PoF schema MUST be refused. A field the definitions do
   not describe, or a field whose type or cardinality contradicts them, MUST fail the read, `encode`
   and `encodeBundle` with an error naming the resource type and the field's path. The check MUST be
-  the one #2884 adds for inferred schemas, applied to the defined schema alone, with no Spark job.
+  the check of a schema against the uber-schema that #2884 adds for inferred schemas, applied to
+  the defined schema alone, with no Spark job.
   Annotation fields in the given schema MUST NOT be checked (FR-007).
 - **FR-006c**: A source that reads stored data (Parquet, Delta, catalog tables and datasets) with a
-  defined schema MUST check the stored schema against the uber-schema as a read without a schema
-  does (#2884), and fail on a clash with an error naming the resource type and path. Stored fields
+  defined schema MUST check the stored schema with the check of a schema against the uber-schema
+  that #2884 adds, as a read without a schema does, and MUST handle a clash as that read does.
+  Where #2884 fails such a read, the error names the resource type and path. Stored fields
   that the definitions describe but the defined schema omits are not a clash: they are dropped and
   logged as FR-006a says.
 - **FR-007**: Annotation fields in a given schema MUST be ignored. The output's annotations MUST be
@@ -262,17 +269,21 @@ Schemas from data:
 - **FR-019**: A schema set returned by any source, written to a schema set file and read back, MUST
   be accepted by every source unchanged.
 - **FR-027**: Pathling MUST provide, in Java, Python and R, a function that canonicalises a schema
-  set: it takes and returns a set in the form of FR-004, the result equivalent to the argument with
-  every schema's fields in canonical field order at every depth, without reading any data. Its
-  field order is that of the definition set in use, so its result is the order an inferred load of
-  FHIR JSON or XML produces. Fields the definitions do not describe are dropped, as a load drops
-  them; where they belong in canonical field order is left to #2925, "Support fields the
-  definitions do not describe, and place them in the conformance levels". A key that is not a
-  resource type code is refused with an error naming it.
+  set: it takes and returns a set in the form of FR-004, with every schema's fields in canonical
+  field order at every depth, and the names and types of the fields it keeps unchanged, without
+  reading any data. Its field order is that of the definition set in use, so its result is the
+  order an inferred load of FHIR JSON or XML produces. Fields the definitions do not describe are
+  dropped, until #2925, "Support fields the definitions do not describe, and place them in the
+  conformance levels", decides their place in canonical field order; for a schema with no such
+  field the result is equivalent to the argument. A field whose type or cardinality contradicts
+  the definitions is refused with an error naming the resource type and path. Annotation fields
+  are kept, in their canonical places. A key that is not a resource type code is refused with an
+  error naming it.
 - **FR-028**: Pathling MUST provide, in Java, Python and R, functions that write a schema set as a
   schema set file and read one back: `SchemaSets.toJson` and `SchemaSets.fromJson` (which convert
   to and from the file's content) in Java, `write_schemas` and `read_schemas` in Python, and
-  `pathling_write_schemas` and `pathling_read_schemas` in R. A file written in one binding MUST be
+  `pathling_write_schemas(sc, schemas, path)` and `pathling_read_schemas(sc, path)` in R, which
+  take a Spark connection and delegate to `SchemaSets`. A file written in one binding MUST be
   read by the others. Reading MUST refuse a malformed file, or malformed content in Java, with an
   error naming the file where there is one, and a value that is not a struct type with an error
   naming its key.
@@ -304,11 +315,14 @@ Documentation:
   schema avoids it; that annotations follow the configuration and primitive metadata follows the
   schema; the narrowing effect of a Delta merge; that a schema that is not a PoF schema is refused;
   that NDJSON, bundle, XML and streaming reads with a schema drop content the schema has no field
-  for silently, where a read of the same data without a schema fails fast (#2884), while stored
-  reads check the stored schema either way; that the output keeps the given schema's field
-  order, and how to canonicalise a schema set to get canonical order; that a read without a
+  for silently, where a read of the same data without a schema fails by the check #2884 adds,
+  while stored reads check the stored schema either way; that the output keeps the given schema's
+  field order, and how to canonicalise a schema set to get canonical order; that a read without a
   schema keeps the order the data is stored in; and that a Parquet source's schema set may come
   back in a different order on another run, which canonicalising it removes.
+- **FR-022a**: The release notes MUST state that a Parquet read with a defined schema merges the
+  footer of every file, as a read without a schema does, so it no longer gets the saving that the
+  Parquet source's former schema option gave by binding the read schema (research R6).
 - **FR-023**: The documentation MUST describe how to bootstrap a schema set from a representative
   sample with inference, and that elements absent from the sample are dropped from later loads.
 - **FR-024**: The streaming documentation MUST show a streaming encode with a schema written to
@@ -322,10 +336,11 @@ Follow-up:
 - **FR-025**: The work MUST leave GitHub issues for the work this feature does not do: the schema
   generator, including the 10.x shaping options as shortcuts that generate and apply a schema;
   and Delta idempotent writes for Pathling's sinks. Checking a schema against the uber-schema is
-  #2884's work, which this feature reuses (FR-006b).
-- **FR-026**: The 001 specification's dense-mode tickets (18 and 19) and the requirements this
-  feature replaces (FR-009, FR-010, FR-017, FR-043's streaming clause and FR-044 of 001) MUST point
-  to this specification or the generator follow-up.
+  #2884's work, once it is re-scoped, which this feature reuses (FR-006b).
+- **FR-026**: The 001 specification's dense-mode tickets (18 and 19) and the parts of it this
+  feature replaces MUST point to this specification or the generator follow-up: FR-009's dense
+  schema, FR-010, FR-016's exception 4, FR-017, FR-043's streaming clause, FR-044, FR-047's schema
+  modes, User Story 4's scenario 7, the dense subset of SC-002, and SC-010.
 
 ### Key Entities
 
@@ -375,15 +390,17 @@ Follow-up:
 
 ## Assumptions
 
-- #2884 provides the check of a schema against the uber-schema. This feature applies it to defined
-  schemas (FR-006b) and to stored schemas under a read with a defined schema (FR-006c).
-- Projection never casts values. A stored type that clashes with the definitions fails the read, by
-  #2884's check.
+- #2884, once re-scoped, provides the check of a schema against the uber-schema. This feature
+  applies it to defined schemas (FR-006b) and to stored schemas under a read with a defined schema
+  (FR-006c).
+- This feature's projection never casts values. How a stored type that clashes with the
+  definitions is handled is #2884's to decide (its OQ-B); a read with a defined schema handles it
+  as a read without one does. The edge cases and tests here assume the read fails.
 - Schema sets are stored and versioned by the user, not by Pathling.
 - The layout column (001 tickets 29 and 30) is not implemented yet. When it is, it is treated as
   part of the base schema that ingest always writes.
 - Content the definitions do not describe fails a read without a schema, and a stored read with
-  one, by the check of #2884. A read of NDJSON, bundles, XML or a stream with a defined schema
+  one, by the check #2884 adds. A read of NDJSON, bundles, XML or a stream with a defined schema
   drops it silently (FR-006). #2925 may change that for every path at once.
 - A stream written with Spark's own streaming writer gets no Pathling projection at write time. It
   does not need one, because `encode` has already projected it.

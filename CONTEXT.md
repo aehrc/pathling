@@ -77,7 +77,7 @@ resource type code to its schema in Spark's JSON form.
 A schema without its annotations. Primitive metadata groups are part of it.
 
 **Projection**:
-Shaping a batch to a defined schema when it is loaded or written.
+Shaping a batch to a defined schema when it is loaded.
 _Avoid_: cast, conform
 
 **Definition set**:
@@ -109,11 +109,16 @@ Schemas with the same fields, names and types, in the same order at every
 depth, ignoring nullability and field metadata.
 
 **Equivalent schemas**:
-Schemas whose canonical forms are equal: equal up to field order.
+Schemas that are equal up to field order: the same fields, names and types at
+every depth, in any order. Two PoF schemas are equivalent when their canonical
+forms are equal.
 
 **Canonicalisation**:
 Reordering a schema's fields into canonical field order at every depth, without
-changing any name or type. It needs only the schema and the definition set.
+changing the name or type of any field it keeps. Fields the definitions do not
+describe are dropped, until #2925 gives them a place; a field whose type
+contradicts the definitions is refused; annotation fields are kept, in their
+canonical places. It needs only the schema and the definition set.
 _Avoid_: normalisation
 
 **Finding**:

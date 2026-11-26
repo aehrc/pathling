@@ -1,10 +1,11 @@
 # Whether Parquet, Delta and catalog tables accept batches that differ only in field order
 
 Measured on 2026-11-26 with PySpark 4.0.2 and Delta 4.0.1, using
-[field-order-probe.py](field-order-probe.py), for the decision that field order does not count
+[field-order-probe.py](field-order-probe.py). The build uses Spark 4.1.0 and Delta 4.2.0, on which
+it has not been repeated. It was run for the decision that field order does not count
 towards whether a defined schema is acceptable. Two schemas are **equal** when they have the same
-fields, names and types in the same order at every depth, and **equivalent** when their canonical
-forms are equal: equal up to field order.
+fields, names and types in the same order at every depth, and **equivalent** when they are equal
+up to field order; two PoF schemas are equivalent when their canonical forms are equal.
 
 Batch A has its fields in canonical order. Batch B has the same fields reordered at the top level,
 inside a struct and inside an array of structs. The swapped fields share a type, so a write or read
@@ -12,7 +13,7 @@ that matched fields by position would swap values silently rather than fail.
 
 **Result: every write accepts equivalent batches and matches fields by name at every depth. A
 Delta table's order is its first writer's, a Parquet directory's is that of whichever file Spark
-reads first, and fields added later go last.**
+reads first, and fields added to a Delta table by schema evolution go last.**
 
 | Write onto a table first written with A                         | Accepted | Values correct |
 | --------------------------------------------------------------- | -------- | -------------- |
@@ -27,10 +28,12 @@ The order a table reports is never changed by accepting a batch:
 - A Delta table keeps the order of the batch that created it. Created from B and appended with A,
   it reports B's order.
 - A Parquet directory takes its order from the footer of the file Spark reads first, with or
-  without `mergeSchema`; with it, fields from other files go last. Part-file names carry random
+  without `mergeSchema`. Where fields from other files go under `mergeSchema` was not measured.
+  Part-file names carry random
   identifiers, so that file is not necessarily the first written: across runs of this probe the
   same directory reported A's order in some runs and B's in others, whichever was written first.
-  A catalog Parquet table read through the catalog keeps the order it was created with.
+  Whether a catalog Parquet table read through the catalog keeps the order it was created with
+  was not measured.
 - Delta schema evolution puts a new field last, even inside a struct:
   `coding: struct<system, code, version>`, where the definitions put `version` between them.
 
@@ -48,7 +51,7 @@ order and canonicalising schemas on request.
   name onto the target in any case.
 - Storage does not preserve canonical order. Once another writer or schema evolution touches a
   table, its order may differ, so a schema returned by `schemas()` is equivalent to the canonical
-  one but not always equal to it (FR-019).
+  one but not always equal to it (FR-018).
 - Order matters only to the operations that match by position: struct cast, struct `=`, `union`
   and `INSERT INTO … SELECT`. Nothing in Pathling uses them on resource data, so order never
   affects correctness inside Pathling.

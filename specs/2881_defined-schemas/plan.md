@@ -12,12 +12,13 @@ definitions exactly as it does an inferred shape, and the result takes the defin
 order (research R14). Because the read uses a fixed schema
 (`from_json` / `from_xml`), there is no inference pass, so a streaming encode works. Before any
 of this, the defined schema passes the check of a schema against the uber-schema that #2884 adds
-for inferred schemas, and a defined schema that is not a PoF schema is refused (FR-006b).
+for inferred schemas, once it is re-scoped, and a defined schema that is not a PoF schema is
+refused (FR-006b).
 
 Data already in the PoF layout (Parquet, Delta, tables, datasets) is
 projected by name to the schema that the same walk yields for the defined schema, after its stored
-schema passes the same #2884 check a read without a schema makes (FR-006c). The projection
-uses a Column-API projector extracted from `DeltaSink.conformToTarget`, and annotations are then
+schema passes the same check a read without a schema makes, which #2884 adds (FR-006c). The
+projection never casts, and uses a Column-API projector extracted from `DeltaSink.conformToTarget`, and annotations are then
 recomputed from the configuration.
 
 The feature also adds:
@@ -40,10 +41,11 @@ defined schema in place of the inferred one, not in addition to it.
 
 **Language/Version**: Java 21 (core modules), Python 3.10+, R 3.5+.
 **Primary Dependencies**: Apache Spark 4 SQL (Column API only in `io` and `fhir-schema`), Delta
-Lake, Py4J (Python), sparklyr (R), and jsonlite (R) for the schema set file only.
-**Depends on**: #2884, which provides the check of a schema against the uber-schema. This feature
-applies it to defined schemas and to stored schemas under a read with a defined schema, so the
-refusal tasks cannot finish before it lands.
+Lake, Py4J (Python) and sparklyr (R).
+**Depends on**: #2884, which is to add the check of a schema against the uber-schema; its issue and
+specification are being re-scoped to include it. This feature applies the check to defined schemas
+and to stored schemas under a read with a defined schema, so the refusal tasks cannot finish
+before it lands. How a stored schema's departures are handled is #2884's to decide (its OQ-B).
 **Storage**: Parquet and Delta tables in the PoF layout, one table per resource type, named
 `<path>/<fileNameMapper(type)>.parquet`.
 **Testing**:
@@ -81,9 +83,9 @@ The constitution is the global `CLAUDE.md`, the project `CLAUDE.md` and `.claude
     - the plumbing.
 
     There is no schema-mode enum and no cast (ADR-0008), and no new validator: the check that
-    refuses a schema that is not a PoF schema is the one #2884 (the fail-fast check of a data
-    schema against the uber-schema) adds, reused for defined schemas and for stored schemas read
-    with one (FR-006b, FR-006c). The YAML suites take a
+    refuses a schema that is not a PoF schema is the check of a schema against the uber-schema
+    that #2884 adds, reused for defined schemas and for stored schemas read with one (FR-006b,
+    FR-006c). The YAML suites take a
     defined schema in their existing resolvers, with no profile, fixture or new test mode. ✅
 
 - **Test-driven development**: every task phase starts with failing tests. Load tests

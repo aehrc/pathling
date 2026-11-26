@@ -3,7 +3,11 @@
 A schema is a `pyspark.sql.types.StructType`. A schema set is a `dict[str, StructType]` from
 resource type code to schema (FR-004). No other form is accepted: a value that is not a
 `StructType` is refused with an error naming its key. A schema that is not a PoF schema fails the
-read, `encode` or `encode_bundle` with an error naming the resource type and path (FR-006b).
+read, `encode` or `encode_bundle` with an error naming the resource type and path, by the check of
+a schema against the uber-schema that #2884 adds (FR-006b).
+
+`tables` takes both `schema`, the catalog database to read from, and `schemas`, the schema set.
+Its docstring states the difference, so that neither is passed for the other.
 
 Argument order: on the three stored-layout readers (`parquet`, `delta` and `tables`), `schemas`
 follows the location argument and precedes `layout_detection`, the order `parquet` already has.

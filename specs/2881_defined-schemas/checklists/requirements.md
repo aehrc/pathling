@@ -19,18 +19,20 @@
 - [x] CHK005 Requirements are testable and unambiguous: each FR states an observable behaviour.
 - [x] CHK006 Success criteria are measurable and technology-agnostic beyond the public API names.
 - [x] CHK007 Acceptance scenarios are defined for every story.
-- [x] CHK008 Edge cases are identified: invalid schema, annotation and metadata fields, absent and
-      unnamed types, unreadable schemas, unknown keys, empty set, Delta merge narrowing, differing
-      append.
-- [x] CHK009 Scope is bounded: Out of Scope lists the three follow-ups and the excluded work.
+- [x] CHK008 Edge cases are identified: invalid schema (refused by the check #2884 adds), field
+      order other than canonical, annotation and metadata fields, absent and unnamed types,
+      unreadable schemas, unknown keys, empty set, Delta merge narrowing, differing append, stored
+      type clashes, and content dropped silently by text and streaming input.
+- [x] CHK009 Scope is bounded: Out of Scope lists the two follow-ups of FR-025 and the excluded work.
 - [x] CHK010 Assumptions are recorded.
 
 ## Feature readiness
 
 - [x] CHK011 Every FR has acceptance criteria: FR-001–010 → US1 and US4 (FR-011 removed), with
-      FR-006a's debug log checked by review rather than a dedicated test; FR-012–013 → US2 (FR-014 removed);
-      FR-015–016 removed with US3; FR-017–019 → US4; FR-020–021b → SC-005, SC-006; FR-022–024 →
-      US2 scenario 5, SC-008; FR-025–026 are delivery obligations checked at completion.
+      FR-006a's debug log tested by T067; FR-012–013 → US2 (FR-014 removed); FR-015–016 removed
+      with US3; FR-017–019 → US4; FR-020–021b → SC-005, SC-006; FR-022–024 → US2 scenario 4,
+      SC-008; FR-027 → US4, SC-009; FR-028 → US4, SC-007; FR-022a, FR-025 and FR-026 are delivery
+      obligations checked at completion.
 - [x] CHK012 User scenarios cover the primary flows: batch load and write, streaming encode
       written through a Pathling sink in `foreachBatch`, schemas from data.
 

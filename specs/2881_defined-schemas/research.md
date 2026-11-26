@@ -12,8 +12,8 @@
     result is reordered into the defined schema's field order (ADR-0008, R14).
 
 - **Rationale**: This is one code path for inferred and defined loads. Only where `observed` comes
-  from changes. The defined schema is first checked against the uber-schema with #2884's check
-  and refused if it is not a PoF schema (FR-006b), so the output equals it (FR-008). There is no
+  from changes. The defined schema is first checked against the uber-schema with the check
+  that #2884 adds, once it is re-scoped, and refused if it is not a PoF schema (FR-006b), so the output equals it (FR-008). There is no
   action on the input, so a stream works (FR-012).
 - **Alternatives considered**:
     - Infer, then project: needs a pass over the data, so it cannot serve streams.
@@ -25,7 +25,7 @@
   canonical structure and returns the JSON-model shape. It follows the walk of the egress
   (`egressFields`), with two differences:
     1. A field the definitions do not describe never reaches the walk: the schema has already
-       been refused by #2884's check, with an error naming its path (FR-006b). The walk may
+       been refused by the check #2884 adds, with an error naming its path (FR-006b). The walk may
        therefore keep throwing, as `storedEntry` does today with `IllegalStateException`
        (ResourceTransformer:754-760), as a guard that should not be hit.
     2. Annotation fields are skipped (FR-007).
@@ -86,7 +86,7 @@
 
 - **Decision**: With a defined schema, skip the inference read at FhirXmlReader:181-188 and build
   the parse schema with `XmlIngestShape` from the derived observed shape, making every repeating
-  element an array. `wrap` (:384-395) already accepts both array and single parsed types. The rest
+  element an array. `XmlIngestShape.wrap` (XmlIngestShape.java:384-395) already accepts both array and single parsed types. The rest
   is unchanged: `from_xml`, then `shape()`, then `toLayout`.
 - **Rationale**: Only the inference call blocks streaming. The parse step is pure Column work.
 
@@ -95,17 +95,20 @@
 - **Decision**: The target is the layout schema, which is the output schema of
   `toLayout(type, observed, …)` for the defined schema, computed over an empty frame and reordered
   into the defined schema's field order (R14). Stored data is projected as follows:
-    1. Check the stored schema against the uber-schema with the check #2884 (the fail-fast check of
-       a data schema against the uber-schema) adds, at the point where a read without a schema
-       makes it (FR-006c). A clash, such as `Patient.birthDate` stored as `int`, fails the read
-       with an error naming the resource type and path. A defined schema does not skip this step.
+    1. Check the stored schema against the uber-schema with the check of a schema against the
+       uber-schema that #2884 adds, at the point where a read without a schema makes it
+       (FR-006c). A defined schema does not skip this step. A clash, such as `Patient.birthDate`
+       stored as `int`, is handled as a read without a schema handles it; this specification
+       assumes that it fails the read with an error naming the resource type and path, and
+       follows #2884 if its OQ-B decides otherwise.
     2. Project by name to the target with `Projection.project(Dataset, StructType)`:
         - drop fields the target lacks, including stored annotations;
         - add missing fields as typed nulls;
         - recurse through structs, arrays and maps;
         - keep a null struct null;
-        - never cast. After step 1 no leaf type clashes with the definitions, and the target's
-          types are the definitions' types.
+        - never cast. The target's types are the definitions' types, and if step 1 fails a
+          clash no leaf type clashes with them. Whether a stored clash is instead cast is #2884's
+          to decide (its OQ-B), and would happen in that check, not in the projection.
     3. Annotate with `Annotator.annotate` per the configuration.
     4. Log at debug level the paths of the stored schema that the target lacks, other than
        annotations (FR-006a). This compares two schemas the source already holds, so it runs no
@@ -131,7 +134,7 @@
 - **Rationale**: Every path lands on the same schema (FR-009). The projector already exists in
   Column-API form, so `io` may hold it. Recomputing annotations satisfies FR-007 and covers a
   stored table annotated under another configuration. The dropped paths are known from the schemas
-  alone for stored data, so logging them is free, and so is #2884's check of the stored schema.
+  alone for stored data, so logging them is free, and so is the check of the stored schema that #2884 adds.
   NDJSON, bundle and XML reads with a defined schema run no inference, so the content they drop
   could be found only by per-row work; they do not look for it, and so do not fail on content a
   read without a schema would fail on.
@@ -143,7 +146,7 @@
   (`mergeSchema=true`), because the stored schema is checked and projected rather than bound
   with `.schema(...)`. Today's Parquet `schemas` option binds the read schema and so skips that
   merge; a defined schema loses the saving, and on a lake of many files costs the same read as
-  one without a schema, plus a fixed output shape. Reading with the layout schema as the Parquet
+  one without a schema, plus a fixed output shape. The release notes state this (FR-022a). Reading with the layout schema as the Parquet
   read schema and then projecting would skip the merge without changing the output, but it would
   also skip the stored-schema check of step 1, so it is left as a later optimisation.
 
@@ -169,14 +172,14 @@
       need no JVM.
     - **R**: a `schemas` argument on each `pathling_read_*` function, a `schema` argument on
       `pathling_encode*`, `ds_schemas()`, `pathling_canonical_schemas(pc, schemas)`, and
-      `pathling_write_schemas(schemas, path)` and `pathling_read_schemas(path)`. sparklyr has no
-      `StructType`, so in R a schema is a string holding Spark's JSON form and a schema set is a
-      named list of such strings. The strings are opaque to the user and cross to the JVM as they
-      are, so no R list is ever converted to schema JSON, and the empty-`metadata` problem of
+      `pathling_write_schemas(sc, schemas, path)` and `pathling_read_schemas(sc, path)`. sparklyr
+      has no `StructType`, so in R a schema is a string holding Spark's JSON form and a schema set
+      is a named list of such strings. The strings are opaque to the user and cross to the JVM as
+      they are, so no R list is ever converted to schema JSON, and the empty-`metadata` problem of
       `jsonlite` (an empty unnamed `list()` written as `[]`, where Spark expects `{}`) cannot
-      arise. The file functions use `jsonlite` on the file's top-level object only: each schema
-      is parsed from, or written as, JSON that Spark produced, never built from a list the user
-      wrote.
+      arise. The file functions take a Spark connection and delegate to Java's
+      `SchemaSets.fromJson` and `SchemaSets.toJson`, so no schema JSON is parsed or written in
+      R.
 
     Every binding reads and writes the one schema set file format of data-model.md, so a file
     written in one is read by the others.
@@ -232,7 +235,9 @@
       Spark reads a streaming sink directory through its `_spark_metadata` log.
 
     FR-014 and its test T030 were later removed: a stream is written through a Pathling sink in
-    `foreachBatch`, so this read-back is not promised.
+    `foreachBatch`, not through Spark's streaming file sinks. The read-back that User Story 2
+    promises is of that output, and a `StreamingEncodeTest` case writes a stream through
+    `foreachBatch` to Delta and to Parquet and reads each back through Pathling.
 
 ## R10. Schema set parsing and errors
 
