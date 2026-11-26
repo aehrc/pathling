@@ -412,6 +412,9 @@ class DataSources(SparkConversionsMixin):
         """
         from pathling.bulk import BulkExportClient
 
+        # The schema set is checked before the export runs, so that a set that is refused does not
+        # cost a full export.
+        sources = self._sources(schemas)
         dfs = Dfs(self._pc.spark)
 
         # If `output_dir` is not provided, create a temporary directory
@@ -481,4 +484,4 @@ class DataSources(SparkConversionsMixin):
         client.export()
 
         # Return a DataSource that reads from the exported files
-        return self.ndjson(output_dir, schemas=schemas)
+        return self._wrap_ds(sources.ndjson(output_dir, DataSources.NDJSON_EXTENSION))

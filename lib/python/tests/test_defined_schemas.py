@@ -223,6 +223,31 @@ def test_bulk_reads_with_the_given_schemas(
         assert primitive_rows(data_source, defined) == expected
 
 
+def test_bulk_refuses_a_schema_set_before_it_exports(
+    pathling_ctx, defined, mock_server
+):
+    """The bulk source refuses a schema set before it starts the export (FR-004)."""
+    exports = []
+
+    @mock_server.route("/fhir/$export", methods=["GET"])
+    def export():
+        exports.append(1)
+        return Response(status=500)
+
+    schemas = {
+        "Patient": defined["Patient"],
+        "Condition": '{"type":"struct","fields":[]}',
+    }
+
+    with mock_server.run():
+        with raises(TypeError, match="Condition"):
+            pathling_ctx.read.bulk(
+                fhir_endpoint_url=mock_server.url("/fhir"), schemas=schemas
+            )
+
+    assert exports == []
+
+
 def test_more_than_ten_types_are_accepted(pathling_ctx, bundles_dir):
     """A set of more than ten types is accepted, with no limit on its size (FR-004)."""
     bundles = pathling_ctx.read.bundles(bundles_dir, ELEVEN_TYPES)
