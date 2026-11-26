@@ -1,7 +1,9 @@
 # Python API contract
 
-A schema is a JSON-compatible `dict` (as from `json.loads(struct.json())`) or a JSON string. A
-schema set is a `dict[str, schema]` or a JSON string. Spark `StructType` is not accepted (FR-004).
+A schema is a `pyspark.sql.types.StructType`. A schema set is a `dict[str, StructType]` from
+resource type code to schema (FR-004). No other form is accepted: a value that is not a
+`StructType` is refused with an error naming its key. A schema that is not a PoF schema fails the
+read, `encode` or `encode_bundle` with an error naming the resource type and path (FR-006b).
 
 Argument order: on the three stored-layout readers (`parquet`, `delta` and `tables`), `schemas`
 follows the location argument and precedes `layout_detection`, the order `parquet` already has.
@@ -15,15 +17,26 @@ the last argument.
 pc.read.ndjson(path, ..., schemas=None)
 pc.read.bundles(path, resource_types, ..., schemas=None)
 pc.read.datasets(resources, schemas=None)
-pc.read.parquet(path, schemas=None, layout_detection=True)  # Was Dict[str, StructType].
+pc.read.parquet(path, schemas=None, layout_detection=True)
 pc.read.delta(path, schemas=None, layout_detection=True)
 pc.read.tables(schema=None, schemas=None, layout_detection=True)
 pc.read.bulk(..., schemas=None)
 
 # Schemas from data.
-DataSource.schemas() -> dict[str, dict]
+DataSource.schemas() -> dict[str, StructType]
+
+# Canonicalisation (FR-027): the same set in canonical field order. Reads no data.
+pc.canonical_schemas(schemas) -> dict[str, StructType]
+
+# Schema set files (FR-028, data-model.md). Pure Python, over StructType.json() and
+# StructType.fromJson; no JVM. read_schemas refuses a malformed file with an error naming it, and
+# a value that is not a struct with an error naming its key.
+from pathling import read_schemas, write_schemas
+write_schemas(schemas, path) -> None
+read_schemas(path) -> dict[str, StructType]
 
 # Encoding.
+# schema is a StructType.
 pc.encode(df, resource_name, input_type=None, column=None, schema=None) -> DataFrame
 pc.encode_bundle(df, resource_name, input_type=None, column=None, schema=None) -> DataFrame
 

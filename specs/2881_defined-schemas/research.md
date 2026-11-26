@@ -8,12 +8,13 @@
     - JSON uses `from_json(document, observed)`.
     - XML uses `from_xml(document, parseSchema)`.
 
-    The walk then types, orders and prunes the result from the definitions, as it does today
-    (ADR-0008).
+    The walk then types and prunes the result from the definitions, as it does today, and the
+    result is reordered into the defined schema's field order (ADR-0008, R14).
 
 - **Rationale**: This is one code path for inferred and defined loads. Only where `observed` comes
-  from changes. The output is a PoF schema by construction (FR-008). There is no action on the
-  input, so a stream works (FR-012).
+  from changes. The defined schema is first checked against the uber-schema with #2884's check
+  and refused if it is not a PoF schema (FR-006b), so the output equals it (FR-008). There is no
+  action on the input, so a stream works (FR-012).
 - **Alternatives considered**:
     - Infer, then project: needs a pass over the data, so it cannot serve streams.
     - Cast to the defined types: ADR-0005 reserves types for the definitions.
@@ -23,8 +24,10 @@
 - **Decision**: Add a `ResourceTransformer` method that walks the defined schema against the
   canonical structure and returns the JSON-model shape. It follows the walk of the egress
   (`egressFields`), with two differences:
-    1. A field the definitions do not describe is skipped, not thrown on. Today `storedEntry` throws
-       `IllegalStateException` (ResourceTransformer:754-760).
+    1. A field the definitions do not describe never reaches the walk: the schema has already
+       been refused by #2884's check, with an error naming its path (FR-006b). The walk may
+       therefore keep throwing, as `storedEntry` does today with `IllegalStateException`
+       (ResourceTransformer:754-760), as a guard that should not be hit.
     2. Annotation fields are skipped (FR-007).
 
     Leaf types follow what `toLayout` ingests with `try_cast`:
@@ -39,8 +42,8 @@
     structs.
 
 - **Rationale**: The egress walk already gives this mapping for canonical input (the survey
-  confirmed `toJsonShape` on an empty frame gives a usable schema with no job). Making it skip
-  rather than throw covers the non-PoF case: "treated as inference treats an observed shape".
+  confirmed `toJsonShape` on an empty frame gives a usable schema with no job). The check of
+  FR-006b runs first, so the walk only ever sees a PoF schema.
 - **Alternatives considered**:
     - Calling `toJsonShape` unchanged: it throws on a non-canonical top-level field, and it marks
       decimals.
@@ -90,28 +93,35 @@
 ## R6. Projecting stored data (Parquet, Delta, tables, datasets)
 
 - **Decision**: The target is the layout schema, which is the output schema of
-  `toLayout(type, observed, …)` for the defined schema, computed over an empty frame. Stored data
-  is projected as follows:
-    1. Project by name to the target with `Projection.project(Dataset, StructType)`:
+  `toLayout(type, observed, …)` for the defined schema, computed over an empty frame and reordered
+  into the defined schema's field order (R14). Stored data is projected as follows:
+    1. Check the stored schema against the uber-schema with the check #2884 (the fail-fast check of
+       a data schema against the uber-schema) adds, at the point where a read without a schema
+       makes it (FR-006c). A clash, such as `Patient.birthDate` stored as `int`, fails the read
+       with an error naming the resource type and path. A defined schema does not skip this step.
+    2. Project by name to the target with `Projection.project(Dataset, StructType)`:
         - drop fields the target lacks, including stored annotations;
         - add missing fields as typed nulls;
         - recurse through structs, arrays and maps;
         - keep a null struct null;
-        - never cast. A leaf type clash is left to #2884, which reads it as null.
-    2. Annotate with `Annotator.annotate` per the configuration.
-    3. Log at debug level the paths of the stored schema that the target lacks, other than
+        - never cast. After step 1 no leaf type clashes with the definitions, and the target's
+          types are the definitions' types.
+    3. Annotate with `Annotator.annotate` per the configuration.
+    4. Log at debug level the paths of the stored schema that the target lacks, other than
        annotations (FR-006a). This compares two schemas the source already holds, so it runs no
        Spark job and touches no row.
 
-    `Projection` is `DeltaSink.conformToTarget` extracted to `io`. `DeltaSink`'s merge then uses it.
+    `Projection` is `DeltaSink.conformToTarget` extracted to `io`. `DeltaSink`'s merge then uses
+    it.
 
     The hook differs per source, so that each read is shaped exactly once:
     - **Parquet and Delta**: the transformer function that `ParquetSource` and `DeltaSource` pass
-      to the `FileSource` constructor, today the identity `(sourceData, resourceType) ->
-sourceData`. `FileSource.load` applies it after `LayoutDetector.check`. `FileSource.load`
-      itself is not changed, because `NdjsonSource` and `BundlesSource` share it and their
+      to the `FileSource` constructor, today the identity
+      `(sourceData, resourceType) -> sourceData`. `FileSource.load` applies it after
+      `LayoutDetector.check`. `FileSource.load` itself is not changed, because `NdjsonSource` and `BundlesSource` share it and their
       transformers (`context.encode`, `context.encodeBundle`) already shape the data with the
-      defined-schema reader. `ParquetSource.readerFor` stops binding the schema with `.schema(...)`.
+      defined-schema reader. `ParquetSource.readerFor` stops binding the schema with
+      `.schema(...)`.
     - **Catalog tables**: `CatalogSource.read`, after `LayoutDetector.check` and before
       `universalOperator`.
     - **Datasets**: `DatasetSource.dataset(type, df)`, where a dataset is registered. Not
@@ -121,34 +131,70 @@ sourceData`. `FileSource.load` applies it after `LayoutDetector.check`. `FileSou
 - **Rationale**: Every path lands on the same schema (FR-009). The projector already exists in
   Column-API form, so `io` may hold it. Recomputing annotations satisfies FR-007 and covers a
   stored table annotated under another configuration. The dropped paths are known from the schemas
-  alone for stored data, so logging them is free. NDJSON, bundle and XML reads with a defined
-  schema run no inference, so the content they drop could be found only by per-row work; they do
-  not look for it.
+  alone for stored data, so logging them is free, and so is #2884's check of the stored schema.
+  NDJSON, bundle and XML reads with a defined schema run no inference, so the content they drop
+  could be found only by per-row work; they do not look for it, and so do not fail on content a
+  read without a schema would fail on.
 - **Alternatives considered**: `MergeCast.project` uses the Catalyst API and lives in `encoders`.
   `spark.read.schema()` on Parquet (the current `parquetWithSchemas`) cannot reorder nested
   structs or drop nested fields reliably, and does not apply to Delta tables or datasets.
 
+- **Cost**: A Parquet read with a defined schema still merges every file's footer
+  (`mergeSchema=true`), because the stored schema is checked and projected rather than bound
+  with `.schema(...)`. Today's Parquet `schemas` option binds the read schema and so skips that
+  merge; a defined schema loses the saving, and on a lake of many files costs the same read as
+  one without a schema, plus a fixed output shape. Reading with the layout schema as the Parquet
+  read schema and then projecting would skip the merge without changing the output, but it would
+  also skip the stored-schema check of step 1, so it is left as a later optimisation.
+
 ## R7. API shape
 
-- **Decision**:
+- **Decision**: a schema is a Spark `StructType` and a schema set is a plain map of them, in each
+  binding's own idiom. JSON conversion is by functions, not by a class wrapping the set.
     - **Java**:
-        - `DataSourceBuilder.withSchemas(String)` and `withSchemas(Map<String, String>)` return a
-          builder whose every source method applies the set.
-        - `encode` and `encodeBundle` overloads with a trailing `@Nullable String schema`.
-        - `QueryableDataSource.schemas()` returns `Map<String, String>`.
-    - **Python**: a `schemas=` keyword on each `read.*` method, a `schema=` keyword on
-      `encode` and `encode_bundle`, and `DataSource.schemas()` returning a dict of dicts.
-    - **R**: a `schemas` argument on each `pathling_read_*` function, a `schema`
-      argument on `pathling_encode*`, and `ds_schemas()`.
+        - `DataSourceBuilder.withSchemas(Map<String, StructType>)` returns a builder whose every
+          source method applies the set.
+        - `encode` and `encodeBundle` overloads with a trailing `@Nullable StructType schema`.
+        - `QueryableDataSource.schemas()` returns `Map<String, StructType>`.
+        - `PathlingContext.canonicalSchemas(Map<String, StructType>)` returns the same type
+          (FR-027).
+        - A small public utility class in `library-api`, `SchemaSets`, converts a set to and from
+          the schema set file's content: `@Nonnull String toJson(@Nonnull Map<String, StructType>)`
+          and `@Nonnull Map<String, StructType> fromJson(@Nonnull String)` (FR-028).
+    - **Python**: a `schemas=` keyword, taking `dict[str, StructType]`, on each `read.*` method; a
+      `schema=` keyword, taking a `StructType`, on `encode` and `encode_bundle`;
+      `DataSource.schemas()` and `pc.canonical_schemas(schemas)` returning `dict[str, StructType]`;
+      and `write_schemas(schemas, path)` and `read_schemas(path)` in the `pathling` package. The
+      two file functions are pure Python, over `StructType.json()` and `StructType.fromJson`, and
+      need no JVM.
+    - **R**: a `schemas` argument on each `pathling_read_*` function, a `schema` argument on
+      `pathling_encode*`, `ds_schemas()`, `pathling_canonical_schemas(pc, schemas)`, and
+      `pathling_write_schemas(schemas, path)` and `pathling_read_schemas(path)`. sparklyr has no
+      `StructType`, so in R a schema is a string holding Spark's JSON form and a schema set is a
+      named list of such strings. The strings are opaque to the user and cross to the JVM as they
+      are, so no R list is ever converted to schema JSON, and the empty-`metadata` problem of
+      `jsonlite` (an empty unnamed `list()` written as `[]`, where Spark expects `{}`) cannot
+      arise. The file functions use `jsonlite` on the file's top-level object only: each schema
+      is parsed from, or written as, JSON that Spark produced, never built from a list the user
+      wrote.
 
-    Bindings accept the JSON form only (FR-004). Python takes a dict or a JSON string. R takes a list
-    or a JSON string, converted with `jsonlite::toJSON(auto_unbox = TRUE)`.
+    Every binding reads and writes the one schema set file format of data-model.md, so a file
+    written in one is read by the others.
 
-- **Rationale**: Builder methods are the Java idiom (`withLayoutDetection`). Keywords are the Python
-  and R idiom. Strings cross Py4J and sparklyr without a type conversion, and that removes R's
-  10-entry `Map.of` cap (`to_java_schema_map`).
-- **Alternatives considered**: Spark `StructType` arguments. Rejected by FR-004, because they do not
-  round-trip through a file the user keeps.
+- **Rationale**: `StructType` is what PySpark and Java users already hold: `df.schema` gives one,
+  and Spark's own readers take one. Builder methods are the Java idiom (`withLayoutDetection`), and
+  keywords the Python and R idiom. A set the user keeps in a file is met by the write and read
+  functions, so the round trip (FR-019) needs no JSON form on the readers. R's strings cross
+  sparklyr without a type conversion, and that removes its 10-entry `Map.of` cap
+  (`to_java_schema_map`).
+- **Alternatives considered**:
+    - Spark's JSON form only, on every binding (the previous decision). Rejected: it is unidiomatic
+      for PySpark and Java users, who already hold `StructType`s and would convert every one, and
+      its reason, that a `StructType` does not round-trip through a file the user keeps, is met by
+      the write and read functions.
+    - A public `SchemaSet` class wrapping the set, with its own JSON reading, writing and
+      canonicalisation. Rejected: more API surface than needed, since plain maps and a few
+      functions do the same.
 
 ## R8. Writing a stream to a lake
 
@@ -190,15 +236,22 @@ sourceData`. `FileSource.load` applies it after `LayoutDetector.check`. `FileSou
 
 ## R10. Schema set parsing and errors
 
-- **Decision**: `io` `SchemaSet.parse(String json)` and `SchemaSet.of(Map<String, String>)` parse
-  each entry with `DataType.fromJson`. The parse refuses, with an error naming the key:
-    - a key that is not a resource type code known to the definitions;
+- **Decision**: `io` `SchemaSet` is the internal form of a schema set, behind the public API.
+  `SchemaSet.of(Map<String, StructType>)` takes the map that `withSchemas` and `canonicalSchemas`
+  are given, and `SchemaSet.parse(String json)` parses a schema set file's content, each entry
+  with `DataType.fromJson`; `SchemaSets.fromJson` delegates to it, and the R binding joins its
+  strings into one such object and passes it to `SchemaSets.fromJson`. Neither is public API. They refuse, with an error naming the key:
+    - a key that is not a resource type code known to the definitions, when the set is given to a
+      source or to `canonicalSchemas`;
     - a value that is not a struct;
     - a value that is malformed.
 
-    An empty set equals no set.
+    A malformed file is refused by `read_schemas` and `pathling_read_schemas` with an error naming
+    the file, and malformed content by `SchemaSets.fromJson`. An empty set equals no set.
 
-- **Rationale**: These are the spec's edge cases. One parser serves every entry point.
+- **Rationale**: These are the spec's edge cases. One parser serves every entry point. The
+  resource type check needs the definitions, so it is made where a context is at hand, not by
+  `SchemaSets.fromJson` or `read_schemas`, which have none.
 
 ## R11. Testing strategy (ADR-0007)
 
@@ -206,16 +259,15 @@ sourceData`. `FileSource.load` applies it after `LayoutDetector.check`. `FileSou
     1. **Load tests** (FR-021a, SC-003): for every source and encode path, the output schema
        equals the given PoF base schema plus the configured annotations, including for batches
        missing schema elements and batches carrying extra elements. "Equals" is the schema
-       equality of spec SC-002, implemented once per binding as a test helper
-       (`SchemaEquality` in Java, `schema_equality.py` in Python, `helper_schema_equality.R` in
-       R).
+       equality of spec SC-002, implemented once per binding as a test helper (`SchemaEquality`
+       in Java, `schema_equality.py` in Python, `helper_schema_equality.R` in R).
     2. **Path parity** (FR-009, SC-004): JSON = XML = stored Parquet.
-    3. **Absence** (FR-021, SC-005): extend `AbsentElementTest` and its peers to any position kind
-       not yet covered. The survey found:
-        - existing coverage of top-level, nested, choice, metadata-group, annotation, recursion and
-          one-sided combinations;
-        - gaps in a repeating complex element absent on both sides of a combination, and an absent
-          primitive metadata group inside a repeating complex element.
+    3. **Absence** (FR-021, SC-005): extend `AbsentElementTest` and its peers to any position
+       kind not yet covered. The survey found:
+        - existing coverage of top-level, nested, choice, metadata-group, annotation, recursion
+          and one-sided combinations;
+        - gaps in a repeating complex element absent on both sides of a combination, and an
+          absent primitive metadata group inside a repeating complex element.
     4. **YAML suites on defined reads** (FR-021b), in the regular build, for both
        `YamlReferenceImplTest` (fhirpath.js) and `YamlFhirPathTest` (ptl). Today a case loads
        one of two ways (`YamlTestArgumentProvider`, lines 137–197):
@@ -224,26 +276,25 @@ sourceData`. `FileSource.load` applies it after `LayoutDetector.check`. `FileSou
           or an inline subject with a valid `resourceType`) goes through `FhirResolverFactory` to
           `PofDatasets.fromJson`, and so to `FhirReader.json().read(type, Dataset<String>)` with
           inference.
-        - **Path 2**: any other subject goes through `ArbitraryObjectResolverFactory`, which builds
-          a definition from the YAML (`YamlSupport.yamlToDefinition`) and a hand-built stored
-          schema (`YamlSupport.definitionToStruct(def, subject)`, with `storedType` and
+        - **Path 2**: any other subject goes through `ArbitraryObjectResolverFactory`, which
+          builds a definition from the YAML (`YamlSupport.yamlToDefinition`) and a hand-built
+          stored schema (`YamlSupport.definitionToStruct(def, subject)`, with `storedType` and
           `storedCodingType`), and reads with `spark.read().schema(...).json(...)`, bypassing
           `FhirReader`.
 
         The new design changes both:
         - **Path 2** reads through
-          `FhirReader.of(spark, DefaultDefinitionContext.of(subjectDefinition), config).json()
-.read(code, docs, definitionToStruct(subjectDefinition))`: a defined read with the schema
-          derived from the definition alone. `FhirReader` accepts any `DefinitionContext`. The
-          `YamlSupport` helpers that served only the hand-built stored layout (`storedType`,
-          `storedCodingType`, the subject-pruned `definitionToStruct` overload, and `subjectToJson`
-          if no longer needed) are removed once a check of their usages, including
-          `YamlTestRunnerTest`, shows nothing else needs them.
+          `FhirReader.of(spark, DefaultDefinitionContext.of(subjectDefinition), config).json().read(code, docs, definitionToStruct(subjectDefinition))`:
+          a defined read with the schema derived from the definition alone. `FhirReader` accepts
+          any `DefinitionContext`. The `YamlSupport` helpers that served only the hand-built
+          stored layout (`storedType`, `storedCodingType`, the subject-pruned
+          `definitionToStruct` overload, and `subjectToJson` if no longer needed) are removed once
+          a check of their usages, including `YamlTestRunnerTest`, shows nothing else needs them.
         - **Path 1** loads each case with a defined schema: the schema inferred from all of the
           suite's input resources of the case's type, merged by name with the case's own inferred
           schema, so it is always at least as wide as the data. It is derived at test time and
-          cached per suite and type. Nothing is checked in. The inferred load stays covered by the
-          `io` and `library-api` tests.
+          cached per suite and type. Nothing is checked in. The inferred load stays covered by
+          the `io` and `library-api` tests.
 
         A case whose result changes is an engine or reader defect to fix or, if it is a genuine
         conformance gap, an entry in the exclusion baselines (the `pathling-yaml-exclusions`
@@ -281,3 +332,27 @@ sourceData`. `FileSource.load` applies it after `LayoutDetector.check`. `FileSou
   which is out of scope. On the NDJSON sink it would drop content from the output.
 - **Alternatives considered**: A schema set on every sink, in the first draft (the old FR-011).
   Removed for the reasons above.
+
+## R14. Field order of the output
+
+- **Decision**: The output of a load with a defined schema keeps the defined schema's field order at
+  every depth. The ingest walk builds canonical order, so its output is reordered by name into the
+  defined order, with the by-name projector of R6; for a canonical schema this is a no-op, because
+  the projector leaves a struct that already has the target type untouched. Fields the
+  configuration adds keep their canonical place: annotations last in their struct, a metadata group
+  holding only annotations right after its primitive. A canonicalisation function (FR-027) sorts a
+  schema set into canonical field order using the canonical structure of `fhir-schema`, without
+  reading data.
+- **Rationale**: Nothing in Pathling depends on field order: sinks, decoding, FHIRPath combining and
+  every storage write match by name ([field-order.md](evidence/field-order.md)). Order matters only
+  to positional operations users run against an existing table, whose order is often not canonical
+  because storage keeps the first writer's order and evolution adds fields last. Keeping the given
+  order makes such a load line up with that table with no further step, and matches Spark's own
+  `spark.read.schema(...)` and `from_json`. A user who wants canonical order canonicalises the
+  schema once, when it is written.
+- **Alternatives considered**: Always produce canonical order. It keeps "every Pathling struct is
+  canonical" (FR-057 of 001), but a user matching an existing non-canonical table would need
+  `df.to(schema)` after every load. `Dataset.to` was confirmed to reorder nested structs, arrays and
+  maps of structs by name, so it would work, but it is a step on every load in place of one on each
+  schema. The cost of the decision is that FR-057 of 001 and ADR-0002 gain an exception, and two
+  lakes loaded with schemas in different orders differ physically.

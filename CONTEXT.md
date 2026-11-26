@@ -46,7 +46,8 @@ _Avoid_: full schema, complete schema, dense schema
 
 **PoF schema**:
 A subset of the uber-schema: every field it carries sits at a path of the
-uber-schema with that path's type, in canonical field order.
+uber-schema with that path's type. Its fields may be in any order; a PoF schema
+in canonical field order is canonical.
 _Avoid_: valid schema
 
 **Inferred schema**:
@@ -55,9 +56,10 @@ uber-schema the data populates. The default.
 _Avoid_: fitted schema, pruned schema, sparse schema
 
 **Defined schema**:
-A schema the user supplies for a resource type, used in place of the inferred
-schema. It selects elements and the definition set types them, so a load always
-produces a PoF schema, equal to the defined schema when that is a PoF schema.
+A PoF schema the user supplies for a resource type, used in place of the
+inferred schema. It selects the elements a load keeps, and the load's base schema
+equals it, in its field order. A defined schema that is not a PoF schema is
+refused, as an inferred one is.
 _Avoid_: explicit schema, user schema, dense schema
 
 **Generated schema**:
@@ -66,8 +68,10 @@ nesting, extension and open-type bounds. Not yet implemented.
 _Avoid_: dense schema
 
 **Schema set**:
-A mapping from resource type code to schema, in Spark's JSON form. Returned by
-every data source and accepted by every source.
+A mapping from resource type code to schema: a map of Spark struct types (in R,
+of strings holding their JSON form). Returned by every data source and accepted
+by every source. Kept on disk as a schema set file, one JSON object mapping each
+resource type code to its schema in Spark's JSON form.
 
 **Base schema**:
 A schema without its annotations. Primitive metadata groups are part of it.
@@ -88,8 +92,29 @@ can also perform from the element itself. Optional by definition.
 The id and extensions belonging to a primitive element, stored beside it.
 
 **Canonical field order**:
-Definition order, restricted to the fields present, with annotations and the
-primitive metadata group at fixed positions beside the element they accompany.
+The order of the elements in the StructureDefinition of the type, for the FHIR
+version in use, restricted to the fields present, with Pathling's own rules for
+the fields FHIR does not define: `resourceType` first; a choice element expanded
+in place, in the order of its types; a primitive's metadata group (`_x`)
+immediately after the primitive, holding `id` and `extension`; annotations
+last, a primitive's in its metadata group and a complex element's in its own
+struct.
+Pathling reads the definitions through HAPI's model of them, which stands in for
+the StructureDefinitions; where HAPI has no order, as for the types of an open
+choice, the order is taken from the R4 StructureDefinition. Deriving it from the
+StructureDefinitions directly is #3006.
+
+**Equal schemas**:
+Schemas with the same fields, names and types, in the same order at every
+depth, ignoring nullability and field metadata.
+
+**Equivalent schemas**:
+Schemas whose canonical forms are equal: equal up to field order.
+
+**Canonicalisation**:
+Reordering a schema's fields into canonical field order at every depth, without
+changing any name or type. It needs only the schema and the definition set.
+_Avoid_: normalisation
 
 **Finding**:
 A report of source content the layout does not store: content the definition

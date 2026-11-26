@@ -53,9 +53,10 @@ uses.
 ### Tests ⚠️ write first, confirm failing
 
 - [ ] T005 [P] Test schema-set parsing in `io/…/io/SchemaSetTest.java`:
-    - parsing from a JSON string and from a map;
+    - building from a map of `StructType`, and parsing a schema set file's content (data-model.md);
     - an unknown resource type key is refused with an error naming the key;
-    - a malformed or non-struct schema is refused with an error naming the type;
+    - in parsed content, a value that is not a struct, or is malformed, is refused with an error
+      naming the type;
     - an empty set equals no set.
 - [ ] T006 [P] Test the by-name projector in `io/…/io/ProjectionTest.java`:
     - extra fields are dropped and missing fields are added as typed nulls, at the top level and
@@ -63,20 +64,34 @@ uses.
     - a null struct stays null;
     - field order follows the target.
 
-    A leaf type mismatch is left untested here; #2884 decides it.
+    A leaf type clash is not tested here: it never reaches the projector, because a stored
+    source checks its stored schema first (FR-006c, T019).
 
 - [ ] T007 [P] Test observed-shape and layout-schema derivation in
       `io/…/io/DefinedSchemaLogicTest.java`:
     - each primitive kind maps to its ingest type, with decimal as fixed by T003;
     - metadata groups, choice types, and repeating and singular complex elements are mapped;
     - annotation fields are skipped;
-    - undescribed fields are dropped at the top level and nested, with no exception;
-    - the layout schema equals the base schema for a PoF schema (FR-008);
-    - a non-PoF schema yields a PoF schema.
+    - a schema that is not a PoF schema is refused by #2884's check with an error naming the
+      resource type and path, with no Spark job (FR-006b): a field the definitions do not
+      describe, at the top level and nested; a field whose type contradicts them; and a field
+      whose cardinality contradicts them, a singular element given as an array and the reverse;
+    - annotation fields that the definitions do not describe are not refused (FR-006b, FR-007);
+    - the layout schema equals the base schema for a PoF schema (FR-008), including one whose
+      fields are out of canonical order at the top level and inside a struct, an array of structs
+      and a primitive metadata group, which keeps that order (SC-009);
+    - with annotations enabled, they go last in their struct, and a metadata group holding only
+      annotations goes right after its primitive, whatever the given order (FR-008);
+    - a given schema with non-nullable fields and field metadata yields every field nullable and
+      none of the given metadata, as an inferred load does (FR-008).
 - [ ] T008 [P] Test defined-schema reads in `io/…/io/DefinedSchemaReadTest.java`, for JSON files,
       JSON documents, JSON bundles, XML documents and XML bundles:
     - elements the batch lacks are present and null;
-    - content the schema lacks is dropped with no error (FR-006);
+    - content the schema lacks is dropped with no error (FR-006), including content the
+      definitions do not describe, which a read of the same data without a schema fails on
+      (#2884);
+    - a schema that is not a PoF schema fails the read with an error naming the resource type and
+      path (FR-006b);
     - annotations follow the configuration, whatever annotations the schema carries (FR-007);
     - metadata groups follow the schema whatever the primitive metadata option (edge case);
     - a read without a schema is unchanged (FR-020).
@@ -102,15 +117,18 @@ uses.
 
 ### Implementation
 
-- [ ] T012 [P] Implement `SchemaSet` (`parse(String)`, `of(Map<String, String>)`, lookup by type,
-      validation against the definitions) in `io/src/main/java/au/csiro/pathling/io/SchemaSet.java`.
+- [ ] T012 [P] Implement the internal `SchemaSet` (`parse(String)`, `of(Map<String, StructType>)`,
+      lookup by type, validation against the definitions) in
+      `io/src/main/java/au/csiro/pathling/io/SchemaSet.java` (research R10).
 - [ ] T013 [P] Implement `Projection.project(Dataset<Row>, StructType)` in
       `io/src/main/java/au/csiro/pathling/io/Projection.java`, extracted from
       `DeltaSink.conformToTarget`/`conformColumn`/`conformFields`.
 - [ ] T014 Replace `DeltaSink`'s private conform methods with `Projection` in
       `library-api/src/main/java/au/csiro/pathling/library/io/sink/DeltaSink.java`. Run
       `NarrowMergeTest` and `DeltaSchemaMergingTest` unchanged.
-- [ ] T015 Implement the observed-shape derivation, skipping undescribed and annotation fields, in
+- [ ] T015 Refuse a defined schema that is not a PoF schema with #2884's check, ignoring its
+      annotation fields (FR-006b), and implement the observed-shape derivation, skipping
+      annotation fields, in
       `io/src/main/java/au/csiro/pathling/io/ResourceTransformer.java`. On a defined-schema read
       the walk keeps or drops each primitive metadata group as the schema says and does not
       consult `storePrimitiveMetadata` (today checked in `ResourceTransformer`'s primitive and
@@ -133,7 +151,7 @@ schema)` and `layoutSchema(type, schema)` in
 - [ ] T018 [P] Implement the schema-equality helpers that T011 tests:
       `library-api/src/test/java/au/csiro/pathling/library/io/SchemaEquality.java` (removing
       annotation fields with `AnnotationNames.isAnnotation`),
-      `lib/python/tests/schema_equality.py` (`same_schema`, `same_schema_set`, over the JSON form)
+      `lib/python/tests/schema_equality.py` (`same_schema`, `same_schema_set`, over `StructType`)
       and `lib/R/tests/testthat/helper_schema_equality.R`, which testthat loads before every test
       file.
 
@@ -159,10 +177,16 @@ set and appended to Delta, leave the table's schema equal to the set.
       for batches missing schema elements and batches carrying extra ones (FR-001,
       FR-006–FR-008, SC-003);
     - a partial set projects the named types and infers the rest (FR-010);
+    - a schema that is not a PoF schema fails the read with an error naming the resource type and
+      path (FR-006b);
+    - for parquet, delta, tables and datasets, a stored type that clashes with the definitions,
+      such as `Patient.birthDate` stored as `int`, fails the read with a schema set as it does
+      without one, with an error naming the resource type and path (FR-006c);
     - for ndjson and bundles (JSON and XML), the dataset returned for a named type is shaped once:
       it has the same analysed plan (`sameResult`) as the `io` defined read of T016 or T017 on
       the same input with the same schema, with no `Projection` or `Annotator` step on top;
-    - `withSchemas` accepts a JSON string and a map (FR-005);
+    - `withSchemas` accepts a `Map<String, StructType>`, including more than ten types (FR-004,
+      FR-005);
     - `parquetWithSchemas` is gone (FR-003).
 - [ ] T020 [P] [US1] Test writing data loaded with a schema set in
       `library-api/src/test/java/au/csiro/pathling/library/io/sink/DefinedSchemaWriteTest.java`:
@@ -174,18 +198,21 @@ set and appended to Delta, leave the table's schema equal to the set.
     - a Delta merge of data loaded with a narrower schema nulls the missing fields of matched rows
       (edge case);
     - an append of data whose schema differs from the table's widens it (edge case).
-- [ ] T021 [P] [US1] Test the Python sources with schema sets given as a dict and as a
-      JSON string, including more than ten types, and the refusal of a Spark `StructType` (FR-004),
-      in `lib/python/tests/test_defined_schemas.py`. Compare output schemas with
+- [ ] T021 [P] [US1] Test the Python sources with schema sets given as a `dict[str, StructType]`,
+      including more than ten types, and the refusal of a value that is not a `StructType`, such
+      as a dict or a JSON string, with an error naming its key (FR-004), in
+      `lib/python/tests/test_defined_schemas.py`. Compare output schemas with
       `same_schema_set` from `lib/python/tests/schema_equality.py`.
-- [ ] T022 [P] [US1] Test the R sources with schema sets given as a named list and as a
-      JSON string, including more than ten types, in `lib/R/tests/testthat/test-defined-schemas.R`.
+- [ ] T022 [P] [US1] Test the R sources with schema sets given as a named list of strings, each a
+      struct type's JSON form, including more than ten types, and the refusal of a string that is
+      not a struct type's JSON form with an error naming its key (FR-004), in
+      `lib/R/tests/testthat/test-defined-schemas.R`.
       Compare output schemas with the helper of `lib/R/tests/testthat/helper_schema_equality.R`.
 
 ### Implementation for User Story 1
 
-- [ ] T023 [US1] Add `withSchemas(String)` and `withSchemas(Map<String, String>)`, remove
-      `parquetWithSchemas`, and pass the parsed `SchemaSet` to every source constructor, in
+- [ ] T023 [US1] Add `withSchemas(Map<String, StructType>)`, remove `parquetWithSchemas`, and pass
+      the `SchemaSet` built with `SchemaSet.of` to every source constructor, in
       `library-api/src/main/java/au/csiro/pathling/library/io/source/DataSourceBuilder.java`.
 - [ ] T024 [US1] Project each named type, with `Projection` then `Annotator`, in the transformer
       function that `ParquetSource` and `DeltaSource` pass to the `FileSource` constructor, today
@@ -193,12 +220,13 @@ set and appended to Delta, leave the table's schema equal to the set.
       `library-api/src/main/java/au/csiro/pathling/library/io/source/ParquetSource.java` and
       `library-api/src/main/java/au/csiro/pathling/library/io/source/DeltaSource.java`.
       `FileSource.load` applies it after `LayoutDetector.check` and is not changed, since
-      `NdjsonSource` and `BundlesSource` share it (research R6). Drop the `.schema(...)` binding
+      `NdjsonSource` and `BundlesSource` share it (research R6). The stored schema passes #2884's
+      check first, as in a read without a schema; a schema set does not skip it (FR-006c). Drop the `.schema(...)` binding
       from `ParquetSource.readerFor`. Log at debug level the paths of the stored schema that the
       defined schema drops, found by comparing the two schemas only, with no Spark job and no
       per-row work (FR-006a). There is no dedicated logging test.
-- [ ] T025 [P] [US1] Project each named type the same way, logging the dropped paths at debug
-      level as T024 does (FR-006a): in `CatalogSource.read`, after `LayoutDetector.check` and
+- [ ] T025 [P] [US1] Project each named type the same way, after #2884's check of the stored
+      schema (FR-006c), logging the dropped paths at debug level as T024 does (FR-006a): in `CatalogSource.read`, after `LayoutDetector.check` and
       before `universalOperator`, in
       `library-api/src/main/java/au/csiro/pathling/library/io/source/CatalogSource.java`; and in
       `DatasetSource.dataset(type, df)`, where a dataset is registered, in
@@ -209,15 +237,17 @@ set and appended to Delta, leave the table's schema equal to the set.
       `library-api/src/main/java/au/csiro/pathling/library/io/source/NdjsonSource.java`,
       `BundlesSource.java` and `BulkDataSource.java` (same directory). These reads do not detect
       or log dropped content (FR-006a).
-- [ ] T027 [US1] Add the `schemas=` keyword, accepting a dict or a JSON string, to every reader in
-      `lib/python/pathling/datasource.py`. Replace the `StructType` form of `parquet(..., schemas=)`.
+- [ ] T027 [US1] Add the `schemas=` keyword, accepting a `dict[str, StructType]`, to every reader in
+      `lib/python/pathling/datasource.py`, refusing any other value. `parquet(..., schemas=)`
+      already takes this form; it now applies to every reader, and its separate path to
+      `parquetWithSchemas` is replaced by `withSchemas`.
       Place `schemas` before `layout_detection` on `parquet`, `delta` and `tables`, as in
       `contracts/python-api.md`.
-- [ ] T028 [US1] Add the `schemas` argument, accepting a named list or a JSON string, to every
-      reader in `lib/R/R/datasource.R`. Replace `to_java_schema_map` and its `Map.of`
-      cap with a JSON string conversion that writes an empty field `metadata` as `{}`, not `[]`
-      (the hand-built case of T038). Place `schemas` before `layout_detection` on the parquet,
-      delta and tables readers, as in `contracts/r-api.md`.
+- [ ] T028 [US1] Add the `schemas` argument, accepting a named list of strings, each a struct
+      type's JSON form, to every reader in `lib/R/R/datasource.R`. Replace `to_java_schema_map` and
+      its `Map.of` cap with a conversion that passes the strings to the JVM unchanged (research
+      R10), with no limit on their number. Place `schemas` before `layout_detection` on the
+      parquet, delta and tables readers, as in `contracts/r-api.md`.
 
 **Checkpoint**: T019–T022 pass. US1 independent test passes.
 
@@ -239,7 +269,9 @@ Parquet, is read back through Pathling.
       return a streaming dataset with the layout schema (FR-012);
     - without a schema, the encode is refused with `UnsupportedOperationException`, as today, and
       the message of research R12, which keeps the `foreachBatch` recommendation (FR-013);
-    - a batch `encode` with a schema gives the schema's output (FR-002).
+    - a batch `encode` with a schema gives the schema's output (FR-002);
+    - `encode` and `encodeBundle` with a schema that is not a PoF schema fail with an error naming
+      the resource type and path (FR-006b).
 - [x] T030 Removed with FR-014: the read-back of a raw `writeStream` is not tested.
 - [ ] T031 [P] [US2] Test streaming `encode` and `encode_bundle` with a schema, and the refusal
       without one, in `lib/python/tests/test_encoders.py`.
@@ -248,14 +280,17 @@ Parquet, is read back through Pathling.
 
 ### Implementation for User Story 2
 
-- [ ] T033 [US2] Add the `encode` and `encodeBundle` overloads with a schema, route them to the
+- [ ] T033 [US2] Add the `encode` and `encodeBundle` overloads with a `@Nullable StructType` schema,
+      route them to the
       defined-schema reader, and allow streams only when a schema is given, keeping
       `UnsupportedOperationException` with the new refusal message, in
       `library-api/src/main/java/au/csiro/pathling/library/PathlingContext.java`.
 - [x] T034 Removed with T030.
-- [ ] T035 [P] [US2] Add the `schema=` keyword to `encode` and `encode_bundle` in
+- [ ] T035 [P] [US2] Add the `schema=` keyword, taking a `StructType`, to `encode` and
+      `encode_bundle` in
       `lib/python/pathling/context.py`.
-- [ ] T036 [P] [US2] Add the `schema` argument to `pathling_encode` and `pathling_encode_bundle` in
+- [ ] T036 [P] [US2] Add the `schema` argument, taking a struct type's JSON form as a string, to
+      `pathling_encode` and `pathling_encode_bundle` in
       `lib/R/R/encoding.R`.
 
 **Checkpoint**: T029–T032 pass.
@@ -264,8 +299,8 @@ Parquet, is read back through Pathling.
 
 ## Phase 5: User Story 4 - Take a schema set from existing data (Priority: P2)
 
-**Goal**: Every source returns its schema set, and the set round-trips through JSON into every
-source.
+**Goal**: Every source returns its schema set, and the set round-trips through a schema set file
+into every source.
 
 **Independent Test**: For every source, `schemas()` round-tripped through a file is accepted by
 every source.
@@ -276,25 +311,74 @@ every source.
       `library-api/src/test/java/au/csiro/pathling/library/io/source/SourceSchemasTest.java`:
     - `schemas()` on every source has one entry for each type held (FR-017);
     - a Parquet source with differing files returns the merged schema (FR-018);
-    - a set written to a JSON file and read back is accepted by every source, and each source's
-      output schema set is the same as it by `SchemaEquality` (FR-019, SC-007);
+    - a set written to a file with `SchemaSets.toJson` and read back with `SchemaSets.fromJson` is
+      accepted by every source, and each source's output schema set is the same as it by
+      `SchemaEquality` (FR-019, SC-007);
     - a single entry is accepted by `encode` and `encodeBundle` (FR-005).
-- [ ] T038 [P] [US4] Test `DataSource.schemas()` round trips through `json.dump`/`json.load` in
-      `lib/python/tests/test_defined_schemas.py`, and `ds_schemas()` through `jsonlite` in
+- [ ] T057 [P] [US4] Test canonicalisation in `io/…/io/DefinedSchemaLogicTest.java` and
+      `library-api/src/test/java/au/csiro/pathling/library/io/source/SourceSchemasTest.java`
+      (FR-027, SC-009):
+    - a set out of canonical order at every depth canonicalises to an equivalent set in canonical
+      order, and a canonical set is returned unchanged;
+    - choice types, open choices, metadata groups and annotations take their canonical places;
+    - a schema from an evolved Delta table canonicalises to the order an inferred load of FHIR
+      JSON gives;
+    - a field the definitions do not describe is dropped, and a key that is not a resource type
+      code is refused with an error naming it;
+    - a load with the canonicalised set gives canonical output;
+    - no Spark job runs.
+- [ ] T060 [P] [US4] Test the schema set file functions in
+      `library-api/src/test/java/au/csiro/pathling/library/SchemaSetsTest.java` (FR-028):
+    - `toJson` gives one JSON object mapping each resource type code to its `StructType.json()`
+      object (data-model.md);
+    - `fromJson(toJson(set))` equals the set exactly, field order, nullability and field metadata
+      included;
+    - malformed content, and a value that is not a struct, are refused with
+      `IllegalArgumentException`, the latter naming its key;
+    - an empty object gives an empty set.
+- [ ] T061 [P] [US4] Test `write_schemas` and `read_schemas` in
+      `lib/python/tests/test_schema_files.py` (FR-028):
+    - a set written and read back is equal to it;
+    - the file written parses to the same JSON object as `SchemaSets.toJson` of the same set, and
+      a file written from `SchemaSets.toJson` is read to the same set, so files cross bindings;
+    - a malformed file is refused with an error naming the file, and a value that is not a struct
+      with an error naming its key;
+    - both run without a Spark session.
+- [ ] T062 [P] [US4] Test `pathling_write_schemas` and `pathling_read_schemas` in
+      `lib/R/tests/testthat/test-schema-files.R`, with the cases of T061 other than the last
+      (FR-028).
+- [ ] T038 [P] [US4] Test that `DataSource.schemas()` round trips through `write_schemas` and
+      `read_schemas` into every source in `lib/python/tests/test_defined_schemas.py`, and
+      `ds_schemas()` through `pathling_write_schemas` and `pathling_read_schemas` in
       `lib/R/tests/testthat/test-defined-schemas.R`, comparing with each binding's schema-equality
-      helper. The R test also passes a hand-built schema, written as an R list with empty field
-      metadata, to a source, because `jsonlite` serialises an empty unnamed `list()` as `[]`
-      where Spark expects `"metadata": {}`.
+      helper (FR-019, SC-007).
 
 ### Implementation for User Story 4
 
 - [ ] T039 [US4] Add `schemas()` to
       `library-api/src/main/java/au/csiro/pathling/library/io/source/QueryableDataSource.java`, and
       implement it once in `AbstractSource.java` (same directory).
-- [ ] T040 [P] [US4] Add `DataSource.schemas()` in `lib/python/pathling/datasource.py` and
-      `ds_schemas()` in `lib/R/R/datasource.R`.
+- [ ] T040 [P] [US4] Add `DataSource.schemas()`, returning `dict[str, StructType]`, in
+      `lib/python/pathling/datasource.py`, and `ds_schemas()`, returning a named list of strings,
+      each a struct type's JSON form, in `lib/R/R/datasource.R`.
+- [ ] T058 [US4] Implement canonicalisation in `io/…/io/DefinedSchemaLogic.java`, sorting each
+      struct by the canonical structure, and expose it in `library-api` as
+      `PathlingContext.canonicalSchemas(Map<String, StructType>)`, returning
+      `Map<String, StructType>` (FR-027).
+- [ ] T059 [P] [US4] Expose canonicalisation as `pc.canonical_schemas(schemas)`, taking and
+      returning `dict[str, StructType]`, in Python, and as `pathling_canonical_schemas(pc, schemas)`,
+      taking and returning a named list of strings, in R, with a test in each binding that a set
+      out of order canonicalises to the inferred load's order (FR-027).
+- [ ] T063 [US4] Implement `SchemaSets.toJson` and `SchemaSets.fromJson`, delegating parsing to
+      `SchemaSet.parse`, in `library-api/src/main/java/au/csiro/pathling/library/SchemaSets.java`
+      (FR-028, research R7, R10).
+- [ ] T064 [P] [US4] Implement `write_schemas` and `read_schemas` in pure Python, over
+      `StructType.json()` and `StructType.fromJson`, in `lib/python/pathling/schemas.py`, and
+      export them from `lib/python/pathling/__init__.py` (FR-028).
+- [ ] T065 [P] [US4] Implement `pathling_write_schemas` and `pathling_read_schemas` in
+      `lib/R/R/schemas.R`, and export them (FR-028).
 
-**Checkpoint**: T037–T038 pass.
+**Checkpoint**: T037, T038, T057 and T060–T062 pass.
 
 ---
 
@@ -361,12 +445,17 @@ every source.
 
 - [ ] T049 [P] Rewrite the schema documentation for defined schemas in every binding in
       `site/docs/libraries/io/schema.md`:
-    - getting, saving and passing a schema set;
+    - getting, saving and passing a schema set, with the schema set file functions (FR-028);
     - loss of content outside the schema with no error (logged at debug level only for stored
       sources, FR-006a), and wide schemas as the remedy;
     - annotations follow the configuration, and metadata follows the schema;
     - Delta merge narrowing;
-    - output equals the given schema only for a PoF schema;
+    - a schema that is not a PoF schema is refused;
+    - NDJSON, bundle, XML and streaming reads with a schema drop content the schema has no field
+      for silently, where a read without a schema fails fast (#2884), while stored reads check the
+      stored schema either way;
+    - output keeps the given field order, canonicalising a set to get canonical order, and a read
+      without a schema keeping the stored order;
     - bootstrapping a set from a sample (FR-022, FR-023).
 
     Replace the "streaming dataset cannot be encoded" paragraph and the "fitted to the data" section.
@@ -382,7 +471,8 @@ every source.
 - [ ] T052 Run the streaming example of T051 against a file-based stream and record that it runs
       in `specs/2881_defined-schemas/evidence/streaming-example.md` (SC-008).
 - [ ] T053 [P] File GitHub issues for the schema generator (including the 10.x shaping options as
-      shortcuts), a schema validator, and Delta idempotent writes, with the PoF_line label. Record
+      shortcuts) and Delta idempotent writes, with the PoF_line label. Checking a schema against
+      the uber-schema is #2884's work, not a follow-up. Record
       their numbers under Out of Scope in `specs/2881_defined-schemas/spec.md` (FR-025).
 - [ ] T054 [P] Point 001's dense-mode tickets, and its FR-009, FR-010, FR-017, FR-043 streaming
       clause and FR-044, at this specification or the generator issue (FR-026). The files are
@@ -402,6 +492,10 @@ every source.
 
 - **Setup (T001–T004)**: T001 has no dependencies. T002 and T003 feed T007 and T015–T017. T004
   is done and adds no tasks.
+- **#2884**: its check of a schema against the uber-schema must land first. The refusal of a
+  schema that is not a PoF schema (T015, and the refusal cases of T007, T008, T019 and T029) and
+  the check of stored schemas under a schema set (T024, T025, and the stored-clash case of T019)
+  reuse it, as does the case of T008 that a read without a schema fails on.
 - **Foundational (T005–T018)**: depends on T002 and T003. Blocks every story.
     - Tests T005–T011 run in parallel.
     - T012 and T013 run in parallel.
@@ -413,8 +507,12 @@ every source.
     - T023 precedes T024–T026.
     - T027 and T028 follow T023.
 - **US2 (T029–T036)**: depends on Foundational. T035 and T036 follow T033.
-- **US4 (T037–T040)**: T037's round trip into sources depends on US1 (T023).
-  `schemas()` itself (T039) does not.
+- **US4 (T037–T040, T057–T065)**: T037's round trip into sources depends on US1 (T023).
+  `schemas()` itself (T039) does not. T058 follows T015; T059 follows T058.
+    - T060–T062 are written and seen to fail before T063–T065.
+    - T063 follows T012, and T037 uses it.
+    - T064 and T065 do not depend on T063, but the cross-binding cases of T061 and T062 need it.
+    - T038 uses T064 and T065, and also follows T027, T028 and T040.
 - **Engine parity (T041–T048)**: T041, T042 and T043 can start any time. T044 and T045 are written
   and seen to fail before T046 and T047, which depend on T016. T048 follows T046 and T047.
 - **Polish (T049–T056)**: the docs follow the APIs they describe (T049 and T050 after US1 and US4,

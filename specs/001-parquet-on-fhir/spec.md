@@ -35,9 +35,9 @@ appear:
 - the dense schema mode and streaming encode: FR-009's dense schema, FR-010,
   FR-016's exception 4, FR-017, FR-043's streaming clause and FR-044, User Story
   4's scenario 7, the dense subset of SC-002, and SC-010;
-- deciding the annotation step's *fill* per row. Until then, *fill* keeps a
+- deciding the annotation step's _fill_ per row. Until then, _fill_ keeps a
   stored annotation that is null beside its value, as in a table merged from
-  annotated and unannotated sources, and *recompute* repairs it.
+  annotated and unannotated sources, and _recompute_ repairs it.
 
 ## Why
 
@@ -405,21 +405,22 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   `JSON → storage → JSON` round trip MUST produce a semantically equal resource,
   with object key order ignored, array order significant and numbers compared
   numerically, subject to these exceptions, each dropped silently:
-  1. `contained` resources (FR-006) and `Bundle` (FR-007);
-  2. an inline resource held by an element declared as the abstract
-     `Resource`, such as `Parameters.parameter.resource`;
-  3. primitive ids and extensions, when the ingest option that stores them (ticket 17)
-     is off, as it is by default;
-  4. on a dense schema, content beyond the configured nesting, extension and
-     open-type bounds (FR-017, deferred);
-  5. `base64Binary` whitespace, which decoding and re-encoding canonicalises.
+    1. `contained` resources (FR-006) and `Bundle` (FR-007);
+    2. an inline resource held by an element declared as the abstract
+       `Resource`, such as `Parameters.parameter.resource`;
+    3. primitive ids and extensions, when the ingest option that stores them (ticket 17)
+       is off, as it is by default;
+    4. on a dense schema, content beyond the configured nesting, extension and
+       open-type bounds (FR-017, deferred);
+    5. `base64Binary` whitespace, which decoding and re-encoding canonicalises.
 
-  OQ-1 lists further exceptions that hold until ticket 16 decides
-  otherwise. Content the definition set does not describe, or whose JSON type
-  contradicts it, is not conformant input, so it is outside the guarantee
-  rather than an exception to it (FR-063). The round trip through XML is held
-  to the same guarantee.
-  Evidence: [null-and-empty-handling.md](evidence/null-and-empty-handling.md).
+    OQ-1 lists further exceptions that hold until ticket 16 decides
+    otherwise. Content the definition set does not describe, or whose JSON type
+    contradicts it, is not conformant input, so it is outside the guarantee
+    rather than an exception to it (FR-063). The round trip through XML is held
+    to the same guarantee.
+    Evidence: [null-and-empty-handling.md](evidence/null-and-empty-handling.md).
+
 - **FR-017**: On a dense schema the guarantee in FR-016 MUST hold within the
   configured nesting, extension and open-type bounds. What those bounds drop is
   an exception to the guarantee (FR-016), and is not reported. _Deferred
@@ -429,7 +430,7 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   positional nulls, which align with its metadata group. A value array that
   holds only nulls beside a metadata group is omitted all the same, as the
   source of a primitive carried only as `_x` had no `x` (ticket 17).
-  *(Subject to OQ-1.)*
+  _(Subject to OQ-1.)_
 - **FR-063**: Ingest and the engine run in `trust` (decision 133's addendum of
   2026-10-22). Ingest assumes its input is conformant and checks nothing: its
   behaviour on non-conformant content is undefined, and it may fail the read,
@@ -507,8 +508,10 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   MUST be reconciled by projecting each by name into the merged type, never by
   a cast ([ADR-0002](../../docs/adr/0002-reconcile-shapes-by-name.md)).
 - **FR-057**: Every struct type Pathling produces MUST be in canonical field
-  order. A schema obtained from storage may carry any order; FR-056 reconciles
-  it by name. Operands that already share a type are left unprojected.
+  order, except the output of a read with a defined schema, which follows that
+  schema's order (FR-008 of `specs/2881_defined-schemas/`, ADR-0008). A schema
+  obtained from storage may carry any order; FR-056 reconciles it by name.
+  Operands that already share a type are left unprojected.
 - **FR-058**: The merged type MUST be the recursive field-wise union of the
   inputs, and one implementation MUST serve both FR-056 and FR-041.
 - **FR-059**: A complex value of a FHIR type MUST leave the engine in the fitted
@@ -678,31 +681,32 @@ reconciliation, legacy export, layout column.
   ingest spike (ticket 08). Its outcome decides the following, each stated here
   as the target with today's behaviour as the fallback if the rework does not
   remove it:
-  - the decimal's lexical form (FR-002). Today a number passes through a double,
-    so trailing zeros, exponent notation and precision beyond a double are not
-    preserved;
-  - the granularity of a contradicting value (FR-063). Today a primitive
-    column that Spark widens for a contradicting value is cast to the declared
-    type one value at a time, so the conformant values in it survive, and the
-    contradicting value may become null, fail the read or be stored wrong;
-  - empty structures and null-only arrays on export (FR-019). Today what is
-    stored for a structure emptied by non-conformant content is undefined
-    (FR-063), and it may be written as `{}`;
-  - a value a converter cannot store, such as an integer beyond the range of an
-    int, which today becomes null.
+    - the decimal's lexical form (FR-002). Today a number passes through a double,
+      so trailing zeros, exponent notation and precision beyond a double are not
+      preserved;
+    - the granularity of a contradicting value (FR-063). Today a primitive
+      column that Spark widens for a contradicting value is cast to the declared
+      type one value at a time, so the conformant values in it survive, and the
+      contradicting value may become null, fail the read or be stored wrong;
+    - empty structures and null-only arrays on export (FR-019). Today what is
+      stored for a structure emptied by non-conformant content is undefined
+      (FR-063), and it may be written as `{}`;
+    - a value a converter cannot store, such as an integer beyond the range of an
+      int, which today becomes null.
 
-  _Interim answer (decision 134)_: the spike measured four candidates and
-  reported without a choice, which is deferred to ticket 16. Until then every
-  loss above is kept, as today's behaviour, on JSON and on XML alike, except
-  that XML keeps a decimal's lexical form (decision 134's note of 2026-10-22). In
-  addition, empty values are handled as Spark's reader handles them. `{}` is
-  dropped silently, and so are `null` and `[]`. In
-  a batch, `[]` can instead be stored as an empty array and `{}` as a present
-  structure holding nothing. `""` is stored. Malformed base64 becomes null. On JSON only, a malformed document is accepted silently:
-  text after the object is ignored, a top-level array becomes several
-  resources, and a duplicate key keeps its last value. XML fails the read on
-  its malformed cases, so the two formats differ here until ticket 16. The
-  per-value scope of decision 133 does not apply.
+    _Interim answer (decision 134)_: the spike measured four candidates and
+    reported without a choice, which is deferred to ticket 16. Until then every
+    loss above is kept, as today's behaviour, on JSON and on XML alike, except
+    that XML keeps a decimal's lexical form (decision 134's note of 2026-10-22). In
+    addition, empty values are handled as Spark's reader handles them. `{}` is
+    dropped silently, and so are `null` and `[]`. In
+    a batch, `[]` can instead be stored as an empty array and `{}` as a present
+    structure holding nothing. `""` is stored. Malformed base64 becomes null. On JSON only, a malformed document is accepted silently:
+    text after the object is ignored, a top-level array becomes several
+    resources, and a duplicate key keeps its last value. XML fails the read on
+    its malformed cases, so the two formats differ here until ticket 16. The
+    per-value scope of decision 133 does not apply.
+
 - **OQ-2: Are column expressions bound to a schema?** Today a column expression
   is built without a dataset and resolves presence against whatever schema it
   meets (FR-054), which lets callers combine FHIRPath and search columns with
@@ -712,7 +716,7 @@ reconciliation, legacy export, layout column.
   answer decides FR-054, SC-010 and the fitted-versus-dense parity tests. Any
   change is weighed against SC-008.
 
-  _Answer (decision 136, owner, 2026-10-23)_: no. A column expression stays
-  unbound, as FR-054 states. The question is revisited with the support of
-  extra fields, whose implementation may need a schema the definitions do not
-  give.
+    _Answer (decision 136, owner, 2026-10-23)_: no. A column expression stays
+    unbound, as FR-054 states. The question is revisited with the support of
+    extra fields, whose implementation may need a schema the definitions do not
+    give.

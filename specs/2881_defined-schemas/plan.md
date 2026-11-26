@@ -4,21 +4,28 @@
 
 ## Summary
 
-Every source and `encode`/`encodeBundle` accept an optional defined schema per
-resource type, in Spark's JSON form. Following ADR-0008, a defined schema takes the place of the
-inferred schema: it is turned into the observed shape that the ingest walk
-(`ResourceTransformer.toLayout`) is given. The walk then types, orders and prunes it from the
-definitions exactly as it does an inferred shape. Because the read uses a fixed schema
-(`from_json` / `from_xml`), there is no inference pass, so a streaming encode works.
+Every source and `encode`/`encodeBundle` accept an optional defined schema per resource type, as a
+Spark `StructType` (in R, a string holding its JSON form). Following ADR-0008, a defined schema
+takes the place of the inferred schema: it is turned into the observed shape that the ingest walk
+(`ResourceTransformer.toLayout`) is given. The walk then types and prunes it from the
+definitions exactly as it does an inferred shape, and the result takes the defined schema's field
+order (research R14). Because the read uses a fixed schema
+(`from_json` / `from_xml`), there is no inference pass, so a streaming encode works. Before any
+of this, the defined schema passes the check of a schema against the uber-schema that #2884 adds
+for inferred schemas, and a defined schema that is not a PoF schema is refused (FR-006b).
 
 Data already in the PoF layout (Parquet, Delta, tables, datasets) is
-projected by name to the schema that the same walk yields for the defined schema. The projection
+projected by name to the schema that the same walk yields for the defined schema, after its stored
+schema passes the same #2884 check a read without a schema makes (FR-006c). The projection
 uses a Column-API projector extracted from `DeltaSink.conformToTarget`, and annotations are then
 recomputed from the configuration.
 
 The feature also adds:
 
 - `schemas()` on every source;
+- a function that canonicalises a schema set, since a load keeps the given field order (research R14);
+- functions that write a schema set to a schema set file and read it back, in every binding
+  (research R7);
 - a debug log of the paths a defined schema drops from stored data, found by comparing schemas;
 - YAML FHIRPath suites that load every case with a defined schema, in the regular build.
 
@@ -33,7 +40,10 @@ defined schema in place of the inferred one, not in addition to it.
 
 **Language/Version**: Java 21 (core modules), Python 3.10+, R 3.5+.
 **Primary Dependencies**: Apache Spark 4 SQL (Column API only in `io` and `fhir-schema`), Delta
-Lake, Py4J (Python), sparklyr and jsonlite (R).
+Lake, Py4J (Python), sparklyr (R), and jsonlite (R) for the schema set file only.
+**Depends on**: #2884, which provides the check of a schema against the uber-schema. This feature
+applies it to defined schemas and to stored schemas under a read with a defined schema, so the
+refusal tasks cannot finish before it lands.
 **Storage**: Parquet and Delta tables in the PoF layout, one table per resource type, named
 `<path>/<fileNameMapper(type)>.parquet`.
 **Testing**:
@@ -70,7 +80,10 @@ The constitution is the global `CLAUDE.md`, the project `CLAUDE.md` and `.claude
     - one projector, extracted from existing code, not new;
     - the plumbing.
 
-    There is no schema-mode enum, no validator and no cast (ADR-0008). The YAML suites take a
+    There is no schema-mode enum and no cast (ADR-0008), and no new validator: the check that
+    refuses a schema that is not a PoF schema is the one #2884 (the fail-fast check of a data
+    schema against the uber-schema) adds, reused for defined schemas and for stored schemas read
+    with one (FR-006b, FR-006c). The YAML suites take a
     defined schema in their existing resolvers, with no profile, fixture or new test mode. ✅
 
 - **Test-driven development**: every task phase starts with failing tests. Load tests
@@ -131,8 +144,9 @@ specs/2881_defined-schemas/
 
 ```text
 io/src/main/java/au/csiro/pathling/io/
-├── SchemaSet.java              # New: parses the JSON schema set, refuses unknown keys or non-structs.
-├── DefinedSchemaLogic.java     # New: PoF schema → observed shape, and → layout schema.
+├── SchemaSet.java              # New, internal: a schema set from a map or a file's content;
+│                               # refuses unknown keys or non-structs.
+├── DefinedSchemaLogic.java     # New: PoF schema → observed shape, → layout schema, and canonical form.
 ├── Projection.java             # New: by-name Column projector, extracted from DeltaSink.
 ├── ResourceTransformer.java    # Observed-shape derivation that drops undescribed fields.
 ├── FhirFormatReader.java       # read / readBundles overloads taking a defined schema.
@@ -148,7 +162,8 @@ io/src/test/java/au/csiro/pathling/io/
 └── SchemaSetTest.java               # New.
 
 library-api/src/main/java/au/csiro/pathling/library/
-├── PathlingContext.java        # encode/encodeBundle schema, streaming refusal.
+├── PathlingContext.java        # encode/encodeBundle schema, streaming refusal, canonicalSchemas.
+├── SchemaSets.java             # New: toJson/fromJson of a schema set file's content.
 ├── io/source/DataSourceBuilder.java   # withSchemas; parquetWithSchemas removed.
 ├── io/source/*Source.java      # Project named types (Parquet/Delta transformer,
 │                               # CatalogSource.read, DatasetSource.dataset), logging dropped
@@ -161,6 +176,7 @@ library-api/src/test/java/au/csiro/pathling/library/
 ├── io/sink/DefinedSchemaWriteTest.java      # New: sinks keep the source's schema.
 ├── io/SchemaEquality.java                   # New test helper: schema equality of SC-002.
 ├── io/SchemaEqualityTest.java               # New.
+├── SchemaSetsTest.java                      # New.
 └── StreamingEncodeTest.java                 # New.
 
 fhirpath/src/test/java/au/csiro/pathling/
@@ -171,12 +187,12 @@ fhirpath/src/test/java/au/csiro/pathling/
 ├── test/yaml/resolver/ArbitraryObjectResolverFactory.java  # Defined read through FhirReader.
 └── test/layout/TestSchemaMode.java   # The dense placeholder removed.
 
-lib/python/pathling/{datasource.py,context.py}
+lib/python/pathling/{datasource.py,context.py,schemas.py,__init__.py}
 lib/python/tests/{test_datasource.py,test_encoders.py,test_defined_schemas.py,
-                  schema_equality.py,test_schema_equality.py}
-lib/R/R/{datasource.R,context.R,encoding.R}
+                  test_schema_files.py,schema_equality.py,test_schema_equality.py}
+lib/R/R/{datasource.R,context.R,encoding.R,schemas.R}
 lib/R/tests/testthat/{test-datasource.R,test-encoding.R,test-defined-schemas.R,
-                      helper_schema_equality.R,test-schema-equality.R}
+                      test-schema-files.R,helper_schema_equality.R,test-schema-equality.R}
 
 site/docs/libraries/io/schema.md, site/docs/libraries/examples/streaming.md
 ```

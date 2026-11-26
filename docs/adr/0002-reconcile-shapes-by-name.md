@@ -12,7 +12,10 @@ combination and file-schema merging, so the two cannot disagree.
 Every struct Pathling builds puts its fields in canonical field order:
 definition order restricted to the fields present, with annotations and the
 primitive metadata group at fixed positions beside the element they accompany.
-Operands that already share a type are left unprojected.
+The one exception is a read with a defined schema, whose output follows the
+defined schema's order (ADR-0008); nothing in Pathling depends on the order of
+the structs it is given. Operands that already share a type are left
+unprojected.
 
 ## Considered options
 
