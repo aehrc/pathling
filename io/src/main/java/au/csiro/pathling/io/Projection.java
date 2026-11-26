@@ -126,9 +126,9 @@ public final class Projection {
   /**
    * Returns the named field of the struct, or null if it has none.
    *
-   * <p>Matched on the exact name rather than through the session's resolver, unlike the decode
-   * side. A difference of case alone therefore reads as a difference of field, which is the
-   * conservative reading, since the two names may well have been meant to be different.
+   * <p>Matched on the exact name rather than through the session's case-insensitive resolver. A
+   * difference of case alone therefore reads as a difference of field, which is the conservative
+   * reading, since the two names may well have been meant to be different.
    */
   @Nullable
   private static StructField fieldOrNull(
