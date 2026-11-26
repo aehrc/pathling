@@ -9,6 +9,45 @@ precedes its implementation task, and those tests must be written to fail first.
 **Organisation**: Tasks are grouped by user story so each story can be implemented and tested
 independently.
 
+## Delivery: gates and slices
+
+The work is delivered as slices, each built from the tasks below and merged by a pull request into
+`issue/2881`. A final pull request takes `issue/2881` to `main`.
+
+| Gate  | Status      | Date       | Note                                 |
+| ----- | ----------- | ---------- | ------------------------------------ |
+| A     | approved    | 2026-11-26 | Intent and design                    |
+| B     | approved    | 2026-11-26 | Decimal read as text, equal in value |
+| 01 G3 | approved    | 2026-11-26 | #3007, to merge once CI is green     |
+| 02 G3 | not started |            |                                      |
+| 03 G2 | not started |            |                                      |
+| 03 G3 | not started |            |                                      |
+| 04 G2 | not started |            |                                      |
+| 04 G3 | not started |            |                                      |
+| 05 G2 | not started |            |                                      |
+| 05 G3 | not started |            |                                      |
+| 06 G2 | not started |            |                                      |
+| 06 G3 | not started |            |                                      |
+| Final | not started |            | `issue/2881` to `main`               |
+
+G2 asks the owner whether the failing tests say what should happen, before the implementation. G3
+asks whether the pull request should merge.
+
+| #   | Slice                              | Tasks                                   | Blocked by                | G2  |
+| --- | ---------------------------------- | --------------------------------------- | ------------------------- | --- |
+| 00  | Spikes                             | T002, T003                              | —                         | no  |
+| 01  | Extract `Projection`               | T006, T013, T014                        | —                         | no  |
+| 02  | `io` foundation                    | T001, T005, T007–T012, T015–T018        | 00, 01, #2884, gate B     | no  |
+| 03  | US1: sources take a schema set     | T019–T028, T067, T069, T049, T050       | 02                        | yes |
+| 04  | US4: schema sets from data         | T037–T040, T057–T066                    | 02; T037 and T038 need 03 | yes |
+| 05  | US2: streaming encode              | T029, T031–T033, T035, T036, T051, T052 | 02                        | yes |
+| 06  | Engine parity and removing `dense` | T041–T048, T054, T068                   | 02; T043 runs first       | yes |
+| —   | Close-out                          | T053, T055, T056                        | all                       | —   |
+
+Slice 00 has no pull request: its evidence is judged at gate B. T043, the baseline that slice 06 is
+compared against, may run before gate B, as may slice 01. A slice
+is split if its pull request would change more than about 800 lines.
+
 ## Format: `[ID] [P?] [Story?] Description`
 
 - **[P]**: can run in parallel (different files, no dependency on incomplete tasks).
