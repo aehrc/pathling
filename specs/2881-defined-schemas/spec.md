@@ -236,7 +236,9 @@ Projection:
   nullability and field metadata are those of an inferred load, whatever the given schema says:
   every field is nullable, and the given field metadata is not carried.
 - **FR-009**: Projection MUST be the same on every input path. JSON, XML and stored Parquet or Delta
-  holding the same resources, loaded with the same schema, MUST give equal data.
+  holding the same resources, loaded with the same schema, MUST give equal data. A decimal is
+  equal in value, not necessarily in text: XML stores the text it carries, and JSON the text Spark
+  makes of the number (owner, 2026-10-22 and 2026-11-26; research R3).
 - **FR-010**: A source MUST project each resource type its schema set names and infer every other
   type as today.
 - **FR-011**: Removed. Sinks take no schema set: a source given the set already produces data with
@@ -295,7 +297,8 @@ Compatibility:
   which subset of the uber-schema the schema carries: an absent element MUST evaluate as a present
   element that is empty everywhere, at every kind of position (ADR-0007).
 - **FR-021a**: Each way of loading or writing data MUST be shown to produce exactly the schema and
-  data it should for a given input and defined schema.
+  data it should for a given input and defined schema. A decimal from a defined JSON load is held
+  to the inferred load's value, not its text (research R3).
 - **FR-021b**: In the regular build, both YAML FHIRPath suites (the fhirpath.js reference suite and
   Pathling's own suite) MUST load every case with a defined schema in place of an inferred one:
     - a case whose subject is not a FHIR resource, with the schema derived from the definition the
@@ -371,7 +374,7 @@ Follow-up:
   configuration enables, including for batches that lack elements of the schema or carry elements
   it does not.
 - **SC-004**: The same resources loaded from JSON, XML and stored Parquet with the same schema set
-  give equal data.
+  give equal data, a decimal equal in value (FR-009).
 - **SC-005**: Absence is tested at every kind of position (singular and repeating primitive,
   singular and repeating complex element, choice type, primitive metadata group, annotation, nested,
   and on one or both sides of a combination), each giving the result of the present-but-empty
