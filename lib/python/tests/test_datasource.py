@@ -232,7 +232,14 @@ def test_datasource_parquet_with_supplied_schemas(fields, func_temp_dir, pathlin
     ).read("Patient")
 
     assert same_schema(patients.schema, schema)
-    assert patients.count() == 2
+    expected = {
+        "p1": {"id": "p1", "gender": "male", "birthDate": None},
+        "p2": {"id": "p2", "gender": None, "birthDate": "1990-01-01"},
+    }
+    rows = sorted(patients.select(fields).collect(), key=lambda row: row.id)
+    assert [row.asDict() for row in rows] == [
+        {field: expected[id_][field] for field in fields} for id_ in ["p1", "p2"]
+    ]
 
 
 def test_datasource_delta(delta_test_data_dir, temp_delta_dir, pathling_ctx):

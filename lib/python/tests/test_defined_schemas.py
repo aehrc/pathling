@@ -138,6 +138,20 @@ def schemas_of(data_source: DataSource, types) -> Dict[str, StructType]:
     return {type_: data_source.read(type_).schema for type_ in types}
 
 
+def primitive_rows(data_source: DataSource, schemas: Dict[str, StructType]):
+    """Return the sorted rows of each type's top-level primitive columns in a schema set."""
+
+    def rows(type_: str, schema: StructType):
+        columns = [
+            field.name
+            for field in schema.fields
+            if not isinstance(field.dataType, (StructType, ArrayType))
+        ]
+        return sorted(data_source.read(type_).select(columns).collect(), key=repr)
+
+    return {type_: rows(type_, schema) for type_, schema in schemas.items()}
+
+
 def open_source(kind: str, pathling_ctx, inferred, test_data_dir, database, schemas):
     """Open a source of the given kind over the Patient and Condition test data."""
     read = pathling_ctx.read
@@ -173,27 +187,40 @@ def test_source_reads_with_the_given_schemas(
     """Every source reads each type with the schema the set gives it (FR-001, FR-004).
 
     The schemas are narrower than the data and in another field order, so the output has the
-    given schemas only if the source projects to them.
+    given schemas only if the source projects to them. The projection keeps every row and its
+    values, as the same source read without a schema set has them.
     """
-    data_source = open_source(
-        kind,
-        pathling_ctx,
-        inferred,
-        test_data_dir,
-        lambda: request.getfixturevalue("tables_database"),
-        defined,
-    )
+
+    def open_with(schemas):
+        return open_source(
+            kind,
+            pathling_ctx,
+            inferred,
+            test_data_dir,
+            lambda: request.getfixturevalue("tables_database"),
+            schemas,
+        )
+
+    data_source = open_with(defined)
 
     assert same_schema_set(schemas_of(data_source, defined), defined)
+    expected = primitive_rows(open_with(None), defined)
+    assert all(expected.values())
+    assert primitive_rows(data_source, defined) == expected
 
 
-def test_bulk_reads_with_the_given_schemas(pathling_ctx, defined, bulk_server):
+def test_bulk_reads_with_the_given_schemas(
+    pathling_ctx, defined, bulk_server, ndjson_dir
+):
     """The bulk source reads each type with the schema the set gives it (FR-001, FR-004)."""
     with bulk_server.run():
         data_source = pathling_ctx.read.bulk(
             fhir_endpoint_url=bulk_server.url("/fhir"), schemas=defined
         )
         assert same_schema_set(schemas_of(data_source, defined), defined)
+        expected = primitive_rows(pathling_ctx.read.ndjson(ndjson_dir), defined)
+        assert all(expected.values())
+        assert primitive_rows(data_source, defined) == expected
 
 
 def test_more_than_ten_types_are_accepted(pathling_ctx, bundles_dir):
@@ -207,6 +234,9 @@ def test_more_than_ten_types_are_accepted(pathling_ctx, bundles_dir):
     data_source = pathling_ctx.read.bundles(bundles_dir, ELEVEN_TYPES, schemas=schemas)
 
     assert same_schema_set(schemas_of(data_source, ELEVEN_TYPES), schemas)
+    expected = primitive_rows(bundles, schemas)
+    assert all(expected.values())
+    assert primitive_rows(data_source, schemas) == expected
 
 
 @mark.parametrize("kind", SOURCES)

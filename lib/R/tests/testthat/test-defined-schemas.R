@@ -50,6 +50,28 @@ schemas_of <- function(ds, types) {
   }), types)
 }
 
+# Expects each of the given types to have the same rows in its top-level primitive columns, other
+# than annotations, in a data source as in another, and to have at least one row.
+expect_same_primitive_rows <- function(ds, expected_ds, types) {
+  prefix <- annotation_prefix()
+  for (type in types) {
+    sdf <- ds %>% ds_read(type)
+    columns <- Filter(function(column) {
+      !startsWith(column$name, prefix) && !grepl("^(Struct|Array|Map)", column$type)
+    }, sparklyr::sdf_schema(sdf))
+    rows <- function(data) {
+      data %>%
+        select(all_of(names(columns))) %>%
+        collect() %>%
+        arrange(across(everything()))
+    }
+    actual <- rows(sdf)
+
+    expect_gt(nrow(actual), 0)
+    expect_equal(actual, rows(expected_ds %>% ds_read(type)))
+  }
+}
+
 # The NDJSON test data read without a schema set.
 inferred_source <- function(pc) {
   pc %>% pathling_read_ndjson(test_path("testdata", "ndjson"))
@@ -104,6 +126,9 @@ for (kind in sources) {
     ds <- open_source(kind, pc, defined, database)
 
     expect_true(same_schema_set(schemas_of(ds, names(defined)), defined))
+    # The projection keeps every row and its values, as the source read without a schema set has
+    # them.
+    expect_same_primitive_rows(ds, open_source(kind, pc, NULL, database), names(defined))
   })
 }
 
@@ -122,6 +147,7 @@ test_that("a set of more than ten types is accepted", {
   ds <- pc %>% pathling_read_bundles(bundles_dir, eleven_types, schemas = schemas)
 
   expect_true(same_schema_set(schemas_of(ds, eleven_types), schemas))
+  expect_same_primitive_rows(ds, bundles, eleven_types)
 })
 
 for (kind in sources) {
