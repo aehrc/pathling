@@ -98,6 +98,7 @@ class TerminologyStoreMigratorTest {
                 "spark.sql.catalog.spark_catalog",
                 "org.apache.spark.sql.delta.catalog.DeltaCatalog")
             .config("spark.sql.warehouse.dir", warehouse.toString())
+            .config("spark.sql.shuffle.partitions", "2")
             .config("spark.driver.bindAddress", "localhost")
             .config("spark.driver.host", "localhost")
             .config("spark.ui.enabled", "false")
