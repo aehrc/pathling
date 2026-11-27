@@ -78,9 +78,8 @@ public class BundlesSource extends FileSource {
       @Nonnull final SchemaSet schemaSet) {
     super(
         context,
-        path,
         // Map to the fixed set of resource types for all files.
-        p -> new HashSet<>(resourceTypes),
+        retrieveFilesFromPath(path, context, p -> new HashSet<>(resourceTypes)),
         // Use the file extension that matches the FHIR MIME type.
         MIME_TYPE_TO_EXTENSION.get(mimeType),
         // Treat the whole file as a record, rather than individual lines.
@@ -88,7 +87,9 @@ public class BundlesSource extends FileSource {
         // Extract the nominated resource types from each file and encode using the specified MIME
         // type, with the schema of the type if the set has one.
         reads(context, schemaSet, mimeType),
-        resourceType -> true);
+        resourceType -> true,
+        false,
+        schemaSet);
   }
 
   @Nonnull
