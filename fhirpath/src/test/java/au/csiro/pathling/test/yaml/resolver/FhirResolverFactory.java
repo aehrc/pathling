@@ -23,6 +23,7 @@ import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.test.layout.PofDatasets;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.function.Function;
 import lombok.AllArgsConstructor;
@@ -43,6 +44,23 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public class FhirResolverFactory implements Function<RuntimeContext, DatasetEvaluator> {
 
   @Nonnull String resourceJson;
+
+  /**
+   * The schemas of the suite the case belongs to, which the case's resource is loaded with, or null
+   * where the case belongs to no suite.
+   */
+  @Nullable SuiteSchemas suiteSchemas;
+
+  /**
+   * Returns a factory for a resource that belongs to no suite.
+   *
+   * @param resourceJson the resource, as FHIR JSON
+   * @return the factory
+   */
+  @Nonnull
+  public static FhirResolverFactory of(@Nonnull final String resourceJson) {
+    return of(resourceJson, null);
+  }
 
   @Override
   @Nonnull

@@ -39,15 +39,8 @@ class TestDimensionsTest {
     assertThat(TestSchemaMode.parse("pruned")).isSameAs(TestSchemaMode.PRUNED);
   }
 
-  @Test
-  void denseSchemaModeFailsUntilItExists() {
-    assertThatThrownBy(() -> TestSchemaMode.parse("dense"))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("does not exist until M6 (T037b)");
-  }
-
   @ParameterizedTest
-  @ValueSource(strings = {"", "true", "Pruned", "fitted", "sparse"})
+  @ValueSource(strings = {"", "true", "Pruned", "fitted", "sparse", "dense"})
   void unknownSchemaModeFails(final String value) {
     assertThatThrownBy(() -> TestSchemaMode.parse(value))
         .isInstanceOf(IllegalArgumentException.class)
