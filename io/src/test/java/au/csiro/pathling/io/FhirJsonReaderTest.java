@@ -21,14 +21,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import jakarta.annotation.Nonnull;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Tests that the reader gives the same result from a dataset of documents as from a file of the
@@ -64,6 +69,48 @@ class FhirJsonReaderTest {
     assertThrows(
         Exception.class,
         () -> TransformFixtures.reader().read("Patient", documents).collectAsList());
+  }
+
+  /**
+   * A schema that leaves nothing to parse, such as an empty one, still fails the read on text that
+   * is not JSON, by every route, and keeps a row for each document that is.
+   */
+  @ParameterizedTest
+  @ValueSource(strings = {"files", "documents", "bundles"})
+  void failsOnTextThatIsNotJsonWithASchemaThatLeavesNothingToParse(
+      @Nonnull final String route, @TempDir @Nonnull final Path directory) throws IOException {
+    final StructType empty = new StructType();
+
+    assertEquals(DOCUMENTS.size(), readWithSchema(route, directory, DOCUMENTS, empty).count());
+    final List<String> malformed = List.of(DOCUMENTS.get(0), "{not json");
+    assertThrows(Exception.class, () -> readWithSchema(route, directory, malformed, empty).count());
+  }
+
+  /** Reads documents with a schema by a route: files, a dataset of them, or a bundle of them. */
+  @Nonnull
+  private static Dataset<Row> readWithSchema(
+      @Nonnull final String route,
+      @Nonnull final Path directory,
+      @Nonnull final List<String> documents,
+      @Nonnull final StructType schema)
+      throws IOException {
+    final FhirJsonReader reader = TransformFixtures.reader();
+    return switch (route) {
+      case "files" ->
+          reader.read(
+              "Patient",
+              TransformFixtures.corpus(
+                  Files.createTempDirectory(directory, "corpus"), documents.toArray(String[]::new)),
+              schema);
+      case "documents" -> reader.read("Patient", documents(documents), schema);
+      case "bundles" ->
+          reader.readBundles(
+              "Patient",
+              documents(
+                  List.of(DefinedSchemaReadTest.jsonBundle(documents.toArray(String[]::new)))),
+              schema);
+      default -> throw new IllegalArgumentException(route);
+    };
   }
 
   @Nonnull

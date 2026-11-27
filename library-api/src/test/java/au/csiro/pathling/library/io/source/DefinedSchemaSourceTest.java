@@ -408,6 +408,23 @@ class DefinedSchemaSourceTest {
   }
 
   /**
+   * A line of NDJSON that is not JSON fails the read with a schema that leaves nothing to parse, as
+   * it does with any other schema, rather than giving a resource with every element absent.
+   */
+  @Test
+  void aMalformedNdjsonLineFailsTheReadWithAnEmptySchema() throws IOException {
+    final Path ndjson = Files.createDirectory(directory.resolve("malformed-line"));
+    Files.writeString(
+        ndjson.resolve("Patient.ndjson"),
+        "{\"resourceType\":\"Patient\",\"id\":\"p1\"}\n{not json\n");
+
+    final Dataset<Row> patients =
+        withSchemas(Map.of(PATIENT, new StructType())).ndjson(ndjson.toString()).read(PATIENT);
+
+    assertThrows(Exception.class, patients::count);
+  }
+
+  /**
    * A dataset source derived by mapping or filtering keeps the schema set, so a dataset added to it
    * afterwards is projected onto the set's schema, plus the configured annotations.
    */
