@@ -406,6 +406,32 @@ class DefinedSchemaLogicTest {
   }
 
   @Test
+  void refusesResourceTypeAndMetadataGroupFieldsThatContradictTheDefinitions() {
+    // The resource type held as a number, the id of a metadata group held as a number, its
+    // extensions held as a single struct, and the url of one of its extensions held as a number.
+    final Map<String, String> pathsByDdl =
+        Map.of(
+            "resourceType INT", "resourceType",
+            "resourceType STRING, _birthDate STRUCT<id: INT>", "_birthDate.id",
+            "resourceType STRING, _birthDate STRUCT<extension: STRUCT<url: STRING>>",
+                "_birthDate.extension",
+            "resourceType STRING, _birthDate STRUCT<extension: ARRAY<STRUCT<url: INT>>>",
+                "_birthDate.extension.url");
+    pathsByDdl.forEach(
+        (ddl, path) -> {
+          final StructType schema = StructType.fromDDL(ddl);
+
+          final IllegalArgumentException error =
+              assertThrows(
+                  IllegalArgumentException.class,
+                  () -> logic().canonicalSchema("Patient", schema),
+                  ddl);
+          assertTrue(error.getMessage().contains("Patient"), error.getMessage());
+          assertTrue(error.getMessage().contains(path), error.getMessage());
+        });
+  }
+
+  @Test
   void refusesFieldWhoseCardinalityContradictsTheDefinitions() {
     // A repeating element held as a single struct, a single element held as an array, and a
     // nested repeating element held as a single value.
