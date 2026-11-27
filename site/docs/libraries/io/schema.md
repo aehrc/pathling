@@ -284,10 +284,10 @@ names is read with its schema, and every other resource type is read with a
 schema fitted to its data, as it is without a set. An empty set is the same as
 no set.
 
-Every load given the same schema gives data with the same schema, whatever the
-data populates. Data loaded at different times can then be appended to one
-table without widening it, and a query written against that schema runs on
-every load.
+Every load given the same schema gives data with the same fields, in the same
+order, whatever the data populates. Data loaded at different times can then be
+appended to one table without widening it, and a query written against that
+schema runs on every load.
 
 ### What a read with a schema gives
 
@@ -299,8 +299,7 @@ every load.
   that names only some elements therefore loses the others without warning. To
   keep everything your data might carry, give a wide schema: one that names
   every element the data could populate.
-- Every field is nullable, and the field metadata of the given schema is not
-  carried over.
+- The field metadata of the given schema is not carried over.
 
 A read of Parquet files, Delta tables, catalog tables or datasets compares the
 stored schema with the given one, without reading any rows, and logs at debug
@@ -332,10 +331,10 @@ A Parquet or Delta file holding columns whose names differ only in case fails
 to load with Spark's own `COLUMN_ALREADY_EXISTS` error, with or without a schema
 set.
 
-A read with a schema refuses data that has a field whose name differs only in
-case from a field of the schema, and data that has a structure with two fields
-whose names differ only in case. The error names the resource type and both
-paths, for example:
+A read of Parquet files, Delta tables, catalog tables or datasets with a schema
+refuses data that has a field whose name differs only in case from a field of
+the schema, and data that has a structure with two fields whose names differ
+only in case. The error names the resource type and both paths, for example:
 
 ```
 Cannot read Patient with its schema: The field `name.Family` differs only in
