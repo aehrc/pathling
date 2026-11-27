@@ -54,9 +54,12 @@ patients = pc.encode(
 
 
 def write_batch(batch, batch_id):
+    # Persist the micro-batch so that the two writes do not each read and encode it again.
+    batch.persist()
     data = pc.read.datasets({"Patient": batch})
     data.write.delta("/usr/share/warehouse/delta", save_mode="merge")
     data.write.parquet("/usr/share/warehouse/parquet", save_mode="append")
+    batch.unpersist()
 
 
 query = (
@@ -84,9 +87,12 @@ Dataset<Row> patients = pc.encodeWithSchema(
 StreamingQuery query = patients.writeStream()
         .option("checkpointLocation", "/usr/share/checkpoints")
         .foreachBatch((VoidFunction2<Dataset<Row>, Long>) (batch, batchId) -> {
+            // Persist the micro-batch so that the two writes do not each read and encode it again.
+            batch.persist();
             DatasetSource data = pc.read().datasets().dataset("Patient", batch);
             data.write().saveMode("merge").delta("/usr/share/warehouse/delta");
             data.write().saveMode("append").parquet("/usr/share/warehouse/parquet");
+            batch.unpersist();
         })
         .start();
 ```

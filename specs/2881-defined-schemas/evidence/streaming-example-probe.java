@@ -81,9 +81,13 @@ class StreamingExampleProbe {
             .foreachBatch(
                 (VoidFunction2<Dataset<Row>, Long>)
                     (batch, batchId) -> {
+                      // Persist the micro-batch so that the two writes do not each read and
+                      // encode it again.
+                      batch.persist();
                       final DatasetSource data = pc.read().datasets().dataset("Patient", batch);
                       data.write().saveMode("merge").delta(delta);
                       data.write().saveMode("append").parquet(parquet);
+                      batch.unpersist();
                     })
             .start();
     query.awaitTermination();

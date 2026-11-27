@@ -2,7 +2,8 @@
 
 Measured on 2026-11-27 with Spark 4.1.0, the version the build uses, against `library-api` as of
 the commit that adds this record, using [streaming-example-probe.java](streaming-example-probe.java).
-It was run for T052 and SC-008.
+It was run for T052 and SC-008, and run again on 2026-11-28, with the same output, after the
+example came to persist each micro-batch around its two writes.
 
 The probe runs the Java example of `site/docs/libraries/examples/streaming.md`, under
 "Encoding a stream", with its paths in a temporary directory. It first saves a schema set file
