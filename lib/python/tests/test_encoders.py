@@ -422,8 +422,17 @@ def test_stream_encoded_without_schema_is_refused(
     arguments = {"schema": None} if schema_given else {}
     with raises(Exception) as refusal:
         getattr(def_pathling, method)(stream, "Patient", **arguments)
-    assert "UnsupportedOperationException" in str(refusal.value)
+    assert _java_class(refusal.value) == "java.lang.UnsupportedOperationException"
     assert REFUSAL in str(refusal.value)
+
+
+def _java_class(error: Exception) -> str:
+    # The class of the Java exception behind an error. PySpark converts some Java exceptions, such
+    # as UnsupportedOperationException, to Python exceptions that keep the original as _origin,
+    # and raises the others as a Py4JJavaError, which keeps it as java_exception.
+    original = getattr(error, "java_exception", None) or getattr(error, "_origin", None)
+    assert original is not None, f"not an error from Java: {error!r}"
+    return original.getClass().getName()
 
 
 @mark.parametrize("method", ["encode", "encode_bundle"])

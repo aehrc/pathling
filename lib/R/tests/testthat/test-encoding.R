@@ -368,7 +368,7 @@ sorted_json <- function(sdf) {
   sdf %>%
     sparklyr::spark_dataframe() %>%
     sparklyr::invoke("toJSON") %>%
-    sparklyr::invoke("collectAsList") %>%
+    sparklyr::invoke("collect") %>%
     unlist() %>%
     sort()
 }
