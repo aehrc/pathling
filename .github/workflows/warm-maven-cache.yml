@@ -1,0 +1,71 @@
+# Fills the GitHub Actions cache of the local Maven repository that the build jobs restore. It runs
+# on the default branch, whose caches every pull request can restore, and on release branches, whose
+# dependencies can run ahead of it. Saving from one build that resolves everything, rather than from
+# the jobs themselves, keeps the cache complete and keeps parallel jobs from downloading hundreds of
+# artifacts each, which Maven Central rate-limits (HTTP 429).
+
+name: Warm Maven cache
+
+on:
+  push:
+    branches:
+      - main
+      - "release/**"
+    paths:
+      - "**/pom.xml"
+      - ".github/actions/setup-java-maven/**"
+      - ".github/workflows/warm-maven-cache.yml"
+  schedule:
+    # Every Sunday at 01:00 UTC.
+    - cron: "0 1 * * 0"
+  workflow_dispatch:
+
+jobs:
+  warm-cache:
+    name: Warm Maven cache
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Java and Maven
+        uses: ./.github/actions/setup-java-maven
+        with:
+          enable-sonar-cache: "false"
+
+      # Every plugin bound to the build lifecycle runs, but no test is executed.
+      - name: Resolve the library build
+        run: |
+          mvn --batch-mode install \
+          -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false \
+          -pl '!site,!benchmark,!lib/R,!lib/python'
+        timeout-minutes: 30
+
+      # Surefire resolves its test framework provider only when it has tests to run, so the tests of
+      # the smallest module are run for real.
+      - name: Resolve the test framework provider
+        run: mvn --batch-mode verify -pl utilities
+        timeout-minutes: 10
+
+      - name: Resolve the analysis plugins
+        run: |
+          mvn --batch-mode dependency:get \
+          -Dartifact=org.sonarsource.scanner.maven:sonar-maven-plugin:LATEST
+          mvn --batch-mode org.jacoco:jacoco-maven-plugin:report-aggregate \
+          -pl '!site,!benchmark,!lib/R,!lib/python'
+
+      # The cache must not carry Pathling's own artifacts, which would shadow the build under test.
+      - name: Remove Pathling artifacts
+        run: rm -rf ~/.m2/repository/au/csiro/pathling
+
+      - name: Save local Maven repository
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.m2/repository
+          # Entries cannot be overwritten, so each refresh saves a new one, and a restore takes the most
+          # recent entry whose key starts with the same prefix.
+          key: ${{ runner.os }}-maven-repo-v2-${{ hashFiles('**/pom.xml') }}-${{ github.run_id }}
