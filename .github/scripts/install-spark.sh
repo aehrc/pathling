@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Downloads and extracts Apache Spark to a specified directory.
 # Tries the CDN first, then falls back to the archive mirror. Each source is
-# retried up to 3 times with exponential backoff.
+# retried up to 3 times with exponential backoff. A download that stalls is abandoned and retried,
+# because the archive mirror can stop sending data without closing the connection.
 #
 # Usage: install-spark.sh <spark-version> <hadoop-version> <target-dir>
 #
@@ -26,7 +27,8 @@ download_with_retries() {
 
   for ((i = 0; i < max_retries; i++)); do
     echo "Attempt $((i + 1))/${max_retries}: downloading ${url}"
-    if curl -fSL --retry 0 -o "${output}" "${url}"; then
+    if curl -fSL --retry 0 --connect-timeout 30 \
+      --speed-limit 102400 --speed-time 60 --max-time 900 -o "${output}" "${url}"; then
       echo "Download succeeded."
       return 0
     fi
