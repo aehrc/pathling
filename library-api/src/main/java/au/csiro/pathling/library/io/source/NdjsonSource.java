@@ -132,13 +132,14 @@ public class NdjsonSource extends FileSource {
       @Nonnull final SchemaSet schemaSet) {
     super(
         context,
-        path,
-        fileNameMapper,
+        retrieveFilesFromPath(path, context, fileNameMapper),
         extension,
         // Read each line of input separately.
         context.getSpark().read().format("text"),
         // Encode each line of input as a JSON FHIR resource, with its schema if the set has one.
         DefinedSchemaReads.of(context, schemaSet)::encode,
-        resourceType -> true);
+        resourceType -> true,
+        false,
+        schemaSet);
   }
 }

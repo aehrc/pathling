@@ -56,6 +56,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
@@ -408,17 +409,41 @@ class DefinedSchemaSourceTest {
   }
 
   /**
+   * A line of NDJSON that is not JSON fails the read with a schema that leaves nothing to parse, as
+   * it does with any other schema, rather than giving a resource with every element absent.
+   */
+  @Test
+  void aMalformedNdjsonLineFailsTheReadWithAnEmptySchema() throws IOException {
+    final Path ndjson = Files.createDirectory(directory.resolve("malformed-line"));
+    Files.writeString(
+        ndjson.resolve("Patient.ndjson"),
+        "{\"resourceType\":\"Patient\",\"id\":\"p1\"}\n{not json\n");
+
+    final Dataset<Row> patients =
+        withSchemas(Map.of(PATIENT, new StructType())).ndjson(ndjson.toString()).read(PATIENT);
+
+    assertThrows(Exception.class, patients::count);
+  }
+
+  /**
    * A dataset source derived by mapping or filtering keeps the schema set, so a dataset added to it
-   * afterwards is projected onto the set's schema, plus the configured annotations.
+   * afterwards is projected onto the set's schema, plus the configured annotations. This holds for
+   * a source derived from a file-backed source as well as from a dataset source.
    */
   @ParameterizedTest
-  @ValueSource(strings = {"map", "filter"})
-  void aDerivedDatasetSourceKeepsTheSchemaSet(@Nonnull final String derivation) {
+  @CsvSource({
+    "datasets, map",
+    "datasets, filter",
+    "ndjson, map",
+    "ndjson, filter",
+    "parquet, map",
+    "parquet, filter"
+  })
+  void aDerivedDatasetSourceKeepsTheSchemaSet(
+      @Nonnull final String kind, @Nonnull final String derivation) {
     final StructType schema = SchemaSetSources.definedPatientSchema(context);
-    final DatasetSource original =
-        withSchemas(Map.of(PATIENT, schema))
-            .datasets()
-            .dataset(CONDITION, SchemaSetSources.encodedConditions(context));
+    SchemaSetSources.write(kind, context, directory, database);
+    final QueryableDataSource original = open(kind, Map.of(PATIENT, schema));
     final DatasetSource derived =
         (DatasetSource)
             ("map".equals(derivation)

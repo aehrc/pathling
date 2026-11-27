@@ -19,6 +19,7 @@ package au.csiro.pathling.library.io.source;
 
 import static java.util.Objects.requireNonNull;
 
+import au.csiro.pathling.io.SchemaSet;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.PersistenceError;
 import jakarta.annotation.Nonnull;
@@ -200,7 +201,46 @@ public abstract class FileSource extends DatasetSource {
       @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer,
       @Nonnull final Predicate<String> additionalResourceTypeFilter,
       final boolean layoutDetection) {
-    super(context);
+    this(
+        context,
+        files,
+        extension,
+        reader,
+        transformer,
+        additionalResourceTypeFilter,
+        layoutDetection,
+        DefinedSchemaReads.noSchemas());
+  }
+
+  /**
+   * Map-based constructor as {@link #FileSource(PathlingContext, Map, String, DataFrameReader,
+   * BiFunction, Predicate, boolean)}, for a source read with a schema set. The transformer reads
+   * each type the set names with its schema; the set is kept so that a dataset added later, to this
+   * source or to one derived from it, is projected onto its type's schema as well.
+   *
+   * @param context the Pathling context
+   * @param files a map where keys are resource type codes (e.g., "Patient", "Observation") and
+   *     values are collections of file paths containing data for that resource type
+   * @param extension the file extension that this source expects for its source files
+   * @param reader a {@link DataFrameReader} that can be used to read the source files
+   * @param transformer a function that transforms a Dataset containing raw source data of a
+   *     specified resource type into a Dataset containing the imported data
+   * @param additionalResourceTypeFilter filter to filter out specific resource types if desired,
+   *     receives the resource type code as a string
+   * @param layoutDetection whether the layout of each resource type's stored data is classified as
+   *     it is read
+   * @param schemaSet the schema set, which may be empty
+   */
+  FileSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final Map<String, Collection<String>> files,
+      @Nonnull final String extension,
+      @Nonnull final DataFrameReader reader,
+      @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer,
+      @Nonnull final Predicate<String> additionalResourceTypeFilter,
+      final boolean layoutDetection,
+      @Nonnull final SchemaSet schemaSet) {
+    super(context, schemaSet);
     this.layoutDetection = layoutDetection;
     this.extension = extension;
     this.reader = reader;
@@ -345,6 +385,8 @@ public abstract class FileSource extends DatasetSource {
     if (resourceCode != null
         && !resourceMap.containsKey(resourceCode)
         && files.containsKey(resourceCode)) {
+      // The transformer has already read the type with its schema, if the set names it, so the
+      // dataset is stored as it is rather than through dataset(), which would project it again.
       return resourceMap.computeIfAbsent(resourceCode, this::load);
     }
     return super.read(resourceCode);

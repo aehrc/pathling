@@ -18,6 +18,7 @@
 package au.csiro.pathling.io;
 
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Column;
@@ -28,6 +29,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 
 /**
@@ -68,6 +70,12 @@ public final class FhirJsonReader implements FhirFormatReader {
    * is a silent truncation rather than an ignored field.
    */
   @Nonnull private static final String FAIL_FAST = "FAILFAST";
+
+  /** The shape a document is checked with where the shape it is read with has no fields. */
+  @Nonnull
+  private static final StructType CHECKED =
+      DataTypes.createStructType(
+          List.of(DataTypes.createStructField("resourceType", DataTypes.StringType, true)));
 
   /** Splits a bundle into the resources of one type it carries. */
   @Nonnull
@@ -145,9 +153,10 @@ public final class FhirJsonReader implements FhirFormatReader {
       @Nonnull final Dataset<String> documents,
       @Nonnull final StructType schema) {
     final StructType observed = defined.observedShape(resourceType, schema);
+    final Column text = functions.col(documents.columns()[0]);
     final Dataset<Row> parsed =
-        documents.select(
-            parse(functions.col(documents.columns()[0]), observed).alias(BundleResource.PARSED));
+        checked(documents, text, observed)
+            .select(parse(text, observed).alias(BundleResource.PARSED));
     return Projection.project(
         parsed.select(
             defined
@@ -225,6 +234,25 @@ public final class FhirJsonReader implements FhirFormatReader {
             observed,
             functions.col(BundleResource.PARSED),
             reference -> BundleResource.resolve(reference, references)));
+  }
+
+  /**
+   * Checks that documents are JSON where the shape leaves nothing to parse, so that text which is
+   * not JSON still fails the read rather than becoming a resource with every element absent. The
+   * documents are parsed with a shape of the resource type alone, in a filter that keeps every row,
+   * because a parse whose result is not used would be optimised away. A shape with fields needs no
+   * check, as parsing with it fails on such text.
+   */
+  @Nonnull
+  private static Dataset<String> checked(
+      @Nonnull final Dataset<String> documents,
+      @Nonnull final Column text,
+      @Nonnull final StructType observed) {
+    if (observed.fields().length > 0) {
+      return documents;
+    }
+    final Column parsed = functions.from_json(text, CHECKED, Map.of(READ_MODE, FAIL_FAST));
+    return documents.filter(parsed.isNull().or(parsed.isNotNull()));
   }
 
   /** Parses JSON text with the given shape, failing on text that is not JSON. */
