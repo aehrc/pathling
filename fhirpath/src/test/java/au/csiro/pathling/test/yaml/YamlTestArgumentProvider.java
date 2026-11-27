@@ -33,19 +33,19 @@ import au.csiro.pathling.test.yaml.resolver.ArbitraryObjectResolverFactory;
 import au.csiro.pathling.test.yaml.resolver.EmptyResolverFactory;
 import au.csiro.pathling.test.yaml.resolver.FhirResolverFactory;
 import au.csiro.pathling.test.yaml.resolver.RuntimeContext;
+import au.csiro.pathling.test.yaml.resolver.SuiteSchemas;
 import jakarta.annotation.Nonnull;
 import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
@@ -57,14 +57,32 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 @Slf4j
 public class YamlTestArgumentProvider implements ArgumentsProvider {
 
+  /**
+   * The schemas of each suite, by its test class, which every FHIR resource factory of the suite
+   * shares, so that each is derived once for the suite rather than for each of its YAML files.
+   */
+  @Nonnull
+  private static final Map<Class<?>, SuiteSchemas> SUITE_SCHEMAS = new ConcurrentHashMap<>();
+
   @Override
   public Stream<? extends Arguments> provideArguments(final ExtensionContext context) {
     final TestConfiguration config = loadTestConfiguration(context);
     final YamlTestDefinition spec = loadTestSpec(context);
+    final SuiteSchemas suiteSchemas = suiteSchemas(context);
     final Function<RuntimeContext, DatasetEvaluator> defaultEvaluatorFactory =
-        createDefaultEvaluatorFactory(spec);
+        createDefaultEvaluatorFactory(spec, suiteSchemas);
 
-    return createTestCases(spec, config, defaultEvaluatorFactory);
+    return createTestCases(spec, config, defaultEvaluatorFactory, suiteSchemas);
+  }
+
+  @Nonnull
+  private static SuiteSchemas suiteSchemas(@Nonnull final ExtensionContext context) {
+    final Class<?> suiteClass =
+        context
+            .getTestClass()
+            .orElseThrow(() -> new IllegalStateException("Test class not found in context"));
+    return SUITE_SCHEMAS.computeIfAbsent(
+        suiteClass, suite -> SuiteSchemas.of(SuiteInputs.documentsOf(suite)));
   }
 
   private TestConfiguration loadTestConfiguration(final ExtensionContext context) {
@@ -124,31 +142,21 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
   }
 
   private Function<RuntimeContext, DatasetEvaluator> createDefaultEvaluatorFactory(
-      final YamlTestDefinition spec) {
+      final YamlTestDefinition spec, @Nonnull final SuiteSchemas suiteSchemas) {
     return Optional.ofNullable(spec.subject())
         .map(
             subject -> {
               final Map<Object, Object> convertedSubject = new HashMap<>(subject);
-              return createEvaluatorFactoryFromSubject(convertedSubject);
+              return createEvaluatorFactoryFromSubject(convertedSubject, suiteSchemas);
             })
         .orElse(EmptyResolverFactory.getInstance());
   }
 
   private Function<RuntimeContext, DatasetEvaluator> createEvaluatorFactoryFromSubject(
-      final Map<Object, Object> subject) {
-    final String resourceTypeStr =
-        Optional.ofNullable(subject.get("resourceType")).map(String.class::cast).orElse(null);
-
-    if (resourceTypeStr != null) {
-      try {
-        Objects.requireNonNull(FHIRDefinedType.fromCode(resourceTypeStr));
-        final String jsonStr = YamlSupport.omToJson(subject);
-        return FhirResolverFactory.of(jsonStr);
-      } catch (final Exception e) {
-        log.debug(
-            "Invalid FHIR resource type '{}', falling back to ArbitraryObjectResolverFactory",
-            resourceTypeStr);
-      }
+      final Map<Object, Object> subject, @Nonnull final SuiteSchemas suiteSchemas) {
+    // The suite inputs pick out the FHIR subjects with the same test, so this subject is one.
+    if (SuiteInputs.isFhirResource(subject)) {
+      return FhirResolverFactory.of(SuiteInputs.toJson(subject), suiteSchemas);
     }
     return ArbitraryObjectResolverFactory.of(subject);
   }
@@ -156,12 +164,15 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
   private Stream<Arguments> createTestCases(
       final YamlTestDefinition spec,
       final TestConfiguration config,
-      final Function<RuntimeContext, DatasetEvaluator> defaultEvaluatorFactory) {
+      final Function<RuntimeContext, DatasetEvaluator> defaultEvaluatorFactory,
+      @Nonnull final SuiteSchemas suiteSchemas) {
 
     final List<Arguments> cases =
         spec.cases().stream()
             .filter(this::filterDisabledTests)
-            .map(testCase -> createRuntimeCase(testCase, config, defaultEvaluatorFactory))
+            .map(
+                testCase ->
+                    createRuntimeCase(testCase, config, defaultEvaluatorFactory, suiteSchemas))
             .map(Arguments::of)
             .toList();
 
@@ -179,11 +190,12 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
   private YamlTestExecutor createRuntimeCase(
       final TestCase testCase,
       final TestConfiguration config,
-      final Function<RuntimeContext, DatasetEvaluator> defaultEvaluatorFactory) {
+      final Function<RuntimeContext, DatasetEvaluator> defaultEvaluatorFactory,
+      @Nonnull final SuiteSchemas suiteSchemas) {
 
     final Function<RuntimeContext, DatasetEvaluator> evaluatorFactory =
         Optional.ofNullable(testCase.inputFile())
-            .map(f -> createFileBasedEvaluatorFactory(f, config.resourceBase()))
+            .map(f -> createFileBasedEvaluatorFactory(f, config.resourceBase(), suiteSchemas))
             .orElse(defaultEvaluatorFactory);
 
     return DefaultYamlTestExecutor.of(
@@ -191,9 +203,11 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
   }
 
   private Function<RuntimeContext, DatasetEvaluator> createFileBasedEvaluatorFactory(
-      final String inputFile, final Optional<String> resourceBase) {
+      final String inputFile,
+      final Optional<String> resourceBase,
+      @Nonnull final SuiteSchemas suiteSchemas) {
     final String path = resourceBase.orElse("") + File.separator + inputFile;
-    return FhirResolverFactory.of(getResourceAsString(path));
+    return FhirResolverFactory.of(getResourceAsString(path), suiteSchemas);
   }
 
   /**

@@ -506,3 +506,20 @@
 - **Alternatives considered**: Keeping the overloads and casting the null in Java, and calling the
   three-argument overload from Python and R when no column is given. That works, but every caller
   that passes a null column has to know to do it.
+
+## R23. Engine parity: decisions at gate 06 G2
+
+- **Decision** (owner, 2026-11-27): An element of a YAML subject that has no type, an empty list
+  or a null, keeps the NULL type in its definition, and fhir-schema accepts it:
+  `PrimitiveTypes.isPrimitive` and `DefinitionCanonicalStructure` take NULL without failing, and
+  the element has no metadata group. `TestSchemaMode` stays, with PRUNED as its only mode. The
+  resolver of the subjects that are not FHIR resources reads with the same `SchemaConfiguration`
+  as the resolver of the FHIR resources, which stores primitive metadata.
+- **Rationale**: Keeping the NULL type leaves the engine seeing an empty collection for the
+  element, so an expression such as `ok1 and i` keeps its result. Handling the type where the
+  structure is derived means no caller has to drop the element first. Keeping `TestSchemaMode`
+  leaves room for another mode without changing the tests that name one. One configuration for
+  both resolvers keeps the two paths alike.
+- **Alternatives considered**: Dropping or retyping untyped elements in `YamlSupport`, which
+  changes what the engine sees for them; removing `TestSchemaMode` with DENSE; and reading the
+  other subjects without primitive metadata.

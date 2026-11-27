@@ -24,6 +24,8 @@ import au.csiro.pathling.fhirpath.evaluation.DefinitionResourceResolver;
 import au.csiro.pathling.fhirpath.evaluation.ResourceResolver;
 import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
+import au.csiro.pathling.io.FhirReader;
+import au.csiro.pathling.schema.SchemaConfiguration;
 import au.csiro.pathling.test.yaml.YamlSupport;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -41,13 +43,22 @@ import org.apache.spark.sql.types.StructType;
 /**
  * Factory for creating DatasetEvaluator instances from arbitrary object representations. This class
  * handles the conversion of YAML-defined test data into a format that can be used for FHIRPath
- * expression evaluation using flat schema. The subject is stored in the Parquet on FHIR layout, so
- * that a decimal is text as it is in a stored resource.
+ * expression evaluation. The subject is read as a defined read of {@link FhirReader}, with the
+ * schema derived from the subject's definition alone, so that it is stored in the Parquet on FHIR
+ * layout as a FHIR resource of the same definition would be (FR-021b).
  */
 @Slf4j
 @Value
 @AllArgsConstructor(staticName = "of")
 public class ArbitraryObjectResolverFactory implements Function<RuntimeContext, DatasetEvaluator> {
+
+  /**
+   * The configuration the subject is read with, which is that of the subjects that are FHIR
+   * resources, so that both paths store primitive metadata alike (R23).
+   */
+  @Nonnull
+  private static final SchemaConfiguration CONFIGURATION =
+      SchemaConfiguration.builder().storePrimitiveMetadata(true).build();
 
   @Nonnull Map<Object, Object> subjectOM;
 
@@ -57,29 +68,25 @@ public class ArbitraryObjectResolverFactory implements Function<RuntimeContext, 
     final String subjectResourceCode =
         Optional.ofNullable(subjectOM.get("resourceType")).map(String.class::cast).orElse("Test");
 
-    // Create definition from YAML
     final DefaultResourceDefinition subjectDefinition =
         (DefaultResourceDefinition) YamlSupport.yamlToDefinition(subjectResourceCode, subjectOM);
-    final StructType subjectSchema = YamlSupport.definitionToStruct(subjectDefinition, subjectOM);
+    final DefaultDefinitionContext definitions = DefaultDefinitionContext.of(subjectDefinition);
+    final StructType subjectSchema = YamlSupport.definitionToStruct(subjectDefinition);
 
-    // Create flat Dataset with YAML schema
-    final String subjectOMJson = YamlSupport.subjectToJson(subjectOM);
-    log.trace("subjectOMJson: \n{}", subjectOMJson);
-    final Dataset<Row> inputDS =
-        rt.getSpark()
-            .read()
-            .schema(subjectSchema)
-            .json(rt.getSpark().createDataset(List.of(subjectOMJson), Encoders.STRING()));
-
+    final String subjectJson = YamlSupport.subjectToJson(subjectOM);
+    log.trace("Subject JSON: \n{}", subjectJson);
     log.trace("Yaml definition: {}", subjectDefinition);
     log.trace("Subject schema: {}", subjectSchema.treeString());
+    final Dataset<Row> inputDS =
+        FhirReader.of(rt.getSpark(), definitions, CONFIGURATION)
+            .json()
+            .read(
+                subjectResourceCode,
+                rt.getSpark().createDataset(List.of(subjectJson), Encoders.STRING()),
+                subjectSchema);
 
-    // Create DefinitionResourceResolver
     final ResourceResolver resolver =
-        DefinitionResourceResolver.of(
-            subjectResourceCode, DefaultDefinitionContext.of(subjectDefinition));
-
-    // Create evaluator with resolver
+        DefinitionResourceResolver.of(subjectResourceCode, definitions);
     final SingleResourceEvaluator evaluator =
         SingleResourceEvaluator.of(resolver, StaticFunctionRegistry.getInstance(), Map.of());
 

@@ -74,7 +74,7 @@ public final class PrimitiveTypes {
    */
   @Nonnull
   public static Optional<DataType> storageTypeOf(@Nonnull final FHIRDefinedType type) {
-    return Optional.ofNullable(TYPES.get(type.toCode()));
+    return Optional.ofNullable(type.toCode()).map(TYPES::get);
   }
 
   /**
@@ -85,7 +85,8 @@ public final class PrimitiveTypes {
    * @return true where the type is a primitive
    */
   public static boolean isPrimitive(@Nonnull final FHIRDefinedType type) {
-    return TYPES.containsKey(type.toCode());
+    // The null type has no code, which an immutable map refuses to look up.
+    return type != FHIRDefinedType.NULL && TYPES.containsKey(type.toCode());
   }
 
   /**
