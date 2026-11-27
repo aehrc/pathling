@@ -22,7 +22,7 @@ spark <- def_spark()
 struct_json <- function(json) {
   spark %>%
     j_invoke_static("org.apache.spark.sql.types.DataType", "fromJson", json) %>%
-    j_invoke("json")
+    sparklyr::invoke("json")
 }
 
 # A set out of canonical order, with non-nullable fields and with empty and nested field metadata.
@@ -54,12 +54,12 @@ schema_set <- function() {
 java_to_json <- function(schemas) {
   java_set <- spark %>% j_invoke_new("java.util.LinkedHashMap")
   for (type in names(schemas)) {
-    java_set %>% j_invoke(
+    java_set %>% sparklyr::invoke(
       "put", type,
       j_invoke_static(spark, "org.apache.spark.sql.types.DataType", "fromJson", schemas[[type]])
     )
   }
-  spark %>% j_invoke_static("au.csiro.pathling.library.SchemaSets", "toJson", java_set)
+  spark %>% sparklyr::invoke_static("au.csiro.pathling.library.SchemaSets", "toJson", java_set)
 }
 
 parse_json <- function(json) jsonlite::fromJSON(json, simplifyVector = FALSE)
