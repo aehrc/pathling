@@ -29,16 +29,14 @@ import au.csiro.pathling.library.SchemaSets;
 import au.csiro.pathling.library.TestHelpers;
 import au.csiro.pathling.library.io.DivergentBatches;
 import au.csiro.pathling.library.io.SchemaEquality;
+import au.csiro.pathling.test.JobCountingListener;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-import org.apache.spark.scheduler.SparkListener;
-import org.apache.spark.scheduler.SparkListenerJobEnd;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
@@ -288,24 +286,10 @@ class SourceSchemasTest {
   @Test
   void canonicalisesWithoutRunningAJob() throws TimeoutException {
     final StructType schema = DivergentBatches.both(context).schema();
-    final AtomicInteger jobs = new AtomicInteger();
-    final SparkListener listener =
-        new SparkListener() {
-          @Override
-          public void onJobEnd(final SparkListenerJobEnd jobEnd) {
-            jobs.incrementAndGet();
-          }
-        };
-    spark.sparkContext().listenerBus().waitUntilEmpty();
-    spark.sparkContext().addSparkListener(listener);
-    try {
-      context.canonicalSchemas(Map.of(PATIENT, schema));
-      spark.sparkContext().listenerBus().waitUntilEmpty();
-    } finally {
-      spark.sparkContext().removeSparkListener(listener);
-    }
-
-    assertEquals(0, jobs.get());
+    assertEquals(
+        0,
+        JobCountingListener.jobsRunBy(
+            spark.sparkContext(), () -> context.canonicalSchemas(Map.of(PATIENT, schema))));
   }
 
   /** Returns the directory a kind of source is written to, so that every kind can coexist. */

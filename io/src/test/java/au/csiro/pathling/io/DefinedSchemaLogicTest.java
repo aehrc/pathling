@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.schema.SchemaConfiguration;
+import au.csiro.pathling.test.JobCountingListener;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,10 +30,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.spark.SparkContext;
-import org.apache.spark.scheduler.SparkListener;
-import org.apache.spark.scheduler.SparkListenerJobEnd;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.ArrayType;
@@ -457,24 +454,10 @@ class DefinedSchemaLogicTest {
   @Test
   void canonicalisesWithoutRunningAJob() throws TimeoutException {
     final StructType outOfOrder = reversed(inferred("Patient", PATIENTS));
-    final AtomicInteger jobs = new AtomicInteger();
-    final SparkListener listener =
-        new SparkListener() {
-          @Override
-          public void onJobEnd(final SparkListenerJobEnd jobEnd) {
-            jobs.incrementAndGet();
-          }
-        };
-    final SparkContext context = TransformFixtures.spark().sparkContext();
-    context.listenerBus().waitUntilEmpty();
-    context.addSparkListener(listener);
-    try {
-      logic().canonicalSchema("Patient", outOfOrder);
-      context.listenerBus().waitUntilEmpty();
-    } finally {
-      context.removeSparkListener(listener);
-    }
-
-    assertEquals(0, jobs.get());
+    assertEquals(
+        0,
+        JobCountingListener.jobsRunBy(
+            TransformFixtures.spark().sparkContext(),
+            () -> logic().canonicalSchema("Patient", outOfOrder)));
   }
 }
