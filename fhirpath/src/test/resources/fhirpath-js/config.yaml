@@ -117,10 +117,10 @@ excludeSet:
         type: feature
         outcome: failure
         comment: |
-          The subject is not a FHIR resource, so the harness models `_collWithNullsAndTrue`
-          as an ordinary element rather than as the id and extensions of the items of
-          `collWithNullsAndTrue`. The `id` of the first item is therefore not reachable,
-          and the expression returns empty instead of `nullId`.
+          The subject is not a FHIR resource, so the harness reads `_collWithNullsAndTrue`
+          as the metadata group of `collWithNullsAndTrue`, but the `id` of an item of a
+          primitive is not reachable through the definition of such a subject, so the
+          expression returns empty instead of `nullId`.
         any:
           - "** first for collection with null values"
   - title: Literal exclusions

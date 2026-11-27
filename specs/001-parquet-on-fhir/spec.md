@@ -34,7 +34,11 @@ appear:
 
 - the dense schema mode and streaming encode: FR-009's dense schema, FR-010,
   FR-016's exception 4, FR-017, FR-043's streaming clause and FR-044, User Story
-  4's scenario 7, the dense subset of SC-002, and SC-010;
+  4's scenario 7, the dense subset of SC-002, and SC-010. These are superseded
+  by [2881, defined schemas](../2881-defined-schemas/spec.md) (its FR-026): a schema is given up front
+  rather than chosen as a mode, a stream is encoded with one, and generating a
+  wide schema from the definitions is the schema generator follow-up named
+  under its Out of Scope;
 - deciding the annotation step's _fill_ per row. Until then, _fill_ keeps a
   stored annotation that is null beside its value, as in a table merged from
   annotated and unannotated sources, and _recompute_ repairs it.
@@ -164,7 +168,9 @@ expression over an absent element yields empty.
    **When** it is evaluated, **Then** it succeeds.
 7. **Given** one column expression, **When** it is applied to a fitted dataset
    and to a dense dataset holding the same resources, **Then** the results are
-   equal. _Deferred (Scope of #2367)._
+   equal. _Superseded by [2881](../2881-defined-schemas/spec.md): there is no dense mode, and its FR-021
+   and FR-021b make results depend on the data alone, whichever schema it is
+   stored with._
 8. **Given** two collections of the same FHIR type reached by different paths,
    whose fitted schemas differ, **When** they are combined, **Then** the result
    holds every element of both and can be traversed.
@@ -353,16 +359,20 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   ([ADR-0005](../../docs/adr/0005-types-from-definitions-only.md)). Content it
   does not describe is typed only as FR-012 allows.
 - **FR-009**: The system MUST support a fitted schema and a dense schema. The
-  fitted schema is the default. _Deferred: the dense schema (Scope of #2367)._
+  fitted schema is the default. _The dense schema is superseded by
+  [2881](../2881-defined-schemas/spec.md): a schema defined up front takes its place, and generating one
+  from the definitions is the schema generator follow-up._
   A dense schema carries a primitive's metadata group only when the ingest
   option that stores primitive ids and extensions is on, and then beside every
   primitive, populated where the source has an id or extensions and null
   otherwise (owner, 2026-11-12; ticket 17). Which further options limit the
-  full dense schema is ticket 18's to decide.
+  full dense schema was ticket 18's to decide, and is now the generator's.
 - **FR-010**: The dense schema MUST be produced by the same traversal as the
   fitted one, differing only in the strategy that decides which children it
   descends into and where it stops, so the two cannot diverge in type,
-  cardinality or field order. _Deferred (Scope of #2367)._
+  cardinality or field order. _Superseded by [2881](../2881-defined-schemas/spec.md): a defined schema is
+  read by the same transform as an inferred one, so there is no second
+  traversal._
 - **FR-011**: A complex element MUST appear in a fitted schema only where some
   descendant leaf is populated. A primitive the source carried only as its id
   and extensions counts as populated.
@@ -411,7 +421,9 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
     3. primitive ids and extensions, when the ingest option that stores them (ticket 17)
        is off, as it is by default;
     4. on a dense schema, content beyond the configured nesting, extension and
-       open-type bounds (FR-017, deferred);
+       open-type bounds (FR-017). Superseded by [2881](../2881-defined-schemas/spec.md): content outside a
+       defined schema is dropped as its FR-006 and FR-006a describe, and the
+       bounds belong to the schema generator follow-up;
     5. `base64Binary` whitespace, which decoding and re-encoding canonicalises.
 
     OQ-1 lists further exceptions that hold until ticket 16 decides
@@ -423,8 +435,8 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
 
 - **FR-017**: On a dense schema the guarantee in FR-016 MUST hold within the
   configured nesting, extension and open-type bounds. What those bounds drop is
-  an exception to the guarantee (FR-016), and is not reported. _Deferred
-  (Scope of #2367)._
+  an exception to the guarantee (FR-016), and is not reported. _Superseded by
+  [2881](../2881-defined-schemas/spec.md) and the schema generator follow-up, as FR-016's exception 4 is._
 - **FR-019**: Export MUST omit an absent element, a structure whose every field
   is null, and an array holding only nulls, except a repeating primitive's
   positional nulls, which align with its metadata group. A value array that
@@ -585,15 +597,19 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
 
 - **FR-043**: `encode`, `encodeBundle` and `decode` MUST be preserved in Java,
   Python and R, in the forms taking a resource name. Encoding a streaming
-  dataset MUST work in the dense schema mode. _Deferred: the streaming clause
-  (Scope of #2367); until then a streaming dataset is refused with a message
-  that names encoding each batch as the remedy._
+  dataset MUST work in the dense schema mode. _The streaming clause is
+  superseded by [2881](../2881-defined-schemas/spec.md): its FR-012 encodes a stream given a schema, and
+  its FR-013 keeps one without a schema refused._
 - **FR-044**: The nesting, extension and open-type options MUST bound the dense
   schema and MUST NOT apply to the fitted one. Evidence:
-  [encoder-scope.md](evidence/encoder-scope.md). _Deferred (Scope of #2367)._
+  [encoder-scope.md](evidence/encoder-scope.md). _Superseded by
+  [2881](../2881-defined-schemas/spec.md): the options become shortcuts of the schema generator
+  follow-up._
 - **FR-047**: The published documentation MUST describe the PoF layout, its
   schema modes and annotations, the refusal of the legacy layout, the legacy
-  export, and the caveat for direct SQL consumers.
+  export, and the caveat for direct SQL consumers. The schema modes are
+  superseded by [2881](../2881-defined-schemas/spec.md): its FR-022 documents defined schemas in their
+  place.
 
 ### Module boundary
 
@@ -624,8 +640,9 @@ reconciliation, legacy export, layout column.
   subject to FR-016's exceptions.
 - **SC-002**: The FHIRPath test suite, both conformance baselines and the
   SQL-on-FHIR compliance suite pass over the PoF layout with fitted schemas, and
-  a curated subset passes with dense schemas. _Deferred: the dense subset
-  (Scope of #2367)._
+  a curated subset passes with dense schemas. _The dense subset is superseded
+  by [2881](../2881-defined-schemas/spec.md): its FR-021b runs both YAML suites with defined schemas in
+  the regular build._
 - **SC-003**: The conformance exclusion baselines gain no new entries, and every
   obsolete entry is removed.
 - **SC-004**: The full engine test suite passes over files written with every
@@ -648,7 +665,8 @@ reconciliation, legacy export, layout column.
 - **SC-010**: One column expression, built without reference to any dataset,
   applied to a fitted and to a dense dataset holding the same resources, yields
   equal results for every expression in the engine's expression-level test set.
-  _Deferred (Scope of #2367)._
+  _Superseded by [2881](../2881-defined-schemas/spec.md): its FR-021, FR-021b and SC-005 show that results
+  do not depend on the stored schema._
 - **SC-011**: Encode and decode are no slower than at the PoF switch, measured on
   the same benchmark, within the measured drift of about 10%
   ([t136-benchmark.md](evidence/t136-benchmark.md)).

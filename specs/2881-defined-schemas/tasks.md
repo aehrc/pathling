@@ -505,9 +505,9 @@ every source.
 **Purpose**: Show that query results do not depend on which subset of the uber-schema is stored
 (ADR-0007).
 
-- [ ] T041 Map every position kind of SC-005 to the existing absence tests named in the survey,
+- [x] T041 Map every position kind of SC-005 to the existing absence tests named in the survey,
       and record the matrix and its gaps in `specs/2881-defined-schemas/evidence/absence-coverage.md`.
-- [ ] T042 Add failing-first tests for each gap found by T041 in
+- [x] T042 Add failing-first tests for each gap found by T041 in
       `fhirpath/src/test/java/au/csiro/pathling/fhirpath/AbsentElementTest.java`. The gaps include:
     - a repeating complex element absent on both sides of a combination;
     - a primitive metadata group absent inside a repeating complex element.
@@ -517,12 +517,12 @@ every source.
 - [x] T043 Record the baseline: run `YamlReferenceImplTest` and `YamlFhirPathTest` with today's
       loads, and record each case's result in
       `specs/2881-defined-schemas/evidence/yaml-defined-run.md`, under a baseline heading.
-- [ ] T044 [P] Test the load of a case whose subject is not a FHIR resource (path 2) in
+- [x] T044 [P] Test the load of a case whose subject is not a FHIR resource (path 2) in
       `fhirpath/src/test/java/au/csiro/pathling/test/yaml/resolver/ArbitraryObjectResolverFactoryTest.java`:
       for subjects with primitive, complex, repeating and missing elements, the resolved dataset
       equals the defined read of `FhirReader` with the schema derived by `definitionToStruct` from
       the subject's definition alone, and keeps the subject's values (FR-021b).
-- [ ] T045 [P] Test the load of a case whose subject is a FHIR resource (path 1) in
+- [x] T045 [P] Test the load of a case whose subject is a FHIR resource (path 1) in
       `fhirpath/src/test/java/au/csiro/pathling/test/yaml/resolver/FhirResolverFactoryTest.java`:
     - the defined schema is the schema inferred from all of the suite's input resources of the
       case's type, merged by name with the case's own inferred schema;
@@ -530,7 +530,7 @@ every source.
       subject;
     - it is derived once per suite and type;
     - the resolved dataset keeps the case's values (FR-021b).
-- [ ] T046 Read path 2 through
+- [x] T046 Read path 2 through
       `FhirReader.of(spark, DefaultDefinitionContext.of(subjectDefinition), config).json().read(code, docs, definitionToStruct(subjectDefinition))`
       in
       `fhirpath/src/test/java/au/csiro/pathling/test/yaml/resolver/ArbitraryObjectResolverFactory.java`.
@@ -540,7 +540,7 @@ every source.
       `fhirpath/src/test/java/au/csiro/pathling/test/yaml/YamlTestRunnerTest.java`, and remove from
       `fhirpath/src/test/java/au/csiro/pathling/test/yaml/YamlSupport.java` those nothing else
       uses.
-- [ ] T047 Load path 1 with a defined schema: derive each suite's schema per resource type from all
+- [x] T047 Load path 1 with a defined schema: derive each suite's schema per resource type from all
       of its input resources (the `inputfile`s of its resource directory and its inline FHIR
       subjects), cache it per suite and type, and merge it by name with each case's inferred
       schema, in
@@ -549,7 +549,7 @@ every source.
       is checked in, and no profile or `TestSchemaMode` mode is added. The inferred load stays
       covered by the `io` and `library-api` tests, and narrowing (FR-006) by the load tests, since
       these schemas are only ever wider than the data.
-- [ ] T048 Run `YamlReferenceImplTest` and `YamlFhirPathTest` in the regular build and compare each
+- [x] T048 Run `YamlReferenceImplTest` and `YamlFhirPathTest` in the regular build and compare each
       case with the baseline of T043. Fix each changed result as an engine or reader defect or, if
       it is a genuine conformance gap, record it in
       `fhirpath/src/test/resources/fhirpath-js/config.yaml` or
@@ -600,7 +600,7 @@ every source.
       shortcuts) and Delta idempotent writes, with the PoF_line label. Checking a schema against
       the uber-schema is #2884's work, once it is re-scoped, not a follow-up. Record
       their numbers under Out of Scope in `specs/2881-defined-schemas/spec.md` (FR-025).
-- [ ] T054 [P] Point 001's dense-mode tickets, and its FR-009 dense schema, FR-010, FR-016
+- [x] T054 [P] Point 001's dense-mode tickets, and its FR-009 dense schema, FR-010, FR-016
       exception 4, FR-017, FR-043 streaming clause, FR-044, FR-047 schema modes, User Story 4
       scenario 7, the dense subset of SC-002 and SC-010, at this specification or the generator
       issue (FR-026). The files are
