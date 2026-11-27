@@ -546,38 +546,6 @@ public class PathlingContext {
 
   /**
    * Takes a dataframe with string representations of FHIR resources and encodes the resources of
-   * the given type with a schema defined up front, so that nothing is inferred from the documents
-   * (FR-002, FR-005). Without a schema, this is {@link #encode(Dataset, String, String)}.
-   *
-   * @param stringResourcesDf the dataframe with the string representation of the resources. The
-   *     dataframe must have a single column of type string.
-   * @param resourceName the name of the resources to encode
-   * @param inputMimeType the MIME type of the input strings
-   * @param schema the schema of the resources, in the Parquet on FHIR layout, or null to fit the
-   *     schema to the data
-   * @return the dataframe with Spark encoded resources
-   */
-  @Nonnull
-  public Dataset<Row> encode(
-      @Nonnull final Dataset<Row> stringResourcesDf,
-      @Nonnull final String resourceName,
-      @Nonnull final String inputMimeType,
-      @Nullable final StructType schema) {
-    if (schema == null) {
-      return encode(stringResourcesDf, resourceName, inputMimeType);
-    }
-    final Dataset<String> stringResources = documents(stringResourcesDf, null);
-    requireEncodable(stringResources, resourceName);
-    return annotator.annotate(
-        resourceName,
-        fhirReader
-            .format(inputMimeType)
-            .read(
-                resourceName, selectForJson(stringResources, resourceName, inputMimeType), schema));
-  }
-
-  /**
-   * Takes a dataframe with string representations of FHIR resources and encodes the resources of
    * the given type as a Spark dataframe.
    *
    * @param stringResourcesDf the dataframe with the string representation of the resources. The
@@ -592,7 +560,7 @@ public class PathlingContext {
       @Nonnull final String resourceName,
       @Nonnull final String inputMimeType) {
 
-    return encode(stringResourcesDf, resourceName, inputMimeType, (String) null);
+    return encode(stringResourcesDf, resourceName, inputMimeType, null);
   }
 
   /**
@@ -608,6 +576,41 @@ public class PathlingContext {
   public Dataset<Row> encode(
       @Nonnull final Dataset<Row> stringResourcesDf, @Nonnull final String resourceName) {
     return encode(stringResourcesDf, resourceName, FHIR_JSON);
+  }
+
+  /**
+   * Takes a dataframe with string representations of FHIR resources and encodes the resources of
+   * the given type with a schema defined up front, so that nothing is inferred from the documents
+   * (FR-002, FR-005). Without a schema, this is {@link #encode(Dataset, String, String)}.
+   *
+   * <p>It has a name of its own, rather than overloading {@code encode}, because the overload
+   * taking a column name also takes a null as its fourth argument (research R22).
+   *
+   * @param stringResourcesDf the dataframe with the string representation of the resources. The
+   *     dataframe must have a single column of type string.
+   * @param resourceName the name of the resources to encode
+   * @param inputMimeType the MIME type of the input strings
+   * @param schema the schema of the resources, in the Parquet on FHIR layout, or null to fit the
+   *     schema to the data
+   * @return the dataframe with Spark encoded resources
+   */
+  @Nonnull
+  public Dataset<Row> encodeWithSchema(
+      @Nonnull final Dataset<Row> stringResourcesDf,
+      @Nonnull final String resourceName,
+      @Nonnull final String inputMimeType,
+      @Nullable final StructType schema) {
+    if (schema == null) {
+      return encode(stringResourcesDf, resourceName, inputMimeType);
+    }
+    final Dataset<String> stringResources = documents(stringResourcesDf, null);
+    requireEncodable(stringResources, resourceName);
+    return annotator.annotate(
+        resourceName,
+        fhirReader
+            .format(inputMimeType)
+            .read(
+                resourceName, selectForJson(stringResources, resourceName, inputMimeType), schema));
   }
 
   /**
@@ -688,35 +691,6 @@ public class PathlingContext {
 
   /**
    * Takes a dataframe with string representations of FHIR bundles and encodes the resources of the
-   * given type with a schema defined up front, so that nothing is inferred from the bundles
-   * (FR-002, FR-005). Without a schema, this is {@link #encodeBundle(Dataset, String, String)}.
-   *
-   * @param stringBundlesDf the dataframe with the string representation of the bundles. The
-   *     dataframe must have a single column of type string.
-   * @param resourceName the name of the resources to encode
-   * @param inputMimeType the MIME type of the input strings
-   * @param schema the schema of the resources, in the Parquet on FHIR layout, or null to fit the
-   *     schema to the data
-   * @return a Spark dataframe containing the encoded resources
-   */
-  @Nonnull
-  public Dataset<Row> encodeBundle(
-      @Nonnull final Dataset<Row> stringBundlesDf,
-      @Nonnull final String resourceName,
-      @Nonnull final String inputMimeType,
-      @Nullable final StructType schema) {
-    if (schema == null) {
-      return encodeBundle(stringBundlesDf, resourceName, inputMimeType);
-    }
-    final Dataset<String> stringBundles = documents(stringBundlesDf, null);
-    requireEncodable(stringBundles, resourceName);
-    return annotator.annotate(
-        resourceName,
-        fhirReader.format(inputMimeType).readBundles(resourceName, stringBundles, schema));
-  }
-
-  /**
-   * Takes a dataframe with string representations of FHIR bundles and encodes the resources of the
    * given type as a Spark dataframe.
    *
    * @param stringBundlesDf the dataframe with the string representation of the bundles. The
@@ -730,7 +704,7 @@ public class PathlingContext {
       @Nonnull final Dataset<Row> stringBundlesDf,
       @Nonnull final String resourceName,
       @Nonnull final String inputMimeType) {
-    return encodeBundle(stringBundlesDf, resourceName, inputMimeType, (String) null);
+    return encodeBundle(stringBundlesDf, resourceName, inputMimeType, null);
   }
 
   /**
@@ -746,6 +720,38 @@ public class PathlingContext {
   public Dataset<Row> encodeBundle(
       @Nonnull final Dataset<Row> stringBundlesDf, @Nonnull final String resourceName) {
     return encodeBundle(stringBundlesDf, resourceName, FHIR_JSON);
+  }
+
+  /**
+   * Takes a dataframe with string representations of FHIR bundles and encodes the resources of the
+   * given type with a schema defined up front, so that nothing is inferred from the bundles
+   * (FR-002, FR-005). Without a schema, this is {@link #encodeBundle(Dataset, String, String)}.
+   *
+   * <p>It has a name of its own, rather than overloading {@code encodeBundle}, because the overload
+   * taking a column name also takes a null as its fourth argument (research R22).
+   *
+   * @param stringBundlesDf the dataframe with the string representation of the bundles. The
+   *     dataframe must have a single column of type string.
+   * @param resourceName the name of the resources to encode
+   * @param inputMimeType the MIME type of the input strings
+   * @param schema the schema of the resources, in the Parquet on FHIR layout, or null to fit the
+   *     schema to the data
+   * @return a Spark dataframe containing the encoded resources
+   */
+  @Nonnull
+  public Dataset<Row> encodeBundleWithSchema(
+      @Nonnull final Dataset<Row> stringBundlesDf,
+      @Nonnull final String resourceName,
+      @Nonnull final String inputMimeType,
+      @Nullable final StructType schema) {
+    if (schema == null) {
+      return encodeBundle(stringBundlesDf, resourceName, inputMimeType);
+    }
+    final Dataset<String> stringBundles = documents(stringBundlesDf, null);
+    requireEncodable(stringBundles, resourceName);
+    return annotator.annotate(
+        resourceName,
+        fhirReader.format(inputMimeType).readBundles(resourceName, stringBundles, schema));
   }
 
   /**

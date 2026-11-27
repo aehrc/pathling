@@ -170,7 +170,9 @@
     - **Java**:
         - `DataSourceBuilder.withSchemas(Map<String, StructType>)` returns a builder whose every
           source method applies the set.
-        - `encode` and `encodeBundle` overloads with a trailing `@Nullable StructType schema`.
+        - `encodeWithSchema` and `encodeBundleWithSchema`, taking a trailing
+          `@Nullable StructType schema`. They were first overloads of `encode` and
+          `encodeBundle`, renamed by R22.
         - `QueryableDataSource.schemas()` returns `Map<String, StructType>`.
         - `PathlingContext.canonicalSchemas(Map<String, StructType>)` returns the same type
           (FR-027).
@@ -489,3 +491,18 @@
 - **Alternatives considered**: An abstract `schemas()` implemented in `AbstractSource`, which
   breaks every other implementation of the interface. Leaving the contradiction refusal to slice
   07, which would leave canonicalisation to keep or drop a field it cannot place.
+
+## R22. Encoding with a schema: methods of their own
+
+- **Decision** (owner, 2026-11-27): The Java methods that encode with a schema are named
+  `encodeWithSchema(df, resourceType, inputMimeType, StructType schema)` and
+  `encodeBundleWithSchema(df, resourceType, inputMimeType, StructType schema)`, rather than
+  overloading `encode` and `encodeBundle`.
+- **Rationale**: The existing `encode` and `encodeBundle` take a `@Nullable String` column name as
+  their fourth argument. An overload taking a `StructType` there made a literal null ambiguous in
+  Java and Scala, which then needed a `(String) null` cast, and in Py4J and sparklyr, which choose
+  an overload from the runtime arguments and so cannot tell the two apart from a null. Distinct
+  names leave every existing call, including those that pass a null column, as it was.
+- **Alternatives considered**: Keeping the overloads and casting the null in Java, and calling the
+  three-argument overload from Python and R when no column is given. That works, but every caller
+  that passes a null column has to know to do it.

@@ -384,8 +384,9 @@ Parquet with a Pathling sink in `foreachBatch`, is read back through Pathling (T
 
 ### Implementation for User Story 2
 
-- [ ] T033 [US2] Add the `encode` and `encodeBundle` overloads with a `@Nullable StructType` schema,
-      route them to the
+- [ ] T033 [US2] Add `encodeWithSchema` and `encodeBundleWithSchema`, taking a `@Nullable
+    StructType` schema, as methods of their own rather than overloads of `encode` and
+      `encodeBundle` (research R22), route them to the
       defined-schema reader, and allow streams only when a schema is given, keeping
       `UnsupportedOperationException` with the new refusal message, in
       `library-api/src/main/java/au/csiro/pathling/library/PathlingContext.java`.

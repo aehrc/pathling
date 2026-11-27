@@ -67,11 +67,16 @@ that set's schemas.
 ## Encoding: `PathlingContext`
 
 ```java
-@Nonnull Dataset<Row> encode(@Nonnull Dataset<?> df, @Nonnull String resourceType,
+@Nonnull Dataset<Row> encodeWithSchema(@Nonnull Dataset<?> df, @Nonnull String resourceType,
     @Nonnull String inputMimeType, @Nullable StructType schema);
-@Nonnull Dataset<Row> encodeBundle(@Nonnull Dataset<?> df, @Nonnull String resourceType,
+@Nonnull Dataset<Row> encodeBundleWithSchema(@Nonnull Dataset<?> df, @Nonnull String resourceType,
     @Nonnull String inputMimeType, @Nullable StructType schema);
 ```
+
+- They have names of their own, not overloads of `encode` and `encodeBundle`, whose fourth
+  argument is a `@Nullable String` column name, so that a literal null is not ambiguous (research
+  R22).
+- A null schema fits the schema to the data, as `encode` and `encodeBundle` do.
 
 - A streaming `df` with a non-null schema returns a streaming dataset.
 - A streaming `df` with a null schema throws `UnsupportedOperationException`, as today, with the

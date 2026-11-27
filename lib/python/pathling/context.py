@@ -805,13 +805,10 @@ class PathlingContext:
                  columns
         """
 
-        mime_type = input_type or MimeType.FHIR_JSON
-        # Without a column, the overload taking none is called, because a null would not tell the
-        # overloads taking a column and a schema apart.
-        if column is None:
-            return self._wrap_df(self._jpc.encode(df._jdf, resource_name, mime_type))
         return self._wrap_df(
-            self._jpc.encode(df._jdf, resource_name, mime_type, column)
+            self._jpc.encode(
+                df._jdf, resource_name, input_type or MimeType.FHIR_JSON, column
+            )
         )
 
     def encode_bundle(
@@ -835,14 +832,10 @@ class PathlingContext:
         :return: a :class:`DataFrame` containing the given type of resources encoded into Spark
                  columns
         """
-        mime_type = input_type or MimeType.FHIR_JSON
-        # Without a column, the overload taking none is called, as in encode.
-        if column is None:
-            return self._wrap_df(
-                self._jpc.encodeBundle(df._jdf, resource_name, mime_type)
-            )
         return self._wrap_df(
-            self._jpc.encodeBundle(df._jdf, resource_name, mime_type, column)
+            self._jpc.encodeBundle(
+                df._jdf, resource_name, input_type or MimeType.FHIR_JSON, column
+            )
         )
 
     def canonical_schemas(

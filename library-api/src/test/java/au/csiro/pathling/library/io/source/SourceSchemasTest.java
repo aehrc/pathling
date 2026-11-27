@@ -202,16 +202,16 @@ class SourceSchemasTest {
     final Map<String, Dataset<Row>> encoded =
         Map.of(
             "encode JSON",
-            context.encode(
+            context.encodeWithSchema(
                 SchemaSetSources.patientJson(context), PATIENT, PathlingContext.FHIR_JSON, entry),
             "encode XML",
-            context.encode(
+            context.encodeWithSchema(
                 SchemaSetSources.patientXml(context), PATIENT, PathlingContext.FHIR_XML, entry),
             "encodeBundle JSON",
-            context.encodeBundle(
+            context.encodeBundleWithSchema(
                 SchemaSetSources.jsonBundles(context), PATIENT, PathlingContext.FHIR_JSON, entry),
             "encodeBundle XML",
-            context.encodeBundle(
+            context.encodeBundleWithSchema(
                 SchemaSetSources.xmlBundles(context), PATIENT, PathlingContext.FHIR_XML, entry));
 
     assertAll(
