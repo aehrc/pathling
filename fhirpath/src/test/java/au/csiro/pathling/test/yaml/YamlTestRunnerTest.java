@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import au.csiro.pathling.definition.ChildDefinition;
 import au.csiro.pathling.definition.defaults.DefaultDefinitionContext;
 import au.csiro.pathling.definition.defaults.DefaultResourceDefinition;
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
@@ -39,14 +40,16 @@ import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.layout.PofDatasets;
 import au.csiro.pathling.test.yaml.format.YamlTestFormat;
+import au.csiro.pathling.test.yaml.resolver.ArbitraryObjectResolverFactory;
+import au.csiro.pathling.test.yaml.resolver.RuntimeContext;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
@@ -57,12 +60,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.yaml.snakeyaml.Yaml;
 
+@Slf4j
 @SpringBootUnitTest
 class YamlTestRunnerTest {
 
   @Autowired SparkSession spark;
 
   @Autowired FhirContext fhirContext;
+
+  @Autowired FhirEncoders fhirEncoders;
 
   private static final Yaml YAML_PARSER = new Yaml();
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -96,22 +102,12 @@ class YamlTestRunnerTest {
     final DefaultResourceDefinition subjectDefinition =
         (DefaultResourceDefinition) YamlSupport.yamlToDefinition("Test", subjectYamlModel);
 
-    System.out.println("Yaml definition:");
-    System.out.println(subjectDefinition);
-
-    final StructType subjectSchema =
-        YamlSupport.definitionToStruct(subjectDefinition, subjectYamlModel);
-    System.out.println("Struct definition:");
-    subjectSchema.printTreeString();
-
-    final String subjectJson = YamlSupport.subjectToJson(subjectYamlModel);
-    System.out.println(subjectJson);
+    log.debug("Yaml definition: {}", subjectDefinition);
 
     final Dataset<Row> inputDS =
-        spark
-            .read()
-            .schema(subjectSchema)
-            .json(spark.createDataset(List.of(subjectJson), Encoders.STRING()));
+        ArbitraryObjectResolverFactory.of(subjectYamlModel)
+            .apply(RuntimeContext.of(spark, fhirEncoders))
+            .getDataset();
 
     inputDS.printSchema();
     inputDS.show();

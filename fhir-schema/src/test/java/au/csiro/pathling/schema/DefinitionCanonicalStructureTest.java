@@ -29,7 +29,12 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.definition.DefinitionContext;
 import au.csiro.pathling.definition.NodeDefinition;
+import au.csiro.pathling.definition.defaults.DefaultDefinitionContext;
+import au.csiro.pathling.definition.defaults.DefaultPrimitiveDefinition;
+import au.csiro.pathling.definition.defaults.DefaultResourceDefinition;
+import au.csiro.pathling.definition.defaults.DefaultResourceTag;
 import au.csiro.pathling.utilities.CanonicalStructure;
 import au.csiro.pathling.utilities.StructureMerge;
 import jakarta.annotation.Nonnull;
@@ -38,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -445,5 +451,33 @@ class DefinitionCanonicalStructureTest {
     assertTrue(asResource.fieldOrder().contains("resourceType"));
     assertFalse(asElement.fieldOrder().contains("resourceType"));
     assertSame(asResource, DefinitionCanonicalStructure.of(patient, true, memo));
+  }
+
+  /**
+   * The null type, which a YAML subject's empty list or null is given, is not a primitive (R23).
+   */
+  @Test
+  void doesNotTakeTheNullTypeForAPrimitive() {
+    assertFalse(PrimitiveTypes.isPrimitive(FHIRDefinedType.NULL));
+  }
+
+  /**
+   * An element the definitions type as null is accepted, beside the typed elements, and has no
+   * metadata group, because it holds no value a group could annotate (R23).
+   */
+  @Test
+  void acceptsAnElementTypedAsNullWithoutAMetadataGroup() {
+    final DefinitionContext definitions =
+        DefaultDefinitionContext.of(
+            DefaultResourceDefinition.of(
+                DefaultResourceTag.of("Test"),
+                DefaultPrimitiveDefinition.single("s", FHIRDefinedType.STRING),
+                DefaultPrimitiveDefinition.of("emptycoll", FHIRDefinedType.NULL, -1)));
+
+    final List<String> order =
+        DefinitionCanonicalStructure.forResource(definitions, "Test").fieldOrder();
+
+    assertTrue(order.containsAll(List.of("resourceType", "s", "_s")));
+    assertFalse(order.contains("_emptycoll"));
   }
 }

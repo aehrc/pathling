@@ -4,6 +4,8 @@
 
 > **Raised as #2881 (2026-11-09),** with ticket 18.
 
+> **Superseded by [2881, defined schemas](../../2881-defined-schemas/spec.md) (its FR-026).** With no dense mode there is no second mode to compare. #2881 shows instead that results depend on the data alone (FR-021): both YAML suites run with defined schemas in the regular build, with every case's result equal to the inferred baseline (FR-021b, `evidence/yaml-defined-run.md`), and absence is tested at every kind of position (SC-005). The `dense` test schema mode placeholder was removed. Nothing in this ticket is to be built as written.
+
 **Spec:** `specs/001-parquet-on-fhir/spec.md` — FR-010, FR-057, SC-002, SC-010. Old tasks: T030, T037b, T108b.
 
 **What to build:** Evidence that the dense and fitted modes agree.

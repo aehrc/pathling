@@ -56,10 +56,12 @@ import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Observation.ObservationComponentComponent;
 import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.PrimitiveType;
 import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Questionnaire;
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemOperator;
@@ -196,7 +198,14 @@ class AbsentElementTest {
     final Stream<Arguments> fromPatients =
         Stream.concat(
                 absentPatientElements().map(arguments -> (String) arguments.get()[0]),
-                Stream.of("active", "telecom", "name.period", "name.family"))
+                Stream.of(
+                    "active",
+                    "telecom",
+                    "name.period",
+                    "name.family",
+                    "address",
+                    "contact.address",
+                    "generalPractitioner"))
             .distinct()
             .map(path -> arguments("Patient", named("patients", patients), path));
     final Stream<Arguments> fromObservations =
@@ -557,6 +566,120 @@ class AbsentElementTest {
         .containsExactlyInAnyOrder(expected1, expected2);
   }
 
+  // T042: a repeating complex element absent on both sides of a combination (SC-005). The cases
+  // above combine an absent element with a populated one; here neither side is in the schema. Each
+  // combination pairs elements of one type, at repeating and singular cardinality, at the root and
+  // nested under a repeating parent.
+
+  @Nonnull
+  Stream<Arguments> combinationsOfAbsentElements() {
+    return Stream.of(
+        // The same repeating complex element on both sides.
+        arguments("(telecom | telecom).count()", "p1=0", "p2=0"),
+        arguments("telecom.combine(telecom).count()", "p1=0", "p2=0"),
+        arguments("telecom.combine(telecom).value.count()", "p1=0", "p2=0"),
+        // A repeating complex element at the root with a singular one nested under a repeating
+        // parent, in both orders.
+        arguments("(address | contact.address).count()", "p1=0", "p2=0"),
+        arguments("(contact.address | address).city.count()", "p1=0", "p2=0"),
+        arguments("address.combine(contact.address).count()", "p1=0", "p2=0"),
+        // A singular complex element with a repeating one.
+        arguments("(managingOrganization | generalPractitioner).count()", "p1=0", "p2=0"),
+        arguments(
+            "generalPractitioner.combine(managingOrganization).reference.count()", "p1=0", "p2=0"),
+        // Membership and equality of values beneath two absent elements.
+        arguments("(address.city.first() in contact.address.city).empty()", "p1=true", "p2=true"),
+        arguments("(address.city = contact.address.city).empty()", "p1=true", "p2=true"),
+        // The combination beside a populated element, so the rows are not empty by accident.
+        arguments("telecom.combine(telecom).count() + name.count()", "p1=1", "p2=2"));
+  }
+
+  @ParameterizedTest(name = "{0} over the full schema")
+  @MethodSource("combinationsOfAbsentElements")
+  void combinationOfUnpopulatedElementsOverFullSchema(
+      @Nonnull final String expression,
+      @Nonnull final String expected1,
+      @Nonnull final String expected2) {
+    assertThat(evaluate(patients.read(), "Patient", expression))
+        .containsExactlyInAnyOrder(expected1, expected2);
+  }
+
+  @ParameterizedTest(name = "{0} with both sides absent from the schema")
+  @MethodSource("combinationsOfAbsentElements")
+  void combinationOfAbsentElementsSucceeds(
+      @Nonnull final String expression,
+      @Nonnull final String expected1,
+      @Nonnull final String expected2) {
+    final Dataset<Row> pruned =
+        patients.readWithout(
+            "telecom", "address", "contact.address", "managingOrganization", "generalPractitioner");
+    assertThat(evaluate(pruned, "Patient", expression))
+        .containsExactlyInAnyOrder(expected1, expected2);
+  }
+
+  // T042: a primitive metadata group absent inside a repeating complex element (SC-005). The
+  // filler stores an id on each of these primitives, so the full schema carries their groups as
+  // nulls, while the pruned schema carries the values without the groups beside them.
+
+  /**
+   * The metadata groups the next cases remove, inside a repeating or a singular complex element.
+   */
+  private static final String[] ABSENT_METADATA_GROUPS = {
+    "name._family", "name._given", "contact.name._given", "maritalStatus._text"
+  };
+
+  @Nonnull
+  Stream<Arguments> absentMetadataGroups() {
+    return Stream.of(
+        // A singular primitive inside a repeating complex element.
+        arguments("name.family.id.count()", "p1=0", "p2=0"),
+        arguments("name.family.extension.exists()", "p1=false", "p2=false"),
+        // A repeating primitive inside a repeating complex element, whose values are populated.
+        arguments("name.given.id.count()", "p1=0", "p2=0"),
+        arguments("name.given.extension.exists()", "p1=false", "p2=false"),
+        arguments("name.given.count()", "p1=2", "p2=2"),
+        arguments("name.given.join(',')", "p1=Ann,Bea", "p2=Cal,Dan"),
+        arguments("name.given.where(id.exists()).count()", "p1=0", "p2=0"),
+        arguments("name.where(given.id.exists()).count()", "p1=0", "p2=0"),
+        // A repeating primitive inside a singular complex element nested in a repeating one.
+        arguments("contact.name.given.id.count()", "p1=0", "p2=0"),
+        // A singular primitive inside a singular complex element.
+        arguments("maritalStatus.text.id.count()", "p1=0", "p2=0"));
+  }
+
+  @ParameterizedTest(name = "{0} over the full schema")
+  @MethodSource("absentMetadataGroups")
+  void unpopulatedMetadataGroupOverFullSchema(
+      @Nonnull final String expression,
+      @Nonnull final String expected1,
+      @Nonnull final String expected2) {
+    assertThat(evaluate(patients.read(), "Patient", expression))
+        .containsExactlyInAnyOrder(expected1, expected2);
+  }
+
+  @ParameterizedTest(name = "{0} with the metadata groups absent from the schema")
+  @MethodSource("absentMetadataGroups")
+  void absentMetadataGroupInsideRepeatingElementIsEmpty(
+      @Nonnull final String expression,
+      @Nonnull final String expected1,
+      @Nonnull final String expected2) {
+    assertThat(evaluate(patients.readWithout(ABSENT_METADATA_GROUPS), "Patient", expression))
+        .containsExactlyInAnyOrder(expected1, expected2);
+  }
+
+  @Test
+  void prunedSchemaLacksTheMetadataGroups() {
+    // A control on the setup, as for the elements: the full schema carries each group, because the
+    // filler stores it, and the pruned schema does not. The definitions do not describe a group as
+    // an element, so it is not checked against them.
+    for (final String group : ABSENT_METADATA_GROUPS) {
+      assertThat(hasElement(patients.read().schema(), group)).as(group).isTrue();
+      assertThat(hasElement(patients.readWithout(ABSENT_METADATA_GROUPS).schema(), group))
+          .as(group)
+          .isFalse();
+    }
+  }
+
   // Helpers.
 
   private void assertEmpty(@Nonnull final Dataset<Row> dataset, @Nonnull final String expression) {
@@ -682,7 +805,23 @@ class AbsentElementTest {
         .setStartElement(new DateTimeType("2020-01-01"));
     patient.getMaritalStatus().setText("married");
     patient.addContact().getName().addGiven("Kin");
+    patient.addAddress().setCity("Town");
+    patient.getContactFirstRep().getAddress().setCity("Village");
+    patient.addGeneralPractitioner().setReference("Practitioner/pr1");
+    // An id and an extension on a primitive store its metadata group, so that the schema carries
+    // the group. HAPI encodes the id of a primitive only where the primitive has an extension.
+    final HumanName name = patient.getNameFirstRep();
+    withMetadata(name.getFamilyElement(), "family-id");
+    withMetadata(name.addGivenElement().setValue("Gil"), "given-id");
+    withMetadata(patient.getContactFirstRep().getName().getGiven().get(0), "contact-given-id");
+    withMetadata(patient.getMaritalStatus().getTextElement(), "text-id");
     return patient;
+  }
+
+  private static void withMetadata(
+      @Nonnull final PrimitiveType<?> primitive, @Nonnull final String id) {
+    primitive.setId(id);
+    primitive.addExtension("http://example.org/filler", new StringType(id));
   }
 
   @Nonnull

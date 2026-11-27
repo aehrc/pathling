@@ -3197,3 +3197,59 @@ YamlFhirPathTest	testSearchParams	1225	passed				VisionPrescription.dateWritten
 YamlFhirPathTest	testSearchParams	1226	passed				VisionPrescription.prescriber
 YamlFhirPathTest	testSearchParams	1227	passed				VisionPrescription.status
 ```
+
+## Defined loads (T048)
+
+Taken for T048 of [tasks.md](../tasks.md), with the loads of T046 and T047: a subject that is not a
+FHIR resource (path 2) is read by `FhirReader` with the schema of its own definition, and a FHIR
+subject (path 1) with its suite's schema for its type, merged by name with its own.
+
+- **Commit**: `dbea50839b` (`issue/2881_06-engine-parity`), with the `sql-on-fhir` submodule as
+  in the baseline.
+- **Date**: 2026-11-27, on the same machine, Java and Spark as the baseline.
+- **Command**: the baseline's, with `-Dmaven.test.failure.ignore=true` so that a failing case
+  cannot stop the run before every case has a result.
+
+    It ended in `BUILD SUCCESS`: 3,092 tests run, no failures, no errors, 866 skipped.
+
+The reports were classified with the baseline's `classify.py`, and compared with `baseline.tsv`
+case by case, by suite, method and index. Every case has the same result as in the baseline, and
+also the same exclusion rule, unsupported cause, description, expression and raw assertion line.
+The tables of the baseline therefore hold unchanged for the defined loads, and no exclusion was
+added or removed.
+
+| Suite                   | Cases | Same result | Changed |
+| ----------------------- | ----: | ----------: | ------: |
+| `YamlReferenceImplTest` | 1,824 |       1,824 |       0 |
+| `YamlFhirPathTest`      | 1,268 |       1,268 |       0 |
+
+### The defect the first run found
+
+The first run of the defined loads errored on 224 cases of `YamlReferenceImplTest`, in six case
+files (`5.1_existence.yaml`, `5.3_subsetting.yaml`, `5.5_conversion.yaml`, `5.7_math.yaml`,
+`7_aggregate.yaml` and `extensions.yaml`), every one with an error like:
+
+```
+IllegalStateException: Duplicate key _collWithNullsAndTrue (attempted merging values
+metadataGroup(_collWithNullsAndTrue) and element(_collWithNullsAndTrue))
+```
+
+The subjects of those files are not FHIR resources but follow FHIR JSON in holding the ids and
+extensions of a primitive's items under the primitive's name prefixed with an underscore, such as
+`collWithNullsAndTrue` and `_collWithNullsAndTrue`. The harness modelled the underscore key as an
+element of its own, while the defined read gives every primitive of a definition a metadata group of
+that same name, so the two collided. The harness was at fault, not the engine or the reader: a key
+that names a sibling with an underscore is that sibling's metadata, not an element. The harness now
+leaves such a key out of the subject's definition, and the reader takes it as the sibling's
+metadata group. `ArbitraryObjectResolverFactoryTest` covers a repeating primitive with such a
+sibling.
+
+A scalar null with a sibling (`i` and `_i` in `6.5_boolean_logic.yaml` and `6.6_math.yaml`) never
+collided, because the null type is not a primitive and so has no metadata group.
+
+The exclusion of `** first for collection with null values` (#437, Primitive attributes) in
+`fhirpath-js/config.yaml` still holds with its recorded outcome. Its comment said the harness models
+`_collWithNullsAndTrue` as an ordinary element, which is no longer so, and now says that it is read
+as the metadata group of `collWithNullsAndTrue` but that the `id` of a primitive's item is not
+reachable through the definition of such a subject, so the case still returns empty rather than
+`nullId`. Only the comment changed.

@@ -4,14 +4,16 @@
 
 > **Raised as #2881 (2026-11-09),** with ticket 19.
 
+> **Superseded by [2881, defined schemas](../../2881-defined-schemas/spec.md) (its FR-026).** #2881 replaced the dense mode with schemas defined up front: a stream is encoded with a given schema (its FR-012), and a schema is read by the same transform as an inferred one, so there is no bounded cursor. Deriving a wide schema from the definitions, with the nesting, extension and open-type options as its bounds, is the schema generator follow-up named under its Out of Scope (FR-025). Nothing in this ticket is to be built as written.
+
 **Spec:** `specs/001-parquet-on-fhir/spec.md` — FR-009, FR-010, FR-017, FR-043, FR-044. Old tasks: T031a, T031e, T031d, T033, T033a, T033d, T134f (removed by ticket 37); decisions 59, 68, 69, 87, 94, 121.
 
 **What to build:** A user can choose the dense schema, which is derived from the definitions and bounded by the nesting, extension and open-type options, and can then encode a stream.
 
 - **A bounded cursor beside the fitted one (T031a).** Extract the traversal strategy interface and implement a bounded cursor over it. The cursor is the only place FR-044's bounds live.
-  - The extension switch and the open-type set cut entries. Only nesting cuts descent.
-  - `fieldOrder()` still reports the full order.
-  - The cursor is not memoised. Its state stays out of the shared canonical-structure memo.
+    - The extension switch and the open-type set cut entries. Only nesting cuts descent.
+    - `fieldOrder()` still reports the full order.
+    - The cursor is not memoised. Its state stays out of the shared canonical-structure memo.
 - **Typed nulls for missing children (T031e).** Where the observed schema lacks a child, emit a typed null built structurally. Never materialise a `StructType` for this (decision 68). Assert that FR-011's post-order prune still holds.
 - **The schema mode on `SchemaConfiguration` (T033, T033a).** Add the mode, default fitted, and thread it onto `PathlingContext`. Rewrite the docs for `max_nesting_level`, `enable_extensions` and `enabled_open_types` in Python, R and Javadoc to say they bound only the dense mode. Document the mode on the schema docs page, revising "The schema is fitted to the data".
 - **Streaming encode (T033d).** Restore streaming `encode` and `encodeBundle` in dense mode. Rewrite `PathlingContextTest.testEncodeResourceStream` from asserting the refusal to counting encoded resources, and restore the Kafka example in the streaming docs.

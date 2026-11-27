@@ -24,10 +24,10 @@ import java.util.Properties;
  * The schema mode dimension of the test framework: how much of the layout a fixture's schema
  * carries (T037).
  *
- * <p>Pruned is the only mode until M6, because the dense mode does not exist before then (decision
- * 69). T037b adds {@code -Dpathling.testSchemaMode=dense} beside the mode itself. Until it does, a
- * request for the dense mode fails rather than being answered with a pruned schema, and so does any
- * other value or a near miss of the property's name.
+ * <p>Pruned is the only mode. The dense mode that Parquet on FHIR planned is superseded by the
+ * defined-schema loads of the YAML suites (specification 2881, R23), so a request for any other
+ * value fails rather than being answered with a pruned schema, and so does a near miss of the
+ * property's name.
  *
  * <p>The mode describes the new-layout arm of the fixtures. The previous layout carries the schema
  * its encoders write, whatever the mode.
@@ -41,9 +41,6 @@ public final class TestSchemaMode {
 
   /** A schema carrying only what the data carries, and the default. */
   @Nonnull public static final TestSchemaMode PRUNED = new TestSchemaMode("pruned");
-
-  /** The name of the mode that arrives in M6, recognised only to explain its absence. */
-  @Nonnull private static final String DENSE = "dense";
 
   @Nonnull private final String name;
 
@@ -88,13 +85,6 @@ public final class TestSchemaMode {
   public static TestSchemaMode parse(@Nullable final String value) {
     if (value == null || PRUNED.name.equals(value)) {
       return PRUNED;
-    } else if (DENSE.equals(value)) {
-      throw new IllegalArgumentException(
-          "The dense schema mode was requested with -D"
-              + PROPERTY
-              + ", but it does not exist until M6 (T037b). Only '"
-              + PRUNED.name
-              + "' is available.");
     }
     throw new IllegalArgumentException(
         "Unknown schema mode '"
