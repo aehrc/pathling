@@ -441,85 +441,18 @@ QueryableDataSource data = pc.read().parquet("/usr/share/staging/parquet");
 #### Schema merging
 
 Pathling stores each resource type with a schema that is
-[fitted to the data](./schema.md#the-schema-is-fitted-to-the-data), so files
+[fitted to the data](./schema.md#inferred-schemas), so files
 written at different times can carry different columns. The Parquet source
 therefore merges the schemas of a resource type's files, and reads them as one
 dataset whose schema is the union of theirs. Without merging, the schema of
 whichever file happened to be read first would win, and the columns that only
 other files carry would be silently lost.
 
-Merging reads the footer of every file, which takes time on a large dataset. The
-way to avoid that cost is to supply the schema to read a resource type with,
-rather than to switch merging off, and there is deliberately no option to switch
-it off. A supplied schema is used as given, so it must cover the columns of
-every file of that type. Columns it leaves out are not read, and whole rows can
-be lost as well as columns: a view that unnests a repeating element returns none
-of a file's rows for that element if the schema leaves out every field the file
-carries within it. The workable pattern is to merge once and keep the resulting
-schema, or to take the schema of the data that was written, and supply that.
-Resource types for which no schema is supplied are merged as usual.
-
-<!--suppress CheckEmptyScriptTag -->
-<Tabs>
-<TabItem value="python" label="Python">
-
-```python
-# Merge once, and keep the resulting schema.
-patient_schema = pc.read.parquet("/usr/share/staging/parquet").read("Patient").schema
-
-# Later reads use the schema rather than merging the schemas of the files.
-data = pc.read.parquet(
-    "/usr/share/staging/parquet", schemas={"Patient": patient_schema}
-)
-```
-
-</TabItem>
-<TabItem value="r" label="R">
-
-```r
-# Merge once, and keep the resulting schema as JSON.
-patient_schema <- pc %>%
-        pathling_read_parquet("/usr/share/staging/parquet") %>%
-        ds_read("Patient") %>%
-        sparklyr::spark_dataframe() %>%
-        sparklyr::invoke("schema") %>%
-        sparklyr::invoke("json")
-
-# Later reads use the schema rather than merging the schemas of the files.
-data <- pc %>% pathling_read_parquet("/usr/share/staging/parquet",
-                                     schemas = list(Patient = patient_schema))
-```
-
-At most ten schemas can be supplied from R.
-
-</TabItem>
-<TabItem value="scala" label="Scala">
-
-```scala
-// Merge once, and keep the resulting schema.
-val patientSchema = pc.read().parquet("/usr/share/staging/parquet")
-        .read("Patient").schema
-
-// Later reads use the schema rather than merging the schemas of the files.
-val data = pc.read().parquetWithSchemas("/usr/share/staging/parquet",
-    Map("Patient" -> patientSchema).asJava)
-```
-
-</TabItem>
-<TabItem value="java" label="Java">
-
-```java
-// Merge once, and keep the resulting schema.
-StructType patientSchema = pc.read().parquet("/usr/share/staging/parquet")
-        .read("Patient").schema();
-
-// Later reads use the schema rather than merging the schemas of the files.
-QueryableDataSource data = pc.read().parquetWithSchemas(
-        "/usr/share/staging/parquet", Map.of("Patient", patientSchema));
-```
-
-</TabItem>
-</Tabs>
+Merging reads the footer of every file, which takes time on a large dataset,
+and there is deliberately no option to switch it off. A read given a
+[schema set](#defined-schemas) merges the files' schemas too, and then reads
+the merged data with the schema it was given, so giving one does not avoid this
+cost.
 
 ### Delta Lake
 
@@ -679,6 +612,95 @@ QueryableDataSource data = pc.read().withLayoutDetection(false)
 </TabItem>
 </Tabs>
 
+### Defined schemas
+
+Every data source can be given a schema set, which maps resource type codes to
+the schemas to read them with. A resource type that the set names is read with
+its schema, whatever its data populates, and every other resource type is read
+with a schema [fitted to its data](./schema.md#inferred-schemas). Content that a
+schema has no field for is dropped with no error, so a schema set is best taken
+from data that Pathling has read, as in the examples below. What a read with a
+schema set gives, and how to choose the schemas, is described under
+[Defined schemas](./schema.md#defined-schemas).
+
+The set takes the form of a dictionary of `StructType` values in Python, a named
+list of strings that each hold the JSON form of a struct type in R, and a map
+of `StructType` values in Java and Scala. Every reader method in Python and
+every `pathling_read_*` function in R takes it as the `schemas` argument. In
+Java and Scala, it is given to `withSchemas` on the builder that `read()`
+returns, and applies to the source that the builder then creates. The `schema`
+argument of the `tables` method and of `pathling_read_tables` is different: it
+names the catalog schema that holds the tables.
+
+A Parquet, Delta, managed table or dataset source reads its data and then
+projects it onto the schema set. The NDJSON, bundle and bulk export sources
+read each resource straight into its schema.
+
+These examples take the schema set from an existing Delta table, and use it to
+read new data to append to that table, so that the table's schema is unchanged
+by the append.
+
+<!--suppress CheckEmptyScriptTag -->
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+lake = pc.read.delta("/usr/share/warehouse/delta")
+schemas = {t: lake.read(t).schema for t in lake.resource_types()}
+
+data = pc.read.ndjson("/usr/share/staging/ndjson", schemas=schemas)
+data.write.delta("/usr/share/warehouse/delta", save_mode="append")
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+lake <- pc %>% pathling_read_delta("/usr/share/warehouse/delta")
+resource_types <- c("Patient", "Condition")
+schemas <- lapply(setNames(resource_types, resource_types), function(resource_type) {
+  lake %>%
+    ds_read(resource_type) %>%
+    sparklyr::spark_dataframe() %>%
+    sparklyr::invoke("schema") %>%
+    sparklyr::invoke("json")
+})
+
+data <- pc %>% pathling_read_ndjson("/usr/share/staging/ndjson", schemas = schemas)
+data %>% ds_write_delta("/usr/share/warehouse/delta", save_mode = SaveMode$APPEND)
+```
+
+</TabItem>
+<TabItem value="scala" label="Scala">
+
+```scala
+import scala.jdk.CollectionConverters._
+
+val lake = pc.read().delta("/usr/share/warehouse/delta")
+val schemas = lake.getResourceTypes.asScala
+        .map(t => t -> lake.read(t).schema).toMap
+
+val data = pc.read().withSchemas(schemas.asJava)
+        .ndjson("/usr/share/staging/ndjson")
+data.write().saveMode("append").delta("/usr/share/warehouse/delta")
+```
+
+</TabItem>
+<TabItem value="java" label="Java">
+
+```java
+QueryableDataSource lake = pc.read().delta("/usr/share/warehouse/delta");
+Map<String, StructType> schemas = lake.getResourceTypes().stream()
+        .collect(Collectors.toMap(type -> type, type -> lake.read(type).schema()));
+
+QueryableDataSource data = pc.read().withSchemas(schemas)
+        .ndjson("/usr/share/staging/ndjson");
+data.write().saveMode("append").delta("/usr/share/warehouse/delta");
+```
+
+</TabItem>
+</Tabs>
+
 ## Writing FHIR data
 
 Once you have read data in from a data source, you can also optionally write it
@@ -687,7 +709,9 @@ more efficient form for query (e.g. Parquet or Delta), or for exporting data to
 NDJSON for use in other systems.
 
 Data is written in the Parquet on FHIR layout described in
-[Storage layout](./schema.md). Writing into Parquet files, a Delta table or a
+[Storage layout](./schema.md). Writing takes no schema: the data is written with
+the schema it has, which is the one it was read with where the source was given
+a [schema set](#defined-schemas). Writing into Parquet files, a Delta table or a
 managed table that holds data written by an earlier release of Pathling is
 refused when the write would add to that data (an append or a merge), with the
 same message that [reading it](#layout-detection) gives. The check is made for
@@ -821,8 +845,8 @@ files fails with an error before any resource type is written. The `merge` save
 mode is not supported for Parquet; use Delta if you need to merge.
 
 Files appended to a resource type can carry columns that its earlier files do
-not, because each write's schema is [fitted to its data](./schema.md). The
-Parquet source [merges their schemas](#schema-merging) when it reads them.
+not, because the schema of data read without a [schema set](#defined-schemas)
+is [fitted to the data](./schema.md#inferred-schemas). The Parquet source [merges their schemas](#schema-merging) when it reads them.
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
@@ -869,13 +893,21 @@ parameter when initialising the Pathling context.
 The tables are named according to their resource
 type (`[resource type].parquet`), e.g. `Patient.parquet`, `Condition.parquet`.
 
-Because each write's schema is [fitted to its data](./schema.md), a batch can
-carry elements that the table has not seen before. Appending or merging such a
+Because the schema of data read without a [schema set](#defined-schemas) is
+[fitted to the data](./schema.md#inferred-schemas), a batch can carry elements
+that the table has not seen before. Appending or merging such a
 batch widens the table to hold the new columns, rather than failing. A batch
 that lacks columns the table carries can also be appended or merged: those
 columns are left null on the rows that are written. In merge mode, a matched
 resource is replaced in full, so an element that its earlier version carried and
 the new version does not is left null rather than kept.
+
+Reading each batch with the table's own schemas, as shown under
+[Defined schemas](#defined-schemas), gives every batch the table's schema, so
+appending it leaves the table's schema unchanged. Merging a batch read with a
+schema narrower than the table's leaves null every element that the schema
+lacks in the resources it replaces, as described under
+[Writing data read with a schema](./schema.md#writing-data-read-with-a-schema).
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
@@ -930,7 +962,8 @@ refused if the schema of the batch differs from the table's in any way,
 including a batch that lacks some of the table's columns. Nothing is written to
 the refused table, but tables of resource types written earlier in the same
 write keep the data written to them.
-Because each batch's schema is fitted to its data, this makes incremental loads
+Because the schema of a batch read without a schema set is fitted to its data,
+this makes incremental loads
 into a non-Delta managed table fail whenever the data changes shape. Write to a
 Delta table instead, by choosing its [format](#table-format), or write Parquet
 files to a path and read them with the [Parquet source](#parquet), which merges

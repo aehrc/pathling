@@ -65,7 +65,8 @@ public final class Projection {
    * already matches, field names included and nullability aside, is passed straight through.
    *
    * <p>The result takes the target's field names and order, but not its nullability or field
-   * metadata, which come from the dataset where a field is taken from it. Where a field is present
+   * metadata, which come from the dataset where a field is taken from it, including within a
+   * subtree that is rebuilt. A field that only the target has is nullable. Where a field is present
    * on both sides with leaf types that differ, the result keeps the dataset's type.
    *
    * @param dataset the dataset to project
@@ -190,11 +191,22 @@ public final class Projection {
     return left.equals(right);
   }
 
-  /** Projects a column onto a target type, resolving struct fields by name at every depth. */
+  /**
+   * Projects a column onto a target type, resolving struct fields by name at every depth.
+   *
+   * @param column the column to project
+   * @param sourceType the type of the column
+   * @param nullable whether the source declares that the column can be null: the nullability of its
+   *     field, or the {@code containsNull} or {@code valueContainsNull} of the array or map holding
+   *     it
+   * @param targetType the type to project it onto
+   * @return the projected column
+   */
   @Nonnull
   private static Column projectColumn(
       @Nonnull final Column column,
       @Nonnull final DataType sourceType,
+      final boolean nullable,
       @Nonnull final DataType targetType) {
     if (sameExactly(sourceType, targetType)) {
       // Nothing below this point differs, so there is nothing to rebuild.
@@ -202,19 +214,27 @@ public final class Projection {
     }
     if (sourceType instanceof final StructType source
         && targetType instanceof final StructType target) {
-      // A struct built field by field is never null, so the null case has to be restored
-      // explicitly, or an absent nested struct would be written as one full of nulls.
-      return when(column.isNull(), lit(null).cast(target))
-          .otherwise(struct(projectFields(column::getField, source, target)));
+      final Column rebuilt = struct(projectFields(column::getField, source, target));
+      // A struct built field by field is never null, so where the source can be null the null case
+      // has to be restored explicitly, or an absent nested struct would be written as one full of
+      // nulls. Where the source cannot be null, the null branch is left out, since it would make
+      // the result nullable.
+      return nullable ? when(column.isNull(), lit(null).cast(target)).otherwise(rebuilt) : rebuilt;
     }
     if (sourceType instanceof final ArrayType source
         && targetType instanceof final ArrayType target) {
       return transform(
-          column, element -> projectColumn(element, source.elementType(), target.elementType()));
+          column,
+          element ->
+              projectColumn(
+                  element, source.elementType(), source.containsNull(), target.elementType()));
     }
     if (sourceType instanceof final MapType source && targetType instanceof final MapType target) {
       return transform_values(
-          column, (key, value) -> projectColumn(value, source.valueType(), target.valueType()));
+          column,
+          (key, value) ->
+              projectColumn(
+                  value, source.valueType(), source.valueContainsNull(), target.valueType()));
     }
     return column;
   }
@@ -243,6 +263,7 @@ public final class Projection {
                       : projectColumn(
                           fieldAccessor.apply(sourceField.name()),
                           sourceField.dataType(),
+                          sourceField.nullable(),
                           field.dataType()))
                   .alias(field.name());
             })

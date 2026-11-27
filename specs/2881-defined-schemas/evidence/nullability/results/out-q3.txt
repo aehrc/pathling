@@ -1,0 +1,62 @@
+
+==================== Q3 widening (batch) ====================
+
+### source: Narrow.apply(good)
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+rows: [[a,[1],ArraySeq(1, 2),Map(k -> v)], [z,[1],ArraySeq(1, 2),Map(k -> v)]]
+
+### Dataset.to(NULLABLE)
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+rows: [[a,[1],ArraySeq(1, 2),Map(k -> v)], [z,[1],ArraySeq(1, 2),Map(k -> v)]]
+
+### Widen.apply(NULLABLE)
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+rows: [[a,[1],ArraySeq(1, 2),Map(k -> v)], [z,[1],ArraySeq(1, 2),Map(k -> v)]]
+
+### createDataFrame(javaRDD, NULLABLE)
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+rows: [[a,[1],ArraySeq(1, 2),Map(k -> v)], [z,[1],ArraySeq(1, 2),Map(k -> v)]]
+
+### cast to NULLABLE struct of whole row
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+rows: [[a,[1],ArraySeq(1, 2),Map(k -> v)], [z,[1],ArraySeq(1, 2),Map(k -> v)]]

@@ -44,6 +44,11 @@ class ProjectionTest {
   }
 
   @Nonnull
+  private static StructField required(@Nonnull final String name, @Nonnull final DataType type) {
+    return DataTypes.createStructField(name, type, false);
+  }
+
+  @Nonnull
   private static StructType struct(@Nonnull final StructField... fields) {
     return DataTypes.createStructType(fields);
   }
@@ -495,5 +500,219 @@ class ProjectionTest {
     final Row value = row.<String, Row>getJavaMap(0).get("k");
     assertEquals("vy", value.getString(0));
     assertEquals("vx", value.getString(1));
+  }
+
+  /**
+   * Pins that a struct that cannot be null keeps its flags when the target narrows it, along with
+   * the flags of the fields inside it, and that a struct inside it that cannot be null and is
+   * narrowed too does the same, whatever the target declares.
+   */
+  @Test
+  void keepsFlagsOfNarrowedNotNullStruct() {
+    final StructType source =
+        struct(
+            required("id", DataTypes.StringType),
+            required(
+                "name",
+                struct(
+                    field("family", DataTypes.StringType),
+                    required("given", DataTypes.StringType),
+                    required(
+                        "period",
+                        struct(
+                            required("start", DataTypes.StringType),
+                            field("extra", DataTypes.LongType))),
+                    field("extra", DataTypes.LongType))));
+    final StructType target =
+        struct(
+            field("id", DataTypes.StringType),
+            field(
+                "name",
+                struct(
+                    field("family", DataTypes.StringType),
+                    field("given", DataTypes.StringType),
+                    field("period", struct(field("start", DataTypes.StringType))))));
+
+    final Dataset<Row> projected =
+        Projection.project(
+            dataset(
+                source,
+                RowFactory.create(
+                    "p1", RowFactory.create(null, "John", RowFactory.create("2020", 1L), 2L))),
+            target);
+
+    assertEquals(
+        struct(
+            required("id", DataTypes.StringType),
+            required(
+                "name",
+                struct(
+                    field("family", DataTypes.StringType),
+                    required("given", DataTypes.StringType),
+                    required("period", struct(required("start", DataTypes.StringType)))))),
+        projected.schema());
+    final Row row = projected.collectAsList().get(0);
+    assertEquals("p1", row.getString(0));
+    final Row name = row.getStruct(1);
+    assertTrue(name.isNullAt(0));
+    assertEquals("John", name.getString(1));
+    assertEquals("2020", name.getStruct(2).getString(0));
+  }
+
+  /**
+   * Pins that the elements of an array that cannot hold null stay non-null when the target narrows
+   * them, so the array keeps {@code containsNull=false}.
+   */
+  @Test
+  void keepsFlagsOfNarrowedArrayOfNotNullStructs() {
+    final StructType source =
+        struct(
+            field(
+                "items",
+                DataTypes.createArrayType(
+                    struct(
+                        required("value", DataTypes.StringType),
+                        field("extra", DataTypes.IntegerType)),
+                    false)));
+    final StructType target =
+        struct(
+            field(
+                "items", DataTypes.createArrayType(struct(field("value", DataTypes.StringType)))));
+
+    final Dataset<Row> projected =
+        Projection.project(
+            dataset(
+                source,
+                RowFactory.create(List.of(RowFactory.create("a", 1), RowFactory.create("b", 2)))),
+            target);
+
+    assertEquals(
+        struct(
+            field(
+                "items",
+                DataTypes.createArrayType(struct(required("value", DataTypes.StringType)), false))),
+        projected.schema());
+    final List<Row> items = projected.collectAsList().get(0).getList(0);
+    assertEquals(2, items.size());
+    assertEquals("a", items.get(0).getString(0));
+    assertEquals("b", items.get(1).getString(0));
+  }
+
+  /**
+   * Pins that the values of a map that cannot hold null stay non-null when the target narrows them,
+   * so the map keeps {@code valueContainsNull=false}.
+   */
+  @Test
+  void keepsFlagsOfNarrowedMapOfNotNullStructs() {
+    final StructType source =
+        struct(
+            field(
+                "byKey",
+                DataTypes.createMapType(
+                    DataTypes.StringType,
+                    struct(
+                        required("value", DataTypes.StringType),
+                        field("extra", DataTypes.IntegerType)),
+                    false)));
+    final StructType target =
+        struct(
+            field(
+                "byKey",
+                DataTypes.createMapType(
+                    DataTypes.StringType, struct(field("value", DataTypes.StringType)))));
+
+    final Dataset<Row> projected =
+        Projection.project(
+            dataset(source, RowFactory.create(Map.of("k", RowFactory.create("v", 1)))), target);
+
+    assertEquals(
+        struct(
+            field(
+                "byKey",
+                DataTypes.createMapType(
+                    DataTypes.StringType, struct(required("value", DataTypes.StringType)), false))),
+        projected.schema());
+    final Row value = projected.collectAsList().get(0).<String, Row>getJavaMap(0).get("k");
+    assertEquals("v", value.getString(0));
+  }
+
+  /**
+   * Pins that a struct that can be null stays nullable when the target narrows it, and that a null
+   * value of it is restored as null rather than as a struct full of nulls, even where the target
+   * declares it not nullable. A field inside it that cannot be null comes out nullable, because
+   * Spark makes any field reached through a nullable struct nullable, and the struct is rebuilt
+   * from such fields.
+   */
+  @Test
+  void keepsFlagsAndNullOfNarrowedNullableStruct() {
+    final StructType source =
+        struct(
+            required("id", DataTypes.StringType),
+            field(
+                "name",
+                struct(
+                    required("family", DataTypes.StringType), field("extra", DataTypes.LongType))));
+    final StructType target =
+        struct(
+            required("id", DataTypes.StringType),
+            required("name", struct(field("family", DataTypes.StringType))));
+
+    final Dataset<Row> projected =
+        Projection.project(
+            dataset(
+                source,
+                RowFactory.create("p1", null),
+                RowFactory.create("p2", RowFactory.create("Smith", 1L))),
+            target);
+
+    assertEquals(
+        struct(
+            required("id", DataTypes.StringType),
+            field("name", struct(field("family", DataTypes.StringType)))),
+        projected.schema());
+    final List<Row> rows = projected.collectAsList();
+    assertTrue(rows.get(0).isNullAt(1));
+    assertEquals("Smith", rows.get(1).getStruct(1).getString(0));
+  }
+
+  /**
+   * Pins that a field only the target has is nullable, at the top level and inside a struct that
+   * cannot be null, even where the target declares it not nullable.
+   */
+  @Test
+  void suppliesFieldOnlyTargetHasAsNullable() {
+    final StructType source =
+        struct(
+            required("id", DataTypes.StringType),
+            required("name", struct(required("family", DataTypes.StringType))));
+    final StructType target =
+        struct(
+            required("id", DataTypes.StringType),
+            required("absent", DataTypes.StringType),
+            required(
+                "name",
+                struct(
+                    required("family", DataTypes.StringType),
+                    required("absent", struct(required("value", DataTypes.StringType))))));
+
+    final Dataset<Row> projected =
+        Projection.project(
+            dataset(source, RowFactory.create("p1", RowFactory.create("Smith"))), target);
+
+    assertEquals(
+        struct(
+            required("id", DataTypes.StringType),
+            field("absent", DataTypes.StringType),
+            required(
+                "name",
+                struct(
+                    required("family", DataTypes.StringType),
+                    field("absent", struct(required("value", DataTypes.StringType)))))),
+        projected.schema());
+    final Row row = projected.collectAsList().get(0);
+    assertEquals("p1", row.getString(0));
+    assertTrue(row.isNullAt(1));
+    assertEquals("Smith", row.getStruct(2).getString(0));
+    assertTrue(row.getStruct(2).isNullAt(1));
   }
 }

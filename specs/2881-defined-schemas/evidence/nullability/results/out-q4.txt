@@ -1,0 +1,214 @@
+
+==================== Q4 Delta writes ====================
+table a before:
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+
+
+### append NN-marked into nullable table
+OK
+table a after:
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+
+
+### create table (path) from NN-marked dataset
+OK
+table c (path) schema:
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+
+
+### saveAsTable from NN-marked dataset
+OK
+t_c schema:
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+
+
+### DeltaTable.create().addColumns(NN-marked schema)
+t_builder schema:
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+
+OK
+
+### append NN-marked dataset into DDL NOT NULL table (t_builder)
+t_builder after:
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+
+OK
+
+### append Narrow(bad0) into t_builder
+ERROR: org.apache.spark.SparkException: [TASK_WRITE_FAILED] Task failed while writing rows to file:/var/folders/kz/w4s1f9vs6px391nln_y532cm0000gp/T/nullspike16327314173995679337/wh/t_builder. SQLSTATE: 58030
+    ROOT org.apache.spark.SparkRuntimeException: [USER_RAISED_EXCEPTION] NOT NULL field 'id' is null SQLSTATE: P0001
+
+### append Narrow(bad2) (s absent, valid) into t_builder
+ERROR: org.apache.spark.sql.delta.schema.DeltaInvariantViolationException: [DELTA_NOT_NULL_CONSTRAINT_VIOLATED] NOT NULL constraint violated for column: s.x. 
+
+### append nullable good (no nulls) into t_builder
+OK
+
+### append nullable bad3 into t_builder (containsNull=false table)
+OK
+
+### append nullable bad4 into t_builder (containsNull=false table)
+OK
+t_builder final:
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+
+
+### t_builder read back (all columns)
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+ERROR AT ACTION: org.apache.spark.SparkException: Job aborted due to stage failure: Task 1 in stage 41.0 failed 1 times, most recent failure: Lost task 1.0 in stage 41.0 (TID 525) (192.168.1.116 executor driver): java.lang.NullPointerException: Cannot invoke "org.apache.spark.unsafe.types.UTF8String.getBaseObject()" because "input" is null 	at org.apache.spark.sql.catalyst.expressions.codegen.UnsafeWriter.write(UnsafeWriter.java:113) 	at org.apac...
+    ROOT java.lang.NullPointerException: null
+
+### t_builder read back (arr only)
+root
+ |-- id: string (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+rows: [[a,ArraySeq(1, 2)], [d,ArraySeq(1, 1)], [a,ArraySeq(1, 2)], [z,ArraySeq(1, 2)], [a,ArraySeq(1, 2)], [z,ArraySeq(1, 2)], [a,ArraySeq(1, 2)], [e,ArraySeq(1)]]
+
+### t_builder exists(arr, x -> x is null)
+root
+ |-- id: string (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+rows: []
+t_b (DDL) schema:
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+
+
+### append nullable bad0 into DDL NOT NULL table t_b
+ERROR: org.apache.spark.sql.delta.schema.DeltaInvariantViolationException: [DELTA_NOT_NULL_CONSTRAINT_VIOLATED] NOT NULL constraint violated for column: id. 
+
+### append nullable bad1 into DDL NOT NULL table t_b
+ERROR: org.apache.spark.sql.delta.schema.DeltaInvariantViolationException: [DELTA_NOT_NULL_CONSTRAINT_VIOLATED] NOT NULL constraint violated for column: s.x. 
+
+### append nullable bad2 into DDL NOT NULL table t_b
+ERROR: org.apache.spark.sql.delta.schema.DeltaInvariantViolationException: [DELTA_NOT_NULL_CONSTRAINT_VIOLATED] NOT NULL constraint violated for column: s.x. 
+
+### append nullable bad3 into DDL NOT NULL table t_b
+OK
+
+### append nullable bad4 into DDL NOT NULL table t_b
+OK
+
+### append nullable good into DDL NOT NULL table t_b
+OK
+t_b after:
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+
+t_b rows: 6
+
+### append nullable bad0 into path table c
+OK
+
+### append nullable bad1 into path table c
+OK
+
+### append nullable bad2 into path table c
+OK
+
+### append nullable bad3 into path table c
+OK
+
+### append nullable bad4 into path table c
+OK
+
+### CREATE TABLE with ARRAY<INT NOT NULL>
+ERROR: org.apache.spark.sql.catalyst.parser.ParseException:  [PARSE_SYNTAX_ERROR] Syntax error at or near '<'. SQLSTATE: 42601 (line 1, pos 29)  == SQL == CREATE TABLE t_arr (arr ARRAY<INT NOT NULL>) USING delta -----------------------------^^^ 
+
+### streaming append NN-marked stream to new delta path
+stream table schema:
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+
+OK
+
+### streaming append nullable bad0 into DDL NOT NULL t_b
+ERROR: org.apache.spark.sql.streaming.StreamingQueryException: [STREAM_FAILED] Query [id = d7ccd758-2822-4c3a-872b-701525e6ba3f, runId = cc8b0248-1cd0-4a72-a24f-875f476cd5f8] terminated with exception: [DELTA_NOT_NULL_CONSTRAINT_VIOLATED] NOT NULL constraint violated for column: id.  SQLSTATE: XXKST === Streaming Query === Identifier: [id = d7ccd758-2822-4c3a-872b-701525e6ba3f, runId = cc8b0248-1cd0-4a72-a24f-875f476cd5f8] Current Committed Offsets: {} Curren...
+    ROOT org.apache.spark.sql.delta.schema.DeltaInvariantViolationException: [DELTA_NOT_NULL_CONSTRAINT_VIOLATED] NOT NULL constraint violated for column: id. 

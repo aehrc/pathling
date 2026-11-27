@@ -182,7 +182,8 @@ with the binding's write and read functions, and pass it to every source.
 - **A stored field whose name differs from the defined schema's only in case**, such as a stored
   `Patient.name.Family` where the schema has `name.family`, fails the read with an error naming
   the resource type and both paths. So does a stored struct holding two fields whose names differ
-  only in case. FHIR names are case-exact, so neither is read as a match or as two unrelated
+  only in case, among the structs the schema keeps; a subtree the schema drops is not inspected.
+  FHIR names are case-exact, so neither is read as a match or as two unrelated
   fields.
 - **NDJSON, bundle, XML and streaming input carrying content the defined schema has no field for**
   loses that content silently, with no error, even where a read of the same data without a schema
@@ -239,9 +240,15 @@ Projection:
 - **FR-008**: The output's base schema MUST equal the given schema's base schema exactly, in the
   given field order, whatever that order is. Fields the configuration adds and the given schema
   lacks are placed as canonical field order places them: annotations last in their struct, and a
-  metadata group that holds only annotations immediately after its primitive. The output's
-  nullability and field metadata are those of an inferred load, whatever the given schema says:
-  every field is nullable, and the given field metadata is not carried.
+  metadata group that holds only annotations immediately after its primitive. The given schema's
+  nullability is ignored: each field keeps the nullability that the same source gives without a
+  schema, which is nullable from JSON, XML, NDJSON, bundles, bulk exports and Parquet files, and
+  the stored flags from Delta tables, catalog tables and datasets. Stored flags pass through
+  subtrees rebuilt to match the given schema too, except that a field inside a nullable struct
+  that is rebuilt comes out nullable, as Spark makes any field reached through a nullable struct.
+  A field that only the given schema has, and the source lacks, is nullable. The output's field metadata is that of an
+  inferred load: the given field metadata is not carried (owner, 2026-11-27; research R15,
+  [evidence/nullability.md](evidence/nullability.md)).
 - **FR-009**: Projection MUST be the same on every input path. JSON, XML and stored Parquet or Delta
   holding the same resources, loaded with the same schema, MUST give equal data. A decimal is
   equal in value, not necessarily in text: XML stores the text it carries, and JSON the text Spark
