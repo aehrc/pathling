@@ -1,0 +1,190 @@
+# Parquet on FHIR: remaining work
+
+The tickets that take the [specification](../spec.md) from milestone M4 to its
+end state. Each stage is a sub-issue of #2367 and is delivered as one pull
+request into `release/11.0.0`, the integration branch for the 11.0.0 release. #2367 was to be complete when ticket 28 closed. It is not by
+itself a release: what the release needs beyond it is raised as follow-up
+issues by ticket 26 (owner, 2026-10-22). Ticket 28 is now retired with #2833
+(owner, 2026-11-16): there is no completion issue and there are no release
+gates, as stage 5 below records.
+
+**The re-plan (owner, 2026-11-02).** #2367, even split into five stages, was too
+big for one issue. Its scope is now a core FHIR library that works, is verified
+and well engineered, and matches the functionality of the legacy (Bunsen) line.
+It has one extension, primitive metadata (ticket 17). It also reconciles the
+layout with the Parquet on FHIR specification upstream: the amendments are
+reviewed (ticket 46) and agreed with the specification's owner. #2367 closes at
+the 11.0.0 release, with no release gates (owner, 2026-11-16). Aligning Pathling
+with the outcome upstream is tracked by the upstream items, and does not gate it.
+
+Everything else, such as dense mode, the XML sink and the shape of SQL output,
+moves to GitHub issues after #2367. Each is labelled `PoF_line`, with
+`Bunsen_line` where the legacy line has the defect too, and whether it goes into
+a release is decided separately. Stage 4 is PR #2877, still open, and stage 5
+was to be the final stage before it was retired (owner, 2026-11-16).
+
+Each ticket's `Blocked by:` line is the authority on order.
+
+## Stage 1: Retire the old layout (#2829)
+
+Only the new layout is read or written. Data in the old layout has a documented
+way out.
+
+- [02](02-port-fhirencoders-tests-to-pof.md) Port the engine tests that encode via FhirEncoders to the PoF layout
+- [03](03-system-quantity-fixed-shape.md) Engine-built System.Quantity takes one fixed shape, not the legacy one
+- ~~[04](04-loud-failure-legacy-column.md) Fail loudly on a legacy-typed column at traversal~~ (dropped, decision 132)
+- [05](05-remove-legacy-normalisation.md) Remove the legacy-layout normalisation, its test dimension and CI job
+- [06](06-legacy-export.md) Legacy export: legacy Parquet/Delta to FHIR NDJSON, as a component and CLI
+- [07](07-legacy-export-docs-and-server-followup.md) Document the legacy export; raise the server migration issue
+
+## Stage 2: Harden (#2830)
+
+The known correctness gaps are closed. The benchmark moved to stage 5, so that it
+measures the finished layout, annotations included.
+
+- [01](01-keep-file-counter-on-rename.md) Keep the file counter so split partition files do not collide on rename
+- ~~[20](20-egress-ignores-unknown-field.md) Egress ignores and reports a stored field it does not know~~ (folded into 34)
+- [21](21-pin-type-over-choice.md) Pin FHIRPath type() over a choice element
+- [22](22-canonical-structure-memo-key.md) Key the canonical-structure memo on the resource flag
+- [23](23-remove-duplicate-cardinality-accessor.md) Remove the duplicate cardinality accessor on the default definitions
+- [25](25-findresourcedefinition-contract.md) State what findResourceDefinition throws for an unknown name
+- [24](24-benchmark-ndjson-branch.md) Remove or restore the benchmark's unreachable NDJSON source
+
+## Stage 3: Ingest and egress without HAPI (#2831)
+
+JSON and XML are read and written without HAPI, and ingest assumes conformant
+input and reports nothing.
+
+- ~~[08](08-spike-ingest-egress-mechanism.md) Spike: the ingest and egress mechanism for JSON and XML~~ (done; choice deferred, decision 134)
+- ~~[09](09-decide-column-binding.md) Decide whether column expressions are bound to a schema~~ (done; unbound, decision 136)
+- [32](32-xml-and-bundles-without-hapi.md) XML and bundles without HAPI, on the interim ingest
+- [37](37-remove-ingest-findings.md) Remove ingest's findings and checks, and list what the layout does not store as exceptions
+
+Decision 134 deferred the choice of ingest mechanism. Until the owner makes it,
+JSON stays on Spark's reader and ticket 32 takes XML and bundles off HAPI; ticket
+16, now #2883, is the deferred rework. Ticket 37 removed ingest's findings and
+checks once 32 had landed, and ticket 18 then builds the dense mode with no
+bounds reporting.
+
+The stage closes early so that stage 4 picks up its changes (owner, 2026-10-23).
+Ticket 17 moved to stage 4, which prepares the engine's pairing of `x` with `_x`,
+and tickets 16, 29, 30, 35 and 39 moved to stage 5.
+
+## Stage 4: Schema annotations (#2832)
+
+Quantity, decimal and date range annotations are emitted and read, each behind
+its own toggle, and their use is decided from the schema. Primitive ids and
+extensions are stored and navigable.
+
+- ~~[11](11-annotation-registry-and-toggles.md) Annotation registry, per-annotation toggles and SchemaConfiguration~~ (done)
+- ~~[12](12-quantity-annotations.md) Quantity annotations, UCUM-only canonicalisation, codegen-fallback measurement~~ (done)
+- ~~[13](13-decimal-annotation.md) Decimal numeric annotation~~ (done)
+- ~~[41](41-system-decimal-38-6.md) Switch System.Decimal to DECIMAL(38,6)~~ (done)
+- ~~[14](14-date-range-annotation.md) Date range annotation~~ (done)
+- ~~[42](42-shared-annotation-computation.md) Memoise an annotation kind's shared computation~~ (done)
+- ~~[43](43-lazy-annotation-evaluation.md) Evaluate annotations in the engine only where they are used~~ (done)
+- ~~[50](50-decimals-and-system-quantity.md) Decimals and System.Quantity in the engine~~ (done)
+- ~~[51](51-emission-shapes-and-level-tests.md) Emission shapes, level tests and the by-example tests~~ (done)
+- ~~[17](17-primitive-metadata-in-the-stored-layout.md) Primitive metadata in the stored layout (US6, #437)~~ (done)
+- ~~[52](52-primitive-metadata-in-the-engine.md) Primitive metadata in the engine (US6, #437)~~ (done)
+- ~~[15](15-schema-decided-plan-test-and-docs.md) Test that annotation use is decided from the schema, and document annotations~~ (done)
+- ~~[53](53-system-coding-without-id.md) Drop `id` from System.Coding~~ (deferred to stage 5, owner, 2026-11-15)
+- ~~[54](54-primitive-metadata-in-the-conformance-baselines.md) Primitive metadata always on (US6, #437): remove the switch, and the full build, Search, Python, R and the fhirpath.js baseline pass with it~~ (done)
+- ~~[34](34-placeholder-content-outside-definitions.md) PLACEHOLDER: Carry content the definitions do not describe through ingest, egress and the engine~~ (moved to a follow-up issue, ticket 26)
+
+The remaining tickets run in the order listed (owner, 2026-11-02). 42 and 43
+build the settled annotations design (decisions 140 to 152), which settles how
+annotations flow through the engine before anything builds on it. 42 writes the
+plan tests for both first, so that any change to what tickets 11 to 14 landed
+shows, then memoises the shared computation and makes the quantity's canonical
+fields flat; 43 builds the lazy accessors on it (owner, 2026-11-10). 43 was split
+(owner, 2026-11-11): it built the accessors for dates and the comparison key, 50
+applies them to decimals and System.Quantity, and 51 builds the emission shapes
+and the level and by-example tests. 17 was triaged and split (owner, 2026-11-12): 17 stores the group and
+round-trips it, behind an ingest option that is off by default, and 52 reads it in the engine, behind its own
+switch, which 54 removes (owner, 2026-11-13: primitive metadata is always on). 15 comes last, so that its
+plan tests and documentation describe the final shape.
+
+Ticket 17 moved here from stage 3 (owner, 2026-10-23): it builds on the interim
+ingest of ticket 32. Ticket 52, split from it, extends ticket 11's pairing of `x`
+with `_x` to ids and extensions.
+
+## Stage 5: Verification, reconciliation and completion (#2833, retired)
+
+**Retired (owner, 2026-11-16).** #2833 is retired, and is closed in the first
+wave of issues with a comment linking its replacements. Each stage 5 ticket that is
+not a process step becomes its own GitHub issue, labelled `PoF_line`: 45, 53,
+55, 31 and 29, and ticket 56, which is #2804. Tickets 10 and 27 are folded into
+#2889 (Profile and optimise query performance across the engine), and tickets
+30, 35 and 44 become the upstream items. There is no completion issue and there
+are no release gates: the final release cut is chosen later from the open
+`PoF_line` issues, and the release process creates the release. Ticket 28 is
+retired, and H1 (no regression of 11 against 10.x) stays a bullet in #2889, to
+weigh at the cut. Tickets 26, 36 and 48 stay as process tickets, ticket 49 stays
+a local ticket that waits on #2879, and the local tickets stay as the working
+record. The text below is the stage as
+planned.
+
+The amendments to the Parquet on FHIR specification are agreed and Pathling
+matches them, performance is measured against the legacy baseline, the engine's
+`trust` is documented, the follow-up issues are raised, and #2367 is checked
+complete. Re-scoped by the re-plan (owner, 2026-11-02).
+
+Reconciling the specification:
+
+- [46](46-review-upstream-amendments.md) Review the proposed amendments to the Parquet on FHIR specification, and summarise them for the specification owner
+- [30](30-pof-spec-layout-column.md) Propose the layout column as an amendment to the Parquet on FHIR specification (raised as aehrc/parquet-on-fhir#2, under review in 46)
+- [35](35-pof-spec-json-projection.md) Propose the JSON projection and its prerequisites as amendments to the Parquet on FHIR specification
+- [44](44-pof-spec-range-type-int96.md) Reconsider keeping INT96 in the range annotations' amendment
+- [45](45-timestamp-type-after-spec.md) Settle the stored timestamp type once the specification is final
+- [29](29-layout-version-column.md) Identify the PoF layout by a versioned layout column
+
+Verification and trust:
+
+- [10](10-benchmark-fix-and-extend.md) Benchmark: fix warm planning, add missing views, re-measure (folded into #2889, owner, 2026-11-16)
+- [27](27-usc-bloodpressures-planning-regression.md) Investigate the UsCoreBloodPressures planning regression (folded into #2889, owner, 2026-11-16)
+- [31](31-engine-trust-mode.md) The engine runs in `trust`, and conformant data gives correct answers (defects the legacy line also has move to GitHub issues)
+
+Follow-ups and completion:
+
+- [26](26-raise-github-followups.md) Raise the GitHub follow-up issues, including everything the re-plan moved out of #2367
+- [36](36-followup-extra-fields.md) Scope the follow-up issue on extra fields: their support, and their place in the conformance levels
+- [48](48-annotation-decisions-to-adr.md) Decide which annotation decisions belong in an ADR
+- [56](56-system-and-fhir-types.md) Tell System types from FHIR types in the engine, for Coding and Quantity (#2804; owner, 2026-11-16)
+- [53](53-system-coding-without-id.md) Drop `id` from System.Coding: one System.Coding, everywhere, with the fields the terminology service returns (deferred from stage 4, owner, 2026-11-15; field list not yet settled; blocked by 56, owner, 2026-11-16)
+- [55](55-optional-switch-to-skip-primitive-metadata.md) Optional switch to skip reading primitive metadata (needs triage; raised from 54, which is implemented, so nothing blocks it)
+- [49](49-dependency-vulnerabilities.md) Clear the dependency vulnerabilities that the pre-release scan reports (after #2879, the move to Spark 4.1)
+- ~~[28](28-completion-checklist.md) Completion checklist~~ (retired: no completion issue and no gates, owner, 2026-11-16)
+- ~~[33](33-engine-layout-tolerance-modes.md) The engine handles non-conformant layout shapes in the same four modes~~ (moved to the follow-up, ticket 26)
+
+Ticket 46 starts early, in parallel with stage 4, because the amendments wait on
+the specification's owner. Tickets 30, 35 and 44 raise or revise nothing upstream
+until 46's review. Tickets 29 and 45 follow the agreement on the layout column
+and on the range annotations' type. Ticket 31 can start at any time.
+
+## After #2367: GitHub issues
+
+Raised by ticket 26 with the owner's approval, each linking back to its ticket,
+and labelled `PoF_line`, with `Bunsen_line` where the legacy line has the defect
+too (owner, 2026-11-02). Since 2026-11-16 the register drawn up after stage 4
+supersedes ticket 26's list, and the rest are raised in waves, each approved as
+a whole by the owner.
+
+Raised:
+
+- [18](18-dense-mode.md) and [19](19-dense-parity.md): #2881 (Dense schema mode, streaming encode and dense parity), `new feature`. Until then, a stream is encoded batch by batch.
+- [39](39-public-xml-sink-and-source.md): #2882 (A public XML data sink and source), `new feature`
+- [16](16-placeholder-ingest-egress-rework.md): #2883 (Rework the ingest mechanism for per-value validation and lossless decimals), `enhancement`
+- The defect the legacy line also has, from ticket 31: #2885 (toDate() and toDateTime() accept impossible calendar dates), `bug`, `Bunsen_line`
+- The other follow-ups ticket 26 lists: #2884, #2886 to #2895, and #2898. Their titles are in ticket 26.
+- Not from a ticket: #2874 (trace() mislabels or fails on arrays of structures inside a traced value), `bug`, `Bunsen_line`, and #2879 (Move to Spark 4.1 for the 11.0.0 release).
+
+To raise in wave 1:
+
+- [40](40-sql-output-shape.md) Specify the shape of SQL output, including System types: `enhancement`
+- [38](38-annotation-fill-per-row.md) Consider deciding the annotation step's *fill* per row: `enhancement`
+- Extra fields and their place in the conformance levels, with ticket 36's scope as its text: `enhancement`
+- The stage 5 tickets 45, 53, 55, 31 and 29, each as its own issue, and the `PoF_line` label on #2804 (ticket 56)
+- New defects and proposals found after stage 4: `toDate()` on a DateTime and `toDateTime()` on a Date returning empty, the implicit range in a UCUM quantity search under `eq` and `ne`, the date search's range comparison under `eq`, `ne`, `ge` and `le`, and two search failures, on `Observation.effective` and on `SampledData` (each `bug`, `Bunsen_line`); and choosing algorithms per row by which annotations are present (`enhancement`)
+
+To raise in wave 2, after ticket 15: the local Python logging test failure, if its triage there shows it is needed (`bug`).

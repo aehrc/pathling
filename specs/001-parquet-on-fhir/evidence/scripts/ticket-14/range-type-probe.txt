@@ -1,0 +1,25 @@
+PROBE conf outputTimestampType=Some(INT96)
+PROBE delta INT96 footer: optional group _birthDate {   optional int96 __start;   optional int96 __end; }
+PROBE delta INT96 b end=1850-01-01T23:59:59.999999Z birthDate>=@1980 -> false birthDate<=@1500-02-03 -> false
+PROBE delta INT96 c end=1500-02-03T23:59:59.999999Z birthDate>=@1980 -> false birthDate<=@1500-02-03 -> true
+PROBE delta INT96 a end=1980-12-31T23:59:59.999999Z birthDate>=@1980 -> true birthDate<=@1500-02-03 -> false
+PROBE parquet INT96 footer: optional group _birthDate {   optional int96 __start;   optional int96 __end; }
+PROBE parquet INT96 c end=1500-02-03T23:59:59.999999Z birthDate>=@1980 -> false birthDate<=@1500-02-03 -> true
+PROBE parquet INT96 b end=1850-01-01T23:59:59.999999Z birthDate>=@1980 -> false birthDate<=@1500-02-03 -> false
+PROBE parquet INT96 a end=1980-12-31T23:59:59.999999Z birthDate>=@1980 -> true birthDate<=@1500-02-03 -> false
+PROBE delta TIMESTAMP_MICROS footer: optional group _birthDate {   optional int64 __start (TIMESTAMP(MICROS,true));   optional int64 __end (TIMESTAMP(MICROS,true)); }
+PROBE delta TIMESTAMP_MICROS c end=1500-02-03T23:59:59.999999Z birthDate>=@1980 -> false birthDate<=@1500-02-03 -> true
+PROBE delta TIMESTAMP_MICROS b end=1850-01-01T23:59:59.999999Z birthDate>=@1980 -> false birthDate<=@1500-02-03 -> false
+PROBE delta TIMESTAMP_MICROS a end=1980-12-31T23:59:59.999999Z birthDate>=@1980 -> true birthDate<=@1500-02-03 -> false
+PROBE parquet TIMESTAMP_MICROS footer: optional group _birthDate {   optional int64 __start (TIMESTAMP(MICROS,true));   optional int64 __end (TIMESTAMP(MICROS,true)); }
+PROBE parquet TIMESTAMP_MICROS b end=1850-01-01T23:59:59.999999Z birthDate>=@1980 -> false birthDate<=@1500-02-03 -> false
+PROBE parquet TIMESTAMP_MICROS c end=1500-02-03T23:59:59.999999Z birthDate>=@1980 -> false birthDate<=@1500-02-03 -> true
+PROBE parquet TIMESTAMP_MICROS a end=1980-12-31T23:59:59.999999Z birthDate>=@1980 -> true birthDate<=@1500-02-03 -> false
+PROBE delta TIMESTAMP_MILLIS footer: optional group _birthDate {   optional int64 __start (TIMESTAMP(MILLIS,true));   optional int64 __end (TIMESTAMP(MILLIS,true)); }
+PROBE delta TIMESTAMP_MILLIS c end=1500-02-03T23:59:59.999Z birthDate>=@1980 -> false birthDate<=@1500-02-03 -> null
+PROBE delta TIMESTAMP_MILLIS b end=1850-01-01T23:59:59.999Z birthDate>=@1980 -> false birthDate<=@1500-02-03 -> false
+PROBE delta TIMESTAMP_MILLIS a end=1980-12-31T23:59:59.999Z birthDate>=@1980 -> null birthDate<=@1500-02-03 -> false
+PROBE parquet TIMESTAMP_MILLIS footer: optional group _birthDate {   optional int64 __start (TIMESTAMP(MILLIS,true));   optional int64 __end (TIMESTAMP(MILLIS,true)); }
+PROBE parquet TIMESTAMP_MILLIS c end=1500-02-03T23:59:59.999Z birthDate>=@1980 -> false birthDate<=@1500-02-03 -> null
+PROBE parquet TIMESTAMP_MILLIS b end=1850-01-01T23:59:59.999Z birthDate>=@1980 -> false birthDate<=@1500-02-03 -> false
+PROBE parquet TIMESTAMP_MILLIS a end=1980-12-31T23:59:59.999Z birthDate>=@1980 -> null birthDate<=@1500-02-03 -> false

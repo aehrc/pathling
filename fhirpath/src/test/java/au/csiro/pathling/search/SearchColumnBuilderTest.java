@@ -30,6 +30,7 @@ import ca.uhn.fhir.context.FhirContext;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -57,12 +58,15 @@ import org.hl7.fhir.r4.model.Period;
 import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.RiskAssessment;
+import org.hl7.fhir.r4.model.SampledData;
+import org.hl7.fhir.r4.model.SimpleQuantity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -132,6 +136,67 @@ class SearchColumnBuilderTest {
     assertThrows(
         InvalidModifierException.class,
         () -> builder.fromQueryString(ResourceType.PATIENT, "gender:exact=male"));
+  }
+
+  /**
+   * A number or quantity search value that is not a number is rejected as invalid input when the
+   * filter is built, with a message that names the parameter and the value. The cases cover a plain
+   * and a prefixed number, a number given with others, and a quantity with no units, with a code
+   * and with a UCUM system and code.
+   */
+  @ParameterizedTest
+  @MethodSource("nonNumericSearchValues")
+  void fromQueryString_nonNumericValue_throwsInvalidSearchParameterException(
+      final ResourceType resourceType,
+      final String queryString,
+      final String parameterCode,
+      final String numericValue) {
+    final InvalidSearchParameterException exception =
+        assertThrows(
+            InvalidSearchParameterException.class,
+            () -> builder.fromQueryString(resourceType, queryString));
+
+    assertEquals(
+        "Invalid value for search parameter '"
+            + parameterCode
+            + "': '"
+            + numericValue
+            + "' is not a number",
+        exception.getMessage());
+  }
+
+  Stream<Arguments> nonNumericSearchValues() {
+    return Stream.of(
+        Arguments.of(ResourceType.RISKASSESSMENT, "probability=abc", "probability", "abc"),
+        Arguments.of(ResourceType.RISKASSESSMENT, "probability=gtabc", "probability", "abc"),
+        // Only the value that is not a number is named, not the others given with it.
+        Arguments.of(ResourceType.RISKASSESSMENT, "probability=0.5,abc", "probability", "abc"),
+        // A control character is not stripped from around a number, as it is not whitespace.
+        Arguments.of(ResourceType.RISKASSESSMENT, "probability=0.5%01", "probability", "0.5\u0001"),
+        Arguments.of(ResourceType.OBSERVATION, "value-quantity=abc", "value-quantity", "abc"),
+        Arguments.of(ResourceType.OBSERVATION, "value-quantity=leabc||mg", "value-quantity", "abc"),
+        Arguments.of(
+            ResourceType.OBSERVATION,
+            "value-quantity=abc|http://unitsofmeasure.org|mg",
+            "value-quantity",
+            "abc"),
+        // A quantity with units but no number is not a number either.
+        Arguments.of(
+            ResourceType.OBSERVATION,
+            "value-quantity=|http://unitsofmeasure.org|mg",
+            "value-quantity",
+            ""));
+  }
+
+  /**
+   * A modifier is not supported on a number or quantity parameter, which is reported as such rather
+   * than as its value not being a number.
+   */
+  @Test
+  void fromQueryString_modifierOnNumberParameter_reportsModifierBeforeValue() {
+    assertThrows(
+        InvalidModifierException.class,
+        () -> builder.fromQueryString(ResourceType.RISKASSESSMENT, "probability:missing=true"));
   }
 
   // ========== fromSearch tests ==========
@@ -307,6 +372,127 @@ class SearchColumnBuilderTest {
 
     final Set<String> resultIds = extractIds(result);
     assertEquals(Set.of("1", "3"), resultIds);
+  }
+
+  // ========== Expressions of a type the parameter type does not allow ==========
+
+  Stream<Arguments> defaultRegistryValueQuantityCases() {
+    return Stream.of(
+        // A value and unit that the SampledData's origin and data also carry.
+        Arguments.of("value-quantity=5.4|http://unitsofmeasure.org|mmol/L", Set.of("obs1")),
+        // A value alone, matched regardless of unit.
+        Arguments.of("value-quantity=gt0", Set.of("obs1", "obs2")),
+        Arguments.of("value-quantity=7", Set.of("obs2")));
+  }
+
+  @ParameterizedTest(name = "default registry value-quantity: {0}")
+  @MethodSource("defaultRegistryValueQuantityCases")
+  void withDefaultRegistry_valueQuantity_skipsSampledDataExpression(
+      final String queryString, final Set<String> expectedIds) {
+    // The bundled value-quantity parameter is
+    // "(Observation.value as Quantity) | (Observation.value as SampledData)". The SampledData
+    // expression is of a type the quantity parameter type does not allow, so it is skipped and the
+    // search matches stored quantities only.
+    final Dataset<Row> dataset = createObservationDataSourceWithValues().read("Observation");
+    final SearchColumnBuilder defaultBuilder = SearchColumnBuilder.withDefaultRegistry(fhirContext);
+
+    final Column filterColumn =
+        defaultBuilder.fromQueryString(ResourceType.OBSERVATION, queryString);
+
+    assertEquals(expectedIds, extractIds(dataset.filter(filterColumn)));
+  }
+
+  @Test
+  void withDefaultRegistry_valueQuantity_invalidModifier_throwsException() {
+    // Skipping the SampledData expression does not stop the modifier from being validated against
+    // the Quantity expression.
+    final SearchColumnBuilder defaultBuilder = SearchColumnBuilder.withDefaultRegistry(fhirContext);
+
+    assertThrows(
+        InvalidModifierException.class,
+        () -> defaultBuilder.fromQueryString(ResourceType.OBSERVATION, "value-quantity:exact=5"));
+  }
+
+  @Test
+  void disallowedExpressionType_isSkippedWhateverItsPosition() {
+    // The disallowed expression comes first, so that the result does not depend on the order of
+    // the expressions.
+    final SearchColumnBuilder customBuilder =
+        builderWithCustomParameter(
+            "Observation",
+            SearchParameterType.QUANTITY,
+            List.of("Observation.value.ofType(SampledData)", "Observation.value.ofType(Quantity)"));
+    final Dataset<Row> dataset = createObservationDataSourceWithValues().read("Observation");
+
+    final Column filterColumn =
+        customBuilder.fromQueryString(ResourceType.OBSERVATION, "custom=5.4");
+
+    assertEquals(Set.of("obs1"), extractIds(dataset.filter(filterColumn)));
+  }
+
+  @Test
+  void noExpressionOfAllowedType_throwsException() {
+    // When every expression is of a type the parameter type does not allow, nothing can be
+    // searched, so the search fails rather than matching nothing.
+    final SearchColumnBuilder customBuilder =
+        builderWithCustomParameter(
+            "Observation",
+            SearchParameterType.QUANTITY,
+            List.of("Observation.value.ofType(SampledData)"));
+
+    final InvalidSearchParameterException exception =
+        assertThrows(
+            InvalidSearchParameterException.class,
+            () -> customBuilder.fromQueryString(ResourceType.OBSERVATION, "custom=5.4"));
+    assertEquals(
+        "Search parameter 'custom' on Observation has no expression of a FHIR type allowed for"
+            + " search parameter type 'QUANTITY'. Types found: [SampledData]."
+            + " Allowed types: [Quantity]",
+        exception.getMessage());
+  }
+
+  private SearchColumnBuilder builderWithCustomParameter(
+      final String resourceType, final SearchParameterType type, final List<String> expressions) {
+    final SearchParameterRegistry customRegistry =
+        new SearchParameterRegistry(
+            Map.of(
+                resourceType,
+                Map.of("custom", new SearchParameterDefinition("custom", type, expressions))));
+    return SearchColumnBuilder.withRegistry(fhirContext, customRegistry);
+  }
+
+  private ObjectDataSource createObservationDataSourceWithValues() {
+    // obs1: a quantity of 5.4 mmol/L.
+    final Observation obs1 = new Observation();
+    obs1.setId("obs1");
+    obs1.setValue(
+        new Quantity().setValue(5.4).setSystem("http://unitsofmeasure.org").setCode("mmol/L"));
+
+    // obs2: a quantity of 7 mmol/L.
+    final Observation obs2 = new Observation();
+    obs2.setId("obs2");
+    obs2.setValue(
+        new Quantity().setValue(7).setSystem("http://unitsofmeasure.org").setCode("mmol/L"));
+
+    // obs3: sampled data whose origin and data both hold 5.4 mmol/L.
+    final Observation obs3 = new Observation();
+    obs3.setId("obs3");
+    obs3.setValue(
+        new SampledData()
+            .setOrigin(
+                new SimpleQuantity()
+                    .setValue(5.4)
+                    .setSystem("http://unitsofmeasure.org")
+                    .setCode("mmol/L"))
+            .setPeriod(1000)
+            .setDimensions(1)
+            .setData("5.4"));
+
+    // obs4: no value.
+    final Observation obs4 = new Observation();
+    obs4.setId("obs4");
+
+    return new ObjectDataSource(spark, encoders, List.of(obs1, obs2, obs3, obs4));
   }
 
   // ========== Data source creation methods ==========
@@ -636,6 +822,23 @@ class SearchColumnBuilderTest {
     assertEquals(0, result.count());
   }
 
+  @ParameterizedTest(name = "filtered name expression: {0}")
+  @CsvSource({"custom=john, 1", "custom=jane, ''"})
+  void stringSearch_filteredNameExpression_searchesOnlyFilteredNames(
+      final String queryString, final String expectedId) {
+    // The sub-fields of a HumanName are searched within the names that the expression selects, so
+    // the name of Patient 2 is excluded by the filter and does not match.
+    final SearchColumnBuilder customBuilder =
+        builderWithCustomParameter(
+            "Patient", SearchParameterType.STRING, List.of("Patient.name.where(family = 'Smith')"));
+    final Dataset<Row> dataset = createPatientDataSourceWithNames().read("Patient");
+
+    final Column filterColumn = customBuilder.fromQueryString(ResourceType.PATIENT, queryString);
+
+    final Set<String> expectedIds = expectedId.isEmpty() ? Set.of() : Set.of(expectedId);
+    assertEquals(expectedIds, extractIds(dataset.filter(filterColumn)));
+  }
+
   // ========== String search on Address (complex type) tests ==========
 
   @Test
@@ -851,8 +1054,8 @@ class SearchColumnBuilderTest {
     final ObjectDataSource dataSource = createCoverageDataSource();
     final Dataset<Row> dataset = dataSource.read("Coverage");
 
-    // Search for a date that falls within the coverage period.
-    final Column filterColumn = builder.fromQueryString(ResourceType.COVERAGE, "period=2024-06-15");
+    // Search for a year that contains the coverage period.
+    final Column filterColumn = builder.fromQueryString(ResourceType.COVERAGE, "period=2024");
     final Dataset<Row> result = dataset.filter(filterColumn);
 
     final Set<String> resultIds = extractIds(result);

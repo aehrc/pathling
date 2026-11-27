@@ -15,3 +15,4 @@
 ^src
 ^cran-comments\.md$
 .lintr$
+^data-raw$

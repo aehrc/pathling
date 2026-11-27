@@ -38,11 +38,13 @@ import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.schema.SchemaConfiguration;
 import au.csiro.pathling.search.UnknownSearchParameterException;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirVersionEnum;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nonnull;
 import jakarta.validation.ConstraintViolationException;
 import java.io.File;
@@ -50,7 +52,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -61,14 +62,11 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.streaming.OutputMode;
-import org.apache.spark.sql.streaming.StreamingQuery;
-import org.hl7.fhir.r4.model.Condition;
+import org.apache.spark.sql.functions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import scala.collection.mutable.ArraySeq;
 
 @Slf4j
 public class PathlingContextTest {
@@ -127,9 +125,13 @@ public class PathlingContextTest {
         "All values should be relative references, but some are not: " + invalidValues);
   }
 
-  public <T> void assertValidIdColumns(@Nonnull final Dataset<T> df) {
+  /**
+   * Asserts the identifiers of resources stored in the Parquet on FHIR layout, which carries the
+   * logical id alone, without the versioned companion of the previous layout.
+   */
+  public void assertValidNewLayoutIdColumns(@Nonnull final Dataset<Row> df) {
     assertAllGUIDs(df.select("id").as(Encoders.STRING()).collectAsList());
-    assertAllRelativeReferences(df.select("id_versioned").as(Encoders.STRING()).collectAsList());
+    assertFieldNotPresent("id_versioned", df.schema());
   }
 
   public <T> void assertValidRelativeRefColumns(
@@ -164,18 +166,18 @@ public class PathlingContextTest {
         pathling.encodeBundle(bundlesDF.toDF(), "Patient", PathlingContext.FHIR_JSON);
     assertEquals(5, patientsDataframe.count());
 
-    assertValidIdColumns(patientsDataframe);
+    assertValidNewLayoutIdColumns(patientsDataframe);
 
     // Test omission of MIME type.
     final Dataset<Row> patientsDataframe2 = pathling.encodeBundle(bundlesDF.toDF(), "Patient");
     assertEquals(5, patientsDataframe2.count());
-    assertValidIdColumns(patientsDataframe2);
+    assertValidNewLayoutIdColumns(patientsDataframe2);
 
-    final Dataset<Condition> conditionsDataframe =
-        pathling.encodeBundle(bundlesDF, Condition.class, PathlingContext.FHIR_JSON);
+    final Dataset<Row> conditionsDataframe =
+        pathling.encodeBundle(bundlesDF.toDF(), "Condition", PathlingContext.FHIR_JSON);
     assertEquals(107, conditionsDataframe.count());
 
-    assertValidIdColumns(conditionsDataframe);
+    assertValidNewLayoutIdColumns(conditionsDataframe);
     assertValidRelativeRefColumns(conditionsDataframe, col("subject"));
     assertValidRelativeRefColumns(conditionsDataframe, col("encounter"));
   }
@@ -186,11 +188,11 @@ public class PathlingContextTest {
         spark.read().option("wholetext", true).textFile(TEST_DATA_URL + "/bundles/R4/xml");
 
     final PathlingContext pathling = PathlingContext.create(spark);
-    final Dataset<Condition> conditionsDataframe =
-        pathling.encodeBundle(bundlesDF, Condition.class, PathlingContext.FHIR_XML);
+    final Dataset<Row> conditionsDataframe =
+        pathling.encodeBundle(bundlesDF.toDF(), "Condition", PathlingContext.FHIR_XML);
     assertEquals(107, conditionsDataframe.count());
 
-    assertValidIdColumns(conditionsDataframe);
+    assertValidNewLayoutIdColumns(conditionsDataframe);
     assertValidRelativeRefColumns(conditionsDataframe, col("subject"));
     assertValidRelativeRefColumns(conditionsDataframe, col("encounter"));
   }
@@ -205,25 +207,34 @@ public class PathlingContextTest {
     final Dataset<Row> patientsDataframe =
         pathling.encode(jsonResources.toDF(), "Patient", PathlingContext.FHIR_JSON);
     assertEquals(9, patientsDataframe.count());
-    assertValidIdColumns(patientsDataframe);
+    assertValidNewLayoutIdColumns(patientsDataframe);
 
-    final Dataset<Condition> conditionsDataframe =
-        pathling.encode(jsonResources, Condition.class, PathlingContext.FHIR_JSON);
+    final Dataset<Row> conditionsDataframe =
+        pathling.encode(jsonResources.toDF(), "Condition", PathlingContext.FHIR_JSON);
     assertEquals(71, conditionsDataframe.count());
 
-    assertValidIdColumns(conditionsDataframe);
+    assertValidNewLayoutIdColumns(conditionsDataframe);
     assertValidRelativeRefColumns(conditionsDataframe, col("subject"));
     assertValidRelativeRefColumns(conditionsDataframe, col("encounter"));
   }
 
+  /**
+   * The nesting, extension and open-type options bound the schema of the dense mode only, which
+   * does not exist yet, so they bound nothing in the fitted schema that encoding stores: depth
+   * comes from the data, extensions appear because they are present, and open types resolve as
+   * observed (contracts/library-api.md, decision 69). The options are still accepted and reported
+   * back.
+   */
   @Test
   void testEncoderOptions() {
     final Dataset<Row> jsonResourcesDF = spark.read().text(TEST_DATA_URL + "/resources/R4/json");
 
-    // Test the defaults
-    final Row defaultRow =
-        PathlingContext.create(spark).encode(jsonResourcesDF, "Questionnaire").head();
-    assertFieldPresent("_extension", defaultRow.schema());
+    // Test the defaults: the nested items the data carries are present, and there is no extension
+    // map.
+    final Dataset<Row> defaultQuestionnaires =
+        PathlingContext.create(spark).encode(jsonResourcesDF, "Questionnaire");
+    final Row defaultRow = defaultQuestionnaires.head();
+    assertFieldNotPresent("_extension", defaultRow.schema());
     final Row defaultItem = (Row) defaultRow.getList(defaultRow.fieldIndex("item")).getFirst();
     assertFieldPresent("item", defaultItem.schema());
 
@@ -233,15 +244,18 @@ public class PathlingContextTest {
         EncodingConfiguration.builder().enableExtensions(false).maxNestingLevel(1).build();
     final PathlingContext context1 = PathlingContext.createForEncoding(spark, encodingConfig1);
 
-    final Row rowWithNesting = context1.encode(jsonResourcesDF, "Questionnaire").head();
-    assertFieldNotPresent("_extension", rowWithNesting.schema());
-    // Test item nesting
+    final Dataset<Row> questionnairesWithNesting =
+        context1.encode(jsonResourcesDF, "Questionnaire");
+    // The options bound nothing: the schema is the one the defaults give.
+    assertEquals(defaultQuestionnaires.schema(), questionnairesWithNesting.schema());
+    final Row rowWithNesting = questionnairesWithNesting.head();
+    // Test item nesting: the third level of items the data carries is kept.
     final Row itemWithNesting =
         (Row) rowWithNesting.getList(rowWithNesting.fieldIndex("item")).getFirst();
     assertFieldPresent("item", itemWithNesting.schema());
     final Row nestedItem =
         (Row) itemWithNesting.getList(itemWithNesting.fieldIndex("item")).getFirst();
-    assertFieldNotPresent("item", nestedItem.schema());
+    assertFieldPresent("item", nestedItem.schema());
 
     // Verify encoding configuration can be retrieved
     final EncodingConfiguration retrievedConfig1 = context1.getEncodingConfiguration();
@@ -256,17 +270,20 @@ public class PathlingContextTest {
             .openTypes(Set.of("boolean", "string", "Address"))
             .build();
     final PathlingContext context2 = PathlingContext.createForEncoding(spark, encodingConfig2);
-    final Row rowWithExtensions = context2.encode(jsonResourcesDF, "Patient").head();
-    assertFieldPresent("_extension", rowWithExtensions.schema());
+    final Dataset<Row> patientsWithExtensions = context2.encode(jsonResourcesDF, "Patient");
+    assertEquals(
+        PathlingContext.create(spark).encode(jsonResourcesDF, "Patient").schema(),
+        patientsWithExtensions.schema());
+    final Row rowWithExtensions = patientsWithExtensions.head();
+    assertFieldNotPresent("_extension", rowWithExtensions.schema());
 
-    final Map<Integer, ArraySeq<Row>> extensions =
-        rowWithExtensions.getJavaMap(rowWithExtensions.fieldIndex("_extension"));
-
-    // get the first extension of some extension set
-    final Row extension = (Row) extensions.values().toArray(ArraySeq[]::new)[0].apply(0);
+    // The extensions are stored inline, with every value type the data carries, whether or not it
+    // is among the open types.
+    final Row extension =
+        (Row) rowWithExtensions.getList(rowWithExtensions.fieldIndex("extension")).getFirst();
     assertFieldPresent("valueString", extension.schema());
     assertFieldPresent("valueAddress", extension.schema());
-    assertFieldPresent("valueBoolean", extension.schema());
+    assertFieldPresent("valueDecimal", extension.schema());
     assertFieldNotPresent("valueInteger", extension.schema());
 
     // Verify encoding configuration can be retrieved
@@ -275,43 +292,34 @@ public class PathlingContextTest {
     assertEquals(Set.of("boolean", "string", "Address"), retrievedConfig2.getOpenTypes());
   }
 
+  /**
+   * A streaming dataset cannot be scanned to fit a schema, so encoding one fails with a message
+   * saying so until the dense schema arrives (decision 87), rather than storing the previous
+   * layout.
+   */
   @Test
-  void testEncodeResourceStream() throws Exception {
-    final EncodingConfiguration encodingConfig =
-        EncodingConfiguration.builder().enableExtensions(true).build();
-    final PathlingContext pathling = PathlingContext.createForEncoding(spark, encodingConfig);
+  void testEncodeResourceStream() {
+    final PathlingContext pathling = PathlingContext.create(spark);
 
     final Dataset<Row> jsonResources =
         spark.readStream().text(TEST_DATA_URL + "/resources/R4/json");
-
     assertTrue(jsonResources.isStreaming());
 
-    final Dataset<Row> patientsStream =
-        pathling.encode(jsonResources, "Patient", PathlingContext.FHIR_JSON);
+    final UnsupportedOperationException encodeFailure =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> pathling.encode(jsonResources, "Patient", PathlingContext.FHIR_JSON));
+    assertTrue(
+        encodeFailure.getMessage().contains("streaming"),
+        "unexpected message: " + encodeFailure.getMessage());
 
-    assertTrue(patientsStream.isStreaming());
-
-    final StreamingQuery patientsQuery =
-        patientsStream.writeStream().queryName("patients").format("memory").start();
-
-    patientsQuery.processAllAvailable();
-    final long patientsCount = spark.sql("select count(*) from patients").head().getLong(0);
-    assertEquals(9, patientsCount);
-
-    final StreamingQuery conditionQuery =
-        pathling
-            .encode(jsonResources, "Condition", PathlingContext.FHIR_JSON)
-            .groupBy()
-            .count()
-            .writeStream()
-            .outputMode(OutputMode.Complete())
-            .queryName("countCondition")
-            .format("memory")
-            .start();
-
-    conditionQuery.processAllAvailable();
-    final long conditionsCount = spark.sql("select * from countCondition").head().getLong(0);
-    assertEquals(71, conditionsCount);
+    final UnsupportedOperationException bundleFailure =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> pathling.encodeBundle(jsonResources, "Patient", PathlingContext.FHIR_JSON));
+    assertTrue(
+        bundleFailure.getMessage().contains("streaming"),
+        "unexpected message: " + bundleFailure.getMessage());
   }
 
   @Test
@@ -521,6 +529,116 @@ public class PathlingContextTest {
     assertNotNull(pathlingContext.getQueryConfiguration());
     assertFalse(pathlingContext.getQueryConfiguration().isExplainQueries());
     assertEquals(10, pathlingContext.getQueryConfiguration().getMaxUnboundTraversalDepth());
+  }
+
+  @Test
+  void testBuildContextWithSchemaConfiguration() {
+    final SchemaConfiguration schemaConfig =
+        SchemaConfiguration.builder()
+            .enableRangeAnnotation(false)
+            .recomputeAnnotations(true)
+            .keepUnrequestedAnnotations(true)
+            .dropUnknownAnnotations(true)
+            .build();
+
+    final PathlingContext pathlingContext =
+        PathlingContext.builder(spark).schemaConfiguration(schemaConfig).build();
+
+    assertEquals(schemaConfig, pathlingContext.getSchemaConfiguration());
+  }
+
+  @Test
+  void testBuildContextWithDefaultSchemaConfiguration() {
+    final SchemaConfiguration schemaConfig =
+        PathlingContext.builder(spark).build().getSchemaConfiguration();
+
+    // Every kind is stored, an annotation already present is kept, one of a kind that is off is
+    // left out, and one Pathling does not compute is kept.
+    assertTrue(schemaConfig.isEnableNumericAnnotation());
+    assertTrue(schemaConfig.isEnableRangeAnnotation());
+    assertTrue(schemaConfig.isEnableCanonicalAnnotation());
+    assertFalse(schemaConfig.isRecomputeAnnotations());
+    assertFalse(schemaConfig.isKeepUnrequestedAnnotations());
+    assertFalse(schemaConfig.isDropUnknownAnnotations());
+  }
+
+  @Test
+  void annotatesStoredResources() {
+    final PathlingContext pathlingContext =
+        PathlingContext.builder(spark)
+            .schemaConfiguration(SchemaConfiguration.builder().dropUnknownAnnotations(true).build())
+            .build();
+    final Dataset<Row> stored =
+        pathlingContext
+            .encode(
+                spark
+                    .createDataset(
+                        List.of(
+                            "{\"resourceType\":\"Patient\",\"id\":\"p1\",\"birthDate\":\"1974-12-25\"}"),
+                        Encoders.STRING())
+                    .toDF(),
+                "Patient")
+            .withColumn("__unknown", functions.lit("u"));
+
+    final Dataset<Row> annotated = pathlingContext.annotate(stored, "Patient");
+
+    // A patient carries no quantity, so the built-in kind has nothing to annotate. The step leaves
+    // out the annotation Pathling does not define, as the configuration says, and changes nothing
+    // else.
+    assertEquals(stored.drop("__unknown").schema(), annotated.schema());
+  }
+
+  /**
+   * The ingest option that stores the ids and extensions of primitives reaches encoding through the
+   * context, and what it stores is annotated and decoded back out unchanged (ticket 17): a singular
+   * primitive's group beside its annotations, a repeating primitive's positional null, and a
+   * repeating annotated primitive carried only as its groups.
+   */
+  @Test
+  void storesAndDecodesPrimitiveMetadataWhereTheSchemaConfigurationAsks() throws IOException {
+    final String extension =
+        "{\"extension\":[{\"url\":\"http://hl7.org/fhir/StructureDefinition/data-absent-reason\","
+            + "\"valueCode\":\"masked\"}]}";
+    final String patient =
+        "{\"resourceType\":\"Patient\",\"id\":\"p1\",\"birthDate\":\"1974-12-25\","
+            + "\"_birthDate\":{\"id\":\"b\"},\"name\":[{\"given\":[\"Ann\",null],"
+            + "\"_given\":[null,"
+            + extension
+            + "]}]}";
+    final String activity =
+        "{\"resourceType\":\"ActivityDefinition\",\"id\":\"a1\",\"status\":\"active\","
+            + "\"timingTiming\":{\"_event\":["
+            + extension
+            + "]}}";
+    final PathlingContext storing =
+        PathlingContext.builder(spark)
+            .schemaConfiguration(SchemaConfiguration.builder().storePrimitiveMetadata(true).build())
+            .build();
+    final PathlingContext defaults = PathlingContext.builder(spark).build();
+    final ObjectMapper mapper = new ObjectMapper();
+
+    for (final String[] typeAndSource :
+        List.of(new String[] {"Patient", patient}, new String[] {"ActivityDefinition", activity})) {
+      final Dataset<Row> source =
+          spark.createDataset(List.of(typeAndSource[1]), Encoders.STRING()).toDF();
+      final Dataset<Row> encoded = storing.encode(source, typeAndSource[0]);
+      final String decoded =
+          storing.decode(encoded, typeAndSource[0], PathlingContext.FHIR_JSON).first();
+
+      assertEquals(mapper.readTree(typeAndSource[1]), mapper.readTree(decoded));
+      assertFalse(
+          Pattern.compile("_[a-zA-Z]+:struct<(?:id|extension)")
+              .matcher(defaults.encode(source, typeAndSource[0]).schema().catalogString())
+              .find(),
+          "the default configuration stores no id or extensions of a primitive");
+    }
+    assertTrue(
+        storing
+            .encode(spark.createDataset(List.of(patient), Encoders.STRING()).toDF(), "Patient")
+            .schema()
+            .catalogString()
+            .contains("_birthDate:struct<id:string,__start"),
+        "the group carries the annotations after the id");
   }
 
   @Test

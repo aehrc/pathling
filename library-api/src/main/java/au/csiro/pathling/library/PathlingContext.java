@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.library;
 
+import static au.csiro.pathling.io.TimestampStorage.OUTPUT_TIMESTAMP_TYPE;
+import static au.csiro.pathling.io.TimestampStorage.TIMESTAMP_MICROS;
 import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.PathlingVersion;
@@ -25,16 +27,23 @@ import au.csiro.pathling.config.FhirpathConfiguration;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.config.TerminologyMode;
+import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.encoders.FhirEncoderBuilder;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ResourceTypes;
+import au.csiro.pathling.encoders.UnsupportedResourceError;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluator;
+import au.csiro.pathling.io.Annotator;
+import au.csiro.pathling.io.FhirReader;
+import au.csiro.pathling.io.FhirWriter;
+import au.csiro.pathling.io.TimestampStorage;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.terminology.FhirImportOptions;
 import au.csiro.pathling.library.terminology.TerminologyImportOptions;
 import au.csiro.pathling.library.terminology.TerminologyRelationException;
 import au.csiro.pathling.library.terminology.TerminologyRelations;
+import au.csiro.pathling.schema.SchemaConfiguration;
 import au.csiro.pathling.search.SearchColumnBuilder;
 import au.csiro.pathling.sql.PathlingUdfConfigurer;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
@@ -52,7 +61,6 @@ import au.csiro.pathling.views.ConstantDeclarationTypeAdapterFactory;
 import au.csiro.pathling.views.StrictStringTypeAdapterFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
-import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import jakarta.annotation.Nonnull;
@@ -64,15 +72,15 @@ import java.util.Optional;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.spark.api.java.function.MapPartitionsFunction;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import scala.jdk.javaapi.OptionConverters;
 
 /**
  * A class designed to provide access to selected Pathling functionality from a language library
@@ -98,9 +106,10 @@ public class PathlingContext {
    */
   public static final String FHIR_XML = "application/fhir+xml";
 
-  @Nonnull @Getter private final SparkSession spark;
+  /** The resource type that carries other resources, which is never stored as a type (FR-007). */
+  @Nonnull private static final String BUNDLE = "Bundle";
 
-  @Nonnull private final FhirVersionEnum fhirVersion;
+  @Nonnull @Getter private final SparkSession spark;
 
   @Nonnull @Getter private final FhirEncoders fhirEncoders;
 
@@ -108,7 +117,19 @@ public class PathlingContext {
 
   @Nonnull @Getter private final QueryConfiguration queryConfiguration;
 
+  /** Which annotations encoding stores, and what it does with those already present. */
+  @Nonnull @Getter private final SchemaConfiguration schemaConfiguration;
+
   @Nonnull @Getter private final Gson gson;
+
+  /** Reads resources given as text into the Parquet on FHIR layout. */
+  @Nonnull private final FhirReader fhirReader;
+
+  /** Writes resources stored in the Parquet on FHIR layout as text. */
+  @Nonnull private final FhirWriter fhirWriter;
+
+  /** Stores the annotations of resources in the Parquet on FHIR layout. */
+  @Nonnull private final Annotator annotator;
 
   /**
    * Creates a new PathlingContext with the specified configuration.
@@ -117,21 +138,28 @@ public class PathlingContext {
    * @param fhirEncoders the FHIR encoders to use
    * @param terminologyServiceFactory the terminology service factory to use
    * @param queryConfiguration the query configuration to use
+   * @param schemaConfiguration the schema configuration to use
    */
   private PathlingContext(
       @Nonnull final SparkSession spark,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
-      @Nonnull final QueryConfiguration queryConfiguration) {
+      @Nonnull final QueryConfiguration queryConfiguration,
+      @Nonnull final SchemaConfiguration schemaConfiguration) {
     requireLegacySizeOfNullDisabled(spark);
+    warnUnlessTimestampsInMicros(spark, schemaConfiguration);
     this.spark = spark;
-    this.fhirVersion = fhirEncoders.getFhirVersion();
     this.fhirEncoders = fhirEncoders;
     this.terminologyServiceFactory = terminologyServiceFactory;
     this.queryConfiguration = queryConfiguration;
+    this.schemaConfiguration = schemaConfiguration;
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
     PathlingUdfConfigurer.registerUdfs(spark);
     gson = buildGson();
+    final FhirDefinitionContext definitions = FhirDefinitionContext.of(fhirEncoders.getContext());
+    fhirReader = FhirReader.of(spark, definitions, schemaConfiguration);
+    fhirWriter = FhirWriter.of(definitions);
+    annotator = Annotator.of(definitions, schemaConfiguration);
   }
 
   /**
@@ -158,6 +186,31 @@ public class PathlingContext {
     }
   }
 
+  /**
+   * Warns where a session writes timestamps to Parquet other than as {@code INT64} microseconds
+   * adjusted to UTC, which is how Pathling stores the range annotations of a date (decision 138).
+   * Pathling sets this on the sessions it builds, and never changes the setting of a session it is
+   * given. A session that is not set so can query, but Pathling's Parquet, Delta and catalog sinks
+   * refuse to write data that carries the range annotations from it. A context that does not add
+   * the range annotations is not warned, as what it encodes carries none.
+   *
+   * @param spark the Spark session to check
+   * @param schemaConfiguration the schema configuration, which says whether the range annotations
+   *     are added
+   */
+  private static void warnUnlessTimestampsInMicros(
+      @Nonnull final SparkSession spark, @Nonnull final SchemaConfiguration schemaConfiguration) {
+    if (!schemaConfiguration.isEnableRangeAnnotation() || TimestampStorage.writesMicros(spark)) {
+      return;
+    }
+    log.warn(
+        "The Spark session {}, rather than as INT64 TIMESTAMP(MICROS), as Pathling stores the"
+            + " range annotations of dates. Writing data that carries them to Parquet, Delta or a"
+            + " catalog table will fail. To write it, set {} on the session.",
+        TimestampStorage.describe(spark),
+        TimestampStorage.REQUIRED_SETTING);
+  }
+
   @Nonnull
   private static Gson buildGson() {
     final GsonBuilder builder = new GsonBuilder();
@@ -174,7 +227,7 @@ public class PathlingContext {
    * @param spark the Spark session to use
    * @param fhirEncoders the FHIR encoders to use
    * @param terminologyServiceFactory the terminology service factory to use
-   * @return a new {@link PathlingContext} instance with default query configuration
+   * @return a new {@link PathlingContext} instance with default query and schema configuration
    */
   @Nonnull
   public static PathlingContext createInternal(
@@ -182,7 +235,11 @@ public class PathlingContext {
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
     return new PathlingContext(
-        spark, fhirEncoders, terminologyServiceFactory, QueryConfiguration.builder().build());
+        spark,
+        fhirEncoders,
+        terminologyServiceFactory,
+        QueryConfiguration.builder().build(),
+        SchemaConfiguration.builder().build());
   }
 
   /** Builder for creating {@link PathlingContext} instances with configurable options. */
@@ -192,6 +249,7 @@ public class PathlingContext {
     @Nullable private EncodingConfiguration encodingConfiguration;
     @Nullable private TerminologyConfiguration terminologyConfiguration;
     @Nullable private QueryConfiguration queryConfiguration;
+    @Nullable private SchemaConfiguration schemaConfiguration;
 
     Builder() {}
 
@@ -250,24 +308,43 @@ public class PathlingContext {
     }
 
     /**
+     * Sets the schema configuration for the context: which annotations encoding stores, and what it
+     * does with those already present.
+     *
+     * @param schemaConfiguration the schema configuration to use
+     * @return this builder
+     */
+    @Nonnull
+    public Builder schemaConfiguration(@Nonnull final SchemaConfiguration schemaConfiguration) {
+      this.schemaConfiguration = schemaConfiguration;
+      return this;
+    }
+
+    /**
      * Builds a new {@link PathlingContext} instance with the configured options.
      *
      * @return a new {@link PathlingContext} instance
      */
     @Nonnull
     public PathlingContext build() {
-      final SparkSession finalSpark = getOrDefault(spark, PathlingContext::buildDefaultSpark);
+      final SparkSession finalSpark = getOrDefault(spark, PathlingContext::defaultSpark);
       final EncodingConfiguration finalEncodingConfig =
           getOrDefault(encodingConfiguration, EncodingConfiguration.builder()::build);
       final TerminologyConfiguration finalTerminologyConfig =
           getOrDefault(terminologyConfiguration, TerminologyConfiguration.builder()::build);
       final QueryConfiguration finalQueryConfig =
           getOrDefault(queryConfiguration, QueryConfiguration.builder()::build);
+      final SchemaConfiguration finalSchemaConfig =
+          getOrDefault(schemaConfiguration, SchemaConfiguration.builder()::build);
 
       validateConfigurations(finalEncodingConfig, finalTerminologyConfig, finalQueryConfig);
 
       return createContext(
-          finalSpark, finalEncodingConfig, finalTerminologyConfig, finalQueryConfig);
+          finalSpark,
+          finalEncodingConfig,
+          finalTerminologyConfig,
+          finalQueryConfig,
+          finalSchemaConfig);
     }
 
     @Nonnull
@@ -290,13 +367,18 @@ public class PathlingContext {
         @Nonnull final SparkSession spark,
         @Nonnull final EncodingConfiguration encodingConfig,
         @Nonnull final TerminologyConfiguration terminologyConfig,
-        @Nonnull final QueryConfiguration queryConfig) {
+        @Nonnull final QueryConfiguration queryConfig,
+        @Nonnull final SchemaConfiguration schemaConfig) {
       final FhirEncoderBuilder encoderBuilder = getEncoderBuilder(encodingConfig);
       final TerminologyServiceFactory terminologyServiceFactory =
           getTerminologyServiceFactory(spark, terminologyConfig);
 
       return new PathlingContext(
-          spark, encoderBuilder.getOrCreate(), terminologyServiceFactory, queryConfig);
+          spark,
+          encoderBuilder.getOrCreate(),
+          terminologyServiceFactory,
+          queryConfig,
+          schemaConfig);
     }
   }
 
@@ -364,6 +446,11 @@ public class PathlingContext {
    * Creates a new {@link PathlingContext} with a default setup for Spark, FHIR encoders, and
    * terminology services.
    *
+   * <p>The Spark session is the active one, or the default one, used as it is, as {@link
+   * #create(SparkSession)} uses a session it is given. Where there is neither, a new local session
+   * is built with {@code spark.sql.parquet.outputTimestampType}={@code TIMESTAMP_MICROS}, so that
+   * the range annotations of a date are written as {@code INT64} microseconds adjusted to UTC.
+   *
    * @return a new {@link PathlingContext} instance
    */
   @Nonnull
@@ -373,6 +460,12 @@ public class PathlingContext {
 
   /**
    * Creates a new {@link PathlingContext} using a pre-configured {@link SparkSession}.
+   *
+   * <p>The session's settings are used as they are. Where it does not set {@code
+   * spark.sql.parquet.outputTimestampType} to {@code TIMESTAMP_MICROS}, as the session Pathling
+   * builds does, a warning is logged, and writing data that carries the range annotations of dates
+   * to Parquet, Delta or a catalog table fails, because Pathling stores them as {@code INT64}
+   * microseconds adjusted to UTC.
    *
    * @param sparkSession the Spark session to use
    * @return a new {@link PathlingContext} instance
@@ -419,28 +512,12 @@ public class PathlingContext {
   }
 
   /**
-   * Takes a dataset with string representations of FHIR resources and encodes the resources of the
-   * given type as a Spark dataset.
-   *
-   * @param stringResources the dataset with the string representation of the resources.
-   * @param resourceClass the class of the resources to encode.
-   * @param inputMimeType the mime type of the encoding for the input strings.
-   * @param <T> the Java type of the resource
-   * @return the dataset with Spark encoded resources.
-   */
-  @Nonnull
-  public <T extends IBaseResource> Dataset<T> encode(
-      @Nonnull final Dataset<String> stringResources,
-      @Nonnull final Class<T> resourceClass,
-      @Nonnull final String inputMimeType) {
-    final ExpressionEncoder<T> encoder = fhirEncoders.of(resourceClass);
-    return stringResources.mapPartitions(
-        new EncodeResourceMapPartitions<>(fhirVersion, inputMimeType, resourceClass), encoder);
-  }
-
-  /**
    * Takes a dataframe with string representations of FHIR resources and encodes the resources of
-   * the given type as a Spark dataframe.
+   * the given type as a Spark dataframe, in the Parquet on FHIR layout.
+   *
+   * <p>Documents of other resource types are left out. A streaming dataframe cannot be encoded,
+   * because the Parquet on FHIR layout fits its schema to the data. The resources are annotated as
+   * the schema configuration says (see {@link #annotate}).
    *
    * @param stringResourcesDf the dataframe with the string representation of the resources.
    * @param resourceName the name of the resources to encode.
@@ -456,13 +533,13 @@ public class PathlingContext {
       @Nonnull final String inputMimeType,
       @Nullable final String maybeColumnName) {
 
-    final Dataset<String> stringResources =
-        (nonNull(maybeColumnName) ? stringResourcesDf.select(maybeColumnName) : stringResourcesDf)
-            .as(Encoders.STRING());
-
-    final RuntimeResourceDefinition definition =
-        FhirEncoders.contextFor(fhirVersion).getResourceDefinition(resourceName);
-    return encode(stringResources, definition.getImplementingClass(), inputMimeType).toDF();
+    final Dataset<String> stringResources = documents(stringResourcesDf, maybeColumnName);
+    requireEncodable(stringResources, resourceName);
+    return annotator.annotate(
+        resourceName,
+        fhirReader
+            .format(inputMimeType)
+            .read(resourceName, selectForJson(stringResources, resourceName, inputMimeType)));
   }
 
   /**
@@ -503,10 +580,13 @@ public class PathlingContext {
    * Takes a dataframe of encoded resources of the specified type and decodes them into a dataset of
    * string representations, based on the requested output MIME type.
    *
+   * <p>The resources are expected in the Parquet on FHIR layout, which {@link #encode(Dataset,
+   * String, String, String)} stores.
+   *
    * @param resources the dataframe of encoded resources
    * @param resourceName the name of the resources to decode
    * @param outputMimeType the MIME type of the output strings
-   * @param <T> the type of the resource
+   * @param <T> the type of the resource, which is not used and is kept for compatibility
    * @return a dataset of string representations of the resources
    */
   @Nonnull
@@ -514,44 +594,43 @@ public class PathlingContext {
       @Nonnull final Dataset<Row> resources,
       @Nonnull final String resourceName,
       @Nonnull final String outputMimeType) {
-    final RuntimeResourceDefinition definition =
-        FhirEncoders.contextFor(fhirVersion).getResourceDefinition(resourceName);
-
-    @SuppressWarnings("unchecked")
-    final Class<T> resourceClass = (Class<T>) definition.getImplementingClass();
-
-    final ExpressionEncoder<T> encoder = fhirEncoders.of(resourceClass);
-    final Dataset<T> typedResources = resources.as(encoder);
-
-    final MapPartitionsFunction<T, String> mapper =
-        new DecodeResourceMapPartitions<>(fhirVersion, outputMimeType);
-
-    return typedResources.mapPartitions(mapper, Encoders.STRING());
+    return fhirWriter.format(outputMimeType).write(resourceName, resources);
   }
 
   /**
-   * Takes a dataset with string representations of FHIR bundles and encodes the resources of the
-   * given type as a Spark dataset.
+   * Annotates resources stored in the Parquet on FHIR layout, as the schema configuration says.
    *
-   * @param stringBundles the dataset with the string representation of the resources.
-   * @param resourceClass the class of the resources to encode.
-   * @param inputMimeType the mime type of the encoding for the input strings.
-   * @param <T> the Java type of the resource
-   * @return the dataset with Spark encoded resources.
+   * <p>An annotation is a value derived from an element and stored with it, which a query reads
+   * rather than computing again. Encoding annotates what it encodes, so this is for resources
+   * stored without annotations, such as Parquet or Delta written by another producer or with a
+   * different configuration. Writing resources does not add annotations, and neither does reading
+   * them for a query, which computes whatever annotation the data does not carry.
+   *
+   * <p>With the default configuration, every kind of annotation is stored, an annotation already
+   * present is kept, one of a kind that is off is left out, and one Pathling does not compute is
+   * kept. The numeric annotation of a decimal, the range annotations of a date, dateTime or
+   * instant, and the canonical annotation of a quantity are defined in this release, so with the
+   * default configuration resources without any of those are returned unchanged, and with unknown
+   * annotations dropped the only other effect is that fields marked as annotations, whose names
+   * begin with {@code __}, are left out.
+   *
+   * @param resources the dataframe of resources, in the Parquet on FHIR layout
+   * @param resourceName the name of the type of the resources
+   * @return the resources, annotated
    */
   @Nonnull
-  public <T extends IBaseResource> Dataset<T> encodeBundle(
-      @Nonnull final Dataset<String> stringBundles,
-      @Nonnull final Class<T> resourceClass,
-      @Nonnull final String inputMimeType) {
-    return stringBundles.mapPartitions(
-        new EncodeBundleMapPartitions<>(fhirVersion, inputMimeType, resourceClass),
-        fhirEncoders.of(resourceClass));
+  public Dataset<Row> annotate(
+      @Nonnull final Dataset<Row> resources, @Nonnull final String resourceName) {
+    return annotator.annotate(resourceName, resources);
   }
 
   /**
    * Takes a dataframe with string representations of FHIR bundles and encodes the resources of the
-   * given type as a Spark dataframe.
+   * given type as a Spark dataframe, in the Parquet on FHIR layout.
+   *
+   * <p>A streaming dataframe cannot be encoded, because the Parquet on FHIR layout fits its schema
+   * to the data. The resources are annotated as the schema configuration says (see {@link
+   * #annotate}).
    *
    * @param stringBundlesDf the dataframe with the string representation of the resources
    * @param resourceName the name of the resources to encode
@@ -567,13 +646,10 @@ public class PathlingContext {
       @Nonnull final String inputMimeType,
       @Nullable final String maybeColumnName) {
 
-    final Dataset<String> stringResources =
-        (nonNull(maybeColumnName) ? stringBundlesDf.select(maybeColumnName) : stringBundlesDf)
-            .as(Encoders.STRING());
-
-    final RuntimeResourceDefinition definition =
-        FhirEncoders.contextFor(fhirVersion).getResourceDefinition(resourceName);
-    return encodeBundle(stringResources, definition.getImplementingClass(), inputMimeType).toDF();
+    final Dataset<String> stringBundles = documents(stringBundlesDf, maybeColumnName);
+    requireEncodable(stringBundles, resourceName);
+    return annotator.annotate(
+        resourceName, fhirReader.format(inputMimeType).readBundles(resourceName, stringBundles));
   }
 
   /**
@@ -607,6 +683,52 @@ public class PathlingContext {
   public Dataset<Row> encodeBundle(
       @Nonnull final Dataset<Row> stringBundlesDf, @Nonnull final String resourceName) {
     return encodeBundle(stringBundlesDf, resourceName, FHIR_JSON);
+  }
+
+  /**
+   * Takes the column of documents from a dataframe, which is its only column unless one is named.
+   */
+  @Nonnull
+  private static Dataset<String> documents(
+      @Nonnull final Dataset<Row> dataframe, @Nullable final String maybeColumnName) {
+    return (nonNull(maybeColumnName) ? dataframe.select(maybeColumnName) : dataframe)
+        .as(Encoders.STRING());
+  }
+
+  /**
+   * Selects the JSON documents of one resource type, as encoding has always done (decision 70). A
+   * document whose type cannot be read is kept, so that text which is not JSON still fails the read
+   * rather than being left out. XML documents are selected by the XML reader itself (decision 84).
+   */
+  @Nonnull
+  private static Dataset<String> selectForJson(
+      @Nonnull final Dataset<String> documents,
+      @Nonnull final String resourceType,
+      @Nonnull final String mimeType) {
+    if (!FHIR_JSON.equals(mimeType)) {
+      return documents;
+    }
+    final Column type =
+        functions.get_json_object(documents.col(documents.columns()[0]), "$.resourceType");
+    return documents.filter(type.isNull().or(type.equalTo(resourceType)));
+  }
+
+  /**
+   * Refuses what encoding cannot store: {@code Bundle} as a resource type, with the error the
+   * previous encoder raised (FR-007), and a streaming dataset, which cannot be scanned to fit a
+   * schema to its data. Streaming encoding returns with the dense schema (decision 87).
+   */
+  private static void requireEncodable(
+      @Nonnull final Dataset<String> documents, @Nonnull final String resourceName) {
+    if (BUNDLE.equals(resourceName)) {
+      throw new UnsupportedResourceError("Encoding is not supported for resource: " + BUNDLE);
+    }
+    if (documents.isStreaming()) {
+      throw new UnsupportedOperationException(
+          "Encoding a streaming dataset is not supported in this release: resources are stored"
+              + " with a schema fitted to the data, which a stream cannot provide. Encode each"
+              + " batch, for example within foreachBatch, instead.");
+    }
   }
 
   /**
@@ -1060,7 +1182,9 @@ public class PathlingContext {
         fhirPathExpression,
         contextExpression,
         variables,
-        fhirpathConfig);
+        fhirpathConfig,
+        // A complex result is rendered as FHIR JSON by the layout-to-JSON transform of io.
+        fhirWriter.json()::writeElement);
   }
 
   /**
@@ -1078,9 +1202,25 @@ public class PathlingContext {
     return encode(jsonDf, resourceType, FHIR_JSON);
   }
 
+  /**
+   * Returns the session a context uses where it is given none: the active session, or else the
+   * default one, as Spark's builder would find it, used as it is, as Python's and R's contexts use
+   * one. Only where there is neither is a session built, and it writes timestamps to Parquet as
+   * {@code INT64} microseconds adjusted to UTC, as the range annotations of a date are stored
+   * (decision 138). Spark would apply a runtime SQL setting given to the builder to a session that
+   * already exists too, so the builder is not used where one does.
+   */
   @Nonnull
-  private static SparkSession buildDefaultSpark() {
-    return SparkSession.builder().appName("Pathling").master("local[*]").getOrCreate();
+  private static SparkSession defaultSpark() {
+    return OptionConverters.toJava(SparkSession.getActiveSession())
+        .or(() -> OptionConverters.toJava(SparkSession.getDefaultSession()))
+        .orElseGet(
+            () ->
+                SparkSession.builder()
+                    .appName("Pathling")
+                    .master("local[*]")
+                    .config(OUTPUT_TIMESTAMP_TYPE, TIMESTAMP_MICROS)
+                    .getOrCreate());
   }
 
   @Nonnull

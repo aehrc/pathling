@@ -23,13 +23,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.definition.ChildDefinition;
+import au.csiro.pathling.definition.defaults.DefaultDefinitionContext;
+import au.csiro.pathling.definition.defaults.DefaultResourceDefinition;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.definition.ChildDefinition;
-import au.csiro.pathling.fhirpath.definition.defaults.DefaultDefinitionContext;
-import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceDefinition;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.evaluation.DefinitionResourceResolver;
@@ -38,11 +37,11 @@ import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.test.layout.PofDatasets;
 import au.csiro.pathling.test.yaml.format.YamlTestFormat;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -65,18 +64,8 @@ class YamlTestRunnerTest {
 
   @Autowired FhirContext fhirContext;
 
-  @Autowired FhirEncoders fhirEncoders;
-
   private static final Yaml YAML_PARSER = new Yaml();
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
-  @SuppressWarnings("SameParameterValue")
-  @Nonnull
-  private static String yamlToJsonResource(@Nonnull final String yamlData) throws Exception {
-    final Map<Object, Object> data = YAML_PARSER.load(yamlData);
-    // Serialize the data map into a JSON string
-    return OBJECT_MAPPER.writeValueAsString(data);
-  }
 
   @Test
   void testSimpleYaml() throws Exception {
@@ -110,18 +99,19 @@ class YamlTestRunnerTest {
     System.out.println("Yaml definition:");
     System.out.println(subjectDefinition);
 
-    final StructType subjectSchema = YamlSupport.definitionToStruct(subjectDefinition);
+    final StructType subjectSchema =
+        YamlSupport.definitionToStruct(subjectDefinition, subjectYamlModel);
     System.out.println("Struct definition:");
     subjectSchema.printTreeString();
 
-    System.out.println(yamlToJsonResource(subjectString));
+    final String subjectJson = YamlSupport.subjectToJson(subjectYamlModel);
+    System.out.println(subjectJson);
 
     final Dataset<Row> inputDS =
         spark
             .read()
             .schema(subjectSchema)
-            .json(
-                spark.createDataset(List.of(yamlToJsonResource(subjectString)), Encoders.STRING()));
+            .json(spark.createDataset(List.of(subjectJson), Encoders.STRING()));
 
     inputDS.printSchema();
     inputDS.show();
@@ -225,7 +215,7 @@ class YamlTestRunnerTest {
     assertEquals("Patient", resource.fhirType());
 
     final Dataset<Row> inputDS =
-        spark.createDataset(List.of(resource), fhirEncoders.of(resource.fhirType())).toDF();
+        PofDatasets.fromJson(spark, fhirContext, resource.fhirType(), List.of(testPatient));
 
     assertNotNull(inputDS);
     assertEquals(1, inputDS.count());

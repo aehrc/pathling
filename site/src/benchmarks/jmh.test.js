@@ -1,0 +1,199 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * Tests for reading JMH JSON results.
+ *
+ * @author John Grimes
+ */
+
+import { describe, expect, test } from "bun:test";
+import {
+  iterationScores,
+  paramsLabel,
+  relativeScore,
+  resultKey,
+  shortBenchmarkName,
+  summariseResults,
+} from "./jmh.js";
+
+/**
+ * Builds a minimal JMH result in the shape written by `-rf json`.
+ *
+ * @param {object} overrides - Fields to replace on the result.
+ * @param {object} metric - Fields to replace on the primary metric.
+ * @returns {object} A JMH result.
+ */
+function jmhResult(overrides = {}, metric = {}) {
+  return {
+    benchmark: "au.csiro.pathling.benchmark.PathlingBenchmark.conditionFlat",
+    mode: "avgt",
+    params: { sourceType: "delta" },
+    primaryMetric: {
+      score: 12.5,
+      scoreError: 0.5,
+      scoreUnit: "ms/op",
+      scorePercentiles: { "50.0": 12.4 },
+      rawData: [
+        [12, 13],
+        [12.5, 12.5],
+      ],
+      ...metric,
+    },
+    ...overrides,
+  };
+}
+
+describe("naming", () => {
+  test("shortBenchmarkName drops the package", () => {
+    expect(
+      shortBenchmarkName(
+        "au.csiro.pathling.benchmark.PathlingBenchmark.conditionFlat",
+      ),
+    ).toBe("PathlingBenchmark.conditionFlat");
+  });
+
+  test("shortBenchmarkName leaves an unqualified name unchanged", () => {
+    expect(shortBenchmarkName("conditionFlat")).toBe("conditionFlat");
+  });
+
+  test("paramsLabel sorts parameters by name", () => {
+    expect(paramsLabel({ view: "PatientFlat", sourceType: "delta" })).toBe(
+      "sourceType=delta, view=PatientFlat",
+    );
+  });
+
+  test("paramsLabel is empty when there are no parameters", () => {
+    // JMH omits the params field entirely for unparameterised benchmarks.
+    expect(paramsLabel(undefined)).toBe("");
+    expect(paramsLabel({})).toBe("");
+  });
+
+  test("resultKey distinguishes mode and parameters", () => {
+    const a = resultKey(jmhResult());
+    const b = resultKey(jmhResult({ params: { sourceType: "ndjson" } }));
+    const c = resultKey(jmhResult({ mode: "thrpt" }));
+    expect(new Set([a, b, c]).size).toBe(3);
+  });
+});
+
+describe("iterationScores", () => {
+  test("flattens raw data across forks", () => {
+    // Two forks with two measurement iterations each.
+    expect(iterationScores(jmhResult())).toEqual([12, 13, 12.5, 12.5]);
+  });
+
+  test("uses the weighted mean of each iteration's histogram in sample mode", () => {
+    // Sample mode records a histogram of [value, count] pairs per iteration.
+    const result = jmhResult(
+      { mode: "sample" },
+      {
+        rawData: undefined,
+        rawDataHistogram: [
+          [
+            [
+              [10, 1],
+              [20, 3],
+            ],
+            [[30, 2]],
+          ],
+          [[[40, 1]]],
+        ],
+      },
+    );
+    expect(iterationScores(result)).toEqual([17.5, 30, 40]);
+  });
+
+  test("returns an empty list when no raw data is present", () => {
+    const result = jmhResult(
+      {},
+      { rawData: undefined, rawDataHistogram: undefined },
+    );
+    expect(iterationScores(result)).toEqual([]);
+  });
+});
+
+describe("relativeScore", () => {
+  test("divides the score by the reference score", () => {
+    // The relative errors of the two scores are combined in quadrature: both
+    // are 4%, so the ratio's relative error is 4% × √2.
+    const relative = relativeScore(
+      jmhResult(),
+      jmhResult({}, { score: 10, scoreError: 0.4 }),
+    );
+    expect(relative.score).toBeCloseTo(1.25, 10);
+    expect(relative.scoreError).toBeCloseTo(1.25 * 0.04 * Math.SQRT2, 10);
+  });
+
+  test("has no error when either score has no error", () => {
+    const relative = relativeScore(
+      jmhResult({}, { scoreError: "NaN" }),
+      jmhResult({}, { score: 10 }),
+    );
+    expect(relative.score).toBeCloseTo(1.25, 10);
+    expect(relative.scoreError).toBeNull();
+  });
+
+  test("is null without a reference result", () => {
+    expect(relativeScore(jmhResult(), undefined)).toBeNull();
+  });
+});
+
+describe("summariseResults", () => {
+  test("keeps only the fields needed for the timeline", () => {
+    const reference = [jmhResult({}, { score: 10, scoreError: 0.4 })];
+    const [summary] = summariseResults([jmhResult()], reference);
+    expect(summary).toEqual({
+      benchmark: "PathlingBenchmark.conditionFlat",
+      mode: "avgt",
+      params: "sourceType=delta",
+      score: 12.5,
+      scoreError: 0.5,
+      scoreUnit: "ms/op",
+      relative: {
+        score: expect.closeTo(1.25, 10),
+        scoreError: expect.closeTo(1.25 * 0.04 * Math.SQRT2, 10),
+      },
+    });
+  });
+
+  test("matches reference results on benchmark, mode and parameters", () => {
+    // The reference results are in a different order, and lack the ndjson
+    // result.
+    const results = [
+      jmhResult({ params: { sourceType: "ndjson" } }),
+      jmhResult(),
+      jmhResult({ mode: "thrpt" }),
+    ];
+    const reference = [
+      jmhResult({ mode: "thrpt" }, { score: 25 }),
+      jmhResult({}, { score: 10 }),
+    ];
+    const summaries = summariseResults(results, reference);
+    expect(summaries.map((summary) => summary.relative?.score ?? null)).toEqual(
+      [null, 1.25, 0.5],
+    );
+  });
+
+  test("records a missing error as null", () => {
+    // JMH writes "NaN" as the error when there are too few iterations.
+    const [summary] = summariseResults(
+      [jmhResult({}, { scoreError: "NaN" })],
+      [jmhResult()],
+    );
+    expect(summary.scoreError).toBeNull();
+  });
+});

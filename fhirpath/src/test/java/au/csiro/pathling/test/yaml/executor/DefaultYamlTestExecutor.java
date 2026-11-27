@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.definition.ChildDefinition;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
@@ -34,7 +35,8 @@ import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.definition.ChildDefinition;
+import au.csiro.pathling.fhirpath.encoding.CodingSchema;
+import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.dsl.TypeInfoExpectation;
@@ -44,6 +46,7 @@ import au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase;
 import au.csiro.pathling.test.yaml.format.ExcludeRule;
 import au.csiro.pathling.test.yaml.resolver.ResolverBuilder;
 import au.csiro.pathling.test.yaml.resolver.RuntimeContext;
+import au.csiro.pathling.utilities.SystemDecimal;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
@@ -207,7 +210,8 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
       final Collection evalResult = verifyEvaluation(evaluator);
 
       // Extract the actual result for error reporting.
-      final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
+      final ColumnRepresentation actualRepresentation =
+          evalResult.toEngineForm().getOutputColumn().asCanonical();
       final Row resultRow =
           evaluator.getDataset().select(actualRepresentation.getValue().alias("actual")).first();
       final Object actual = getResult(resultRow, 0);
@@ -296,7 +300,8 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
 
     // Get column representations for both actual and expected results.
     final ColumnRepresentation expectedRepresentation = getResultRepresentation();
-    final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
+    final ColumnRepresentation actualRepresentation =
+        evalResult.toEngineForm().getOutputColumn().asCanonical();
 
     // Create a single row with both actual and expected values for comparison.
     final Row resultRow =
@@ -346,6 +351,11 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
         actual = actualRaw;
         expected = expectedRaw;
       }
+    } else if (evalResult instanceof CodingCollection) {
+      // A Coding read from the new layout has only the fields its data populates, so Codings are
+      // compared by the fields they hold rather than by position.
+      actual = normalizeCodings(actualRaw);
+      expected = normalizeCodings(expectedRaw);
     } else {
       actual = actualRaw;
       expected = expectedRaw;
@@ -391,6 +401,50 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
   }
 
   /**
+   * Normalizes a Coding result, or an array of them, for comparison by the fields each Coding
+   * holds. A result that is neither is returned unchanged.
+   *
+   * @param result the result, as read from the evaluated row
+   * @return the result, with each Coding as a map of its populated fields
+   */
+  @Nullable
+  private static Object normalizeCodings(@Nullable final Object result) {
+    if (result instanceof final Row row) {
+      return normalizeCodingRow(row);
+    }
+    if (isArrayOfRows(result)) {
+      final List<Map<String, Object>> normalized = new java.util.ArrayList<>();
+      final scala.collection.Iterator<?> it = ((scala.collection.Seq<?>) result).iterator();
+      while (it.hasNext()) {
+        normalized.add(normalizeCodingRow((Row) it.next()));
+      }
+      return normalized;
+    }
+    return result;
+  }
+
+  /**
+   * Normalizes a Coding Row to the fields it holds, by name. A field the Row's structure does not
+   * carry and a field holding null are both left out, so that a Coding narrowed to the fields its
+   * data populates equals the same Coding in the full structure. The element id is left out too, as
+   * it is not part of the Coding's value.
+   *
+   * @param codingRow the Coding Row to normalize
+   * @return the populated fields of the Coding, by name
+   */
+  @Nonnull
+  private static Map<String, Object> normalizeCodingRow(@Nonnull final Row codingRow) {
+    final Map<String, Object> normalized = new HashMap<>();
+    for (final String field : codingRow.schema().fieldNames()) {
+      final int index = codingRow.fieldIndex(field);
+      if (!field.equals(CodingSchema.ID_FIELD) && !codingRow.isNullAt(index)) {
+        normalized.put(field, codingRow.get(index));
+      }
+    }
+    return normalized;
+  }
+
+  /**
    * Normalizes an array of Quantity Rows for comparison.
    *
    * @param arrayObj the array object (scala Seq) containing Quantity Rows
@@ -415,44 +469,29 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
   }
 
   /**
-   * Normalizes a Quantity Row for comparison by removing implementation and derived fields. This
-   * allows comparing quantities based on their core semantic data (value, unit, system, code)
-   * without being affected by representation or canonicalization differences.
-   *
-   * <p>Quantity Row structure: [id, value, value_scale, comparator, unit, system, code,
-   * canonicalizedValue, canonicalizedCode, _fid]
-   *
-   * <p>The following fields are ignored: - value_scale (position 2): representation detail of
-   * decimal value storage - canonicalizedValue, canonicalizedCode (positions 7-8): derived
-   * canonical forms
+   * Normalizes a Quantity Row for comparison, to its content: its value, unit, code and system
+   * (decision 150), by name. The value is compared as the engine holds it, a decimal of six
+   * fractional digits. A canonical annotation a System quantity carries is left out: it is derived
+   * from the content, and is pinned where quantities are compared.
    *
    * @param quantityRow the Quantity Row to normalize
-   * @return a List representing the normalized quantity (ignored fields set to null)
+   * @return a List representing the normalized quantity
    */
   @Nonnull
   private static java.util.List<Object> normalizeQuantityRow(@Nonnull final Row quantityRow) {
-    // Quantity rows should have 10 fields
-    final int expectedSize = 10;
-    if (quantityRow.size() < expectedSize) {
-      throw new IllegalArgumentException(
-          "Expected Quantity row to have "
-              + expectedSize
-              + " fields, but got "
-              + quantityRow.size());
+    final java.util.List<Object> normalized = new java.util.ArrayList<>();
+    for (final String field : QuantityEncoding.dataType().fieldNames()) {
+      final int index = quantityRow.fieldIndex(field);
+      normalized.add(quantityRow.isNullAt(index) ? null : quantityRow.get(index));
     }
-
-    return java.util.Arrays.asList(
-        quantityRow.isNullAt(0) ? null : quantityRow.get(0), // id
-        quantityRow.isNullAt(1) ? null : quantityRow.get(1), // value
-        null, // value_scale - ignored
-        quantityRow.isNullAt(3) ? null : quantityRow.get(3), // comparator
-        quantityRow.isNullAt(4) ? null : quantityRow.get(4), // unit
-        quantityRow.isNullAt(5) ? null : quantityRow.get(5), // system
-        quantityRow.isNullAt(6) ? null : quantityRow.get(6), // code
-        null, // canonicalizedValue - ignored
-        null, // canonicalizedCode - ignored
-        quantityRow.isNullAt(9) ? null : quantityRow.get(9) // _fid
-        );
+    final int valueIndex = QuantityEncoding.dataType().fieldIndex(QuantityEncoding.VALUE_COLUMN);
+    normalized.set(
+        valueIndex,
+        normalized.get(valueIndex) == null
+            ? null
+            : new BigDecimal(normalized.get(valueIndex).toString())
+                .setScale(SystemDecimal.SCALE, RoundingMode.HALF_UP));
+    return normalized;
   }
 
   @Nonnull
@@ -546,7 +585,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
       return intValue.longValue();
     } else if (actualRaw instanceof final BigDecimal bdValue) {
       // Scale BigDecimal to 6 places and convert to Long.
-      return bdValue.setScale(6, RoundingMode.HALF_UP).longValue();
+      return bdValue.setScale(SystemDecimal.SCALE, RoundingMode.HALF_UP).longValue();
     } else {
       // Return other types unchanged.
       return actualRaw;

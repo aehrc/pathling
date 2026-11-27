@@ -17,9 +17,9 @@
 
 package au.csiro.pathling.fhirpath.evaluation;
 
+import au.csiro.pathling.definition.DefinitionContext;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.column.ResourceRepresentation;
-import au.csiro.pathling.fhirpath.definition.DefinitionContext;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.Value;

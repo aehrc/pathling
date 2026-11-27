@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.fhirpath.FhirPathQuantity;
+import au.csiro.pathling.fhirpath.column.SystemDateTime;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.search.InvalidModifierException;
 import au.csiro.pathling.search.SearchParameterType;
@@ -48,6 +49,8 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Unit tests for {@link ElementMatcher} implementations.
  *
  * <p>Tests matching logic in isolation using simple DataFrames without full FHIR resources.
+ *
+ * @author John Grimes
  */
 @SpringBootUnitTest
 class ElementMatcherTest {
@@ -164,20 +167,23 @@ class ElementMatcherTest {
 
   // ========== DateMatcher tests ==========
 
+  // The expected values follow the R4 prefix table (https://hl7.org/fhir/R4/search.html#prefix),
+  // where the search value and the stored value are each the range their precision implies. Each
+  // prefix is tested with a search value of the same precision as the stored value, a finer one and
+  // a coarser one.
   static Stream<Arguments> dateMatcherCases() {
     return Stream.of(
-        // ========== eq prefix (default) - ranges overlap ==========
-        // Same precision (day) - exact match
+        // ========== eq prefix (default) - the search range contains the stored range ==========
+        // Same precision.
         Arguments.of("2013-01-14", "2013-01-14", true),
         Arguments.of("2013-01-14", "eq2013-01-14", true),
         Arguments.of("1990-05-20", "1990-05-20", true),
-
-        // Same precision (day) - no overlap
+        Arguments.of("1980", "1980", true),
         Arguments.of("2013-01-14", "2013-01-15", false),
         Arguments.of("2013-01-14", "2013-02-14", false),
         Arguments.of("2013-01-14", "2014-01-14", false),
 
-        // Coarser search precision (year-month) - overlaps with day in that month
+        // Coarser search precision (month) - contains every day in that month.
         Arguments.of("2013-01-14", "2013-01", true),
         Arguments.of("2013-01-14", "eq2013-01", true),
         Arguments.of("2013-01-01", "2013-01", true),
@@ -185,59 +191,108 @@ class ElementMatcherTest {
         Arguments.of("2013-01-14", "2013-02", false),
         Arguments.of("2013-02-01", "2013-01", false),
 
-        // Coarser search precision (year) - overlaps with day in that year
+        // Coarser search precision (year) - contains every day and month in that year.
         Arguments.of("2013-01-14", "2013", true),
         Arguments.of("2013-12-31", "2013", true),
+        Arguments.of("2013-06", "2013", true),
         Arguments.of("2013-01-14", "2014", false),
         Arguments.of("2014-01-01", "2013", false),
 
-        // Finer search precision (datetime) - time within the day
-        Arguments.of("2013-01-14", "2013-01-14T00:00", true),
-        Arguments.of("2013-01-14", "2013-01-14T10:00", true),
-        Arguments.of("2013-01-14", "2013-01-14T23:59", true),
-        Arguments.of("2013-01-14", "2013-01-14T23:59:59", true),
-
-        // Finer search precision (datetime) - time in different day should not match
+        // Finer search precision - the search range is within the stored range, but does not
+        // contain it.
+        Arguments.of("1980", "1980-06-15", false),
+        Arguments.of("1980", "eq1980-06", false),
+        Arguments.of("1980-06", "1980-06-15", false),
+        Arguments.of("2013-01-14", "2013-01-14T00:00", false),
+        Arguments.of("2013-01-14", "2013-01-14T10:00", false),
+        Arguments.of("2013-01-14", "2013-01-14T23:59:59", false),
         Arguments.of("2013-01-14", "2013-01-15T00:00", false),
         Arguments.of("2013-01-14", "2013-01-13T23:59:59", false),
 
-        // ========== ne prefix - no overlap ==========
-        Arguments.of("2023-01-15", "ne2023-01-15", false), // same day = overlap exists
-        Arguments.of("2023-01-15", "ne2023-01-14", true), // different day = no overlap
-        Arguments.of("2023-01-15", "ne2023-01-16", true), // different day = no overlap
-        Arguments.of("2023-01-15", "ne2023-02", true), // different month = no overlap
-        Arguments.of("2023-01-15", "ne2023-01", false), // same month = overlap exists
-        Arguments.of("2023-01-15", "ne2024", true), // different year = no overlap
+        // ========== ne prefix - the search range does not contain the stored range ==========
+        // Same precision.
+        Arguments.of("2023-01-15", "ne2023-01-15", false),
+        Arguments.of("2023-01-15", "ne2023-01-14", true),
+        Arguments.of("2023-01-15", "ne2023-01-16", true),
+        Arguments.of("1980", "ne1980", false),
 
-        // ========== gt prefix - resource ends after parameter ==========
+        // Coarser search precision.
+        Arguments.of("2023-01-15", "ne2023-01", false),
+        Arguments.of("2023-01-15", "ne2023-02", true),
+        Arguments.of("2023-01-15", "ne2024", true),
+        Arguments.of("2023-01", "ne2023", false),
+
+        // Finer search precision - a search range within the stored range does not contain it.
+        Arguments.of("1980", "ne1980-06-15", true),
+        Arguments.of("1980", "ne1980-06", true),
+        Arguments.of("1980-06", "ne1980-06-15", true),
+        Arguments.of("2023-01-15", "ne2023-01-15T10:00", true),
+
+        // ========== gt prefix - the range above the search value intersects the stored range ==
         Arguments.of("2023-01-15", "gt2023-01-14", true), // 15 ends after 14
         Arguments.of("2023-01-15", "gt2023-01-15", false), // 15 does not end after 15
         Arguments.of("2023-01-15", "gt2023-01-16", false), // 15 does not end after 16
         Arguments.of("2023-01-15", "gt2023-01", false), // day doesn't end after month containing it
         Arguments.of("2023-02-01", "gt2023-01", true), // Feb 1 ends after Jan
+        Arguments.of("1980", "gt1980-06", true), // 1980 ends after June
+        Arguments.of("1980", "gt1980-12-31", false), // 1980 ends with Dec 31
 
-        // ========== ge prefix - resource starts at or after parameter start ==========
-        Arguments.of("2023-01-15", "ge2023-01-14", true), // 15 >= 14
-        Arguments.of("2023-01-15", "ge2023-01-15", true), // 15 >= 15
-        Arguments.of("2023-01-15", "ge2023-01-16", false), // 15 not >= 16
-        Arguments.of("2023-01-15", "ge2023-01", true), // 15 starts after month start
-        Arguments.of("2023-01-01", "ge2023-01", true), // 1st starts at month start
-        Arguments.of("2022-12-31", "ge2023-01", false), // Dec 31 before Jan start
+        // ========== ge prefix - gt, or the search range contains the stored range ==========
+        // Same precision.
+        Arguments.of("2023-01-15", "ge2023-01-14", true),
+        Arguments.of("2023-01-15", "ge2023-01-15", true),
+        Arguments.of("2023-01-15", "ge2023-01-16", false),
+        Arguments.of("1980", "ge1980", true),
+        Arguments.of("1980", "ge1981", false),
 
-        // ========== lt prefix - resource starts before parameter ==========
+        // Coarser search precision.
+        Arguments.of("2023-01-15", "ge2023-01", true), // contained in Jan
+        Arguments.of("2023-01-01", "ge2023-01", true), // contained in Jan
+        Arguments.of("2023-01-31", "ge2023-01", true), // contained in Jan
+        Arguments.of("2023-02-01", "ge2023-01", true), // after Jan
+        Arguments.of("2022-12-31", "ge2023-01", false), // before Jan
+        Arguments.of("2022-06", "ge2023", false), // before 2023
+
+        // Finer search precision - the stored range extends beyond the search value.
+        Arguments.of("1980", "ge1980-06", true), // 1980 continues after June
+        Arguments.of("1980", "ge1980-06-15", true), // 1980 continues after Jun 15
+        Arguments.of("1980-06", "ge1980-06-15", true), // June continues after Jun 15
+        Arguments.of("2023-01-15", "ge2023-01-15T10:00", true), // day continues after 10:00
+        Arguments.of("1980", "ge1980-12-31", false), // 1980 does not continue after Dec 31
+        Arguments.of("1980-06", "ge1980-07-01", false), // June ends before Jul 1
+
+        // ========== lt prefix - the range below the search value intersects the stored range ==
         Arguments.of("2023-01-15", "lt2023-01-16", true), // 15 < 16
         Arguments.of("2023-01-15", "lt2023-01-15", false), // 15 not < 15
         Arguments.of("2023-01-15", "lt2023-01-14", false), // 15 not < 14
         Arguments.of("2023-01-15", "lt2023-02", true), // 15 starts before Feb
         Arguments.of("2023-01-15", "lt2023-01", false), // 15 not before Jan start
+        Arguments.of("1980", "lt1980-06", true), // 1980 starts before June
+        Arguments.of("1980", "lt1980-01-01", false), // 1980 starts with Jan 1
 
-        // ========== le prefix - resource ends at or before parameter end ==========
-        Arguments.of("2023-01-15", "le2023-01-16", true), // 15 ends <= 16 end
-        Arguments.of("2023-01-15", "le2023-01-15", true), // 15 ends <= 15 end
-        Arguments.of("2023-01-15", "le2023-01-14", false), // 15 ends not <= 14 end
-        Arguments.of("2023-01-15", "le2023-01", true), // 15 ends within Jan
-        Arguments.of("2023-01-31", "le2023-01", true), // last day ends at month end
-        Arguments.of("2023-02-01", "le2023-01", false) // Feb 1 ends after Jan
+        // ========== le prefix - lt, or the search range contains the stored range ==========
+        // Same precision.
+        Arguments.of("2023-01-15", "le2023-01-16", true),
+        Arguments.of("2023-01-15", "le2023-01-15", true),
+        Arguments.of("2023-01-15", "le2023-01-14", false),
+        Arguments.of("1980", "le1980", true),
+        Arguments.of("1980", "le1979", false),
+
+        // Coarser search precision.
+        Arguments.of("2023-01-15", "le2023-01", true), // contained in Jan
+        Arguments.of("2023-01-01", "le2023-01", true), // contained in Jan
+        Arguments.of("2023-01-31", "le2023-01", true), // contained in Jan
+        Arguments.of("2022-12-31", "le2023-01", true), // before Jan
+        Arguments.of("2023-02-01", "le2023-01", false), // after Jan
+        Arguments.of("2024-06", "le2023", false), // after 2023
+
+        // Finer search precision - the stored range extends before the search value.
+        Arguments.of("1980", "le1980-06", true), // 1980 starts before June
+        Arguments.of("1980", "le1980-06-15", true), // 1980 starts before Jun 15
+        Arguments.of("1980-06", "le1980-06-15", true), // June starts before Jun 15
+        Arguments.of("2023-01-15", "le2023-01-15T10:00", true), // day starts before 10:00
+        Arguments.of("1980", "le1980-01-01", false), // 1980 does not start before Jan 1
+        Arguments.of("1980-06", "le1980-05-31", false) // June starts after May 31
         );
   }
 
@@ -247,7 +302,8 @@ class ElementMatcherTest {
     final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.STRING()).toDF("value");
 
     final DateMatcher matcher = DateMatcher.forScalarDates();
-    final Column result = matcher.match(col("value"), searchValue);
+    // The engine holds a date as a System date, with its range.
+    final Column result = matcher.match(SystemDateTime.fromText(col("value")), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);
     assertEquals(expected, actual);
@@ -418,45 +474,57 @@ class ElementMatcherTest {
 
   // ========== DateMatcher Period tests ==========
 
+  // The expected values follow the R4 prefix table, as for scalar dates. The range of a Period runs
+  // from the lower bound of its start to the upper bound of its end.
   static Stream<Arguments> periodMatcherCases() {
     return Stream.of(
-        // ========== eq prefix (default) - ranges overlap ==========
-        // Period fully within search range
-        Arguments.of("2023-01-15", "2023-06-30", "2023-03-15", true),
-        Arguments.of("2023-01-15", "2023-06-30", "2023-01", true),
-        Arguments.of("2023-01-15", "2023-06-30", "2023", true),
-        // Period partially overlaps search range
-        Arguments.of("2023-01-15", "2023-06-30", "2023-06-15", true), // overlaps end
-        Arguments.of(
-            "2023-01-15",
-            "2023-06-30",
-            "2023-01-15",
-            true), // overlaps start (same day as Period start)
-        // Period does not overlap search range
-        Arguments.of("2023-01-15", "2023-06-30", "2022-12-01", false),
-        Arguments.of("2023-01-15", "2023-06-30", "2023-07-01", false),
+        // ========== eq prefix (default) - the search range contains the Period ==========
+        Arguments.of("2023-01-15", "2023-06-30", "2023", true), // coarser search, contains it
+        Arguments.of("2023-01", "2023-06", "2023", true), // month bounds, contained in the year
+        Arguments.of("2023-03-15", "2023-03-15", "2023-03-15", true), // same day
+        Arguments.of("2023-03-15", "2023-03-15", "2023-03-15T10:00", false), // finer search
+        Arguments.of("2023-01-15", "2023-06-30", "2023-03-15", false), // within, not containing
+        Arguments.of("2023-01-15", "2023-06-30", "2023-01", false), // overlaps the start
+        Arguments.of("2023-01-15", "2023-06-30", "2023-06-15", false), // overlaps the end
+        Arguments.of("2023-01-15", "2023-06-30", "2023-01-15", false), // the start day only
+        Arguments.of("2023-01", "2023-06", "2023-01", false), // the start month only
+        Arguments.of("2023-01-15", "2023-06-30", "2022-12-01", false), // before
+        Arguments.of("2023-01-15", "2023-06-30", "2023-07-01", false), // after
 
-        // ========== ne prefix - no overlap ==========
-        Arguments.of("2023-01-15", "2023-06-30", "ne2023-03-15", false), // overlap exists
-        Arguments.of("2023-01-15", "2023-06-30", "ne2022-12-01", true), // no overlap
-        Arguments.of("2023-01-15", "2023-06-30", "ne2023-07-01", true), // no overlap
+        // ========== ne prefix - the search range does not contain the Period ==========
+        Arguments.of("2023-01-15", "2023-06-30", "ne2023", false), // contained
+        Arguments.of("2023-03-15", "2023-03-15", "ne2023-03-15", false), // same day
+        Arguments.of("2023-01-15", "2023-06-30", "ne2023-03-15", true), // within, not containing
+        Arguments.of("2023-01-15", "2023-06-30", "ne2023-01", true), // overlaps the start
+        Arguments.of("2023-01-15", "2023-06-30", "ne2022-12-01", true), // before
+        Arguments.of("2023-01-15", "2023-06-30", "ne2023-07-01", true), // after
 
-        // ========== ge prefix - resource starts at or after parameter start ==========
-        Arguments.of("2023-06-01", "2023-12-31", "ge2023-06-01", true), // starts at same time
+        // ========== ge prefix - gt, or the search range contains the Period ==========
+        Arguments.of("2023-06-01", "2023-12-31", "ge2023-06-01", true), // continues after
         Arguments.of("2023-06-01", "2023-12-31", "ge2023-05-01", true), // starts after
-        Arguments.of("2023-06-01", "2023-12-31", "ge2023-07-01", false), // starts before
+        Arguments.of("2023-06-01", "2023-12-31", "ge2023-07-01", true), // continues after
+        Arguments.of("2023-06-01", "2023-12-31", "ge2023", true), // coarser search, contains it
+        Arguments.of("2023-06", "2023-12", "ge2023-12-15", true), // month end continues after
+        Arguments.of("2023-06-01", "2023-12-31", "ge2023-12-31", false), // ends with it
+        Arguments.of("2023-06-01", "2023-12-31", "ge2023-12", false), // ends with it, not inside
+        Arguments.of("2023-06-01", "2023-12-31", "ge2024-01-01", false), // ends before
 
-        // ========== le prefix - resource ends at or before parameter end ==========
-        Arguments.of("2023-01-01", "2023-06-30", "le2023-06-30", true), // ends at same time
+        // ========== le prefix - lt, or the search range contains the Period ==========
+        Arguments.of("2023-01-01", "2023-06-30", "le2023-06-30", true), // starts before
         Arguments.of("2023-01-01", "2023-06-30", "le2023-07-31", true), // ends before
-        Arguments.of("2023-01-01", "2023-06-30", "le2023-05-31", false), // ends after
+        Arguments.of("2023-01-01", "2023-06-30", "le2023-05-31", true), // starts before
+        Arguments.of("2023-01-01", "2023-06-30", "le2023", true), // coarser search, contains it
+        Arguments.of("2023-01", "2023-06", "le2023-01-15", true), // month start is before
+        Arguments.of("2023-01-01", "2023-06-30", "le2023-01-01", false), // starts with it
+        Arguments.of("2023-01-01", "2023-06-30", "le2023-01", false), // starts with it, not inside
+        Arguments.of("2023-01-01", "2023-06-30", "le2022-12-31", false), // starts after
 
-        // ========== gt prefix - resource ends after parameter ==========
+        // ========== gt prefix - the range above the search value intersects the Period ==========
         Arguments.of("2023-01-01", "2023-12-31", "gt2023-06-30", true), // ends after Jun 30
         Arguments.of("2023-01-01", "2023-06-30", "gt2023-06-30", false), // ends at Jun 30
         Arguments.of("2023-01-01", "2023-06-30", "gt2023-12-31", false), // ends before Dec 31
 
-        // ========== lt prefix - resource starts before parameter ==========
+        // ========== lt prefix - the range below the search value intersects the Period ==========
         Arguments.of("2023-01-01", "2023-06-30", "lt2023-06-01", true), // starts before Jun 1
         Arguments.of("2023-06-01", "2023-12-31", "lt2023-06-01", false), // starts at Jun 1
         Arguments.of("2023-06-01", "2023-12-31", "lt2023-01-01", false) // starts after Jan 1
@@ -491,18 +559,24 @@ class ElementMatcherTest {
         Arguments.of(
             "2024-01-01", null, "gt2023-12-31", true), // ends after Dec 31 (infinity > anything)
         Arguments.of("2024-01-01", null, "gt2025-12-31", true), // still ends after (infinity)
-        Arguments.of("2024-01-01", null, "le2023-12-31", false), // doesn't end <= Dec 31
+        Arguments.of("2024-01-01", null, "ge2025-12-31", true), // continues after (infinity)
+        Arguments.of("2024-01-01", null, "le2023-12-31", false), // starts after Dec 31
+        Arguments.of("2024-01-01", null, "2024", false), // eq: no year contains an open end
+        Arguments.of("2024-01-01", null, "ne2024", true), // ne: no year contains an open end
 
         // Open-ended past (null start = negative infinity)
         Arguments.of(
             null, "2022-12-31", "lt2023-01-01", true), // starts before Jan 1 (-infinity < anything)
         Arguments.of(null, "2022-12-31", "lt2020-01-01", true), // still starts before (-infinity)
-        Arguments.of(null, "2022-12-31", "ge2023-01-01", false), // doesn't start >= Jan 1
+        Arguments.of(null, "2022-12-31", "le2020-01-01", true), // starts before (-infinity)
+        Arguments.of(null, "2022-12-31", "ge2023-01-01", false), // ends before Jan 1
+        Arguments.of(null, "2022-12-31", "2022", false), // eq: no year contains an open start
 
-        // Both null (infinite range - overlaps with any eq, but ge/le have specific semantics)
-        Arguments.of(null, null, "2023-06-15", true), // eq: infinite range overlaps with anything
-        Arguments.of(null, null, "ge2023-01-01", false), // ge: -infinity is NOT >= 2023-01-01
-        Arguments.of(null, null, "le2023-12-31", false) // le: +infinity is NOT <= 2023-12-31
+        // Both null (infinite range - no search range contains it, and it extends beyond any)
+        Arguments.of(null, null, "2023-06-15", false), // eq: not contained
+        Arguments.of(null, null, "ne2023-06-15", true), // ne: not contained
+        Arguments.of(null, null, "ge2023-01-01", true), // ge: continues after 2023-01-01
+        Arguments.of(null, null, "le2023-12-31", true) // le: starts before 2023-12-31
         );
   }
 
@@ -784,11 +858,11 @@ class ElementMatcherTest {
   @MethodSource("quantityValueMatcherCases")
   void testQuantityValueMatcher(
       final BigDecimal value, final String searchValue, final boolean expected) {
-    // Create a DataFrame with a Quantity-like struct containing just 'value' field
+    // Create a DataFrame with a stored Quantity holding just its value, as text.
     final Dataset<Row> df =
         spark
             .createDataset(List.of(1), Encoders.INT())
-            .select(struct(lit(value).as("value")).as("quantity"));
+            .select(struct(lit(value.toPlainString()).as("value")).as("quantity"));
 
     final QuantityMatcher matcher = new QuantityMatcher();
     final Column result = matcher.match(col("quantity"), searchValue);
@@ -989,22 +1063,17 @@ class ElementMatcherTest {
       final String unit,
       final String searchValue,
       final boolean expected) {
-    // Create a DataFrame with a full Quantity-like struct
-    // Include canonicalized fields (set to null) since the matcher references them
-    // for UCUM system searches. With null canonical values, it falls back to standard matching.
+    // Create a DataFrame with a stored Quantity, in the shape the Parquet on FHIR layout stores it:
+    // its value as text and no canonical form, which the matcher computes where it needs it.
     final Dataset<Row> df =
         spark
             .createDataset(List.of(1), Encoders.INT())
             .select(
                 struct(
-                        lit(value).as("value"),
-                        lit(system).as("system"),
-                        lit(code).as("code"),
-                        lit(unit).as("unit"),
-                        lit(null)
-                            .cast("struct<value:decimal(38,0),scale:int>")
-                            .as("_value_canonicalized"),
-                        lit(null).cast("string").as("_code_canonicalized"))
+                        lit(value.toPlainString()).as("value"),
+                        lit(unit).cast("string").as("unit"),
+                        lit(system).cast("string").as("system"),
+                        lit(code).cast("string").as("code"))
                     .as("quantity"));
 
     final QuantityMatcher matcher = new QuantityMatcher();
@@ -1022,7 +1091,8 @@ class ElementMatcherTest {
     // UCUM canonical base units:
     // - g (gram) is the base mass unit
     // - mg = 10^-3 g, kg = 10^3 g
-    // Canonical values are computed automatically by QuantityEncoding.encodeLiteral()
+    // Canonical values are computed from the element's value and code by the canonicalisation
+    // functions QuantityMatcher calls.
     return Stream.of(
         // ========== UCUM canonicalization - matching equivalent units ==========
         // Resource has 70 kg, canonical = (70000, "g")
@@ -1062,7 +1132,78 @@ class ElementMatcherTest {
 
         // Resource has 500 mg, canonical = (0.5, "g")
         // Search for ge0.5 g -> 0.5 >= 0.5, should match
-        Arguments.of(new BigDecimal("500"), "mg", "ge0.5|http://unitsofmeasure.org|g", true));
+        Arguments.of(new BigDecimal("500"), "mg", "ge0.5|http://unitsofmeasure.org|g", true),
+
+        // ========== UCUM - eq and ne match the implicit range of the search value ==========
+        // 5.4 mg is the range [5.35, 5.45) mg, which holds its lower boundary but not its upper.
+        Arguments.of(new BigDecimal("5.41"), "mg", "5.4|http://unitsofmeasure.org|mg", true),
+        Arguments.of(new BigDecimal("5.35"), "mg", "5.4|http://unitsofmeasure.org|mg", true),
+        Arguments.of(new BigDecimal("5.45"), "mg", "5.4|http://unitsofmeasure.org|mg", false),
+        Arguments.of(new BigDecimal("5.41"), "mg", "ne5.4|http://unitsofmeasure.org|mg", false),
+        Arguments.of(new BigDecimal("5.45"), "mg", "ne5.4|http://unitsofmeasure.org|mg", true),
+        Arguments.of(new BigDecimal("5.34"), "mg", "ne5.4|http://unitsofmeasure.org|mg", true),
+
+        // The range is carried into the canonical unit, so 0.0054 g is [5.35, 5.45) mg, and 5.4 mg
+        // holds 0.00541 g.
+        Arguments.of(new BigDecimal("5.41"), "mg", "0.0054|http://unitsofmeasure.org|g", true),
+        Arguments.of(new BigDecimal("5.45"), "mg", "0.0054|http://unitsofmeasure.org|g", false),
+        Arguments.of(new BigDecimal("0.00541"), "g", "5.4|http://unitsofmeasure.org|mg", true),
+        Arguments.of(new BigDecimal("0.00541"), "g", "ne5.4|http://unitsofmeasure.org|mg", false),
+        Arguments.of(new BigDecimal("0.00545"), "g", "ne5.4|http://unitsofmeasure.org|mg", true),
+
+        // Trailing zeros are significant, so 5.40 mg is the narrower range [5.395, 5.405) mg.
+        Arguments.of(new BigDecimal("5.404"), "mg", "5.40|http://unitsofmeasure.org|mg", true),
+        Arguments.of(new BigDecimal("5.41"), "mg", "5.40|http://unitsofmeasure.org|mg", false),
+        Arguments.of(new BigDecimal("5.41"), "mg", "ne5.40|http://unitsofmeasure.org|mg", true),
+
+        // A search value beyond the range of the System.Decimal has no canonical form, and matches
+        // nothing, under ne as under eq.
+        Arguments.of(new BigDecimal("5.4"), "mg", "1e33|http://unitsofmeasure.org|mg", false),
+        Arguments.of(new BigDecimal("5.4"), "mg", "ne1e33|http://unitsofmeasure.org|mg", false),
+
+        // A pH falls as the concentration it is canonicalised to rises, so the range of 7.0 [pH],
+        // [6.95, 7.05) [pH], still holds its lower boundary but not its upper.
+        Arguments.of(new BigDecimal("6.95"), "[pH]", "7.0|http://unitsofmeasure.org|[pH]", true),
+        Arguments.of(new BigDecimal("7.04"), "[pH]", "7.0|http://unitsofmeasure.org|[pH]", true),
+        Arguments.of(new BigDecimal("7.05"), "[pH]", "7.0|http://unitsofmeasure.org|[pH]", false),
+        Arguments.of(new BigDecimal("6.95"), "[pH]", "ne7.0|http://unitsofmeasure.org|[pH]", false),
+        Arguments.of(new BigDecimal("7.05"), "[pH]", "ne7.0|http://unitsofmeasure.org|[pH]", true),
+
+        // Where the canonical boundaries do not enclose the canonical search value, the range is
+        // matched in the unit of the search instead. ucumate squares [m/s2/Hz^(1/2)], so the
+        // boundaries of 0, -0.5 and 0.5, both canonicalise to 0.25.
+        Arguments.of(
+            new BigDecimal("0"),
+            "[m/s2/Hz^(1/2)]",
+            "0|http://unitsofmeasure.org|[m/s2/Hz^(1/2)]",
+            true),
+        Arguments.of(
+            new BigDecimal("0.3"),
+            "[m/s2/Hz^(1/2)]",
+            "0|http://unitsofmeasure.org|[m/s2/Hz^(1/2)]",
+            true),
+        Arguments.of(
+            new BigDecimal("0"),
+            "[m/s2/Hz^(1/2)]",
+            "ne0|http://unitsofmeasure.org|[m/s2/Hz^(1/2)]",
+            false),
+        Arguments.of(
+            new BigDecimal("0.6"),
+            "[m/s2/Hz^(1/2)]",
+            "ne0|http://unitsofmeasure.org|[m/s2/Hz^(1/2)]",
+            true),
+        // ucumate adds the offset of Cel in double arithmetic, which loses the boundaries of a very
+        // large temperature.
+        Arguments.of(
+            new BigDecimal("100000000000000000000"),
+            "Cel",
+            "100000000000000000000|http://unitsofmeasure.org|Cel",
+            true),
+        Arguments.of(
+            new BigDecimal("100000000000000000000"),
+            "Cel",
+            "ne100000000000000000000|http://unitsofmeasure.org|Cel",
+            false));
   }
 
   @ParameterizedTest(name = "QuantityMatcher UCUM: value={0}, code={1} matches \"{2}\" = {3}")

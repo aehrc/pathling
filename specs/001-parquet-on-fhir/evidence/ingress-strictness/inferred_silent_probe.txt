@@ -1,0 +1,27 @@
+== array for a string, mixed with strings
+   schema: struct<family:string,id:string>
+   {"family": "Smith", "id": "1"}
+   {"family": "[\"A\",\"B\"]", "id": "2"}
+== array for a string, in every row
+   schema: struct<family:array<string>,id:string>
+   {"family": ["A"], "id": "1"}
+   {"family": ["A", "B"], "id": "2"}
+== object for a string, mixed
+   schema: struct<family:string,id:string>
+   {"family": "Smith", "id": "1"}
+   {"family": "{\"x\":1}", "id": "2"}
+== number for a string, mixed
+   schema: struct<family:string,id:string>
+   {"family": "Smith", "id": "1"}
+   {"family": "1.5", "id": "2"}
+== duplicate key
+   schema: struct<gender:string,gender:string,id:string>
+   {"gender": "female", "id": "1"}
+== top-level array
+   schema: struct<id:string>
+   {"id": "1"}
+   {"id": "2a"}
+   {"id": "2b"}
+== trailing text
+   schema: struct<id:string>
+   {"id": "1"}

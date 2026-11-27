@@ -22,7 +22,7 @@ name = "pathling"
 dynamic = ["version"]
 description = "Python API for Pathling"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "Apache License, version 2.0" }
 authors = [
     { name = "Australian e-Health Research Centre, CSIRO", email = "pathling@csiro.au" }
@@ -31,12 +31,12 @@ keywords = ["pathling", "fhir", "analytics", "spark", "standards", "terminology"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: Apache Software License",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
-    "pyspark>=4.0.0,<4.1.0",
+    # Spark 4.1.2 removed a class that Delta 4.2.0 uses, so Delta writes fail on later patches.
+    "pyspark>=4.1.0,<4.1.2",
     "deprecated>=1.2.13",
     "click>=8.1.7",
     "rich>=13.7.0",
@@ -88,7 +88,7 @@ include = [
 ]
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py310"
 line-length = 88
 
 [tool.ruff.lint]

@@ -8,6 +8,9 @@
 .docusaurus
 .cache-loader
 
+# Benchmark data, fetched from gh-pages or published locally
+/static/benchmarks
+
 # Misc
 .DS_Store
 .env.local

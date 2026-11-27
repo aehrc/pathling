@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.evaluation;
 
 import au.csiro.pathling.config.FhirpathConfiguration;
+import au.csiro.pathling.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.ListTraceCollector;
@@ -31,23 +32,29 @@ import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TraceResult;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TypedValue;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.sql.SyntheticFieldUtils;
+import au.csiro.pathling.utilities.AnnotationNames;
 import ca.uhn.fhir.context.FhirContext;
+import com.google.gson.stream.JsonWriter;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.ArrayType;
-import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -64,6 +71,9 @@ import scala.collection.mutable.ArraySeq;
 @UtilityClass
 public class SingleInstanceEvaluator {
 
+  /** The name of the column a result is selected into. */
+  private static final String RESULT_COLUMN = "_result";
+
   /**
    * Evaluates a FHIRPath expression against a single encoded FHIR resource.
    *
@@ -74,6 +84,7 @@ public class SingleInstanceEvaluator {
    * @param contextExpression an optional context expression; if non-null, the main expression is
    *     composed with the context
    * @param variables optional named variables available via %variable syntax, or null
+   * @param renderer renders a result whose values are structures as FHIR JSON
    * @return a {@link SingleInstanceEvaluationResult} containing typed result values and type
    *     metadata
    */
@@ -84,7 +95,8 @@ public class SingleInstanceEvaluator {
       @Nonnull final FhirContext fhirContext,
       @Nonnull final String fhirPathExpression,
       @Nullable final String contextExpression,
-      @Nullable final Map<String, Object> variables) {
+      @Nullable final Map<String, Object> variables,
+      @Nonnull final ElementRenderer renderer) {
     return evaluate(
         resourceDf,
         resourceType,
@@ -92,7 +104,8 @@ public class SingleInstanceEvaluator {
         fhirPathExpression,
         contextExpression,
         variables,
-        FhirpathConfiguration.DEFAULT);
+        FhirpathConfiguration.DEFAULT,
+        renderer);
   }
 
   /**
@@ -107,6 +120,7 @@ public class SingleInstanceEvaluator {
    *     composed with the context
    * @param variables optional named variables available via %variable syntax, or null
    * @param configuration the FHIRPath evaluation configuration
+   * @param renderer renders a result whose values are structures as FHIR JSON
    * @return a {@link SingleInstanceEvaluationResult} containing typed result values and type
    *     metadata
    */
@@ -118,7 +132,8 @@ public class SingleInstanceEvaluator {
       @Nonnull final String fhirPathExpression,
       @Nullable final String contextExpression,
       @Nullable final Map<String, Object> variables,
-      @Nonnull final FhirpathConfiguration configuration) {
+      @Nonnull final FhirpathConfiguration configuration,
+      @Nonnull final ElementRenderer renderer) {
 
     // Convert incoming variables to Collection objects for the evaluator.
     final Map<String, Collection> variableCollections = convertVariables(variables);
@@ -152,12 +167,13 @@ public class SingleInstanceEvaluator {
             contextExpression,
             evaluator,
             expectedReturnType,
-            traceCollector);
+            traceCollector,
+            renderer);
       }
 
       // Apply the result Column to the dataset and collect the results.
-      final Column resultColumn = resultCollection.getColumn().getValue();
-      final List<TypedValue> results = collectResults(resourceDf, resultColumn, expectedReturnType);
+      final List<TypedValue> results =
+          collectResults(resourceDf, resultCollection, expectedReturnType, renderer);
       final List<TraceResult> traces = buildTraceResults(traceCollector);
       return new SingleInstanceEvaluationResult(results, expectedReturnType, traces);
     }
@@ -220,6 +236,7 @@ public class SingleInstanceEvaluator {
    * @param evaluator the single resource evaluator
    * @param expectedReturnType the inferred return type of the main expression
    * @param traceCollector the trace collector for capturing trace() output
+   * @param renderer renders a result whose values are structures as FHIR JSON
    * @return a SingleInstanceEvaluationResult with results for each context item
    */
   @Nonnull
@@ -230,7 +247,8 @@ public class SingleInstanceEvaluator {
       @Nonnull final String contextExpression,
       @Nonnull final SingleResourceEvaluator evaluator,
       @Nonnull final String expectedReturnType,
-      @Nonnull final ListTraceCollector traceCollector) {
+      @Nonnull final ListTraceCollector traceCollector,
+      @Nonnull final ElementRenderer renderer) {
 
     // Parse and evaluate the context expression.
     final FhirPath contextPath = parser.parse(contextExpression);
@@ -250,9 +268,9 @@ public class SingleInstanceEvaluator {
     // the main expression, so we compose the expressions.
     final FhirPath composedPath = contextPath.andThen(mainPath);
     final Collection composedResult = evaluator.evaluate(composedPath);
-    final Column composedColumn = composedResult.getColumn().getValue();
 
-    final List<TypedValue> results = collectResults(resourceDf, composedColumn, expectedReturnType);
+    final List<TypedValue> results =
+        collectResults(resourceDf, composedResult, expectedReturnType, renderer);
     final List<TraceResult> traces = buildTraceResults(traceCollector);
     return new SingleInstanceEvaluationResult(results, expectedReturnType, traces);
   }
@@ -274,20 +292,44 @@ public class SingleInstanceEvaluator {
   }
 
   /**
-   * Collects materialised results from a Dataset by applying a result Column.
+   * Collects materialised results from a Dataset by applying the column of a result collection.
+   *
+   * <p>A result whose values are structures, and whose collection carries the definition of their
+   * type, is rendered as FHIR JSON by the supplied renderer, which is the layout-to-JSON transform
+   * of the {@code io} module, adapting the structure recursively by the definition (T100j,
+   * decisions 80 and 91). A structure that was read from the data is rendered as it is stored, so a
+   * quantity keeps its extensions and a decimal its text, as a number. A structure the engine
+   * builds is rendered by the definition it carries, and the fields it has beside the elements of
+   * its type are left out. A System quantity has a fixed shape whose value is its text (FR-059), so
+   * it is rendered as it is, as a stored quantity is. A date is collected as its text. Every other
+   * value is collected as it is.
    *
    * @param resourceDf the single-row encoded resource Dataset
-   * @param resultColumn the Column expression for the result
+   * @param result the result collection
    * @param typeName the FHIR type name for the result values
+   * @param renderer renders values that are structures as FHIR JSON
    * @return a list of typed values
    */
   @Nonnull
   private static List<TypedValue> collectResults(
       @Nonnull final Dataset<Row> resourceDf,
-      @Nonnull final Column resultColumn,
-      @Nonnull final String typeName) {
+      @Nonnull final Collection result,
+      @Nonnull final String typeName,
+      @Nonnull final ElementRenderer renderer) {
 
-    final Dataset<Row> resultDf = resourceDf.select(resultColumn.alias("_result"));
+    final Dataset<Row> valueDf =
+        resourceDf.select(result.getOutputColumn().getValue().alias(RESULT_COLUMN));
+    final DataType valueType = valueDf.schema().fields()[0].dataType();
+    final Dataset<Row> resultDf =
+        asElementDefinition(result)
+            .filter(unused -> holdsStructures(valueType))
+            .map(
+                definition ->
+                    valueDf.select(
+                        renderer
+                            .render(definition, valueDf.col(RESULT_COLUMN), valueType)
+                            .alias(RESULT_COLUMN)))
+            .orElse(valueDf);
     final List<Row> rows = resultDf.collectAsList();
 
     if (rows.isEmpty()) {
@@ -301,6 +343,22 @@ public class SingleInstanceEvaluator {
 
     final Object rawValue = row.get(0);
     return materialiseValues(rawValue, typeName);
+  }
+
+  /** Returns the definition of the element a collection holds, where it has one. */
+  @Nonnull
+  private static Optional<ElementDefinition> asElementDefinition(
+      @Nonnull final Collection collection) {
+    return collection
+        .getDefinition()
+        .filter(ElementDefinition.class::isInstance)
+        .map(ElementDefinition.class::cast);
+  }
+
+  /** Returns whether a type is a structure or an array of them. */
+  private static boolean holdsStructures(@Nonnull final DataType type) {
+    return type instanceof StructType
+        || type instanceof final ArrayType array && array.elementType() instanceof StructType;
   }
 
   /**
@@ -352,23 +410,75 @@ public class SingleInstanceEvaluator {
   }
 
   /**
-   * Converts a Spark Row to a JSON string representation, stripping synthetic fields first.
+   * Converts a Spark Row to a JSON string representation, stripping annotations first. A result
+   * carrying its definition is rendered by the layout-to-JSON transform instead, so this is reached
+   * by a value that carries none, which is a value collected by {@code trace()}.
+   *
+   * <p>Each structure is rendered against its own schema, not the type its parent declares for it,
+   * because the elements of a sanitised array keep different fields. {@link Row#json()} maps the
+   * fields of a nested structure by position against the declared type, so it would label an
+   * element with another element's field names. Values other than structures and arrays are
+   * rendered by Spark.
    *
    * @param row the row to convert
-   * @return a JSON string with synthetic fields removed
+   * @return a JSON string with annotations removed
    */
   @Nonnull
   static String rowToJson(@Nonnull final Row row) {
     final Row sanitised = sanitiseRow(row);
-    return sanitised.json();
+    final StringWriter json = new StringWriter();
+    try (final JsonWriter writer = new JsonWriter(json)) {
+      writeJson(writer, sanitised, sanitised.schema());
+    } catch (final IOException e) {
+      throw new UncheckedIOException(e);
+    }
+    return json.toString();
   }
 
   /**
-   * Strips synthetic fields and null-valued fields from a Spark Row, recursively handling nested
-   * struct types.
+   * Writes a sanitised value as JSON, writing a structure against its own schema.
+   *
+   * @param writer the writer to write to
+   * @param value the value to write
+   * @param type the type declared for the value
+   * @throws IOException if the value cannot be written
+   */
+  private static void writeJson(
+      @Nonnull final JsonWriter writer, @Nullable final Object value, @Nonnull final DataType type)
+      throws IOException {
+    switch (value) {
+      case null -> writer.nullValue();
+      case final Row row -> {
+        writer.beginObject();
+        final StructField[] fields = row.schema().fields();
+        for (int i = 0; i < fields.length; i++) {
+          writer.name(fields[i].name());
+          writeJson(writer, row.get(i), fields[i].dataType());
+        }
+        writer.endObject();
+      }
+      case final scala.collection.Seq<?> seq when type instanceof final ArrayType arrayType -> {
+        writer.beginArray();
+        for (int i = 0; i < seq.length(); i++) {
+          writeJson(writer, seq.apply(i), arrayType.elementType());
+        }
+        writer.endArray();
+      }
+      default -> {
+        // Spark renders a row holding only the value as {"v":<value>}.
+        final String json =
+            new GenericRowWithSchema(new Object[] {value}, new StructType().add("v", type)).json();
+        writer.jsonValue(json.substring("{\"v\":".length(), json.length() - 1));
+      }
+    }
+  }
+
+  /**
+   * Strips annotations, the fields whose names begin with {@code __}, and null-valued fields from a
+   * Spark Row, recursively handling nested struct types.
    *
    * @param row the row to sanitise
-   * @return a new Row with synthetic and null-valued fields removed
+   * @return a new Row with annotations and null-valued fields removed
    */
   @Nonnull
   static Row sanitiseRow(@Nonnull final Row row) {
@@ -381,7 +491,7 @@ public class SingleInstanceEvaluator {
     final List<Object> filteredValues = new ArrayList<>();
 
     for (final StructField field : schema.fields()) {
-      if (!SyntheticFieldUtils.isSyntheticField(field.name())) {
+      if (!AnnotationNames.isAnnotation(field.name())) {
         final Object value = row.get(row.fieldIndex(field.name()));
         // Skip fields with null values.
         if (value != null) {
@@ -395,13 +505,14 @@ public class SingleInstanceEvaluator {
   }
 
   /**
-   * Sanitises a single field value, appending the resulting field and value to the supplied lists.
-   * Nested rows and array-of-struct elements are recursively sanitised so that synthetic and null
-   * fields are stripped at every depth.
+   * Sanitises a single field value, appending the field and the sanitised value to the supplied
+   * lists. Nested rows and array-of-struct elements are recursively sanitised so that annotations
+   * and null fields are stripped at every depth. The type declared by the field is kept as it is,
+   * as {@link #rowToJson} renders each structure against its own schema.
    *
    * @param field the original struct field
    * @param value the non-null value associated with the field
-   * @param filteredFields the list to which the (possibly updated) field is appended
+   * @param filteredFields the list to which the field is appended
    * @param filteredValues the list to which the sanitised value is appended
    */
   private static void sanitiseField(
@@ -410,14 +521,14 @@ public class SingleInstanceEvaluator {
       @Nonnull final List<StructField> filteredFields,
       @Nonnull final List<Object> filteredValues) {
     switch (value) {
-      // Recursively sanitise nested struct values, updating the parent field's dataType to match
-      // the sanitised schema. This is critical because Row.json() uses the parent's dataType (not
-      // the nested row's own schema) to map field names positionally.
       case final Row nestedRow -> {
         final Row sanitisedNested = sanitiseRow(nestedRow);
-        filteredFields.add(
-            new StructField(
-                field.name(), sanitisedNested.schema(), field.nullable(), field.metadata()));
+        // A structure left with no fields, such as a metadata group that held only annotations, is
+        // left out like a null one.
+        if (sanitisedNested.size() == 0) {
+          return;
+        }
+        filteredFields.add(field);
         filteredValues.add(sanitisedNested);
       }
       case final scala.collection.Seq<?> seq ->
@@ -430,13 +541,12 @@ public class SingleInstanceEvaluator {
   }
 
   /**
-   * Sanitises an array field by recursively sanitising any struct elements and updating the parent
-   * field's {@link ArrayType} element type so that {@link Row#json()} positional mapping remains
-   * correct after fields are stripped from array elements.
+   * Sanitises an array field by recursively sanitising any struct elements. The elements may be
+   * left with different fields, so no single element type describes them.
    *
    * @param field the original array struct field
    * @param seq the array value
-   * @param filteredFields the list to which the (possibly updated) field is appended
+   * @param filteredFields the list to which the field is appended
    * @param filteredValues the list to which the sanitised array is appended
    */
   private static void sanitiseSeqField(
@@ -445,29 +555,28 @@ public class SingleInstanceEvaluator {
       @Nonnull final List<StructField> filteredFields,
       @Nonnull final List<Object> filteredValues) {
     final List<Object> sanitisedElements = new ArrayList<>(seq.length());
-    StructType sanitisedElementSchema = null;
+    boolean emptied = false;
     for (int i = 0; i < seq.length(); i++) {
       final Object element = seq.apply(i);
       if (element instanceof final Row elementRow) {
         final Row sanitisedElement = sanitiseRow(elementRow);
-        sanitisedElements.add(sanitisedElement);
-        if (sanitisedElementSchema == null) {
-          sanitisedElementSchema = sanitisedElement.schema();
+        // An element left with no fields becomes null rather than being removed, so that the
+        // positions of the elements after it, which align with another array, do not move.
+        if (sanitisedElement.size() == 0) {
+          sanitisedElements.add(null);
+          emptied = true;
+        } else {
+          sanitisedElements.add(sanitisedElement);
         }
       } else {
         sanitisedElements.add(element);
       }
     }
-    if (sanitisedElementSchema != null && field.dataType() instanceof final ArrayType arrayType) {
-      filteredFields.add(
-          new StructField(
-              field.name(),
-              DataTypes.createArrayType(sanitisedElementSchema, arrayType.containsNull()),
-              field.nullable(),
-              field.metadata()));
-    } else {
-      filteredFields.add(field);
+    // An array whose structures were all left with no fields is left out like a null one.
+    if (emptied && sanitisedElements.stream().allMatch(Objects::isNull)) {
+      return;
     }
+    filteredFields.add(field);
     filteredValues.add(new ArraySeq.ofRef<>(sanitisedElements.toArray()));
   }
 

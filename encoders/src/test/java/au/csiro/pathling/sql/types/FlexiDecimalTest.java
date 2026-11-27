@@ -53,5 +53,12 @@ class FlexiDecimalTest {
         FlexiDecimal.normalize(
             new BigDecimal(
                 "0.01555555555555555555555555555555555555555555555555555555555555555555555555")));
+
+    // Rounding that carries into a new integer digit stays within the precision.
+    final BigDecimal carried = FlexiDecimal.normalize(new BigDecimal("0." + "9".repeat(39)));
+    assertNotNull(carried);
+    assertEquals(new BigDecimal("1." + "0".repeat(37)), carried);
+    assertEquals(FlexiDecimal.MAX_PRECISION, carried.precision());
+    assertNull(FlexiDecimal.normalize(new BigDecimal("9".repeat(38) + ".9")));
   }
 }

@@ -11,7 +11,9 @@
     "clear": "docusaurus clear",
     "serve": "docusaurus serve --dir target/site",
     "write-translations": "docusaurus write-translations",
-    "write-heading-ids": "docusaurus write-heading-ids"
+    "write-heading-ids": "docusaurus write-heading-ids",
+    "test": "bun test",
+    "fetch-benchmarks": "git fetch origin gh-pages && rm -rf static/benchmarks && git -C \"$(git rev-parse --show-toplevel)\" archive origin/gh-pages benchmarks/data | tar -x -C static"
   },
   "dependencies": {
     "@docusaurus/core": "^3.8.1",
@@ -33,9 +35,9 @@
       "not op_mini all"
     ],
     "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
+      ">0.5%",
+      "not dead",
+      "not op_mini all"
     ]
   },
   "overrides": {
@@ -46,7 +48,7 @@
     "js-yaml": "3.15.2",
     "mdast-util-to-hast": "13.2.1",
     "mermaid": "^11.17.2",
-    "dompurify": "3.4.14",
+    "dompurify": "3.4.17",
     "nanoid": "3.3.18",
     "webpack-dev-server": "5.2.6",
     "brace-expansion": "1.1.21",
@@ -64,8 +66,8 @@
     "proxy-addr": "2.0.8",
     "source-map-js": "1.2.2",
     "tinypool": "2.2.0",
-    "body-parser": "1.20.9",
     "follow-redirects": "1.16.3",
-    "launch-editor": "2.14.2"
+    "launch-editor": "2.14.2",
+    "body-parser": "1.20.9"
   }
 }

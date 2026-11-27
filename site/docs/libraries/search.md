@@ -303,6 +303,8 @@ Search parameters support prefixes for comparisons on dates, numbers, and quanti
 
 Prefixes can be applied to date search parameters to filter based on temporal relationships.
 
+A date search value and a stored date are each treated as the range their precision implies, as described in the [FHIR search specification](https://hl7.org/fhir/R4/search.html#prefix). Without a prefix, or with `eq`, a resource matches when the search range fully contains the stored range: `birthdate=1980-06` matches a birth date of `1980-06-15`, but `birthdate=1980-06-15` does not match a birth date of `1980`. `ne` matches when the search range does not fully contain the stored range. `ge` matches when the stored range continues after the search range or is contained in it, so `birthdate=ge1980-06` matches a birth date of `1980`, and `le` matches when the stored range starts before the search range or is contained in it.
+
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
 <TabItem value="python" label="Python">
@@ -484,6 +486,10 @@ Results in:
 
 Different FHIR search parameter types support different matching behaviours.
 
+Where a search parameter's expression is a choice element, such as `Observation.effective[x]` for the Observation `date` parameter, each type of the choice that the parameter type supports is searched, and a resource matches if any of them does. Types that the parameter type does not support are not searched. For example, `Observation?date=2020` matches an Observation whose `effective` is a `dateTime`, `instant` or `Period` in 2020, but not one whose `effective` is a `Timing`.
+
+Some search parameters cover elements of more than one type. Elements of a type that the parameter type does not support are not matched. For example, `value-quantity` covers both `Observation.value as Quantity` and `Observation.value as SampledData`, and matches only the `Quantity` values. Likewise, `context-quantity` matches `Quantity` values but not `Range` values. A search on a parameter none of whose elements is of a supported type fails.
+
 ### Quantity parameters
 
 Quantity parameters match numeric values with units. The syntax is `[prefix]value|system|code` where the system and code identify the unit.
@@ -573,6 +579,8 @@ Results in:
 | id                                   | value | unit   |
 | ------------------------------------ | ----- | ------ |
 | 3c4d5e6f-7g8h-9i0j-1k2l-3m4n5o6p7q8r | 5.4   | mmol/L |
+
+Without a prefix, or with `eq` or `ne`, a quantity search matches the implicit range of the search value, which is set by its significant figures. `5.4` is the range from 5.35 up to but not including 5.45, and `5.40` is the range from 5.395 up to but not including 5.405. Where the system is UCUM, the range is converted to the canonical unit, so `5.4|http://unitsofmeasure.org|mg` also matches a value of `0.00541 g`. The prefixes `gt`, `ge`, `lt` and `le` compare with the search value itself.
 
 ### String parameters
 

@@ -93,7 +93,7 @@ variable when running the script.
 - **Notebooks**:
     - `/Shared/SQL on FHIR/SQL on FHIR - Prostate cancer demo (explained, simplified)`
     - `/Shared/R test`
-- **Databricks runtime**: `17.3.x-scala2.13`
+- **Databricks runtime**: `18.x-scala2.13`
 - **Timeout**: `30` minutes
 - **Databricks CLI profile**: `pathling`
 

@@ -26,14 +26,17 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TraceResult;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.ObjectDataSource;
+import au.csiro.pathling.test.helpers.JsonElementRenderer;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.List;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.ContactPoint.ContactPointSystem;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Patient.ContactComponent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,7 +80,13 @@ class SingleInstanceEvaluatorIntegrationTest {
     // Evaluating a traced primitive expression should return both the result and trace entries.
     final SingleInstanceEvaluationResult result =
         SingleInstanceEvaluator.evaluate(
-            patientDf, "Patient", fhirContext, "Patient.gender.trace('gender')", null, null);
+            patientDf,
+            "Patient",
+            fhirContext,
+            "Patient.gender.trace('gender')",
+            null,
+            null,
+            JsonElementRenderer.of(fhirContext));
 
     // The result should contain the gender value.
     assertEquals(1, result.getResults().size());
@@ -101,7 +110,8 @@ class SingleInstanceEvaluatorIntegrationTest {
             fhirContext,
             "Patient.name.where(use = 'official').given.trace('given').first().trace('first')",
             null,
-            null);
+            null,
+            JsonElementRenderer.of(fhirContext));
 
     // The result should be the first given name.
     assertEquals(1, result.getResults().size());
@@ -126,7 +136,13 @@ class SingleInstanceEvaluatorIntegrationTest {
     // An expression without trace() should return an empty traces list.
     final SingleInstanceEvaluationResult result =
         SingleInstanceEvaluator.evaluate(
-            patientDf, "Patient", fhirContext, "Patient.active", null, null);
+            patientDf,
+            "Patient",
+            fhirContext,
+            "Patient.active",
+            null,
+            null,
+            JsonElementRenderer.of(fhirContext));
 
     assertEquals(1, result.getResults().size());
     assertEquals(true, result.getResults().get(0).getValue());
@@ -138,7 +154,13 @@ class SingleInstanceEvaluatorIntegrationTest {
     // Tracing a complex type should produce a JSON string without synthetic fields.
     final SingleInstanceEvaluationResult result =
         SingleInstanceEvaluator.evaluate(
-            patientDf, "Patient", fhirContext, "Patient.name.first().trace('name')", null, null);
+            patientDf,
+            "Patient",
+            fhirContext,
+            "Patient.name.first().trace('name')",
+            null,
+            null,
+            JsonElementRenderer.of(fhirContext));
 
     // The trace should contain a JSON representation of the HumanName.
     assertEquals(1, result.getTraces().size());
@@ -152,5 +174,35 @@ class SingleInstanceEvaluatorIntegrationTest {
     assertTrue(json.contains("Smith"));
     // Synthetic fields should not appear in the JSON output.
     assertFalse(json.contains("_fid"));
+  }
+
+  @Test
+  void evaluateTraceOnElementWithArrayElementsHoldingDifferentFields() {
+    // Tracing a contact renders its telecom array, whose elements populate different fields. Each
+    // element must be labelled with its own fields.
+    final Patient patient = new Patient();
+    patient.setId("Patient/2");
+    final ContactComponent contact = patient.addContact();
+    contact.addTelecom().setSystem(ContactPointSystem.PHONE).setValue("123");
+    contact.addTelecom().setValue("456");
+    contact.addTelecom().setRank(1);
+    final Dataset<Row> dataset =
+        new ObjectDataSource(spark, encoders, List.of(patient)).read("Patient");
+
+    final SingleInstanceEvaluationResult result =
+        SingleInstanceEvaluator.evaluate(
+            dataset,
+            "Patient",
+            fhirContext,
+            "Patient.contact.trace('c').count()",
+            null,
+            null,
+            JsonElementRenderer.of(fhirContext));
+
+    final TraceResult trace = result.getTraces().get(0);
+    assertEquals("c", trace.getLabel());
+    assertEquals(
+        "{\"telecom\":[{\"system\":\"phone\",\"value\":\"123\"},{\"value\":\"456\"},{\"rank\":1}]}",
+        trace.getValues().get(0).getValue());
   }
 }

@@ -23,16 +23,23 @@ import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toQuantity;
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.Address;
 import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.CarePlan;
+import org.hl7.fhir.r4.model.CarePlan.CarePlanActivityComponent;
+import org.hl7.fhir.r4.model.CarePlan.CarePlanActivityDetailComponent;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.HumanName;
+import org.hl7.fhir.r4.model.MedicationRequest;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Observation.ObservationComponentComponent;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Quantity;
+import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.DynamicTest;
 
@@ -976,9 +983,9 @@ public class TypeFunctionsDslTest extends FhirPathDslTestBase {
         // Plural choice collection - heterogeneous types.
         .group("type() - plural choice collection")
         .testEquals(
-            6,
+            5,
             "component.value.type().count()",
-            "type() returns one TypeInfo per component value including null")
+            "type() returns one TypeInfo per component value, and none for the absent one")
         .testEquals(
             toTypeInfo("FHIR.Quantity(FHIR.Element)"),
             "component.value.type().first()",
@@ -1014,5 +1021,178 @@ public class TypeFunctionsDslTest extends FhirPathDslTestBase {
             "component.where(value.type().name = 'string').count()",
             "where() filtering by type name finds string components")
         .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testTypeFunctionOnOpenChoiceThatCanHoldReference() {
+    // Extension.value is an open choice, so it can hold a Reference as well as any other type. The
+    // extension without a value is between the others, so that the plural cases show that an
+    // absent value gives no entry, rather than a null one that shifts the positions after it.
+    final Patient patient = new Patient();
+    patient.setId("type-open-choice-test");
+    patient.addExtension(new Extension("http://example.org/refExt", new Reference("Patient/1")));
+    final Extension complexExt = new Extension("http://example.org/complexExt");
+    complexExt.addExtension(new Extension("nested", new BooleanType(true)));
+    patient.addExtension(complexExt);
+    patient.addExtension(new Extension("http://example.org/stringExt", new StringType("text")));
+
+    return builder()
+        .withResource(patient)
+        // Singular open choice elements, selected by index.
+        .group("type() - singular open choice elements")
+        .testEquals(
+            toTypeInfo("FHIR.Reference(FHIR.Element)"),
+            "extension[0].value.type()",
+            "Open choice holding a Reference has type FHIR.Reference")
+        .testEmpty("extension[1].value.type()", "Open choice with no value has no type")
+        .testEquals(
+            toTypeInfo("FHIR.string(FHIR.Element)"),
+            "extension[2].value.type()",
+            "Open choice holding a string has type FHIR.string")
+        // Open choice elements selected by the extension function.
+        .group("type() - open choice elements selected by extension()")
+        .testEquals(
+            toTypeInfo("FHIR.Reference(FHIR.Element)"),
+            "extension('http://example.org/refExt').value.type()",
+            "Reference extension value has type FHIR.Reference")
+        .testEquals(
+            toTypeInfo("FHIR.string(FHIR.Element)"),
+            "extension('http://example.org/stringExt').value.type()",
+            "String extension value has type FHIR.string")
+        .testEmpty(
+            "extension('http://example.org/complexExt').value.type()",
+            "Complex extension with no value has no type")
+        // Plural open choice collection.
+        .group("type() - plural open choice collection")
+        .testEquals(
+            toTypeInfo("FHIR.Reference(FHIR.Element)"),
+            "extension.value.type()[0]",
+            "First extension value has type FHIR.Reference")
+        .testEquals(
+            toTypeInfo("FHIR.string(FHIR.Element)"),
+            "extension.value.type()[1]",
+            "Second extension value has type FHIR.string")
+        .testEquals(
+            2,
+            "extension.value.type().count()",
+            "type() gives no entry for the extension with no value")
+        .testEquals(
+            List.of("Reference", "string"),
+            "extension.value.type().name",
+            "Extensions with a value have the types Reference and string in order")
+        .testEquals(
+            1,
+            "extension.where(value.type().name = 'Reference').count()",
+            "where() filtering by type name finds the Reference extension")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testTypeFunctionOnClosedChoiceThatCanHoldReference() {
+    // CarePlan.activity.detail.product is a closed choice of CodeableConcept and
+    // Reference(Medication | Substance), within a repeating element. The activity without a
+    // product is between the others, so that the plural cases show that an absent value gives no
+    // entry, rather than a null one that shifts the positions after it.
+    final CarePlan carePlan = new CarePlan();
+    carePlan.setId("type-closed-choice-test");
+    carePlan.setStatus(CarePlan.CarePlanStatus.ACTIVE);
+    carePlan.setIntent(CarePlan.CarePlanIntent.PLAN);
+    carePlan.addActivity(
+        new CarePlanActivityComponent()
+            .setDetail(
+                new CarePlanActivityDetailComponent().setProduct(new Reference("Medication/1"))));
+    carePlan.addActivity(
+        new CarePlanActivityComponent()
+            .setDetail(new CarePlanActivityDetailComponent().setDescription("No product")));
+    carePlan.addActivity(
+        new CarePlanActivityComponent()
+            .setDetail(
+                new CarePlanActivityDetailComponent()
+                    .setProduct(
+                        new CodeableConcept()
+                            .addCoding(
+                                new Coding(
+                                    "http://snomed.info/sct", "387517004", "Paracetamol")))));
+
+    return builder()
+        .withResource(carePlan)
+        // Singular closed choice elements, selected by index.
+        .group("type() - singular closed choice elements")
+        .testEquals(
+            toTypeInfo("FHIR.Reference(FHIR.Element)"),
+            "activity[0].detail.product.type()",
+            "Closed choice holding a Reference has type FHIR.Reference")
+        .testEmpty("activity[1].detail.product.type()", "Closed choice with no value has no type")
+        .testEquals(
+            toTypeInfo("FHIR.CodeableConcept(FHIR.Element)"),
+            "activity[2].detail.product.type()",
+            "Closed choice holding a CodeableConcept has type FHIR.CodeableConcept")
+        // Plural closed choice collection.
+        .group("type() - plural closed choice collection")
+        .testEquals(
+            toTypeInfo("FHIR.Reference(FHIR.Element)"),
+            "activity.detail.product.type()[0]",
+            "First product has type FHIR.Reference")
+        .testEquals(
+            toTypeInfo("FHIR.CodeableConcept(FHIR.Element)"),
+            "activity.detail.product.type()[1]",
+            "Second product has type FHIR.CodeableConcept")
+        .testEquals(
+            2,
+            "activity.detail.product.type().count()",
+            "type() gives no entry for the activity with no product")
+        .testEquals(
+            List.of("Reference", "CodeableConcept"),
+            "activity.detail.product.type().name",
+            "Products that are present have the types Reference and CodeableConcept in order")
+        .testEquals(
+            1,
+            "activity.where(detail.product.type().name = 'Reference').count()",
+            "where() filtering by type name finds the activity with a Reference product")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testTypeFunctionOnRootChoicesThatCanHoldReference() {
+    // MedicationRequest.medication is a closed choice of CodeableConcept and Reference(Medication),
+    // and MedicationRequest.reported a closed choice of boolean and Reference, both singular and at
+    // the root of the resource.
+    final MedicationRequest withReference = new MedicationRequest();
+    withReference.setId("type-root-choice-reference");
+    withReference.setStatus(MedicationRequest.MedicationRequestStatus.ACTIVE);
+    withReference.setIntent(MedicationRequest.MedicationRequestIntent.ORDER);
+    withReference.setMedication(new Reference("Medication/1"));
+    withReference.setReported(new BooleanType(true));
+
+    final MedicationRequest withoutReference = new MedicationRequest();
+    withoutReference.setId("type-root-choice-no-reference");
+    withoutReference.setStatus(MedicationRequest.MedicationRequestStatus.ACTIVE);
+    withoutReference.setIntent(MedicationRequest.MedicationRequestIntent.ORDER);
+    withoutReference.setMedication(
+        new CodeableConcept()
+            .addCoding(new Coding("http://snomed.info/sct", "387517004", "Paracetamol")));
+
+    return Stream.concat(
+        builder()
+            .withResource(withReference)
+            .group("type() - root choice elements holding a Reference")
+            .testEquals(
+                toTypeInfo("FHIR.Reference(FHIR.Element)"),
+                "medication.type()",
+                "Root closed choice holding a Reference has type FHIR.Reference")
+            .testEquals(
+                toTypeInfo("FHIR.boolean(FHIR.Element)"),
+                "reported.type()",
+                "Root closed choice holding a boolean has type FHIR.boolean")
+            .build(),
+        builder()
+            .withResource(withoutReference)
+            .group("type() - root choice elements not holding a Reference")
+            .testEquals(
+                toTypeInfo("FHIR.CodeableConcept(FHIR.Element)"),
+                "medication.type()",
+                "Root closed choice holding a CodeableConcept has type FHIR.CodeableConcept")
+            .testEmpty("reported.type()", "Root closed choice with no value has no type")
+            .build());
   }
 }

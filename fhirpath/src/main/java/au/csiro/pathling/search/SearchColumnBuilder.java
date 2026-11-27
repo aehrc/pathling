@@ -20,16 +20,23 @@ package au.csiro.pathling.search;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.DateTimeComparable;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
+import au.csiro.pathling.fhirpath.collection.mixed.ChoiceElementCollection;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.evaluation.CrossResourceStrategy;
 import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.search.filter.NumericMatchingSupport;
+import au.csiro.pathling.search.filter.QuantitySearchValue;
 import au.csiro.pathling.search.filter.SearchFilter;
+import au.csiro.pathling.search.filter.SearchPrefix;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -156,7 +163,8 @@ public class SearchColumnBuilder {
    * @return a SparkSQL Column representing the search criteria
    * @throws UnknownSearchParameterException if a search parameter is not found in the registry
    * @throws InvalidModifierException if an unsupported modifier is used
-   * @throws InvalidSearchParameterException if the search parameter configuration is invalid
+   * @throws InvalidSearchParameterException if the search parameter configuration is invalid, or
+   *     the number in a number or quantity search value is not a number
    */
   @Nonnull
   public Column fromSearch(
@@ -187,7 +195,8 @@ public class SearchColumnBuilder {
    * @return a SparkSQL Column representing the search criteria
    * @throws UnknownSearchParameterException if a search parameter is not found in the registry
    * @throws InvalidModifierException if an unsupported modifier is used
-   * @throws InvalidSearchParameterException if the search parameter configuration is invalid
+   * @throws InvalidSearchParameterException if the search parameter configuration is invalid, or
+   *     the number in a number or quantity search value is not a number
    */
   @Nonnull
   public Column fromQueryString(
@@ -216,8 +225,11 @@ public class SearchColumnBuilder {
     final SingleResourceEvaluator evaluator = createEvaluator(resourceType);
     final Collection result = evaluator.evaluate(fhirPath);
 
-    // Get the Column value - for boolean expressions this should be a scalar boolean
-    return result.getColumn().getValue();
+    // Get the Column value - for boolean expressions this should be a scalar boolean. A value is
+    // returned in the form the engine computes with, so that a quantity is a System quantity, in
+    // its fixed shape, whatever the layout (FR-059), and is given as a caller is given it, so that
+    // a date is its text.
+    return result.toEngineForm().getOutputColumn().getValue();
   }
 
   /**
@@ -248,10 +260,19 @@ public class SearchColumnBuilder {
    * <p>For polymorphic search parameters with multiple expressions, each expression is evaluated
    * separately and the filter results are combined with OR logic.
    *
+   * <p>An expression of a FHIR type that the search parameter type does not allow is skipped, so
+   * that it matches nothing, as long as at least one expression is of an allowed type. For example,
+   * the R4 {@code value-quantity} parameter has the expressions {@code (Observation.value as
+   * Quantity)} and {@code (Observation.value as SampledData)}, and a quantity search matches the
+   * first only. If no expression is of an allowed type, the parameter cannot be searched and the
+   * search fails.
+   *
    * @param resourceType the resource type
    * @param criterion the search criterion
    * @param evaluator the FHIRPath evaluator
    * @return a SparkSQL Column expression for this criterion
+   * @throws InvalidSearchParameterException if no expression of the parameter is of a FHIR type
+   *     that its search parameter type allows
    */
   @Nonnull
   private Column buildCriterionFilter(
@@ -267,16 +288,128 @@ public class SearchColumnBuilder {
                 () ->
                     new UnknownSearchParameterException(
                         criterion.getParameterCode(), resourceType.toCode()));
+    final SearchParameterType paramType = paramDef.type();
 
-    // Build filter for each expression and combine with OR
-    return paramDef.expressions().stream()
-        .map(expression -> buildExpressionFilter(paramDef.type(), criterion, expression, evaluator))
-        .reduce(Column::or)
-        .orElse(lit(false));
+    // Evaluate each expression, keeping those of a type the parameter type allows. A choice element
+    // is kept if any of its alternatives is of an allowed type.
+    final List<Collection> results =
+        paramDef.expressions().stream().map(expression -> evaluate(expression, evaluator)).toList();
+    final List<Collection> allowedResults =
+        results.stream()
+            .filter(result -> fhirTypesOf(result).anyMatch(paramType::isAllowedFhirType))
+            .toList();
+    if (!results.isEmpty() && allowedResults.isEmpty()) {
+      throw new InvalidSearchParameterException(
+          String.format(
+              "Search parameter '%s' on %s has no expression of a FHIR type allowed for search"
+                  + " parameter type '%s'. Types found: %s. Allowed types: %s",
+              paramDef.code(),
+              resourceType.toCode(),
+              paramType,
+              typeCodes(results.stream().flatMap(SearchColumnBuilder::fhirTypesOf)),
+              typeCodes(paramType.getAllowedFhirTypes().stream())));
+    }
+
+    // Build a filter for each remaining expression and combine them with OR. The values are checked
+    // afterwards, so that an unsupported modifier is reported in preference to a value it would not
+    // accept.
+    final Column filter =
+        allowedResults.stream()
+            .map(result -> buildExpressionFilter(paramType, criterion, result, evaluator))
+            .reduce(Column::or)
+            .orElse(lit(false));
+    checkNumbers(paramDef, criterion);
+    return filter;
   }
 
   /**
-   * Builds a filter expression for a single FHIRPath expression within a search criterion.
+   * Checks that the number in each value of a number or quantity search is a number. A matcher
+   * parses its value only when the filter is resolved against a dataset, where the parameter is no
+   * longer known, so a value that is not a number is rejected here, naming the parameter.
+   *
+   * @param paramDef the definition of the search parameter
+   * @param criterion the search criterion
+   * @throws InvalidSearchParameterException if the number in a value is not a number
+   */
+  private static void checkNumbers(
+      @Nonnull final SearchParameterDefinition paramDef, @Nonnull final SearchCriterion criterion) {
+    final Stream<String> numbers =
+        switch (paramDef.type()) {
+          case NUMBER -> criterion.getValues().stream().map(SearchPrefix::stripPrefix);
+          case QUANTITY ->
+              criterion.getValues().stream()
+                  .map(value -> QuantitySearchValue.parse(value).getNumericValue());
+          default -> Stream.empty();
+        };
+    try {
+      numbers.forEach(NumericMatchingSupport::parseNumber);
+    } catch (final InvalidSearchParameterException e) {
+      throw new InvalidSearchParameterException(
+          String.format(
+              "Invalid value for search parameter '%s': %s", paramDef.code(), e.getMessage()));
+    }
+  }
+
+  /**
+   * Parses and evaluates a FHIRPath expression of a search parameter.
+   *
+   * @param expression the FHIRPath expression
+   * @param evaluator the FHIRPath evaluator
+   * @return the evaluated collection, which is a choice element or has a FHIR type
+   * @throws InvalidSearchParameterException if the FHIR type of the result cannot be determined
+   */
+  @Nonnull
+  private Collection evaluate(
+      @Nonnull final String expression, @Nonnull final SingleResourceEvaluator evaluator) {
+    final Collection result = evaluator.evaluate(parser.parse(expression));
+    if (!(result instanceof ChoiceElementCollection) && result.getFhirType().isEmpty()) {
+      throw new InvalidSearchParameterException(
+          "Cannot determine FHIR type for expression: " + expression);
+    }
+    return result;
+  }
+
+  /**
+   * Returns the FHIR types that a collection returned by {@link #evaluate} can hold: those of the
+   * alternatives of a choice element, or otherwise its own type.
+   *
+   * @param result the evaluated collection
+   * @return its FHIR types
+   */
+  @Nonnull
+  private static Stream<FHIRDefinedType> fhirTypesOf(@Nonnull final Collection result) {
+    if (result instanceof final ChoiceElementCollection choice) {
+      return choice.getChoiceDefinition().getAllChildTypes().stream()
+          .flatMap(alternative -> alternative.getFhirType().stream());
+    }
+    return Stream.of(fhirTypeOf(result));
+  }
+
+  /**
+   * Returns the FHIR type of a collection returned by {@link #evaluate} that is not a choice
+   * element.
+   *
+   * @param result the evaluated collection
+   * @return its FHIR type
+   */
+  @Nonnull
+  private static FHIRDefinedType fhirTypeOf(@Nonnull final Collection result) {
+    return result.getFhirType().orElseThrow();
+  }
+
+  /**
+   * Formats FHIR types as their codes, sorted and without repetition, for an error message.
+   *
+   * @param types the FHIR types
+   * @return the formatted codes, for example {@code [Quantity, SampledData]}
+   */
+  @Nonnull
+  private static String typeCodes(@Nonnull final Stream<FHIRDefinedType> types) {
+    return types.map(FHIRDefinedType::toCode).distinct().sorted().toList().toString();
+  }
+
+  /**
+   * Builds a filter expression for a single evaluated expression within a search criterion.
    *
    * <p>When the expression resolves to a complex type with known string sub-fields (HumanName,
    * Address), the expression is expanded into multiple sub-field expressions that are each
@@ -285,7 +418,8 @@ public class SearchColumnBuilder {
    *
    * @param paramType the search parameter type
    * @param criterion the search criterion (for modifier and values)
-   * @param expression the FHIRPath expression to evaluate
+   * @param result the evaluated expression: a choice element with an alternative of a FHIR type
+   *     that the parameter type allows, or otherwise of such a type
    * @param evaluator the FHIRPath evaluator
    * @return a SparkSQL Column expression for this expression
    */
@@ -293,77 +427,90 @@ public class SearchColumnBuilder {
   private Column buildExpressionFilter(
       @Nonnull final SearchParameterType paramType,
       @Nonnull final SearchCriterion criterion,
-      @Nonnull final String expression,
+      @Nonnull final Collection result,
       @Nonnull final SingleResourceEvaluator evaluator) {
 
-    // Parse and evaluate the FHIRPath expression to determine its type.
-    final FhirPath fhirPath = parser.parse(expression);
-    final Collection result = evaluator.evaluate(fhirPath);
-
-    // Get FHIR type from collection - fail if not available.
-    final FHIRDefinedType fhirType =
-        result
-            .getFhirType()
-            .orElseThrow(
-                () ->
-                    new InvalidSearchParameterException(
-                        "Cannot determine FHIR type for expression: " + expression));
+    // A choice element has no single type, so each of its alternatives is searched separately.
+    if (result instanceof final ChoiceElementCollection choice) {
+      return buildChoiceFilter(paramType, criterion, choice, evaluator);
+    }
 
     // If the expression resolves to a complex type with known string sub-fields, expand into
     // sub-field expressions and OR the results together.
+    final FHIRDefinedType fhirType = fhirTypeOf(result);
     final List<String> subFields = COMPLEX_TYPE_STRING_SUBFIELDS.get(fhirType);
     if (subFields != null) {
       return subFields.stream()
-          .map(subField -> expression + "." + subField)
           .flatMap(
-              subFieldExpr -> {
-                final FhirPath subFhirPath = parser.parse(subFieldExpr);
-                final Collection subResult = evaluator.evaluate(subFhirPath);
+              subField -> {
+                final Collection subResult = evaluator.evaluate(parser.parse(subField), result);
                 // Skip sub-fields that do not exist for this resource type.
-                if (subResult.getFhirType().isEmpty()) {
-                  return Stream.empty();
-                }
-                final SearchFilter filter =
-                    getFilterForType(
-                        paramType, criterion.getModifier(), subResult.getFhirType().get());
-                return Stream.of(filter.buildFilter(subResult.getColumn(), criterion.getValues()));
+                return subResult
+                    .getFhirType()
+                    .map(
+                        subFieldType ->
+                            paramType
+                                .createFilter(criterion.getModifier(), subFieldType)
+                                .buildFilter(matchedColumn(subResult), criterion.getValues()))
+                    .stream();
               })
           .reduce(Column::or)
           .orElse(lit(false));
     }
 
     // Standard path: build filter directly from the evaluated column.
-    final SearchFilter filter = getFilterForType(paramType, criterion.getModifier(), fhirType);
-    return filter.buildFilter(result.getColumn(), criterion.getValues());
+    final SearchFilter filter = paramType.createFilter(criterion.getModifier(), fhirType);
+    return filter.buildFilter(matchedColumn(result), criterion.getValues());
   }
 
   /**
-   * Gets the appropriate filter implementation for a search parameter type, modifier, and FHIR
-   * type.
+   * Builds a filter expression for an expression that resolves to a choice element, such as {@code
+   * Observation.effective}.
    *
-   * @param type the search parameter type
-   * @param modifier the search modifier (e.g., "not", "exact"), or null for no modifier
-   * @param fhirType the FHIR type of the element being searched
-   * @return the filter implementation
-   * @throws InvalidModifierException if the modifier is not supported for the parameter type
-   * @throws InvalidSearchParameterException if the FHIR type is not valid for the search parameter
-   *     type
+   * <p>Each alternative of the choice that the search parameter type allows is selected with {@code
+   * ofType} and searched as an expression of its own, and the filter results are OR'd together so
+   * that a match on any alternative satisfies the criterion. With the {@code :not} modifier each
+   * alternative's filter is already negated, so they are AND'd instead: a resource matches only if
+   * no alternative holds a matching value. An alternative that the parameter type does not allow,
+   * such as the {@code Timing} alternative of {@code Observation.effective} for a date parameter,
+   * is skipped.
+   *
+   * @param paramType the search parameter type
+   * @param criterion the search criterion (for modifier and values)
+   * @param choice the evaluated choice element, with at least one alternative that the parameter
+   *     type allows
+   * @param evaluator the FHIRPath evaluator
+   * @return a SparkSQL Column expression for this expression
    */
   @Nonnull
-  private SearchFilter getFilterForType(
-      @Nonnull final SearchParameterType type,
-      @Nullable final String modifier,
-      @Nonnull final FHIRDefinedType fhirType) {
+  private Column buildChoiceFilter(
+      @Nonnull final SearchParameterType paramType,
+      @Nonnull final SearchCriterion criterion,
+      @Nonnull final ChoiceElementCollection choice,
+      @Nonnull final SingleResourceEvaluator evaluator) {
+    return fhirTypesOf(choice)
+        .filter(paramType::isAllowedFhirType)
+        .map(
+            alternative ->
+                choice.filterByType(
+                    new TypeSpecifier(TypeSpecifier.FHIR_NAMESPACE, alternative.toCode())))
+        .map(alternative -> buildExpressionFilter(paramType, criterion, alternative, evaluator))
+        .reduce("not".equals(criterion.getModifier()) ? Column::and : Column::or)
+        .orElseThrow();
+  }
 
-    // Validate FHIR type is allowed for this search parameter type
-    if (!type.isAllowedFhirType(fhirType)) {
-      throw new InvalidSearchParameterException(
-          String.format(
-              "FHIR type '%s' is not valid for search parameter type '%s'. " + "Allowed types: %s",
-              fhirType.toCode(), type, type.getAllowedFhirTypes()));
-    }
-
-    // Delegate to enum constant's createFilter() implementation
-    return type.createFilter(modifier, fhirType);
+  /**
+   * Returns the column a search filter matches against. A decimal is matched as its number, so a
+   * stored decimal is converted to one, and a primitive held with its id and extensions is matched
+   * as its System value. Any other value is matched as it is held: a stored quantity, whose matcher
+   * reads its stored annotations, and a date, whose matcher reads only its text and bounds, so that
+   * a filter on a stored bound is pushed down to the scan, which converting it would prevent.
+   */
+  @Nonnull
+  private static ColumnRepresentation matchedColumn(@Nonnull final Collection result) {
+    final boolean converted =
+        result instanceof DecimalCollection
+            || (result.holdsPrimitiveMetadata() && !(result instanceof DateTimeComparable));
+    return converted ? result.toEngineForm().getColumn() : result.getColumn();
   }
 }

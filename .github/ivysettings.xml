@@ -1,0 +1,21 @@
+<!--
+  Ivy settings for the Spark sessions that CI tests start with spark.jars.packages.
+
+  Spark's default resolver chain consults the local Maven repository first, and fails a
+  resolution when it finds an artifact's POM there without its JAR. The Maven build leaves many
+  POMs without JARs behind, for versions it considered and then discarded. Here only Pathling's own
+  artifacts, which the build installs, come from the local Maven repository, and everything else
+  comes from Maven Central.
+
+  Author: John Grimes
+-->
+<ivysettings>
+  <settings defaultResolver="central"/>
+  <resolvers>
+    <ibiblio name="local-m2" m2compatible="true" root="file:${user.home}/.m2/repository"/>
+    <ibiblio name="central" m2compatible="true" root="https://repo1.maven.org/maven2/"/>
+  </resolvers>
+  <modules>
+    <module organisation="au.csiro.pathling" resolver="local-m2"/>
+  </modules>
+</ivysettings>

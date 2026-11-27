@@ -259,6 +259,19 @@ class SingleResourceEvaluatorTest {
     }
 
     @Test
+    void defaultResolver_resolveResource_caseMismatchedCode_returnsEmpty() {
+      // A name that matches a resource type only without regard to case is a field reference,
+      // since the definitions accept a resource type's canonical name only.
+      final ResourceResolver resolverEmpty =
+          new FhirResourceResolver("Patient", fhirContext, CrossResourceStrategy.EMPTY);
+      final ResourceResolver resolverFail =
+          new FhirResourceResolver("Patient", fhirContext, CrossResourceStrategy.FAIL);
+
+      assertTrue(resolverEmpty.resolveResource("observation").isEmpty());
+      assertTrue(resolverFail.resolveResource("observation").isEmpty());
+    }
+
+    @Test
     void defaultResolver_getSubjectResourceCode_returnsConfiguredType() {
       final ResourceResolver resolver =
           new FhirResourceResolver("Condition", fhirContext, CrossResourceStrategy.FAIL);

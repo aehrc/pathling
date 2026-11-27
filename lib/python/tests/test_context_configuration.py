@@ -17,6 +17,7 @@
 
 import logging
 import os
+import threading
 from tempfile import mkdtemp
 
 import pytest
@@ -26,7 +27,11 @@ from pytest import fixture
 
 import pathling.context as context_module
 from pathling import PathlingContext
-from pathling._spark_defaults import DELTA_COORDINATE, PACKAGES_KEY
+from pathling._spark_defaults import (
+    DELTA_COORDINATE,
+    OUTPUT_TIMESTAMP_TYPE_KEY,
+    PACKAGES_KEY,
+)
 from pathling._version import __java_version__
 
 PROJECT_DIR = os.path.abspath(
@@ -97,6 +102,16 @@ def test_default_configurations(spark_session):
     assert not query_config.isExplainQueries()
     assert query_config.getMaxUnboundTraversalDepth() == 10
 
+    # Retrieve SchemaConfiguration
+    schema_config = jpc.getSchemaConfiguration()
+    assert schema_config.isEnableNumericAnnotation()
+    assert schema_config.isEnableRangeAnnotation()
+    assert schema_config.isEnableCanonicalAnnotation()
+    assert not schema_config.isRecomputeAnnotations()
+    assert not schema_config.isKeepUnrequestedAnnotations()
+    assert not schema_config.isDropUnknownAnnotations()
+    assert not schema_config.isStorePrimitiveMetadata()
+
 
 def test_custom_configurations(spark_session):
     """Test that custom configurations round-trip correctly."""
@@ -108,6 +123,13 @@ def test_custom_configurations(spark_session):
         enabled_open_types=["string", "boolean"],
         explain_queries=True,
         max_unbound_traversal_depth=20,
+        enable_numeric_annotation=False,
+        enable_range_annotation=False,
+        enable_canonical_annotation=False,
+        recompute_annotations=True,
+        keep_unrequested_annotations=True,
+        drop_unknown_annotations=True,
+        store_primitive_metadata=True,
     )
 
     # Get Java PathlingContext instance
@@ -124,6 +146,16 @@ def test_custom_configurations(spark_session):
     query_config = jpc.getQueryConfiguration()
     assert query_config.isExplainQueries()
     assert query_config.getMaxUnboundTraversalDepth() == 20
+
+    # Retrieve SchemaConfiguration and verify custom values
+    schema_config = jpc.getSchemaConfiguration()
+    assert not schema_config.isEnableNumericAnnotation()
+    assert not schema_config.isEnableRangeAnnotation()
+    assert not schema_config.isEnableCanonicalAnnotation()
+    assert schema_config.isRecomputeAnnotations()
+    assert schema_config.isKeepUnrequestedAnnotations()
+    assert schema_config.isDropUnknownAnnotations()
+    assert schema_config.isStorePrimitiveMetadata()
 
 
 def test_spark_conf_with_explicit_session_raises(spark_session):
@@ -142,6 +174,40 @@ def test_spark_conf_with_running_session_raises(spark_session):
         PathlingContext.create(spark_conf={"spark.driver.memory": "8g"})
 
 
+def test_create_on_another_thread_keeps_the_existing_session(spark_session):
+    """A session created on another thread is used with its own settings.
+
+    The active session is local to a thread, so a thread that did not create
+    the session has none. Building one there would apply Pathling's settings,
+    such as the Parquet timestamp type, to the existing session.
+    """
+    original = spark_session.conf.get(OUTPUT_TIMESTAMP_TYPE_KEY, None)
+    spark_session.conf.set(OUTPUT_TIMESTAMP_TYPE_KEY, "INT96")
+    result = {}
+
+    def create():
+        try:
+            result["active"] = SparkSession.getActiveSession()
+            result["context"] = PathlingContext.create()
+        except Exception as error:  # noqa: BLE001 - reraised on the test thread.
+            result["error"] = error
+
+    try:
+        thread = threading.Thread(target=create)
+        thread.start()
+        thread.join()
+        if "error" in result:
+            raise result["error"]
+        assert result["active"] is None
+        assert result["context"].spark is spark_session
+        assert spark_session.conf.get(OUTPUT_TIMESTAMP_TYPE_KEY) == "INT96"
+    finally:
+        if original is None:
+            spark_session.conf.unset(OUTPUT_TIMESTAMP_TYPE_KEY)
+        else:
+            spark_session.conf.set(OUTPUT_TIMESTAMP_TYPE_KEY, original)
+
+
 class _StopBeforeJvm(Exception):
     """Sentinel raised by the fake session builder so create() stops before
     touching ``spark._jvm`` (which would require a running Spark)."""
@@ -152,9 +218,9 @@ def _capture_create(monkeypatch) -> dict:
     and then raises a sentinel so ``create()`` stops before touching the JVM.
 
     Also patches ``SparkSession.getActiveSession`` to return ``None`` and clears
-    the signals of an already-running driver JVM (the PySpark gateway and
-    ``PYSPARK_GATEWAY_PORT``), so ``create()`` takes the session-build path even
-    when another test has started Spark.
+    the existing session and the signals of an already-running driver JVM (the
+    PySpark gateway and ``PYSPARK_GATEWAY_PORT``), so ``create()`` takes the
+    session-build path even when another test has started Spark.
 
     :param monkeypatch: the pytest monkeypatch fixture.
     :return: a dict populated with the ``extra_configs`` passed to the builder.
@@ -167,6 +233,7 @@ def _capture_create(monkeypatch) -> dict:
 
     monkeypatch.setattr(context_module, "_build_spark_session", fake_build)
     monkeypatch.setattr(SparkSession, "getActiveSession", classmethod(lambda cls: None))
+    monkeypatch.setattr(SparkSession, "_instantiatedSession", None)
     monkeypatch.setattr(SparkContext, "_gateway", None)
     monkeypatch.delenv("PYSPARK_GATEWAY_PORT", raising=False)
     return captured

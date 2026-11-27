@@ -1,0 +1,10 @@
+== defaults
+   {"id": "bad-first", "valueInteger": null, "status": "final", "name": [{"given": null, "family": "X"}], "_corrupt_record": "<raw line>"}
+   {"id": "bad-last", "valueInteger": null, "status": "final", "name": [{"given": null, "family": "X"}], "_corrupt_record": "<raw line>"}
+   {"id": "bad-before-id", "valueInteger": null, "status": "final", "name": null, "_corrupt_record": "<raw line>"}
+   {"id": "bad-nested", "valueInteger": null, "status": "final", "name": [{"given": null, "family": "X"}], "_corrupt_record": "<raw line>"}
+== {'spark.sql.json.enablePartialResults': 'false'}
+   {"id": "bad-first", "valueInteger": null, "status": "final", "name": [{"given": null, "family": "X"}], "_corrupt_record": "<raw line>"}
+   {"id": "bad-last", "valueInteger": null, "status": "final", "name": [{"given": null, "family": "X"}], "_corrupt_record": "<raw line>"}
+   {"id": "bad-before-id", "valueInteger": null, "status": "final", "name": null, "_corrupt_record": "<raw line>"}
+   {"id": "bad-nested", "valueInteger": null, "status": "final", "name": null, "_corrupt_record": "<raw line>"}

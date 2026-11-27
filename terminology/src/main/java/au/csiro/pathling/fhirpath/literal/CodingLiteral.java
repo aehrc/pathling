@@ -42,8 +42,10 @@ public abstract class CodingLiteral {
   /** Special characters that require quoting within a Coding literal component. */
   private static final String SPECIAL_CHARACTERS = "\\s'|\\r\\n\\t(),";
 
+  // A quoted component matches QUOTED_CODING_COMPONENT in the FHIRPath grammar: a backslash escapes
+  // the character that follows it, and the component ends at the first quote that is not escaped.
   private static final String COMPONENT_REGEX =
-      String.format("('.*?(?<!\\\\)'|[^%s]*)", SPECIAL_CHARACTERS);
+      String.format("('(?:\\\\(?s:.)|[^'\\\\])*'|[^%s]*)", SPECIAL_CHARACTERS);
 
   private static final Pattern CODING_PATTERN =
       Pattern.compile(

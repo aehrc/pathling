@@ -167,18 +167,32 @@ class DataSinks(SparkConversionsMixin):
         self,
         schema: Optional[str] = None,
         save_mode: Optional[str] = SaveMode.OVERWRITE,
+        format: Optional[str] = None,
     ) -> WriteDetails:
         """
         Writes the data to a set of tables in the Spark catalog.
 
-        :param schema: The name of the schema to write the tables to.
+        :param schema: The name of the schema to write the tables to. If omitted, the current
+        database of the Spark session is used.
         :param save_mode: The save mode to use when writing the data - "overwrite" will
         overwrite any existing data, "merge" will merge the new data with the existing data based
         on resource ID.
+        :param format: The table format to create tables in, such as "delta" or "parquet". If
+        omitted, Spark's default (the `spark.sql.sources.default` setting) is used. Use "delta"
+        for tables that will later be appended to or merged into: only a Delta table can be
+        widened to admit data whose schema differs from its own, and only a Delta table can be
+        merged into.
         :returns: Details about the files that were written.
         """
-        if schema:
-            result = self._datasinks.saveMode(save_mode).tables(schema)
+        sink_builder = self._datasinks.saveMode(save_mode)
+        if format:
+            # The Java method that takes a format also requires a schema, so the current
+            # database stands in for an omitted one, which is where the tables would go anyway.
+            result = sink_builder.tables(
+                schema or self.spark.catalog.currentDatabase(), format
+            )
+        elif schema:
+            result = sink_builder.tables(schema)
         else:
-            result = self._datasinks.saveMode(save_mode).tables()
+            result = sink_builder.tables()
         return _convert_write_details(result)

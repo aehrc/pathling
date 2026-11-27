@@ -24,7 +24,6 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -65,13 +64,15 @@ public class FileSystemPersistence {
   }
 
   /**
-   * Get a Hadoop {@link FileSystem} for the given location.
+   * Get a Hadoop {@link FileSystem} for the given location. The location is read as a Hadoop {@link
+   * Path}, so a local path that is not a valid URI, such as a Windows path like {@code C:\data} or
+   * a path holding a space, resolves to the local file system.
    *
    * @param spark the Spark session
-   * @param location the location URL to be accessed
+   * @param location the location to be accessed, as a URL or a local path
    * @return the {@link FileSystem} for the given location
    * @throws PersistenceError if there is a problem accessing the location
-   * @throws IllegalArgumentException if the location URL is malformed
+   * @throws IllegalArgumentException if the location cannot be read as a path
    */
   @Nonnull
   public static FileSystem getFileSystem(
@@ -82,11 +83,9 @@ public class FileSystemPersistence {
     requireNonNull(hadoopConfiguration);
     @Nullable final FileSystem warehouseLocation;
     try {
-      warehouseLocation = FileSystem.get(new URI(location), hadoopConfiguration);
+      warehouseLocation = new Path(location).getFileSystem(hadoopConfiguration);
     } catch (final IOException e) {
       throw new PersistenceError("Problem accessing location: " + location, e);
-    } catch (final URISyntaxException e) {
-      throw new IllegalArgumentException("Problem parsing URL: " + location, e);
     }
     requireNonNull(warehouseLocation);
     return warehouseLocation;

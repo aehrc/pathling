@@ -18,6 +18,23 @@ $ yarn start
 This command starts a local development server and opens up a browser window.
 Most changes are reflected live without having to restart the server.
 
+### Benchmark data
+
+The benchmarks page fetches its data at runtime from `/benchmarks/data`, rather
+than building it into the site. The benchmark workflow publishes this data to
+the `gh-pages` branch. To view the page on a local development server, copy the
+data into `static/benchmarks`:
+
+```
+$ bun run fetch-benchmarks
+```
+
+This replaces any existing local copy. To add the results of a local JMH run,
+use `scripts/publishBenchmark.js` with `--data-dir static/benchmarks/data`. Its
+header comment describes the other options.
+
+`static/benchmarks` is ignored by Git.
+
 ### Build
 
 ```

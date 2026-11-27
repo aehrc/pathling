@@ -17,15 +17,16 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
+import au.csiro.pathling.fhirpath.comparison.DefaultComparator;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -43,15 +44,13 @@ public class BooleanCollection extends Collection implements StringCoercible, Ma
    * @param type the FhirPath type
    * @param fhirType the FHIR type
    * @param definition the node definition
-   * @param extensionMapColumn the extension map column
    */
   protected BooleanCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition,
-      @Nonnull final Optional<Column> extensionMapColumn) {
-    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(columnRepresentation, type, fhirType, definition);
   }
 
   /**
@@ -69,8 +68,7 @@ public class BooleanCollection extends Collection implements StringCoercible, Ma
         columnRepresentation,
         Optional.of(FhirPathType.BOOLEAN),
         Optional.of(FHIRDefinedType.BOOLEAN),
-        definition,
-        Optional.empty());
+        definition);
   }
 
   /**
@@ -151,7 +149,7 @@ public class BooleanCollection extends Collection implements StringCoercible, Ma
   @Override
   @Nonnull
   public BooleanCollection asBooleanPath() {
-    return this;
+    return (BooleanCollection) toEngineForm();
   }
 
   /**
@@ -162,6 +160,17 @@ public class BooleanCollection extends Collection implements StringCoercible, Ma
   @Override
   @Nonnull
   public BooleanCollection asBooleanSingleton() {
-    return (BooleanCollection) this.asSingular();
+    return (BooleanCollection) asBooleanPath().asSingular();
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>A primitive held with its id and extensions is compared by its value alone (decision 151).
+   */
+  @Override
+  @Nonnull
+  public ColumnEquality getComparator() {
+    return comparatorFor(DefaultComparator.getInstance());
   }
 }

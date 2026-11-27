@@ -198,6 +198,10 @@ const config = {
             to: "/roadmap",
           },
           {
+            label: "Benchmarks",
+            to: "/benchmarks",
+          },
+          {
             to: "/blog",
             label: "Blog",
             position: "left",

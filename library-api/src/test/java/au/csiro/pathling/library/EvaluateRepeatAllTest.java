@@ -19,11 +19,14 @@ package au.csiro.pathling.library;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TypedValue;
+import jakarta.annotation.Nonnull;
 import java.util.HashSet;
 import java.util.Set;
 import org.apache.spark.sql.SparkSession;
@@ -143,10 +146,11 @@ class EvaluateRepeatAllTest {
   }
 
   @Test
-  void extensionsLimitedByDepth() {
-    // Extensions have the same SQL type at every nesting level, so each level is a same-type
-    // traversal that consumes depth budget. With maxUnboundTraversalDepth=1, only extensions up
-    // to depth 1 should be returned — fewer than the 3 total levels in the data.
+  void nestedExtensionsAreBoundedByTheData() {
+    // On the Parquet on FHIR layout each level of nested extensions has its own SQL type, since a
+    // nested structure contains its child's type, so the levels are not same-type recursion and
+    // do not consume the depth budget. Every level the data carries is returned, even with
+    // maxUnboundTraversalDepth=1, and the traversal stops where the data does (decision 89).
     final String patientJson =
         """
         {
@@ -170,31 +174,53 @@ class EvaluateRepeatAllTest {
           ]
         }
         """;
+    final Set<Object> expected =
+        Set.of("http://example.com/ext1", "http://example.com/ext2", "http://example.com/ext3");
 
-    // First verify baseline: with default depth (10), all 3 extensions are returned.
     final SingleInstanceEvaluationResult baselineResult =
         pathling.evaluateFhirPath("Patient", patientJson, "repeatAll(extension).url");
     assertNotNull(baselineResult);
-    assertEquals(3, baselineResult.getResults().size());
-
-    // Now with maxUnboundTraversalDepth=1, fewer extensions should be returned.
-    final PathlingContext shallowDepthPathling =
-        PathlingContext.builder(spark)
-            .encodingConfiguration(EncodingConfiguration.builder().maxNestingLevel(3).build())
-            .queryConfiguration(QueryConfiguration.builder().maxUnboundTraversalDepth(1).build())
-            .build();
+    assertEquals(
+        expected,
+        new HashSet<>(baselineResult.getResults().stream().map(TypedValue::getValue).toList()));
 
     final SingleInstanceEvaluationResult limitedResult =
-        shallowDepthPathling.evaluateFhirPath("Patient", patientJson, "repeatAll(extension).url");
-
+        shallowDepthPathling().evaluateFhirPath("Patient", patientJson, "repeatAll(extension).url");
     assertNotNull(limitedResult);
-    final Set<Object> urls =
-        new HashSet<>(limitedResult.getResults().stream().map(TypedValue::getValue).toList());
-    // With maxDepth=1: ext1 at depth 0 + ext2 at depth 1 = 2 extensions. ext3 is excluded
-    // because reaching it would require depth 2.
     assertEquals(
-        Set.of("http://example.com/ext1", "http://example.com/ext2"),
-        urls,
-        "Expected only 2 extensions with maxUnboundTraversalDepth=1");
+        expected,
+        new HashSet<>(limitedResult.getResults().stream().map(TypedValue::getValue).toList()),
+        "Expected every level of the data with maxUnboundTraversalDepth=1");
+  }
+
+  @Test
+  void sameTypeRecursionIsBoundedByDepth() {
+    // A projection that returns the same structure at every level is same-type recursion, which
+    // never ends on its own, so maxUnboundTraversalDepth still bounds it (decision 89).
+    final String patientJson =
+        """
+        {
+          "resourceType": "Patient",
+          "id": "test-patient",
+          "name": [{"family": "Smith"}]
+        }
+        """;
+
+    final Exception error =
+        assertThrows(
+            Exception.class,
+            () ->
+                shallowDepthPathling()
+                    .evaluateFhirPath("Patient", patientJson, "name.repeatAll(first()).count()"));
+    assertTrue(
+        error.getMessage().contains("Recursive traversal exceeded maximum depth"),
+        "unexpected message: " + error.getMessage());
+  }
+
+  @Nonnull
+  private static PathlingContext shallowDepthPathling() {
+    return PathlingContext.builder(spark)
+        .queryConfiguration(QueryConfiguration.builder().maxUnboundTraversalDepth(1).build())
+        .build();
   }
 }

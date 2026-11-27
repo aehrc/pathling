@@ -213,6 +213,14 @@ code - see
 
 You can also optionally single-quote each of the components within the Coding
 literal, in cases where certain characters might otherwise confuse the parser.
+Within a quoted component, a single quote or a backslash must be escaped with a
+backslash, for example `'Alzheimer\'s disease'` or `'C:\\'`.
+
+Because the pipe also separates the components of a Coding literal, the
+[union operator](./index.md#collection-operators) must have whitespace on both
+sides. An expression such as `name.given|name.family` or `'a'|'b'` is read as a
+Coding literal, not as a union. Write `name.given | name.family` or `'a' | 'b'`
+instead.
 
 Examples:
 

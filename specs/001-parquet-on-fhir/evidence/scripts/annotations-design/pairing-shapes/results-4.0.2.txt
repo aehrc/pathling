@@ -1,0 +1,202 @@
+Spark 4.0.2
+File leaves total 541373 bytes; _event extension leaves 513612 bytes.
+### Context 1, plain projection, unguarded
+| Shape | Reads | Bytes | Reads _event extension | Equal to (a) of this block |
+| --- | --- | --- | --- | --- |
+| 0 control (value only) | id, t.event[] | 19159 | no | **NO** (4000 vs 4000 rows; except -1/-1) |
+| (a) | id, t._event[].__end, t._event[].__start, t._event[].extension[].url, t._event[].extension[].valueString, t._event[].id, t.event[] | 237320 | **yes** | yes |
+| (b) | id, t._event[].__end, t._event[].__start, t._event[].extension[].url, t._event[].extension[].valueString, t._event[].id, t.event[] | 237320 | **yes** | yes |
+| (c) | id, t._event[].__end, t._event[].__start, t.event[] | 20775 | no | yes |
+| (d) | id, t._event[].__end, t._event[].__start, t._event[].extension[].url, t._event[].extension[].valueString, t._event[].id, t.event[] | 237320 | **yes** | yes |
+### Context 1, compute-first inline, unguarded
+| Shape | Reads | Bytes | Reads _event extension | Equal to (a) of this block |
+| --- | --- | --- | --- | --- |
+| (a) | id, t._event[].__end, t._event[].__start, t._event[].extension[].url, t._event[].extension[].valueString, t._event[].id, t.event[] | 237320 | **yes** | yes |
+| (b) | id, t._event[].__end, t._event[].__start, t._event[].extension[].url, t._event[].extension[].valueString, t._event[].id, t.event[] | 237320 | **yes** | yes |
+| (c) | id, t._event[].__end, t._event[].__start, t.event[] | 20775 | no | yes |
+| (d) | id, t._event[].__end, t._event[].__start, t._event[].extension[].url, t._event[].extension[].valueString, t._event[].id, t.event[] | 237320 | **yes** | yes |
+### Context 1, plain projection, guarded
+| Shape | Reads | Bytes | Reads _event extension | Equal to (a) of this block |
+| --- | --- | --- | --- | --- |
+| 0 control (value only) | id, t.event[] | 19159 | no | **NO** (4000 vs 4000 rows; except -1/-1) |
+| (a) | id, t._event[].__end, t._event[].__start, t._event[].extension[].url, t._event[].extension[].valueString, t._event[].id, t.event[] | 237320 | **yes** | yes |
+| (b) | id, t._event[].__end, t._event[].__start, t._event[].extension[].url, t._event[].extension[].valueString, t._event[].id, t.event[] | 237320 | **yes** | yes |
+| (c) | id, t._event[].__end, t._event[].__start, t.event[] | 20775 | no | yes |
+| (d) | id, t._event[].__end, t._event[].__start, t._event[].extension[].url, t._event[].extension[].valueString, t._event[].id, t.event[] | 237320 | **yes** | yes |
+### Context 1, compute-first inline, guarded
+| Shape | Reads | Bytes | Reads _event extension | Equal to (a) of this block |
+| --- | --- | --- | --- | --- |
+| (a) | id, t._event[].__end, t._event[].__start, t._event[].extension[].url, t._event[].extension[].valueString, t._event[].id, t.event[] | 237320 | **yes** | yes |
+| (b) | id, t._event[].__end, t._event[].__start, t._event[].extension[].url, t._event[].extension[].valueString, t._event[].id, t.event[] | 237320 | **yes** | yes |
+| (c) | id, t._event[].__end, t._event[].__start, t.event[] | 20775 | no | yes |
+| (d) | id, t._event[].__end, t._event[].__start, t._event[].extension[].url, t._event[].extension[].valueString, t._event[].id, t.event[] | 237320 | **yes** | yes |
+### Context 2, plain projection, unguarded
+| Shape | Reads | Bytes | Reads _event extension | Equal to (a) of this block |
+| --- | --- | --- | --- | --- |
+| 0 control (value only) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** | **NO** (4000 vs 4000 rows; except -1/-1) |
+| (a) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** | yes |
+| (b) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** | yes |
+| (c) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** | yes |
+| (d) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** | yes |
+| (e) | dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 321789 | **yes** | **NO** (4000 vs 4000 rows; except 500/500) |
+### Context 2, compute-first inline, unguarded
+| Shape | Reads | Bytes | Reads _event extension | Equal to (a) of this block |
+| --- | --- | --- | --- | --- |
+| (a) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** | yes |
+| (b) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** | yes |
+| (c) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** | yes |
+| (d) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** | yes |
+| (e) | dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 321789 | **yes** | **NO** (15701 vs 14803 rows; except 898/0) |
+### Context 2, plain projection, guarded
+| Shape | Reads | Bytes | Reads _event extension | Equal to (a) of this block |
+| --- | --- | --- | --- | --- |
+| 0 control (value only) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** | **NO** (4000 vs 4000 rows; except -1/-1) |
+| (a) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** | yes |
+| (b) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** | yes |
+| (c) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** | yes |
+| (d) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** | yes |
+| (e) | dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 321789 | **yes** | yes |
+### Context 2, compute-first inline, guarded
+| Shape | Reads | Bytes | Reads _event extension | Equal to (a) of this block |
+| --- | --- | --- | --- | --- |
+| (a) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** | yes |
+| (b) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** | yes |
+| (c) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** | yes |
+| (d) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** | yes |
+| (e) | dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 321789 | **yes** | yes |
+### Cross-check against guarded (a), by context and mode
+| Context | Mode | Shape | Guard | Equal to guarded (a) |
+| --- | --- | --- | --- | --- |
+| 1 | plain | (a) | unguarded | **NO** |
+| 1 | plain | (a) | guarded | yes |
+| 1 | plain | (b) | unguarded | **NO** |
+| 1 | plain | (b) | guarded | yes |
+| 1 | plain | (c) | unguarded | **NO** |
+| 1 | plain | (c) | guarded | yes |
+| 1 | plain | (d) | unguarded | **NO** |
+| 1 | plain | (d) | guarded | yes |
+| 1 | inline | (a) | unguarded | **NO** |
+| 1 | inline | (a) | guarded | yes |
+| 1 | inline | (b) | unguarded | **NO** |
+| 1 | inline | (b) | guarded | yes |
+| 1 | inline | (c) | unguarded | **NO** |
+| 1 | inline | (c) | guarded | yes |
+| 1 | inline | (d) | unguarded | **NO** |
+| 1 | inline | (d) | guarded | yes |
+| 2 | plain | (a) | unguarded | **NO** |
+| 2 | plain | (a) | guarded | yes |
+| 2 | plain | (b) | unguarded | **NO** |
+| 2 | plain | (b) | guarded | yes |
+| 2 | plain | (c) | unguarded | **NO** |
+| 2 | plain | (c) | guarded | yes |
+| 2 | plain | (d) | unguarded | **NO** |
+| 2 | plain | (d) | guarded | yes |
+| 2 | plain | (e) | unguarded | yes |
+| 2 | plain | (e) | guarded | yes |
+| 2 | inline | (a) | unguarded | **NO** |
+| 2 | inline | (a) | guarded | yes |
+| 2 | inline | (b) | unguarded | **NO** |
+| 2 | inline | (b) | guarded | yes |
+| 2 | inline | (c) | unguarded | **NO** |
+| 2 | inline | (c) | guarded | yes |
+| 2 | inline | (d) | unguarded | **NO** |
+| 2 | inline | (d) | guarded | yes |
+| 2 | inline | (e) | unguarded | yes |
+| 2 | inline | (e) | guarded | yes |
+### Extra controls: does start-only access prune inside a dosage lambda?
+| Control | Reads | Bytes | Reads _event extension |
+| --- | --- | --- | --- |
+| x1 flatten(transform(dosage, d -> transform(d.timing._event, x -> x.__start))) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** |
+| x2 flatten(transform(dosage, d -> d.timing._event.__start)) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** |
+| x3 transform(dosage.timing._event, m -> transform(m, x -> x.__start)) | dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, id | 320302 | **yes** |
+| x4 flatten(transform(dosage, d -> arrays_zip(d.timing.event, d.timing._event.__start))) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** |
+| x5 flatten(transform(dosage, d -> arrays_zip(d.timing.event, transform(d.timing._event, x -> x.__start)))) | dosage[].text, dosage.t._event[].__end, dosage.t._event[].__start, dosage.t._event[].extension[].url, dosage.t._event[].extension[].valueString, dosage.t._event[].id, dosage.t.event[], id | 322054 | **yes** |
+### Null and length behaviour (context 1, plain, edge rows)
+(a) unguarded:
+  p12 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,null,null])
+  p15 -> ArraySeq()
+  p18 -> ArraySeq([2020-01-10,null,null], [2020-02-10,null,null])
+  p21 -> ArraySeq([null,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,2020-01-02 10:00:00.0,2021-01-02 10:00:00.0])
+  p24 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,2020-01-02 10:00:00.0,2021-01-02 10:00:00.0], [2030-01-01,null,null])
+  p27 -> NULL
+  p3 -> NULL
+  p33 -> NULL
+  p6 -> NULL
+  p9 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,null,null])
+(b) unguarded:
+  p12 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,null,null])
+  p15 -> ArraySeq()
+  p18 -> ArraySeq([2020-01-10,null,null], [2020-02-10,null,null])
+  p21 -> ArraySeq([null,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,2020-01-02 10:00:00.0,2021-01-02 10:00:00.0])
+  p24 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,2020-01-02 10:00:00.0,2021-01-02 10:00:00.0], [2030-01-01,null,null])
+  p27 -> NULL
+  p3 -> NULL
+  p33 -> NULL
+  p6 -> NULL
+  p9 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,null,null])
+(c) unguarded:
+  p12 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,null,null])
+  p15 -> ArraySeq()
+  p18 -> ArraySeq([2020-01-10,null,null], [2020-02-10,null,null])
+  p21 -> ArraySeq([null,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,2020-01-02 10:00:00.0,2021-01-02 10:00:00.0])
+  p24 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,2020-01-02 10:00:00.0,2021-01-02 10:00:00.0], [2030-01-01,null,null])
+  p27 -> NULL
+  p3 -> NULL
+  p33 -> NULL
+  p6 -> NULL
+  p9 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,null,null])
+(d) unguarded:
+  p12 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,null,null])
+  p15 -> ArraySeq()
+  p18 -> ArraySeq([2020-01-10,null,null], [2020-02-10,null,null])
+  p21 -> ArraySeq([null,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,2020-01-02 10:00:00.0,2021-01-02 10:00:00.0])
+  p24 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,2020-01-02 10:00:00.0,2021-01-02 10:00:00.0], [2030-01-01,null,null])
+  p27 -> NULL
+  p3 -> NULL
+  p33 -> NULL
+  p6 -> NULL
+  p9 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,null,null])
+(a) guarded:
+  p12 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,null,null])
+  p15 -> ArraySeq()
+  p18 -> ArraySeq([2020-01-10,null,null], [2020-02-10,null,null])
+  p21 -> ArraySeq([null,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,2020-01-02 10:00:00.0,2021-01-02 10:00:00.0])
+  p24 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,2020-01-02 10:00:00.0,2021-01-02 10:00:00.0], [2030-01-01,null,null])
+  p27 -> ArraySeq()
+  p3 -> ArraySeq([2020-01-10,null,null], [2020-02-10,null,null])
+  p33 -> ArraySeq()
+  p6 -> ArraySeq([null,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [null,2020-01-02 10:00:00.0,2021-01-02 10:00:00.0])
+  p9 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,null,null])
+(b) guarded:
+  p12 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,null,null])
+  p15 -> ArraySeq()
+  p18 -> ArraySeq([2020-01-10,null,null], [2020-02-10,null,null])
+  p21 -> ArraySeq([null,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,2020-01-02 10:00:00.0,2021-01-02 10:00:00.0])
+  p24 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,2020-01-02 10:00:00.0,2021-01-02 10:00:00.0], [2030-01-01,null,null])
+  p27 -> ArraySeq()
+  p3 -> ArraySeq([2020-01-10,null,null], [2020-02-10,null,null])
+  p33 -> ArraySeq()
+  p6 -> ArraySeq([null,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [null,2020-01-02 10:00:00.0,2021-01-02 10:00:00.0])
+  p9 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,null,null])
+(c) guarded:
+  p12 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,null,null])
+  p15 -> ArraySeq()
+  p18 -> ArraySeq([2020-01-10,null,null], [2020-02-10,null,null])
+  p21 -> ArraySeq([null,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,2020-01-02 10:00:00.0,2021-01-02 10:00:00.0])
+  p24 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,2020-01-02 10:00:00.0,2021-01-02 10:00:00.0], [2030-01-01,null,null])
+  p27 -> ArraySeq()
+  p3 -> ArraySeq([2020-01-10,null,null], [2020-02-10,null,null])
+  p33 -> ArraySeq()
+  p6 -> ArraySeq([null,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [null,2020-01-02 10:00:00.0,2021-01-02 10:00:00.0])
+  p9 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,null,null])
+(d) guarded:
+  p12 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,null,null])
+  p15 -> ArraySeq()
+  p18 -> ArraySeq([2020-01-10,null,null], [2020-02-10,null,null])
+  p21 -> ArraySeq([null,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,2020-01-02 10:00:00.0,2021-01-02 10:00:00.0])
+  p24 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,2020-01-02 10:00:00.0,2021-01-02 10:00:00.0], [2030-01-01,null,null])
+  p27 -> ArraySeq()
+  p3 -> ArraySeq([2020-01-10,null,null], [2020-02-10,null,null])
+  p33 -> ArraySeq()
+  p6 -> ArraySeq([null,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [null,2020-01-02 10:00:00.0,2021-01-02 10:00:00.0])
+  p9 -> ArraySeq([2020-01-10,2020-01-01 10:00:00.0,2021-01-01 10:00:00.0], [2020-02-10,null,null])

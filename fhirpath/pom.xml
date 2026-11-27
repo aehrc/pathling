@@ -26,7 +26,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>10.0.0</version>
+    <version>11.0.0-SNAPSHOT</version>
   </parent>
   <artifactId>fhirpath</artifactId>
   <packaging>jar</packaging>
@@ -34,10 +34,27 @@
   <name>Pathling FHIRPath Engine</name>
   <description>A library that can translate FHIRPath expressions into Spark queries.</description>
 
+  <properties>
+    <!-- The test schema mode dimension (T037): pruned is the only mode until M6. -->
+    <pathling.testSchemaMode>pruned</pathling.testSchemaMode>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>terminology</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>fhir-schema</artifactId>
+    </dependency>
+    <!-- The new-layout transform, which builds the test fixtures through the public read path, and
+         the layout-to-JSON transform, which the tests pass to single-resource evaluation to render a
+         complex result as FHIR JSON, as library-api does (decision 91). -->
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>io</artifactId>
+      <scope>test</scope>
     </dependency>
 
     <!-- Apache Spark -->
@@ -207,6 +224,7 @@
               <systemPropertyVariables>
                 <spring.profiles.active>unit-test</spring.profiles.active>
                 <spark.logConf>true</spark.logConf>
+                <pathling.testSchemaMode>${pathling.testSchemaMode}</pathling.testSchemaMode>
               </systemPropertyVariables>
             </configuration>
           </execution>
@@ -268,6 +286,7 @@
                   <systemPropertyVariables>
                     <spring.profiles.active>unit-test</spring.profiles.active>
                     <spark.logConf>true</spark.logConf>
+                    <pathling.testSchemaMode>${pathling.testSchemaMode}</pathling.testSchemaMode>
                     <au.csiro.pathling.views.test.disableExclusions>true</au.csiro.pathling.views.test.disableExclusions>
                   </systemPropertyVariables>
                 </configuration>

@@ -1,0 +1,257 @@
+/*
+ * This is a modified version of the Bunsen library, originally published at
+ * https://github.com/cerner/bunsen.
+ *
+ * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
+ * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
+ *
+ * These modifications are copyright 2018-2026 Commonwealth Scientific
+ * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package au.csiro.pathling.sql
+
+import au.csiro.pathling.utilities.{AnnotationNames, CanonicalStructure, StructureMerge}
+import org.apache.spark.sql.catalyst.analysis.TypeCheckResult
+import org.apache.spark.sql.catalyst.analysis.TypeCheckResult.{TypeCheckFailure, TypeCheckSuccess}
+import org.apache.spark.sql.catalyst.expressions.{ArrayTransform, CreateNamedStruct, Expression, GetStructField, If, IsNull, KnownNotNull, KnownNullable, LambdaFunction, Literal, NamedLambdaVariable, RuntimeReplaceable}
+import org.apache.spark.sql.types.{ArrayType, DataType, NullType, StructType}
+
+import scala.jdk.CollectionConverters._
+import scala.util.{Failure, Success, Try}
+
+/**
+ * The reconciliation expression: projects one of several operands of the same FHIR type **by
+ * name** into the recursive field-wise merge of all of their types (FR-056).
+ *
+ * Under a fitted schema, two collections of the same FHIR type reached by different paths have
+ * different SQL shapes, and every operation needing a common type fails on them. Each operand is
+ * therefore replaced with its projection into the merged type, and the projections combine. Every
+ * operand is given the full operand list, so that each computes the same target type.
+ *
+ * The merge is [[StructureMerge]], under the supplied canonical structure, which orders the fields
+ * at every level (FR-057). The canonical structure is an input because the operands cannot supply
+ * it: two subsequences of a total order do not determine that order. It is taken through the
+ * interface declared in `utilities`, so that this module never sees the definitions (FR-051).
+ *
+ * The projection is by name and never a cast, because a cast between structures of equal arity
+ * reorders their fields positionally and silently. A field an operand lacks becomes a null, and a
+ * null structure stays null rather than becoming a structure of nulls. An annotation field, one
+ * whose name starts with `__`, is the exception: it is kept only where every operand has it
+ * (decision 142, D9), so that no operand's annotation is filled with null. An operand of the bottom
+ * type, or an array of it, is how an absent element is typed (FR-055): it takes part in no merge
+ * and projects to a null of the merged type, whatever its cardinality. Whether the merged type
+ * repeats is decided by the present operands, and where none is present, absent operands of both
+ * cardinalities agree on an array of the bottom type.
+ *
+ * The operands must be all structures or all arrays of structures, apart from those of the bottom
+ * type, which combine with either. Operands of any other type must already agree, and are left as
+ * they are. So are operands that all have one type already, whatever it is.
+ *
+ * @param operands  the full, ordered list of operands being reconciled
+ * @param index     the position in the list of the operand this expression projects
+ * @param canonical the canonical structure of the operands' element type
+ */
+case class MergeCast(operands: Seq[Expression], index: Int, canonical: CanonicalStructure)
+  extends RuntimeReplaceable {
+
+  /** The type every operand is projected into. */
+  lazy val targetType: DataType = MergeCast.mergedType(operands.map(_.dataType), canonical)
+
+  override lazy val replacement: Expression = {
+    val operand = operands(index)
+    MergeCast.project(operand, operand.dataType, targetType)
+  }
+
+  override def checkInputDataTypes(): TypeCheckResult =
+    Try(targetType) match {
+      case Success(_) => TypeCheckSuccess
+      case Failure(e: IllegalArgumentException) => TypeCheckFailure(e.getMessage)
+      case Failure(e) => throw e
+    }
+
+  override def children: Seq[Expression] = operands
+
+  override def prettyName: String = "merge_cast"
+
+  override def flatArguments: Iterator[Any] = Iterator(operands, index)
+
+  override protected def withNewChildrenInternal(
+      newChildren: IndexedSeq[Expression]): Expression = copy(operands = newChildren)
+}
+
+object MergeCast {
+
+  /** The type absent operands of both cardinalities agree on: an array of the bottom type. */
+  private val AbsentRepeating: DataType = ArrayType(NullType, containsNull = true)
+
+  /**
+   * Computes the type that operands of the given types are projected into.
+   *
+   * @param types     the types of every operand
+   * @param canonical the canonical structure of the operands' element type
+   * @return the merged type
+   * @throws IllegalArgumentException if the types cannot be merged
+   */
+  def mergedType(types: Seq[DataType], canonical: CanonicalStructure): DataType = {
+    val present = types.filterNot(isAbsent)
+    if (types.forall(_ == types.head)) {
+      // Operands that already share one type have nothing to reconcile, and are left as they are
+      // rather than reordered. A structure the canonical structure does not fully describe is
+      // therefore only changed where it meets another shape.
+      types.head
+    } else if (present.isEmpty) {
+      // Absent operands of both cardinalities agree on an array of the bottom type, into which a
+      // singular null projects without loss, where an array could not become a singular null.
+      AbsentRepeating
+    } else {
+      // Whether the operands repeat is decided by the present ones alone, because an absent
+      // operand takes part in no merge, whichever its cardinality.
+      val repeating = present.exists(_.isInstanceOf[ArrayType])
+      if (repeating && !present.forall(_.isInstanceOf[ArrayType])) {
+        throw new IllegalArgumentException(
+          "Cannot reconcile singular and repeating operands: " + types.map(_.simpleString)
+            .mkString(", "))
+      }
+      val elements = present.map(elementType)
+      val element = elements match {
+        case structs if structs.forall(_.isInstanceOf[StructType]) =>
+          commonAnnotations(
+            StructureMerge.merge(structs.map(_.asInstanceOf[StructType]).asJava, canonical),
+            structs.map(Some(_)))
+        case others if others.forall(_ == others.head) =>
+          others.head
+        case others =>
+          throw new IllegalArgumentException(
+            "Cannot reconcile operands of different types: " + others.map(_.simpleString)
+              .mkString(", "))
+      }
+      if (repeating) {
+        ArrayType(element, types.exists {
+          case ArrayType(_, containsNull) => containsNull
+          case _ => true
+        })
+      } else {
+        element
+      }
+    }
+  }
+
+  /**
+   * Keeps in a merged type only the annotation fields that every operand has, at every depth
+   * (decision 142, D9). The merge unions the other fields, and a field an operand lacks is null in
+   * its projection. That is safe for content, where a null means what an absent field means, but
+   * not for an annotation, because a null stored annotation is read as an absent value: the
+   * accessor would read the null rather than compute the annotation. An annotation that only some
+   * operands have is therefore left out, and the accessor computes it from the value where an
+   * operation reads it. An operand that lacks the structure an annotation is in lacks the
+   * annotation too. A structure that is left with no fields is left out as well (owner,
+   * 2026-11-11).
+   *
+   * @param merged   the merged type, or a type within it
+   * @param operands the corresponding type of each operand, empty where the operand lacks it
+   * @return the merged type without the annotations some operand lacks
+   */
+  private def commonAnnotations(merged: DataType, operands: Seq[Option[DataType]]): DataType =
+    merged match {
+      case struct: StructType =>
+        StructType(struct.fields.flatMap { field =>
+          val fields = operands.map(_.flatMap {
+            case operand: StructType => operand.fields.find(_.name == field.name).map(_.dataType)
+            case _ => None
+          })
+          val common = commonAnnotations(field.dataType, fields)
+          if (AnnotationNames.isAnnotation(field.name) && fields.exists(_.isEmpty)) {
+            None
+          } else if (isEmptyStructure(common) && !isEmptyStructure(field.dataType)) {
+            // A structure left with no fields, such as a metadata group that held only an
+            // annotation, stores nothing, and Parquet cannot write an empty structure.
+            None
+          } else {
+            Some(field.copy(dataType = common))
+          }
+        })
+      case ArrayType(element, containsNull) =>
+        ArrayType(commonAnnotations(element, operands.map(_.map(elementType))), containsNull)
+      case other => other
+    }
+
+  /** Whether a type is a structure with no fields, or an array of them. */
+  private def isEmptyStructure(dataType: DataType): Boolean = dataType match {
+    case struct: StructType => struct.isEmpty
+    case ArrayType(element, _) => isEmptyStructure(element)
+    case _ => false
+  }
+
+  /**
+   * Projects a value by name into a target type, recursively.
+   *
+   * The result has exactly the target type, nullability included, so that every operand's
+   * projection has the same type and nothing downstream needs to widen them.
+   *
+   * @param value the value to project
+   * @param from  the value's type
+   * @param to    the target type
+   * @return the projected value
+   */
+  def project(value: Expression, from: DataType, to: DataType): Expression = (from, to) match {
+    case (f, t) if f == t => value
+    case (NullType, t) => Literal(null, t)
+    case (ArrayType(NullType, _), ArrayType(t, containsNull)) =>
+      val element = NamedLambdaVariable("element", NullType, nullable = true)
+      ArrayTransform(value,
+        LambdaFunction(withNullability(Literal(null, t), containsNull), Seq(element)))
+    case (ArrayType(NullType, _), t) => Literal(null, t)
+    case (fs: StructType, ts: StructType) =>
+      val struct = CreateNamedStruct(ts.fields.toSeq.flatMap { field =>
+        val projected = fs.fieldNames.indexOf(field.name) match {
+          case ordinal if ordinal >= 0 =>
+            project(GetStructField(value, ordinal, Some(field.name)), fs(ordinal).dataType,
+              field.dataType)
+          case _ => Literal(null, field.dataType)
+        }
+        Seq(Literal(field.name), withNullability(projected, field.nullable))
+      })
+      if (value.nullable) If(IsNull(value), Literal(null, ts), struct) else struct
+    case (ArrayType(fe, fromContainsNull), ArrayType(te, containsNull)) =>
+      val element = NamedLambdaVariable("element", fe, fromContainsNull)
+      ArrayTransform(value,
+        LambdaFunction(withNullability(project(element, fe, te), containsNull), Seq(element)))
+    case _ => value
+  }
+
+  /**
+   * Declares a value's nullability to be what the target type says. Where the target type says a
+   * value cannot be null, every operand's type said so too, and the value is inside a structure
+   * already known not to be null, so the declaration is true.
+   */
+  private def withNullability(value: Expression, nullable: Boolean): Expression =
+    if (value.nullable == nullable) {
+      value
+    } else if (nullable) {
+      KnownNullable(value)
+    } else {
+      KnownNotNull(value)
+    }
+
+  private def isAbsent(dataType: DataType): Boolean = dataType match {
+    case NullType | ArrayType(NullType, _) => true
+    case _ => false
+  }
+
+  private def elementType(dataType: DataType): DataType = dataType match {
+    case ArrayType(element, _) => element
+    case other => other
+  }
+}

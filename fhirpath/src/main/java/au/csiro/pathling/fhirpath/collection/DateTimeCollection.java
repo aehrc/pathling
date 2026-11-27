@@ -17,35 +17,31 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
-import static org.apache.spark.sql.functions.date_format;
-
 import au.csiro.pathling.annotations.UsedByReflection;
-import au.csiro.pathling.fhirpath.FhirPathDateTime;
+import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import au.csiro.pathling.fhirpath.column.SystemDateTime;
 import jakarta.annotation.Nonnull;
-import java.sql.Timestamp;
 import java.text.ParseException;
+import java.time.format.DateTimeParseException;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.InstantType;
 
 /**
- * Represents a collection of DateTime-typed elements.
+ * Represents a collection of DateTime-typed elements, each held as a structure of its text and the
+ * range annotations available without computing (see {@link SystemDateTime}).
  *
  * @author John Grimes
  */
 public class DateTimeCollection extends Collection
     implements StringCoercible, Materializable, DateTimeComparable {
-
-  private static final String SPARK_FHIRPATH_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
 
   /**
    * Creates a new DateTimeCollection.
@@ -54,15 +50,13 @@ public class DateTimeCollection extends Collection
    * @param type the FhirPath type
    * @param fhirType the FHIR type
    * @param definition the node definition
-   * @param extensionMapColumn the extension map column
    */
   protected DateTimeCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition,
-      @Nonnull final Optional<Column> extensionMapColumn) {
-    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(columnRepresentation, type, fhirType, definition);
   }
 
   /**
@@ -80,8 +74,7 @@ public class DateTimeCollection extends Collection
         columnRepresentation,
         Optional.of(FhirPathType.DATETIME),
         Optional.of(FHIRDefinedType.DATETIME),
-        definition,
-        Optional.empty());
+        definition);
   }
 
   /**
@@ -104,11 +97,13 @@ public class DateTimeCollection extends Collection
   @UsedByReflection
   @Nonnull
   public static DateTimeCollection fromValue(@Nonnull final DateTimeType value) {
-    return DateTimeCollection.build(DefaultRepresentation.literal(value.getValueAsString()));
+    return DateTimeCollection.build(
+        new DefaultRepresentation(SystemDateTime.fromValue(value.getValueAsString())));
   }
 
   /**
-   * Returns a new instance based upon a {@link InstantType}.
+   * Returns a new instance based upon a {@link InstantType}. The instant is held as its text, as a
+   * traversed instant is (decision 81), with its range.
    *
    * @param value The value to use
    * @return A new instance of {@link DateTimeCollection}
@@ -116,18 +111,19 @@ public class DateTimeCollection extends Collection
   @UsedByReflection
   @Nonnull
   public static DateTimeCollection fromValue(@Nonnull final InstantType value) {
-    final Timestamp timestamp = new Timestamp(value.getValue().toInstant().toEpochMilli());
-    final ColumnRepresentation column = new DefaultRepresentation(functions.lit(timestamp));
+    final ColumnRepresentation column =
+        new DefaultRepresentation(SystemDateTime.fromValue(value.getValueAsString()));
     return new DateTimeCollection(
         column,
         Optional.of(FhirPathType.DATETIME),
         Optional.of(FHIRDefinedType.INSTANT),
-        Optional.empty(),
         Optional.empty());
   }
 
   /**
-   * Returns a new instance, parsed from a FHIRPath literal.
+   * Returns a new instance, parsed from a FHIRPath literal. A literal of a date's precision ends in
+   * {@code T}, as in {@code @2020-06T}, which distinguishes it from a Date but is not part of its
+   * value, so it is held as the FHIR dateTime {@code 2020-06}.
    *
    * @param dateTimeLiteral The FHIRPath representation of the literal
    * @return A new instance of {@link DateTimeCollection}
@@ -136,23 +132,54 @@ public class DateTimeCollection extends Collection
   @Nonnull
   public static DateTimeCollection fromLiteral(@Nonnull final String dateTimeLiteral)
       throws ParseException {
-    final String dateTimeString = dateTimeLiteral.replaceFirst("^@", "");
-    if (!FhirPathDateTime.isDateTimeValue(dateTimeString)) {
+    final String dateTimeString = dateTimeLiteral.replaceFirst("^@", "").replaceFirst("T$", "");
+    try {
+      return DateTimeCollection.build(
+          new DefaultRepresentation(SystemDateTime.fromLiteral(dateTimeString)));
+    } catch (final DateTimeParseException e) {
       throw new ParseException("Invalid dateTime literal: " + dateTimeLiteral, 0);
     }
-    return DateTimeCollection.build(DefaultRepresentation.literal(dateTimeString));
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>A date's System value keeps the range annotations it carries.
+   */
+  @Override
+  @Nonnull
+  protected Column systemValueOf(@Nonnull final Column primitive) {
+    return SystemDateTime.withoutMetadata(primitive);
+  }
+
+  /**
+   * Returns the value as a string, its text. An instant needs no formatting, because it is held as
+   * its text (decision 81), like every other date and time.
+   *
+   * @return the value as a string
+   */
+  @Nonnull
+  @Override
+  public StringCollection asStringPath() {
+    return StringCollection.build(getOutputColumn());
+  }
+
+  /**
+   * Returns the text of each value, which is what a System date is given to a caller as.
+   *
+   * @return the text of each value
+   */
+  @Nonnull
+  @Override
+  public ColumnRepresentation getOutputColumn() {
+    // A date held with its id and extensions is given as its System value, without the elements
+    // that have no value.
+    return withoutPrimitiveMetadata().getColumn().transform(SystemDateTime::text);
   }
 
   @Nonnull
   @Override
-  public StringCollection asStringPath() {
-    final ColumnRepresentation valueColumn;
-    final Optional<FHIRDefinedType> fhirType = getFhirType();
-    if (fhirType.isPresent() && fhirType.get() == FHIRDefinedType.INSTANT) {
-      valueColumn = getColumn().call(c -> date_format(c, SPARK_FHIRPATH_DATETIME_FORMAT));
-    } else {
-      valueColumn = getColumn();
-    }
-    return StringCollection.build(valueColumn);
+  public Column toExternalValue() {
+    return getOutputColumn().getValue();
   }
 }
