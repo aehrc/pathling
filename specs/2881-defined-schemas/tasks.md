@@ -26,7 +26,7 @@ The work is delivered as slices, each built from the tasks below and merged by a
 | 03b G3 | approved    | 2026-11-27 | #3014, to merge once CI is green          |
 | 03c G3 | not started |            |                                           |
 | 04 G2  | approved    | 2026-11-27 | with review fixes; decisions in R21       |
-| 04 G3  | not started |            |                                           |
+| 04 G3  | approved    | 2026-11-27 | after /code-review fixes; R22             |
 | 05 G2  | not started |            |                                           |
 | 05 G3  | not started |            |                                           |
 | 06 G2  | not started |            |                                           |
@@ -385,7 +385,7 @@ Parquet with a Pathling sink in `foreachBatch`, is read back through Pathling (T
 ### Implementation for User Story 2
 
 - [ ] T033 [US2] Add `encodeWithSchema` and `encodeBundleWithSchema`, taking a `@Nullable
-    StructType` schema, as methods of their own rather than overloads of `encode` and
+  StructType` schema, as methods of their own rather than overloads of `encode` and
       `encodeBundle` (research R22), route them to the
       defined-schema reader, and allow streams only when a schema is given, keeping
       `UnsupportedOperationException` with the new refusal message, in
@@ -445,7 +445,7 @@ every source.
     - content that names a resource type twice is refused with `IllegalArgumentException` naming
       the type;
     - an empty object gives an empty set.
-- [ ] T061 [P] [US4] Test `write_schemas` and `read_schemas` in
+- [x] T061 [P] [US4] Test `write_schemas` and `read_schemas` in
       `lib/python/tests/test_schema_files.py` (FR-028):
     - a set written and read back is equal to it;
     - the file written parses to the same JSON object as `SchemaSets.toJson` of the same set, and
@@ -455,15 +455,15 @@ every source.
     - a file that names a resource type twice is refused with `ValueError` naming the type;
     - an empty object gives an empty set;
     - both run without a Spark session.
-- [ ] T062 [P] [US4] Test `pathling_write_schemas(sc, schemas, path)` and
+- [x] T062 [P] [US4] Test `pathling_write_schemas(sc, schemas, path)` and
       `pathling_read_schemas(sc, path)` in `lib/R/tests/testthat/test-schema-files.R`, with the
       cases of T061 other than the last, that a schema carrying empty and nested field
       metadata survives a round trip unchanged, and that `pathling_write_schemas` refuses an entry
       that is not the JSON form of a struct type, naming its key (FR-028).
-- [ ] T066 [P] [US4] Test `pc.canonical_schemas` in `lib/python/tests/test_defined_schemas.py`
+- [x] T066 [P] [US4] Test `pc.canonical_schemas` in `lib/python/tests/test_defined_schemas.py`
       and `pathling_canonical_schemas` in `lib/R/tests/testthat/test-defined-schemas.R`: a set out
       of order canonicalises to the order an inferred load gives (FR-027).
-- [ ] T038 [P] [US4] Test that `DataSource.schemas()` round trips through `write_schemas` and
+- [x] T038 [P] [US4] Test that `DataSource.schemas()` round trips through `write_schemas` and
       `read_schemas` into every source in `lib/python/tests/test_defined_schemas.py`, and
       `ds_schemas()` through `pathling_write_schemas` and `pathling_read_schemas` in
       `lib/R/tests/testthat/test-defined-schemas.R`, comparing with each binding's schema-equality
