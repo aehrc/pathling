@@ -348,6 +348,31 @@ class FileSinkSaveModeTest {
     assertTrue(before.stream().noneMatch(after::contains), after::toString);
   }
 
+  /**
+   * A directory given as a local path that is not a valid URI, here one whose name holds a space,
+   * is written and read back. A Windows path such as {@code C:\data} is not a valid URI either, and
+   * was refused in the same way.
+   */
+  @ParameterizedTest
+  @ValueSource(strings = {"parquet", "ndjson"})
+  void writesToALocalPathThatIsNotAValidUri(@Nonnull final String format) {
+    final String spaced = directory.resolve("with space").toString();
+    final DataSinkBuilder builder =
+        new DataSinkBuilder(context, patients("a1", "a2")).saveMode("error");
+    if ("parquet".equals(format)) {
+      builder.parquet(spaced);
+    } else {
+      builder.ndjson(spaced);
+    }
+
+    final Dataset<Row> patients =
+        ("parquet".equals(format) ? context.read().parquet(spaced) : context.read().ndjson(spaced))
+            .read("Patient");
+    assertEquals(
+        List.of("a1", "a2"),
+        patients.select("id").as(Encoders.STRING()).collectAsList().stream().sorted().toList());
+  }
+
   @Nonnull
   private static DatasetSource patientsInOnePartition(@Nonnull final String... ids) {
     return context.read().datasets().dataset("Patient", newPatients(context, ids).coalesce(1));
