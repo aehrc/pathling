@@ -3,7 +3,7 @@
 # Author: John Grimes
 
 name: Setup Java and Maven
-description: Sets up Java with Maven repository caching, SonarQube caching, and MAVEN_OPTS.
+description: Sets up Java and Maven with a restored Maven repository, SonarQube caching, and MAVEN_OPTS.
 
 inputs:
   java-version:
@@ -35,26 +35,55 @@ runs:
         java-version: ${{ inputs.java-version }}
         distribution: ${{ inputs.distribution }}
 
-    # The Maven download is cached because Maven Central rate-limits it (HTTP 429) often enough to
-    # fail jobs. setup-maven uses a copy in the tool cache when there is one.
+    # Maven is installed from the Apache archive rather than from Maven Central, which rate-limits
+    # the download (HTTP 429) often enough to fail jobs. The distribution is cached, but a miss costs
+    # only a download, so concurrent jobs racing to save it do no harm.
     - name: Cache Maven
+      id: maven-dist
       uses: actions/cache@v4
       with:
-        path: ${{ runner.tool_cache }}/maven/${{ inputs.maven-version }}
-        key: ${{ runner.os }}-${{ runner.arch }}-maven-dist-${{ inputs.maven-version }}
+        path: ~/.maven-dist/apache-maven-${{ inputs.maven-version }}
+        key: ${{ runner.os }}-maven-dist-v2-${{ inputs.maven-version }}
+
+    - name: Download Maven
+      if: steps.maven-dist.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        MAVEN_VERSION: ${{ inputs.maven-version }}
+      run: |
+        set -euo pipefail
+        name="apache-maven-${MAVEN_VERSION}-bin.tar.gz"
+        path="maven/maven-3/${MAVEN_VERSION}/binaries/${name}"
+        mkdir -p ~/.maven-dist
+        cd ~/.maven-dist
+        for base in https://dlcdn.apache.org https://archive.apache.org/dist; do
+          if curl --fail --silent --show-error --location --retry 5 --retry-all-errors \
+              --output "${name}" "${base}/${path}"; then
+            break
+          fi
+        done
+        curl --fail --silent --show-error --location --retry 5 --retry-all-errors \
+          "https://archive.apache.org/dist/${path}.sha512" | awk '{print $1}' > "${name}.sha512"
+        echo "$(cat "${name}.sha512")  ${name}" | sha512sum --check
+        tar --extract --gzip --file "${name}"
+        rm "${name}" "${name}.sha512"
 
     - name: Set up Maven
-      uses: stCarolas/setup-maven@v5.1
-      with:
-        maven-version: ${{ inputs.maven-version }}
+      shell: bash
+      run: echo "${HOME}/.maven-dist/apache-maven-${{ inputs.maven-version }}/bin" >> "${GITHUB_PATH}"
 
-    - name: Cache local Maven repository
-      uses: actions/cache@v4
+    # The local repository is only restored here. It is saved by the Warm Maven cache workflow, from
+    # a build that resolves everything the jobs need, because a job that saved its own repository
+    # would freeze whatever subset it happened to download under a key that is then never saved
+    # again. The cache is filled on the default branch so that every pull request can restore it.
+    - name: Restore local Maven repository
+      uses: actions/cache/restore@v4
       with:
         path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        key: ${{ runner.os }}-maven-repo-v2-${{ hashFiles('**/pom.xml') }}
         restore-keys: |-
-          ${{ runner.os }}-maven-
+          ${{ runner.os }}-maven-repo-v2-${{ hashFiles('**/pom.xml') }}-
+          ${{ runner.os }}-maven-repo-v2-
 
     - name: Cache SonarQube packages
       if: inputs.enable-sonar-cache == 'true'

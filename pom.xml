@@ -945,6 +945,13 @@
               <goals>
                 <goal>prepare-agent</goal>
               </goals>
+              <!-- Instrumenting only Pathling's own classes, rather than Spark and the rest of the
+                   classpath, makes the tests markedly faster and leaves the coverage unchanged. -->
+              <configuration>
+                <includes>
+                  <include>au.csiro.pathling.*</include>
+                </includes>
+              </configuration>
             </execution>
             <execution>
               <id>report</id>
