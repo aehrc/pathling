@@ -22,7 +22,9 @@ The work is delivered as slices, each built from the tasks below and merged by a
 | 02a G3 | approved    | 2026-11-26 | #3008, merged; split from 02 for size     |
 | 02b G3 | approved    | 2026-11-26 | #3009, merged                             |
 | 03 G2  | approved    | 2026-11-26 | with review fixes; split into 03a/03b/03c |
-| 03 G3  | not started |            |                                           |
+| 03a G3 | approved    | 2026-11-27 | #3013, merged; with two Copilot fixes     |
+| 03b G3 | approved    | 2026-11-27 | #3014, to merge once CI is green          |
+| 03c G3 | not started |            |                                           |
 | 04 G2  | not started |            |                                           |
 | 04 G3  | not started |            |                                           |
 | 05 G2  | not started |            |                                           |
@@ -43,11 +45,16 @@ asks whether the pull request should merge.
 | 02a | `io` foundation                    | T001, T005, T007–T010, T012, T015–T017                            | 00, 01, gate B            | no  |
 | 02b | Schema-equality helpers            | T011, T018                                                        | 02a                       | no  |
 | 03  | US1: sources take a schema set     | T019–T028, T067, T069, T049, T050                                 | 02                        | yes |
-| 04  | US4: schema sets from data         | T037–T040, T057–T066                                              | 02; T037 and T038 need 03 | yes |
-| 05  | US2: streaming encode              | T029, T031–T033, T035, T036, T051, T052                           | 02                        | yes |
+| 04  | US4: schema sets from data         | T037–T040, T057–T066; its parts of T049                           | 02; T037 and T038 need 03 | yes |
+| 05  | US2: streaming encode              | T029, T031–T033, T035, T036, T051, T052; its parts of T049        | 02                        | yes |
 | 06  | Engine parity and removing `dense` | T041–T048, T054, T068                                             | 02; T043 runs first       | yes |
 | 07  | #2884 checks                       | The #2884 parts of T007, T008, T015, T019, T024, T025, T029, T049 | #2884, 03, 05             | yes |
 | —   | Close-out                          | T053, T055, T056                                                  | all                       | —   |
+
+The two Copilot fixes in #3013 make a read of text that is not JSON fail when the schema leaves
+nothing to parse, and keep the schema set on a source derived from a file-backed source. A bug
+found during slice 03 that predates #2881, a `ClassCastException` when a bulk export data source
+is transformed, is #3016, outside this specification.
 
 Slice 00 has no pull request: its evidence is judged at gate B. T043, the baseline that slice 06 is
 compared against, may run before gate B, as may slice 01.
@@ -545,21 +552,28 @@ every source.
 ## Phase 7: Polish & cross-cutting concerns
 
 - [ ] T049 [P] Rewrite the schema documentation for defined schemas in every binding in
-      `site/docs/libraries/io/schema.md`:
-    - getting, saving and passing a schema set, with the schema set file functions (FR-028);
-    - loss of content outside the schema with no error (logged at debug level only for stored
-      sources, FR-006a), and wide schemas as the remedy;
-    - annotations follow the configuration, and metadata follows the schema;
-    - Delta merge narrowing;
-    - a schema that is not a PoF schema is refused;
-    - NDJSON, bundle, XML and streaming reads with a schema drop content the schema has no field
-      for silently, where a read without a schema fails fast by the check #2884 adds, while stored reads check the
-      stored schema either way;
-    - output keeps the given field order, canonicalising a set to get canonical order, and a read
-      without a schema keeping the stored order;
-    - bootstrapping a set from a sample (FR-022, FR-023).
+      `site/docs/libraries/io/schema.md`. Slice 03 wrote the parts marked done; each open part
+      names the slice that writes it.
+    - [ ] getting and saving a schema set, with the schema set file functions (FR-028): slice 04.
+          Passing one: done in 03;
+    - [x] loss of content outside the schema with no error (logged at debug level only for stored
+          sources, FR-006a), and wide schemas as the remedy;
+    - [x] annotations follow the configuration, and metadata follows the schema;
+    - [x] Delta merge narrowing;
+    - [ ] a schema that is not a PoF schema is refused: slice 07;
+    - [ ] NDJSON, bundle, XML and streaming reads with a schema drop content the schema has no field
+          for silently, where a read without a schema fails fast by the check #2884 adds, while stored
+          reads check the stored schema either way. The silent drop of NDJSON, bundle and XML reads:
+          done in 03. Streaming reads: slice 05. The contrast with the #2884 check and the check of
+          stored schemas: slice 07;
+    - [ ] output keeps the given field order, canonicalising a set to get canonical order, and a
+          read without a schema keeping the stored order. The given order and the stored order: done
+          in 03. Canonicalising, and that a Parquet source's set may come back in another order:
+          slice 04;
+    - [x] bootstrapping a set from a sample (FR-022, FR-023).
 
-    Replace the "streaming dataset cannot be encoded" paragraph and the "fitted to the data" section.
+    Replace the "streaming dataset cannot be encoded" paragraph (slice 05) and the "fitted to the
+    data" section (done in 03, as "Inferred schemas").
 
 - [x] T050 [P] Document the `schemas` option on sources, and that sinks keep the source's schema,
       in `site/docs/libraries/io/index.md`. Replace its Scala and Java `parquetWithSchemas`
