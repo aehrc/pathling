@@ -125,3 +125,23 @@ test_that("a value that is not a struct is refused with an error naming its key"
     expect_error(pathling_read_schemas(spark, path), "Condition")
   }
 })
+
+test_that("a file that names a resource type twice is refused with an error naming it", {
+  struct <- '{"type":"struct","fields":[]}'
+  path <- tempfile(fileext = ".json")
+  writeLines(paste0('{"Patient": ', struct, ', "Patient": ', struct, "}"), path)
+
+  expect_error(pathling_read_schemas(spark, path), "Patient")
+})
+
+test_that("writing refuses an entry that is not the JSON form of a struct type, naming its key", {
+  schemas <- list(
+    Patient = schema_set()$Patient,
+    Condition = '{"type":"array","elementType":"string","containsNull":true}'
+  )
+
+  expect_error(
+    pathling_write_schemas(spark, schemas, tempfile(fileext = ".json")),
+    "Condition"
+  )
+})

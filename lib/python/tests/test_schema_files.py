@@ -148,6 +148,24 @@ def test_value_that_is_not_a_struct_is_refused_naming_its_key(value, tmp_path):
         read_schemas(str(path))
 
 
+def test_repeated_resource_type_is_refused_naming_it(tmp_path):
+    """A file that names a resource type twice is refused with an error naming the type."""
+    struct = '{"type": "struct", "fields": []}'
+    path = tmp_path / "schemas.json"
+    path.write_text('{"Patient": ' + struct + ', "Patient": ' + struct + "}")
+
+    with raises(ValueError, match="Patient"):
+        read_schemas(str(path))
+
+
+def test_empty_object_gives_an_empty_set(tmp_path):
+    """A file holding an empty object is read to an empty set."""
+    path = tmp_path / "schemas.json"
+    path.write_text("{}")
+
+    assert read_schemas(str(path)) == {}
+
+
 def test_both_run_without_a_spark_session(tmp_path):
     """Writing and reading a schema set file needs no Spark session, and starts none."""
     path = str(tmp_path / "schemas.json")

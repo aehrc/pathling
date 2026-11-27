@@ -20,7 +20,7 @@ import static au.csiro.pathling.library.io.source.SchemaSetSources.CONDITION;
 import static au.csiro.pathling.library.io.source.SchemaSetSources.PATIENT;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -34,7 +34,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
@@ -50,7 +49,6 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.api.io.TempDir;
@@ -59,8 +57,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Tests that every source reports the schema set it holds, that the set survives a schema set file
- * into every source, and that a schema set canonicalises to canonical order (T037, T057, FR-017 to
- * FR-019, FR-027, SC-007, SC-009).
+ * into every source and into encoding, and that a schema set canonicalises to canonical order
+ * (T037, T057, FR-005, FR-017 to FR-019, FR-027, SC-007, SC-009).
  */
 class SourceSchemasTest {
 
@@ -82,9 +80,13 @@ class SourceSchemasTest {
   private static SparkSession spark;
   private static PathlingContext context;
 
-  @TempDir Path directory;
+  /** The directory under which every kind of source is written once, for the whole class. */
+  private static Path sources;
 
-  private String database;
+  /** The catalog database the shared table source is written to. */
+  private static String sharedDatabase;
+
+  @TempDir Path directory;
 
   /** Set up Spark, with a warehouse in a temporary directory, and the Pathling context. */
   @BeforeAll
@@ -94,19 +96,18 @@ class SourceSchemasTest {
             .config("spark.sql.warehouse.dir", warehouse.resolve("spark-warehouse").toString())
             .getOrCreate();
     context = PathlingContext.create(spark);
+    // Every kind of source is written once, since writing all of them for each test that reads
+    // them would make this the slowest class in the module.
+    sources = warehouse.resolve("sources");
+    sharedDatabase = "db_shared";
+    spark.sql("CREATE DATABASE " + sharedDatabase);
+    KINDS.forEach(kind -> SchemaSetSources.write(kind, context, place(kind), sharedDatabase));
   }
 
   /** Stop Spark. */
   @AfterAll
   static void tearDown() {
     spark.stop();
-  }
-
-  /** Give each test a database of its own, so that tests do not share tables. */
-  @BeforeEach
-  void createDatabase() {
-    database = "db_" + UUID.randomUUID().toString().replace("-", "");
-    spark.sql("CREATE DATABASE " + database);
   }
 
   /**
@@ -126,9 +127,7 @@ class SourceSchemasTest {
         "datasets"
       })
   void reportsOneSchemaForEachTypeHeld(@Nonnull final String kind) {
-    SchemaSetSources.write(kind, context, directory, database);
-    final QueryableDataSource source =
-        SchemaSetSources.open(kind, context.read(), directory, database);
+    final QueryableDataSource source = shared(kind, context.read());
 
     final Map<String, StructType> schemas = source.schemas();
 
@@ -147,10 +146,11 @@ class SourceSchemasTest {
     final String table = DivergentBatches.writeParquet(context, directory.toString());
     final StructType union = spark.read().option("mergeSchema", "true").parquet(table).schema();
 
-    final StructType reported =
-        context.read().parquet(directory.toString()).schemas().get(DivergentBatches.RESOURCE_TYPE);
+    final QueryableDataSource source = context.read().parquet(directory.toString());
+    final StructType reported = source.schemas().get(DivergentBatches.RESOURCE_TYPE);
 
     assertEquals(fieldPaths(union), fieldPaths(reported));
+    assertEquals(source.read(DivergentBatches.RESOURCE_TYPE).schema(), reported);
   }
 
   /**
@@ -171,9 +171,7 @@ class SourceSchemasTest {
         "datasets"
       })
   void schemaSetRoundTripsThroughAFileIntoEverySource(@Nonnull final String kind) {
-    KINDS.forEach(target -> SchemaSetSources.write(target, context, place(target), database));
-    final Map<String, StructType> schemas =
-        SchemaSetSources.open(kind, context.read(), place(kind), database).schemas();
+    final Map<String, StructType> schemas = shared(kind, context.read()).schemas();
 
     final Map<String, StructType> readBack = SchemaSets.fromJson(SchemaSets.toJson(schemas));
 
@@ -184,16 +182,54 @@ class SourceSchemasTest {
                     (Executable)
                         () -> {
                           final Map<String, StructType> reported =
-                              SchemaSetSources.open(
-                                      target,
-                                      context.read().withSchemas(readBack),
-                                      place(target),
-                                      database)
-                                  .schemas();
+                              shared(target, context.read().withSchemas(readBack)).schemas();
                           assertTrue(
                               SchemaEquality.sameSet(readBack, reported),
                               () -> kind + " into " + target + ": " + reported);
                         }));
+  }
+
+  /**
+   * A single entry of a source's schema set, written to a schema set file and read back, is
+   * accepted by {@code encode} of FHIR JSON and XML and by {@code encodeBundle} of JSON and XML
+   * bundles, each of which gives output that is the same as it (FR-005).
+   */
+  @Test
+  void singleEntryIsAcceptedByEncodeAndEncodeBundle() {
+    final StructType entry =
+        SchemaSets.fromJson(
+                SchemaSets.toJson(shared(SchemaSetSources.NDJSON, context.read()).schemas()))
+            .get(PATIENT);
+
+    final Map<String, Dataset<Row>> encoded =
+        Map.of(
+            "encode JSON",
+            context.encode(
+                SchemaSetSources.patientJson(context), PATIENT, PathlingContext.FHIR_JSON, entry),
+            "encode XML",
+            context.encode(
+                SchemaSetSources.patientXml(context), PATIENT, PathlingContext.FHIR_XML, entry),
+            "encodeBundle JSON",
+            context.encodeBundle(
+                SchemaSetSources.jsonBundles(context), PATIENT, PathlingContext.FHIR_JSON, entry),
+            "encodeBundle XML",
+            context.encodeBundle(
+                SchemaSetSources.xmlBundles(context), PATIENT, PathlingContext.FHIR_XML, entry));
+
+    assertAll(
+        encoded.entrySet().stream()
+            .map(
+                result ->
+                    (Executable)
+                        () ->
+                            assertTrue(
+                                SchemaEquality.same(entry, result.getValue().schema()),
+                                () ->
+                                    result.getKey()
+                                        + ": expected "
+                                        + entry.treeString()
+                                        + " but got "
+                                        + result.getValue().schema().treeString())));
   }
 
   /**
@@ -215,12 +251,21 @@ class SourceSchemasTest {
         .save(table);
     final StructType evolved = spark.read().format("delta").load(table).schema();
     final StructType canonical = DivergentBatches.both(context).schema();
-    assertNotEquals(canonical, evolved, "the evolved schema should be out of canonical order");
+    assertFalse(
+        SchemaEquality.same(canonical, evolved),
+        "the evolved schema should be out of canonical order");
 
     final Map<String, StructType> canonicalised =
         context.canonicalSchemas(Map.of(PATIENT, evolved));
 
-    assertEquals(Map.of(PATIENT, canonical), canonicalised);
+    assertEquals(Set.of(PATIENT), canonicalised.keySet());
+    assertTrue(
+        SchemaEquality.same(canonical, canonicalised.get(PATIENT)),
+        () ->
+            "expected "
+                + canonical.treeString()
+                + " but got "
+                + canonicalised.get(PATIENT).treeString());
     final Dataset<Row> loaded =
         context.read().withSchemas(canonicalised).delta(directory.toString()).read(PATIENT);
     assertTrue(
@@ -265,13 +310,23 @@ class SourceSchemasTest {
 
   /** Returns the directory a kind of source is written to, so that every kind can coexist. */
   @Nonnull
-  private Path place(@Nonnull final String kind) {
-    final Path place = directory.resolve(kind);
+  private static Path place(@Nonnull final String kind) {
+    final Path place = sources.resolve(kind);
     place.toFile().mkdirs();
     return place;
   }
 
-  /** Returns the dotted path and type of every field of a schema, at any depth, sorted. */
+  /** Opens a kind of source over the fixture written once for the class, from a builder. */
+  @Nonnull
+  private static QueryableDataSource shared(
+      @Nonnull final String kind, @Nonnull final DataSourceBuilder builder) {
+    return SchemaSetSources.open(kind, builder, place(kind), sharedDatabase);
+  }
+
+  /**
+   * Returns the dotted path and type of every field of a schema, at any depth, sorted. An array
+   * adds {@code []} to the path, so that a difference in cardinality is seen.
+   */
   @Nonnull
   private static List<String> fieldPaths(@Nonnull final StructType schema) {
     return fieldPaths("", schema).sorted().toList();
@@ -286,7 +341,7 @@ class SourceSchemasTest {
               (StructField field) -> fieldPaths(prefix + field.name() + ".", field.dataType()));
     }
     if (type instanceof final ArrayType array) {
-      return fieldPaths(prefix, array.elementType());
+      return fieldPaths(prefix.substring(0, prefix.length() - 1) + "[].", array.elementType());
     }
     return Stream.of(prefix + type.simpleString());
   }

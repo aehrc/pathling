@@ -278,6 +278,50 @@ final class SchemaSetSources {
     return client;
   }
 
+  /**
+   * Returns the Patients as FHIR JSON documents, one per row.
+   *
+   * @param context the Pathling context
+   * @return the documents
+   */
+  @Nonnull
+  static Dataset<Row> patientJson(@Nonnull final PathlingContext context) {
+    return strings(context, PATIENT_JSON).toDF();
+  }
+
+  /**
+   * Returns the Patients as FHIR XML documents, one per row.
+   *
+   * @param context the Pathling context
+   * @return the documents
+   */
+  @Nonnull
+  static Dataset<Row> patientXml(@Nonnull final PathlingContext context) {
+    return strings(context, PATIENT_XML).toDF();
+  }
+
+  /**
+   * Returns a FHIR JSON bundle holding the Patients and the Condition, in a dataset of one row.
+   *
+   * @param context the Pathling context
+   * @return the bundle
+   */
+  @Nonnull
+  static Dataset<Row> jsonBundles(@Nonnull final PathlingContext context) {
+    return strings(context, List.of(jsonBundle())).toDF();
+  }
+
+  /**
+   * Returns a FHIR XML bundle holding the Patients and the Condition, in a dataset of one row.
+   *
+   * @param context the Pathling context
+   * @return the bundle
+   */
+  @Nonnull
+  static Dataset<Row> xmlBundles(@Nonnull final PathlingContext context) {
+    return strings(context, List.of(xmlBundle())).toDF();
+  }
+
   @Nonnull
   private static String jsonBundle() {
     final List<String> resources =

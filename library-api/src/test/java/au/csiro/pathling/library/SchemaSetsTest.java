@@ -128,6 +128,21 @@ class SchemaSetsTest {
     assertTrue(error.getMessage().contains("Condition"), error.getMessage());
   }
 
+  /**
+   * A file that names a resource type twice is refused, naming the type, rather than one of the two
+   * schemas being kept without a word.
+   */
+  @Test
+  void refusesRepeatedResourceTypeNamingIt() {
+    final String struct = "{\"type\":\"struct\",\"fields\":[]}";
+    final String json = "{\"Patient\":" + struct + ",\"Patient\":" + struct + "}";
+
+    final IllegalArgumentException error =
+        assertThrows(IllegalArgumentException.class, () -> SchemaSets.fromJson(json));
+
+    assertTrue(error.getMessage().contains("Patient"), error.getMessage());
+  }
+
   @Test
   void emptyObjectGivesAnEmptySet() {
     assertEquals(Map.of(), SchemaSets.fromJson("{}"));

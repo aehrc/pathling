@@ -34,6 +34,9 @@ and path (FR-006b).
 
 For a Parquet source whose files differ, each schema is the merged schema the reader returns.
 
+`schemas()` is a default method, which reads the schema of each type `getResourceTypes()` names, in
+order (research R21).
+
 ## Canonicalisation: `PathlingContext`
 
 ```java

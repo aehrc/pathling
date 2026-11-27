@@ -25,7 +25,7 @@ The work is delivered as slices, each built from the tasks below and merged by a
 | 03a G3 | approved    | 2026-11-27 | #3013, merged; with two Copilot fixes     |
 | 03b G3 | approved    | 2026-11-27 | #3014, to merge once CI is green          |
 | 03c G3 | not started |            |                                           |
-| 04 G2  | not started |            |                                           |
+| 04 G2  | approved    | 2026-11-27 | with review fixes; decisions in R21       |
 | 04 G3  | not started |            |                                           |
 | 05 G2  | not started |            |                                           |
 | 05 G3  | not started |            |                                           |
@@ -48,7 +48,7 @@ asks whether the pull request should merge.
 | 04  | US4: schema sets from data         | T037–T040, T057–T066; its parts of T049                           | 02; T037 and T038 need 03 | yes |
 | 05  | US2: streaming encode              | T029, T031–T033, T035, T036, T051, T052; its parts of T049        | 02                        | yes |
 | 06  | Engine parity and removing `dense` | T041–T048, T054, T068                                             | 02; T043 runs first       | yes |
-| 07  | #2884 checks                       | The #2884 parts of T007, T008, T015, T019, T024, T025, T029, T049 | #2884, 03, 05             | yes |
+| 07  | #2884 checks                       | The #2884 parts of T007, T008, T015, T019, T024, T025, T029, T049 | #2884, 03, 05; see R21    | yes |
 | —   | Close-out                          | T053, T055, T056                                                  | all                       | —   |
 
 The two Copilot fixes in #3013 make a read of text that is not JSON fail when the schema leaves
@@ -72,7 +72,10 @@ moved to slice 07, and the slice that owns the rest of the task leaves it out:
 
 Until slice 07, a defined schema is not checked against the definitions. A slice before 07 adds no
 check of its own in place of #2884's, and leaves no failing or disabled test for the moved
-cases. A slice
+cases. The one exception is the refusal by canonicalisation of a field whose type or cardinality
+contradicts the definitions (FR-027), which slice 04 makes as part of the canonicalisation walk
+and uses only in `canonicalSchemas`, never in a read (research R21). Slice 07 reconciles it with
+#2884's check. A slice
 is split if its pull request would change more than about 800 lines.
 
 ## Format: `[ID] [P?] [Story?] Description`
@@ -438,6 +441,8 @@ every source.
       included;
     - malformed content, and a value that is not a struct, are refused with
       `IllegalArgumentException`, the latter naming its key;
+    - content that names a resource type twice is refused with `IllegalArgumentException` naming
+      the type;
     - an empty object gives an empty set.
 - [ ] T061 [P] [US4] Test `write_schemas` and `read_schemas` in
       `lib/python/tests/test_schema_files.py` (FR-028):
@@ -445,12 +450,15 @@ every source.
     - the file written parses to the same JSON object as `SchemaSets.toJson` of the same set, and
       a file written from `SchemaSets.toJson` is read to the same set, so files cross bindings;
     - a malformed file is refused with an error naming the file, and a value that is not a struct
-      with an error naming its key;
+      with an error naming its key, both with `ValueError`;
+    - a file that names a resource type twice is refused with `ValueError` naming the type;
+    - an empty object gives an empty set;
     - both run without a Spark session.
 - [ ] T062 [P] [US4] Test `pathling_write_schemas(sc, schemas, path)` and
       `pathling_read_schemas(sc, path)` in `lib/R/tests/testthat/test-schema-files.R`, with the
-      cases of T061 other than the last, and that a schema carrying empty and nested field
-      metadata survives a round trip unchanged (FR-028).
+      cases of T061 other than the last, that a schema carrying empty and nested field
+      metadata survives a round trip unchanged, and that `pathling_write_schemas` refuses an entry
+      that is not the JSON form of a struct type, naming its key (FR-028).
 - [ ] T066 [P] [US4] Test `pc.canonical_schemas` in `lib/python/tests/test_defined_schemas.py`
       and `pathling_canonical_schemas` in `lib/R/tests/testthat/test-defined-schemas.R`: a set out
       of order canonicalises to the order an inferred load gives (FR-027).
@@ -463,8 +471,9 @@ every source.
 ### Implementation for User Story 4
 
 - [ ] T039 [US4] Add `schemas()` to
-      `library-api/src/main/java/au/csiro/pathling/library/io/source/QueryableDataSource.java`, and
-      implement it once in `AbstractSource.java` (same directory).
+      `library-api/src/main/java/au/csiro/pathling/library/io/source/QueryableDataSource.java` as a
+      default method, which reads the schema of each type `getResourceTypes()` names, in order
+      (research R21).
 - [ ] T040 [P] [US4] Add `DataSource.schemas()`, returning `dict[str, StructType]`, in
       `lib/python/pathling/datasource.py`, and `ds_schemas()`, returning a named list of strings,
       each a struct type's JSON form, in `lib/R/R/datasource.R`.
