@@ -359,11 +359,14 @@ jobs:
           done
 
       # The tests are skipped, which also disables JaCoCo, so the restored coverage reports are left
-      # untouched by this build.
+      # untouched by this build. The library runtime is not built, because it has no sources to
+      # analyse and shading it takes most of a minute, and the format, style and licence checks are
+      # skipped, because the test jobs already enforce them on every module.
       - name: Build without tests
         run: |
           mvn --batch-mode install -DskipTests \
-          -pl '!site,!benchmark,!lib/R,!lib/python'
+          -Dlicense.skip=true -Dcheckstyle.skip=true -Dspotless.check.skip=true \
+          -pl '!site,!benchmark,!lib/R,!lib/python,!library-runtime'
         timeout-minutes: 30
 
       - name: Run SonarCloud analysis
