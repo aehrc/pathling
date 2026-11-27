@@ -610,7 +610,7 @@ every source.
       specification's defined-schema YAML loads, from
       `fhirpath/src/test/java/au/csiro/pathling/test/layout/TestSchemaMode.java`, with its tests in
       `fhirpath/src/test/java/au/csiro/pathling/test/layout/TestDimensionsTest.java`.
-- [ ] T068 Measure the regular build time of `fhirpath` before and after Phase 6, on the same
+- [x] T068 Measure the regular build time of `fhirpath` before and after Phase 6, on the same
       machine, and record the growth, with the time the new tests and the derivation of each YAML
       suite's schemas take, in `specs/2881-defined-schemas/evidence/build-time.md` (SC-005).
 - [x] T069 [P] Write the release note that FR-022a requires: a Parquet read with a defined schema
