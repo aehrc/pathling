@@ -33,6 +33,7 @@ import au.csiro.pathling.test.yaml.resolver.ArbitraryObjectResolverFactory;
 import au.csiro.pathling.test.yaml.resolver.EmptyResolverFactory;
 import au.csiro.pathling.test.yaml.resolver.FhirResolverFactory;
 import au.csiro.pathling.test.yaml.resolver.RuntimeContext;
+import au.csiro.pathling.test.yaml.resolver.SuiteSchemas;
 import jakarta.annotation.Nonnull;
 import java.io.File;
 import java.util.HashMap;
@@ -143,7 +144,7 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
       try {
         Objects.requireNonNull(FHIRDefinedType.fromCode(resourceTypeStr));
         final String jsonStr = YamlSupport.omToJson(subject);
-        return FhirResolverFactory.of(jsonStr);
+        return FhirResolverFactory.of(jsonStr, SuiteSchemas.of(List.of()));
       } catch (final Exception e) {
         log.debug(
             "Invalid FHIR resource type '{}', falling back to ArbitraryObjectResolverFactory",
@@ -193,7 +194,7 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
   private Function<RuntimeContext, DatasetEvaluator> createFileBasedEvaluatorFactory(
       final String inputFile, final Optional<String> resourceBase) {
     final String path = resourceBase.orElse("") + File.separator + inputFile;
-    return FhirResolverFactory.of(getResourceAsString(path));
+    return FhirResolverFactory.of(getResourceAsString(path), SuiteSchemas.of(List.of()));
   }
 
   /**

@@ -79,6 +79,12 @@ class FhirResolverFactoryTest {
        "name":[{"family":"Jones","_family":{"id":"f1"}}]}\
       """;
 
+  /** A patient whose deceasedBoolean no other document of the suite or case carries. */
+  private static final String DECEASED_PATIENT =
+      """
+      {"resourceType":"Patient","id":"p4","deceasedBoolean":true}\
+      """;
+
   @Autowired SparkSession spark;
 
   @Autowired FhirEncoders fhirEncoders;
@@ -134,6 +140,19 @@ class FhirResolverFactoryTest {
     }
     // The suite widens a case beyond what its own resource carries.
     assertThat(paths(resolve(PATIENT_WITH_NAME).schema())).contains("telecom.value", "active");
+  }
+
+  @Test
+  void resolvedSchemaCarriesAnElementOnlyTheSuppliedSuiteSchemasCarry() {
+    // The suite's other patient is the only document with deceasedBoolean, so the factory can
+    // carry it only by loading the case with the suite schemas it is given.
+    final SuiteSchemas suite = SuiteSchemas.of(List.of(PATIENT_WITH_NAME, DECEASED_PATIENT));
+
+    final Dataset<Row> resolved =
+        FhirResolverFactory.of(PATIENT_WITH_NAME, suite).apply(runtime()).getDataset();
+
+    assertThat(resolved.schema().fieldNames()).contains("deceasedBoolean");
+    assertThat(resolved.selectExpr("deceasedBoolean").first().isNullAt(0)).isTrue();
   }
 
   @Test

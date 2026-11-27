@@ -29,7 +29,7 @@ The work is delivered as slices, each built from the tasks below and merged by a
 | 04 G3  | approved    | 2026-11-27 | after /code-review fixes; R22             |
 | 05 G2  | not started |            |                                           |
 | 05 G3  | not started |            |                                           |
-| 06 G2  | not started |            |                                           |
+| 06 G2  | approved    | 2026-11-27 | with review fixes; R23                    |
 | 06 G3  | not started |            |                                           |
 | 07 G2  | not started |            |                                           |
 | 07 G3  | not started |            |                                           |
@@ -385,7 +385,7 @@ Parquet with a Pathling sink in `foreachBatch`, is read back through Pathling (T
 ### Implementation for User Story 2
 
 - [ ] T033 [US2] Add `encodeWithSchema` and `encodeBundleWithSchema`, taking a `@Nullable
-  StructType` schema, as methods of their own rather than overloads of `encode` and
+StructType` schema, as methods of their own rather than overloads of `encode` and
       `encodeBundle` (research R22), route them to the
       defined-schema reader, and allow streams only when a schema is given, keeping
       `UnsupportedOperationException` with the new refusal message, in

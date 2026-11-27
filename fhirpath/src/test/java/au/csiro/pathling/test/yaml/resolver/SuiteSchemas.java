@@ -61,14 +61,4 @@ public final class SuiteSchemas {
     throw new UnsupportedOperationException(
         "The suite schema of " + resourceType + " is not derived until T047");
   }
-
-  /**
-   * Returns the suite's input resources.
-   *
-   * @return the documents
-   */
-  @Nonnull
-  public List<String> getDocuments() {
-    return documents;
-  }
 }

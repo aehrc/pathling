@@ -19,10 +19,12 @@ package au.csiro.pathling.test.yaml.resolver;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
+import au.csiro.pathling.definition.ChildDefinition;
 import au.csiro.pathling.definition.defaults.DefaultDefinitionContext;
 import au.csiro.pathling.definition.defaults.DefaultResourceDefinition;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.FhirReader;
+import au.csiro.pathling.schema.SchemaConfiguration;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.yaml.YamlSupport;
 import jakarta.annotation.Nonnull;
@@ -48,6 +50,10 @@ import org.springframework.beans.factory.annotation.Autowired;
  */
 @SpringBootUnitTest
 class ArbitraryObjectResolverFactoryTest {
+
+  /** The configuration path 1 reads with, which stores the metadata of primitives (R23). */
+  private static final SchemaConfiguration PATH_1_CONFIGURATION =
+      SchemaConfiguration.builder().storePrimitiveMetadata(true).build();
 
   @Autowired SparkSession spark;
 
@@ -102,6 +108,43 @@ class ArbitraryObjectResolverFactoryTest {
             s: text
             coll:
               - a: 1
+            """),
+        arguments(
+            "a scalar null with a metadata sibling",
+            """
+            i: null
+            _i:
+              id: iid
+            s: text
+            """),
+        arguments(
+            "a Coding with only a code",
+            """
+            c: !fhir.Coding '|c1'
+            """),
+        arguments(
+            "a Quantity",
+            """
+            q: !fhir.Quantity "11.5 'mg'"
+            """),
+        arguments(
+            "a decimal with a trailing zero",
+            """
+            d: 1.50
+            """),
+        arguments(
+            "a choice",
+            """
+            __CHOICE__: value
+            valueString: text
+            valueInteger: null
+            """),
+        arguments(
+            "an element of a named FHIR type",
+            """
+            hn:
+              __FHIR_TYPE__: HumanName
+              family: Smith
             """));
   }
 
@@ -121,7 +164,7 @@ class ArbitraryObjectResolverFactoryTest {
 
     // The schema comes from the definition alone, not from the values of the subject.
     final Dataset<Row> expected =
-        FhirReader.of(spark, DefaultDefinitionContext.of(definition))
+        FhirReader.of(spark, DefaultDefinitionContext.of(definition), PATH_1_CONFIGURATION)
             .json()
             .read(
                 code,
@@ -138,8 +181,11 @@ class ArbitraryObjectResolverFactoryTest {
         YamlSupport.YAML.load(
             """
             s: text
-            i: 3
+            i: null
+            _i:
+              id: iid
             b: true
+            d: 1.50
             el:
               a: 2
             coll:
@@ -150,6 +196,11 @@ class ArbitraryObjectResolverFactoryTest {
               - 2
               - 3
             emptycoll: []
+            c: !fhir.Coding '|c1'
+            q: !fhir.Quantity "11.5 'mg'"
+            hn:
+              __FHIR_TYPE__: HumanName
+              family: Smith
             """);
 
     final Dataset<Row> resolved =
@@ -158,12 +209,63 @@ class ArbitraryObjectResolverFactoryTest {
             .getDataset();
 
     assertThat(resolved.count()).isEqualTo(1);
-    final Row row = resolved.selectExpr("s", "i", "b", "el.a", "coll.a", "icoll").first();
+    final Row row =
+        resolved
+            .selectExpr(
+                "s",
+                "b",
+                "d",
+                "el.a",
+                "coll.a",
+                "icoll",
+                "c.code",
+                "q.value",
+                "q.code",
+                "q.system",
+                "hn.family")
+            .first();
     assertThat(row.getString(0)).isEqualTo("text");
-    assertThat(row.getInt(1)).isEqualTo(3);
-    assertThat(row.getBoolean(2)).isTrue();
+    assertThat(row.getBoolean(1)).isTrue();
+    // A decimal keeps the text it was written with.
+    assertThat(row.getString(2)).isEqualTo("1.50");
     assertThat(row.getInt(3)).isEqualTo(2);
     assertThat(row.<Integer>getList(4)).containsExactly(1, 2);
     assertThat(row.<Integer>getList(5)).containsExactly(1, 2, 3);
+    assertThat(row.getString(6)).isEqualTo("c1");
+    assertThat(row.getString(7)).isEqualTo("11.5");
+    assertThat(row.getString(8)).isEqualTo("mg");
+    assertThat(row.getString(9)).isEqualTo("http://unitsofmeasure.org");
+    assertThat(row.getString(10)).isEqualTo("Smith");
+    // An empty list and a null are empty, whether the schema has a column for them or not.
+    assertThat(emptyOrAbsent(resolved, "emptycoll")).isTrue();
+    assertThat(emptyOrAbsent(resolved, "i")).isTrue();
+  }
+
+  @Test
+  void definitionOfASubjectHasNoResourceTypeElement() {
+    final Map<Object, Object> subject =
+        YamlSupport.YAML.load(
+            """
+            resourceType: TestResource
+            s: text
+            """);
+
+    final DefaultResourceDefinition definition =
+        (DefaultResourceDefinition) YamlSupport.yamlToDefinition("TestResource", subject);
+
+    assertThat(definition.getChildren())
+        .extracting(ChildDefinition::getName)
+        .doesNotContain("resourceType")
+        .contains("s");
+  }
+
+  /** Whether a column is missing from a dataset, null in its row, or an empty array. */
+  private static boolean emptyOrAbsent(
+      @Nonnull final Dataset<Row> dataset, @Nonnull final String column) {
+    if (!List.of(dataset.columns()).contains(column)) {
+      return true;
+    }
+    final Row row = dataset.select(column).first();
+    return row.isNullAt(0) || row.getList(0).isEmpty();
   }
 }
