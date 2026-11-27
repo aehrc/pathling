@@ -411,7 +411,7 @@ every source.
 
 ### Tests for User Story 4 ⚠️ write first, confirm failing
 
-- [ ] T037 [P] [US4] Test the following in
+- [x] T037 [P] [US4] Test the following in
       `library-api/src/test/java/au/csiro/pathling/library/io/source/SourceSchemasTest.java`:
     - `schemas()` on every source has one entry for each type held (FR-017);
     - a Parquet source with differing files returns the merged schema (FR-018);
@@ -419,7 +419,7 @@ every source.
       accepted by every source, and each source's output schema set is the same as it by
       `SchemaEquality` (FR-019, SC-007);
     - a single entry is accepted by `encode` and `encodeBundle` (FR-005).
-- [ ] T057 [P] [US4] Test canonicalisation in `io/…/io/DefinedSchemaLogicTest.java` and
+- [x] T057 [P] [US4] Test canonicalisation in `io/…/io/DefinedSchemaLogicTest.java` and
       `library-api/src/test/java/au/csiro/pathling/library/io/source/SourceSchemasTest.java`
       (FR-027, SC-009):
     - a set out of canonical order at every depth canonicalises to an equivalent set in canonical
@@ -433,7 +433,7 @@ every source.
       refused with an error naming it;
     - a load with the canonicalised set gives canonical output;
     - no Spark job runs.
-- [ ] T060 [P] [US4] Test the schema set file functions in
+- [x] T060 [P] [US4] Test the schema set file functions in
       `library-api/src/test/java/au/csiro/pathling/library/SchemaSetsTest.java` (FR-028):
     - `toJson` gives one JSON object mapping each resource type code to its `StructType.json()`
       object (data-model.md);
@@ -470,27 +470,27 @@ every source.
 
 ### Implementation for User Story 4
 
-- [ ] T039 [US4] Add `schemas()` to
+- [x] T039 [US4] Add `schemas()` to
       `library-api/src/main/java/au/csiro/pathling/library/io/source/QueryableDataSource.java` as a
       default method, which reads the schema of each type `getResourceTypes()` names, in order
       (research R21).
-- [ ] T040 [P] [US4] Add `DataSource.schemas()`, returning `dict[str, StructType]`, in
+- [x] T040 [P] [US4] Add `DataSource.schemas()`, returning `dict[str, StructType]`, in
       `lib/python/pathling/datasource.py`, and `ds_schemas()`, returning a named list of strings,
       each a struct type's JSON form, in `lib/R/R/datasource.R`.
-- [ ] T058 [US4] Implement canonicalisation in `io/…/io/DefinedSchemaLogic.java`, sorting each
+- [x] T058 [US4] Implement canonicalisation in `io/…/io/DefinedSchemaLogic.java`, sorting each
       struct by the canonical structure, and expose it in `library-api` as
       `PathlingContext.canonicalSchemas(Map<String, StructType>)`, returning
       `Map<String, StructType>` (FR-027).
-- [ ] T059 [P] [US4] Expose canonicalisation as `pc.canonical_schemas(schemas)`, taking and
+- [x] T059 [P] [US4] Expose canonicalisation as `pc.canonical_schemas(schemas)`, taking and
       returning `dict[str, StructType]`, in Python, and as `pathling_canonical_schemas(pc, schemas)`,
       taking and returning a named list of strings, in R (FR-027).
-- [ ] T063 [US4] Implement `SchemaSets.toJson` and `SchemaSets.fromJson`, delegating parsing to
+- [x] T063 [US4] Implement `SchemaSets.toJson` and `SchemaSets.fromJson`, delegating parsing to
       `SchemaSet.parse`, in `library-api/src/main/java/au/csiro/pathling/library/SchemaSets.java`
       (FR-028, research R7, R10).
-- [ ] T064 [P] [US4] Implement `write_schemas` and `read_schemas` in pure Python, over
+- [x] T064 [P] [US4] Implement `write_schemas` and `read_schemas` in pure Python, over
       `StructType.json()` and `StructType.fromJson`, in `lib/python/pathling/schemas.py`, and
       export them from `lib/python/pathling/__init__.py` (FR-028).
-- [ ] T065 [US4] Implement `pathling_write_schemas(sc, schemas, path)` and
+- [x] T065 [US4] Implement `pathling_write_schemas(sc, schemas, path)` and
       `pathling_read_schemas(sc, path)` in `lib/R/R/schemas.R`, delegating to
       `SchemaSets.toJson` and `SchemaSets.fromJson` through the Spark connection, and export them
       (FR-028, research R7).
@@ -563,7 +563,7 @@ every source.
 - [ ] T049 [P] Rewrite the schema documentation for defined schemas in every binding in
       `site/docs/libraries/io/schema.md`. Slice 03 wrote the parts marked done; each open part
       names the slice that writes it.
-    - [ ] getting and saving a schema set, with the schema set file functions (FR-028): slice 04.
+    - [x] getting and saving a schema set, with the schema set file functions (FR-028): slice 04.
           Passing one: done in 03;
     - [x] loss of content outside the schema with no error (logged at debug level only for stored
           sources, FR-006a), and wide schemas as the remedy;
@@ -575,7 +575,7 @@ every source.
           reads check the stored schema either way. The silent drop of NDJSON, bundle and XML reads:
           done in 03. Streaming reads: slice 05. The contrast with the #2884 check and the check of
           stored schemas: slice 07;
-    - [ ] output keeps the given field order, canonicalising a set to get canonical order, and a
+    - [x] output keeps the given field order, canonicalising a set to get canonical order, and a
           read without a schema keeping the stored order. The given order and the stored order: done
           in 03. Canonicalising, and that a Parquet source's set may come back in another order:
           slice 04;

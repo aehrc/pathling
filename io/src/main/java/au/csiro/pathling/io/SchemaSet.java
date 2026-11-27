@@ -25,7 +25,8 @@ import com.fasterxml.jackson.core.JsonToken;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import org.apache.spark.sql.types.DataType;
@@ -36,7 +37,8 @@ import org.apache.spark.sql.types.StructType;
  * type code (FR-004, research R10). It is the internal form of the map that the public API is
  * given, and of a schema set file's content.
  *
- * <p>An empty set is the same as no set.
+ * <p>A set keeps its resource types in the order it is given them, or in which its content names
+ * them. An empty set is the same as no set.
  */
 public final class SchemaSet {
 
@@ -66,7 +68,7 @@ public final class SchemaSet {
             throw new IllegalArgumentException("No schema is given for " + resourceType);
           }
         });
-    return new SchemaSet(Map.copyOf(schemas));
+    return new SchemaSet(Collections.unmodifiableMap(new LinkedHashMap<>(schemas)));
   }
 
   /**
@@ -81,7 +83,7 @@ public final class SchemaSet {
    */
   @Nonnull
   public static SchemaSet parse(@Nonnull final String json) {
-    final Map<String, StructType> schemas = new HashMap<>();
+    final Map<String, StructType> schemas = new LinkedHashMap<>();
     try (final JsonParser parser = FACTORY.createParser(json)) {
       if (parser.nextToken() != JsonToken.START_OBJECT) {
         throw new IllegalArgumentException("A schema set is not a JSON object");
@@ -105,7 +107,7 @@ public final class SchemaSet {
     } catch (final IOException e) {
       throw new IllegalArgumentException("A schema set is not valid JSON: " + e.getMessage(), e);
     }
-    return new SchemaSet(Map.copyOf(schemas));
+    return new SchemaSet(Collections.unmodifiableMap(schemas));
   }
 
   /**
@@ -123,6 +125,28 @@ public final class SchemaSet {
   }
 
   /**
+   * Returns this set with each schema in canonical field order at every depth, in the order of its
+   * resource types, without reading any data (FR-027).
+   *
+   * @param definitions the definitions the canonical order is taken from
+   * @return the canonical set
+   * @throws IllegalArgumentException if a key is not a resource type code, or if a schema
+   *     contradicts the definitions in the type or cardinality of a field, naming the type and the
+   *     path of the field
+   */
+  @Nonnull
+  public SchemaSet canonical(@Nonnull final DefinitionContext definitions) {
+    requireResourceTypes(definitions);
+    final Map<String, StructType> canonical = new LinkedHashMap<>();
+    schemas.forEach(
+        (resourceType, schema) ->
+            canonical.put(
+                resourceType,
+                SchemaCanonicalisation.canonicalSchema(definitions, resourceType, schema)));
+    return new SchemaSet(Collections.unmodifiableMap(canonical));
+  }
+
+  /**
    * Returns the schema of a resource type, if this set has one.
    *
    * @param resourceType the resource type code
@@ -134,7 +158,7 @@ public final class SchemaSet {
   }
 
   /**
-   * Returns the schemas of this set, keyed by resource type code.
+   * Returns the schemas of this set, keyed by resource type code, in the order of the set.
    *
    * @return the schemas
    */

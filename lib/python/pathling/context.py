@@ -22,6 +22,7 @@ Author: John Grimes.
 
 # noinspection PyPackageRequirements
 
+import json
 import os
 import warnings
 from typing import TYPE_CHECKING, Dict, Optional, Sequence
@@ -29,6 +30,7 @@ from typing import TYPE_CHECKING, Dict, Optional, Sequence
 from py4j.java_gateway import JavaObject
 from pyspark import SparkContext
 from pyspark.sql import Column, DataFrame, SparkSession
+from pyspark.sql.types import StructType
 
 from pathling._spark_defaults import (
     managed_spark_defaults,
@@ -54,6 +56,40 @@ def _java_map(jvm, entries: Dict[str, str]) -> JavaObject:
     for key, value in entries.items():
         java_map.put(key, value)
     return java_map
+
+
+def _java_schema_set(jvm, schemas: Dict[str, StructType]) -> JavaObject:
+    """Converts a schema set to the Java map the library API takes, keeping its order.
+
+    :param jvm: the Py4J JVM view used to construct the map
+    :param schemas: the schema set, keyed by resource type code
+    :return: a ``java.util.LinkedHashMap`` of the same schemas, as Spark struct types
+    :raises TypeError: if a schema in the set is not a StructType, naming its key
+    """
+    java_schemas = jvm.java.util.LinkedHashMap()
+    for resource_type, schema in schemas.items():
+        if not isinstance(schema, StructType):
+            raise TypeError(
+                f"The schema for {resource_type} is not a StructType: "
+                f"{type(schema).__name__}"
+            )
+        java_schemas.put(
+            resource_type,
+            jvm.org.apache.spark.sql.types.DataType.fromJson(schema.json()),
+        )
+    return java_schemas
+
+
+def _python_schema_set(java_schemas: JavaObject) -> Dict[str, StructType]:
+    """Converts a Java schema set from the library API to a dict, keeping its order.
+
+    :param java_schemas: a Java map of Spark struct types, keyed by resource type code
+    :return: the same schemas, keyed by resource type code
+    """
+    return {
+        entry.getKey(): StructType.fromJson(json.loads(entry.getValue().json()))
+        for entry in java_schemas.entrySet()
+    }
 
 
 def _convert_java_value(value):
@@ -769,10 +805,13 @@ class PathlingContext:
                  columns
         """
 
+        mime_type = input_type or MimeType.FHIR_JSON
+        # Without a column, the overload taking none is called, because a null would not tell the
+        # overloads taking a column and a schema apart.
+        if column is None:
+            return self._wrap_df(self._jpc.encode(df._jdf, resource_name, mime_type))
         return self._wrap_df(
-            self._jpc.encode(
-                df._jdf, resource_name, input_type or MimeType.FHIR_JSON, column
-            )
+            self._jpc.encode(df._jdf, resource_name, mime_type, column)
         )
 
     def encode_bundle(
@@ -796,11 +835,36 @@ class PathlingContext:
         :return: a :class:`DataFrame` containing the given type of resources encoded into Spark
                  columns
         """
-        return self._wrap_df(
-            self._jpc.encodeBundle(
-                df._jdf, resource_name, input_type or MimeType.FHIR_JSON, column
+        mime_type = input_type or MimeType.FHIR_JSON
+        # Without a column, the overload taking none is called, as in encode.
+        if column is None:
+            return self._wrap_df(
+                self._jpc.encodeBundle(df._jdf, resource_name, mime_type)
             )
+        return self._wrap_df(
+            self._jpc.encodeBundle(df._jdf, resource_name, mime_type, column)
         )
+
+    def canonical_schemas(
+        self, schemas: Dict[str, StructType]
+    ) -> Dict[str, StructType]:
+        """
+        Returns a schema set with each schema in canonical field order at every depth, the order
+        an inferred load gives, without reading any data.
+
+        Each field keeps its nullability and metadata. A field the FHIR definitions do not
+        describe is left out.
+
+        :param schemas: the schema set, keyed by resource type code
+        :return: the schema set in canonical order
+        :raises TypeError: if a schema in the set is not a StructType, naming its key
+        :raises py4j.protocol.Py4JJavaError: wrapping an ``IllegalArgumentException`` if a key is
+            not a resource type that can be stored, naming it, or if a field contradicts the FHIR
+            definitions in its type or cardinality, naming the resource type and the path of the
+            field
+        """
+        java_schemas = _java_schema_set(self.spark._jvm, schemas)
+        return _python_schema_set(self._jpc.canonicalSchemas(java_schemas))
 
     def annotate(self, df: DataFrame, resource_name: str) -> DataFrame:
         """

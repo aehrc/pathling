@@ -646,7 +646,7 @@ by the append.
 
 ```python
 lake = pc.read.delta("/usr/share/warehouse/delta")
-schemas = {t: lake.read(t).schema for t in lake.resource_types()}
+schemas = lake.schemas()
 
 data = pc.read.ndjson("/usr/share/staging/ndjson", schemas=schemas)
 data.write.delta("/usr/share/warehouse/delta", save_mode="append")
@@ -657,14 +657,7 @@ data.write.delta("/usr/share/warehouse/delta", save_mode="append")
 
 ```r
 lake <- pc %>% pathling_read_delta("/usr/share/warehouse/delta")
-resource_types <- c("Patient", "Condition")
-schemas <- lapply(setNames(resource_types, resource_types), function(resource_type) {
-  lake %>%
-    ds_read(resource_type) %>%
-    sparklyr::spark_dataframe() %>%
-    sparklyr::invoke("schema") %>%
-    sparklyr::invoke("json")
-})
+schemas <- lake %>% ds_schemas()
 
 data <- pc %>% pathling_read_ndjson("/usr/share/staging/ndjson", schemas = schemas)
 data %>% ds_write_delta("/usr/share/warehouse/delta", save_mode = SaveMode$APPEND)
@@ -674,13 +667,10 @@ data %>% ds_write_delta("/usr/share/warehouse/delta", save_mode = SaveMode$APPEN
 <TabItem value="scala" label="Scala">
 
 ```scala
-import scala.jdk.CollectionConverters._
-
 val lake = pc.read().delta("/usr/share/warehouse/delta")
-val schemas = lake.getResourceTypes.asScala
-        .map(t => t -> lake.read(t).schema).toMap
+val schemas = lake.schemas()
 
-val data = pc.read().withSchemas(schemas.asJava)
+val data = pc.read().withSchemas(schemas)
         .ndjson("/usr/share/staging/ndjson")
 data.write().saveMode("append").delta("/usr/share/warehouse/delta")
 ```
@@ -690,8 +680,7 @@ data.write().saveMode("append").delta("/usr/share/warehouse/delta")
 
 ```java
 QueryableDataSource lake = pc.read().delta("/usr/share/warehouse/delta");
-Map<String, StructType> schemas = lake.getResourceTypes().stream()
-        .collect(Collectors.toMap(type -> type, type -> lake.read(type).schema()));
+Map<String, StructType> schemas = lake.schemas();
 
 QueryableDataSource data = pc.read().withSchemas(schemas)
         .ndjson("/usr/share/staging/ndjson");

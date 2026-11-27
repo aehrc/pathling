@@ -22,10 +22,13 @@ import au.csiro.pathling.library.query.FhirViewQuery;
 import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.StructType;
@@ -114,6 +117,15 @@ public interface QueryableDataSource extends DataSource {
    */
   @Nonnull
   default Map<String, StructType> schemas() {
-    throw new UnsupportedOperationException("schemas() is not implemented yet.");
+    // The schema of each type is the schema of its dataset. Reading a type that has not been read
+    // yet fits its schema to the data where the source has no schema for it, as NDJSON, bundles
+    // and XML read without a schema set have not.
+    return getResourceTypes().stream()
+        .collect(
+            Collectors.toMap(
+                Function.identity(),
+                resourceType -> read(resourceType).schema(),
+                (first, second) -> first,
+                LinkedHashMap::new));
   }
 }

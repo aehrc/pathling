@@ -37,6 +37,7 @@ import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluator;
 import au.csiro.pathling.io.Annotator;
 import au.csiro.pathling.io.FhirReader;
 import au.csiro.pathling.io.FhirWriter;
+import au.csiro.pathling.io.SchemaSet;
 import au.csiro.pathling.io.TimestampStorage;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.terminology.FhirImportOptions;
@@ -562,7 +563,17 @@ public class PathlingContext {
       @Nonnull final String resourceName,
       @Nonnull final String inputMimeType,
       @Nullable final StructType schema) {
-    throw new UnsupportedOperationException("encode with a schema is not implemented yet.");
+    if (schema == null) {
+      return encode(stringResourcesDf, resourceName, inputMimeType);
+    }
+    final Dataset<String> stringResources = documents(stringResourcesDf, null);
+    requireEncodable(stringResources, resourceName);
+    return annotator.annotate(
+        resourceName,
+        fhirReader
+            .format(inputMimeType)
+            .read(
+                resourceName, selectForJson(stringResources, resourceName, inputMimeType), schema));
   }
 
   /**
@@ -694,7 +705,14 @@ public class PathlingContext {
       @Nonnull final String resourceName,
       @Nonnull final String inputMimeType,
       @Nullable final StructType schema) {
-    throw new UnsupportedOperationException("encodeBundle with a schema is not implemented yet.");
+    if (schema == null) {
+      return encodeBundle(stringBundlesDf, resourceName, inputMimeType);
+    }
+    final Dataset<String> stringBundles = documents(stringBundlesDf, null);
+    requireEncodable(stringBundles, resourceName);
+    return annotator.annotate(
+        resourceName,
+        fhirReader.format(inputMimeType).readBundles(resourceName, stringBundles, schema));
   }
 
   /**
@@ -785,7 +803,7 @@ public class PathlingContext {
    */
   @Nonnull
   public Map<String, StructType> canonicalSchemas(@Nonnull final Map<String, StructType> schemas) {
-    throw new UnsupportedOperationException("canonicalSchemas is not implemented yet.");
+    return SchemaSet.of(schemas).canonical(FhirDefinitionContext.of(getFhirContext())).schemas();
   }
 
   /**

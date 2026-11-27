@@ -42,10 +42,10 @@ library(purrr)
 #' pc %>% pathling_encode(json_resources_df, "Condition")
 #' pathling_disconnect(pc)
 pathling_encode <- function(pc, df, resource_name, input_type = NULL, column = NULL) {
-  sdf_register(j_invoke(
-    pc, "encode", spark_dataframe(df), resource_name,
-    input_type %||% MimeType$FHIR_JSON, column
-  ))
+  # Without a column, the overload taking none is called, because a null would not tell the
+  # overloads taking a column and a schema apart.
+  args <- list(pc, "encode", spark_dataframe(df), resource_name, input_type %||% MimeType$FHIR_JSON)
+  sdf_register(do.call(j_invoke, c(args, if (is.null(column)) list() else list(column))))
 }
 
 #' Encode FHIR Bundles to a dataframe
@@ -79,10 +79,11 @@ pathling_encode <- function(pc, df, resource_name, input_type = NULL, column = N
 #' )
 #' pathling_disconnect(pc)
 pathling_encode_bundle <- function(pc, df, resource_name, input_type = NULL, column = NULL) {
-  sdf_register(j_invoke(
-    pc, "encodeBundle", spark_dataframe(df), resource_name,
-    input_type %||% MimeType$FHIR_JSON, column
-  ))
+  # Without a column, the overload taking none is called, as in pathling_encode.
+  args <- list(
+    pc, "encodeBundle", spark_dataframe(df), resource_name, input_type %||% MimeType$FHIR_JSON
+  )
+  sdf_register(do.call(j_invoke, c(args, if (is.null(column)) list() else list(column))))
 }
 
 #' Annotate resources stored in the Parquet on FHIR layout

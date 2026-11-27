@@ -16,6 +16,10 @@
  */
 package au.csiro.pathling.library;
 
+import au.csiro.pathling.io.SchemaSet;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import org.apache.spark.sql.types.StructType;
@@ -25,6 +29,8 @@ import org.apache.spark.sql.types.StructType;
  * resource type code to the JSON form of its struct type (FR-028).
  */
 public final class SchemaSets {
+
+  @Nonnull private static final ObjectMapper MAPPER = new ObjectMapper();
 
   private SchemaSets() {}
 
@@ -36,7 +42,19 @@ public final class SchemaSets {
    */
   @Nonnull
   public static String toJson(@Nonnull final Map<String, StructType> schemas) {
-    throw new UnsupportedOperationException("SchemaSets.toJson is not implemented yet.");
+    final ObjectNode content = MAPPER.createObjectNode();
+    // The set refuses a null key or schema, naming it, before anything is written.
+    SchemaSet.of(schemas)
+        .schemas()
+        .forEach(
+            (resourceType, schema) -> {
+              try {
+                content.set(resourceType, MAPPER.readTree(schema.json()));
+              } catch (final JsonProcessingException e) {
+                throw new IllegalStateException("Spark gave a type JSON form that is not JSON", e);
+              }
+            });
+    return content.toString();
   }
 
   /**
@@ -44,10 +62,11 @@ public final class SchemaSets {
    *
    * @param json the JSON content
    * @return the schema set, keyed by resource type code, in the order of the file
-   * @throws IllegalArgumentException if the content is malformed, or a value is not a struct type
+   * @throws IllegalArgumentException if the content is malformed, if it names a resource type more
+   *     than once, naming it, or if a value is not a struct type, naming its key
    */
   @Nonnull
   public static Map<String, StructType> fromJson(@Nonnull final String json) {
-    throw new UnsupportedOperationException("SchemaSets.fromJson is not implemented yet.");
+    return SchemaSet.parse(json).schemas();
   }
 }
