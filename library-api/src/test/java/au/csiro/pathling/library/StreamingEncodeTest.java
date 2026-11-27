@@ -31,7 +31,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 import org.apache.spark.api.java.function.VoidFunction2;
 import org.apache.spark.sql.Dataset;
@@ -248,6 +250,8 @@ class StreamingEncodeTest {
         context.encodeWithSchema(stream, PATIENT, PathlingContext.FHIR_JSON, schema);
     final String delta = directory.resolve("delta").toString();
     final String parquet = directory.resolve("parquet").toString();
+    // The batches that wrote rows, which the query calls on the driver.
+    final Set<Long> writtenBatches = ConcurrentHashMap.newKeySet();
 
     final StreamingQuery query =
         encoded
@@ -257,6 +261,9 @@ class StreamingEncodeTest {
             .foreachBatch(
                 (VoidFunction2<Dataset<Row>, Long>)
                     (batch, id) -> {
+                      if (!batch.isEmpty()) {
+                        writtenBatches.add(id);
+                      }
                       context
                           .read()
                           .datasets()
@@ -282,6 +289,9 @@ class StreamingEncodeTest {
     final Dataset<Row> fromDelta = context.read().delta(delta).read(PATIENT);
     final Dataset<Row> fromParquet = context.read().parquet(parquet).read(PATIENT);
     assertAll(
+        () ->
+            assertTrue(
+                writtenBatches.size() >= 2, "micro-batches that wrote rows: " + writtenBatches),
         () -> assertTrue(SchemaEquality.same(schema, fromDelta.schema()), "Delta schema"),
         () -> assertTrue(SchemaEquality.same(schema, fromParquet.schema()), "Parquet schema"),
         () -> assertEquals(expected, sortedJson(fromDelta), "Delta rows"),

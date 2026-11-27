@@ -398,19 +398,39 @@ test_that("a stream encoded with a schema is a stream with the schema", {
 })
 
 test_that("a stream encoded without a schema is refused", {
-  # A streaming encode without a schema is refused with a message telling the user to pass a
-  # schema or encode each batch within foreachBatch (FR-013, US2 scenario 3).
+  # A streaming encode without a schema is refused with UnsupportedOperationException and a message
+  # telling the user to pass a schema or encode each batch within foreachBatch (FR-013, US2
+  # scenario 3). An explicit NULL is no schema.
+  spark <- spark_session()
+  pc <- pathling_connect(spark)
+  cases <- list(
+    list(pathling_encode, patient_json),
+    list(pathling_encode_bundle, bundle_json)
+  )
+  for (case in cases) {
+    encode <- case[[1]]
+    for (refused in list(
+      function() encode(pc, text_stream(spark, case[[2]]), "Patient"),
+      function() encode(pc, text_stream(spark, case[[2]]), "Patient", schema = NULL)
+    )) {
+      expect_error(refused(), "UnsupportedOperationException", fixed = TRUE)
+      expect_error(refused(), streaming_refusal, fixed = TRUE)
+    }
+  }
+})
+
+test_that("a schema argument that is not a schema is refused", {
+  # A schema argument that is not the JSON form of a struct type is refused with an error naming
+  # the resource type.
   spark <- spark_session()
   pc <- pathling_connect(spark)
   expect_error(
-    pathling_encode(pc, text_stream(spark, patient_json), "Patient"),
-    streaming_refusal,
-    fixed = TRUE
+    pathling_encode(pc, text_batch(spark, patient_json), "Patient", schema = "not a schema"),
+    "Patient"
   )
   expect_error(
-    pathling_encode_bundle(pc, text_stream(spark, bundle_json), "Patient"),
-    streaming_refusal,
-    fixed = TRUE
+    pathling_encode_bundle(pc, text_batch(spark, bundle_json), "Patient", schema = "not a schema"),
+    "Patient"
   )
 })
 
@@ -446,14 +466,20 @@ test_that("an encode with a schema reads the given column", {
   spark <- spark_session()
   pc <- pathling_connect(spark)
   schema <- patient_schema(spark, pc)
-  documents <- sparklyr::copy_to(
-    spark, data.frame(other = "x", resource = patient_json),
-    name = paste0("columns_", sample.int(1e6, 1)), overwrite = TRUE
+  cases <- list(
+    list(pathling_encode, patient_json),
+    list(pathling_encode_bundle, bundle_json)
   )
-  encoded <- pathling_encode(pc, documents, "Patient", column = "resource", schema = schema)
-  expect_true(same_schema(schema, encoded_schema(encoded)))
-  expect_equal(
-    encoded %>% select(id) %>% collect() %>% pull(id) %>% sort(),
-    c("p1", "p2")
-  )
+  for (case in cases) {
+    documents <- sparklyr::copy_to(
+      spark, data.frame(other = "x", resource = case[[2]]),
+      name = paste0("columns_", sample.int(1e6, 1)), overwrite = TRUE
+    )
+    encoded <- case[[1]](pc, documents, "Patient", column = "resource", schema = schema)
+    expect_true(same_schema(schema, encoded_schema(encoded)))
+    expect_equal(
+      encoded %>% select(id) %>% collect() %>% pull(id) %>% sort(),
+      c("p1", "p2")
+    )
+  }
 })

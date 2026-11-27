@@ -410,16 +410,33 @@ def test_stream_encoded_with_schema_is_a_stream_with_the_schema(
 
 
 @mark.parametrize("method", ["encode", "encode_bundle"])
+@mark.parametrize("schema_given", [False, True])
 def test_stream_encoded_without_schema_is_refused(
-    spark_session, def_pathling, tmp_path, method
+    spark_session, def_pathling, tmp_path, method, schema_given
 ):
-    # A streaming encode without a schema is refused with a message telling the user to pass a
-    # schema or encode each batch within foreachBatch (FR-013, US2 scenario 3).
+    # A streaming encode without a schema is refused with UnsupportedOperationException and a
+    # message telling the user to pass a schema or encode each batch within foreachBatch (FR-013,
+    # US2 scenario 3). An explicit None is no schema.
     lines = PATIENT_JSON if method == "encode" else [BUNDLE_JSON]
     stream = _stream(spark_session, tmp_path, lines)
+    arguments = {"schema": None} if schema_given else {}
     with raises(Exception) as refusal:
-        getattr(def_pathling, method)(stream, "Patient")
+        getattr(def_pathling, method)(stream, "Patient", **arguments)
+    assert "UnsupportedOperationException" in str(refusal.value)
     assert REFUSAL in str(refusal.value)
+
+
+@mark.parametrize("method", ["encode", "encode_bundle"])
+def test_encode_with_something_other_than_a_schema_is_refused(
+    spark_session, def_pathling, patient_schema, method
+):
+    # A schema argument that is not a StructType, such as the schema's JSON form, is refused with
+    # an error naming the resource type.
+    lines = PATIENT_JSON if method == "encode" else [BUNDLE_JSON]
+    with raises(TypeError, match="Patient"):
+        getattr(def_pathling, method)(
+            _documents(spark_session, lines), "Patient", schema=patient_schema.json()
+        )
 
 
 @mark.parametrize("case", SCHEMA_CASES.keys())
@@ -444,14 +461,16 @@ def test_batch_encoded_with_schema_gives_the_schemas_output(
     assert rows == [("p1", "female", None, ["Ash"]), ("p2", None, "1990-01-01", None)]
 
 
+@mark.parametrize("method", ["encode", "encode_bundle"])
 def test_encode_with_schema_reads_the_given_column(
-    spark_session, def_pathling, patient_schema
+    spark_session, def_pathling, patient_schema, method
 ):
     # With a schema, the documents are read from the named column, as they are without one.
+    lines = PATIENT_JSON if method == "encode" else [BUNDLE_JSON]
     documents = spark_session.createDataFrame(
-        [("x", d) for d in PATIENT_JSON], ["other", "resource"]
+        [("x", d) for d in lines], ["other", "resource"]
     )
-    encoded = def_pathling.encode(
+    encoded = getattr(def_pathling, method)(
         documents, "Patient", column="resource", schema=patient_schema
     )
     assert same_schema(patient_schema, encoded.schema)
