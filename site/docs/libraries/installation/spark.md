@@ -10,7 +10,9 @@ description: Instructions for configuring Apache Spark to use the Pathling libra
 Pathling is built and tested against **Apache Spark 4.1.0**, the version that
 Databricks Runtime 18 LTS runs. The Python library requires PySpark 4.1.0 or
 4.1.1: Spark 4.1.2 removed a class that Delta 4.2.0 uses, so Delta operations
-fail on later patch releases. The R library requires sparklyr with Spark 4.1.0.
+fail on later patch releases. The R library requires sparklyr 1.9.5 or later,
+with Spark 4.1.0. Earlier sparklyr releases either cannot run Spark 4.1 or fail
+with dbplyr 2.6.0.
 
 ## ANSI mode
 
