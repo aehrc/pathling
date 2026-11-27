@@ -141,8 +141,27 @@ jobs:
       - name: Build core libraries
         run: |
           mvn --batch-mode install -DskipTests \
-          -pl library-runtime -am
+          -pl library-runtime,legacy-export -am
         timeout-minutes: 20
+
+      # The SonarCloud job analyses this build's classes rather than compiling its own. The installed
+      # artifacts go with them, because that job resolves one module's dependency on another from the
+      # local repository. The library runtime is left out, as nothing depends on it there.
+      - name: Archive build output
+        run: |
+          tar --create --file build-output.tar */target/classes */target/test-classes
+          tar --create --file pathling-repository.tar --exclude 'library-runtime' \
+            --directory ~/.m2/repository au/csiro/pathling
+
+      - name: Save build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: |
+            build-output.tar
+            pathling-repository.tar
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Save built JARs
         uses: actions/upload-artifact@v4
@@ -324,7 +343,7 @@ jobs:
   sonar:
     name: SonarCloud analysis
     runs-on: ubuntu-latest
-    needs: [detect-changes, test-core]
+    needs: [detect-changes, build-core, test-core]
     # Only the suites affected by the change report coverage, so the overall coverage that this
     # analysis publishes for a pull request can be lower than the true figure. The quality gate judges
     # the new code, whose own module's suite always runs.
@@ -358,16 +377,16 @@ jobs:
             tar --extract --file "${archive}"
           done
 
-      # The tests are skipped, which also disables JaCoCo, so the restored coverage reports are left
-      # untouched by this build. The library runtime is not built, because it has no sources to
-      # analyse and shading it takes most of a minute, and the format, style and licence checks are
-      # skipped, because the test jobs already enforce them on every module.
-      - name: Build without tests
+      - name: Download build output
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+
+      - name: Restore build output
         run: |
-          mvn --batch-mode install -DskipTests \
-          -Dlicense.skip=true -Dcheckstyle.skip=true -Dspotless.check.skip=true \
-          -pl '!site,!benchmark,!lib/R,!lib/python,!library-runtime'
-        timeout-minutes: 30
+          tar --extract --file build-output.tar
+          mkdir -p ~/.m2/repository
+          tar --extract --file pathling-repository.tar --directory ~/.m2/repository
 
       - name: Run SonarCloud analysis
         # Secrets are not available for pull requests from forks.
