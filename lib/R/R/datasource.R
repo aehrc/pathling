@@ -22,31 +22,30 @@ data_sources <- function(pc) {
   j_invoke(pc, "read")
 }
 
-#' @importFrom sparklyr j_invoke
-invoke_datasource <- function(pc, name, ...) {
-  pc %>%
-    data_sources() %>%
-    j_invoke(name, ...)
-}
-
-#' Invoke a data source that reads stored data
+#' Invoke a data source
 #'
-#' Invokes a method of the Java data source builder after setting whether the sources it creates
-#' classify the layout of the data they read.
+#' Invokes a method of the Java data source builder, after giving it the schema set to read with
+#' and setting whether the sources it creates classify the layout of the data they read.
 #'
 #' @param pc The PathlingContext object.
-#' @param layout_detection Whether the source classifies the layout of the data it reads.
 #' @param name The name of the builder method.
 #' @param ... The arguments of the builder method.
+#' @param schemas An optional named list of the schema to read each resource type with, each a
+#'   string holding a struct type's JSON form.
+#' @param layout_detection Whether the source classifies the layout of the data it reads.
 #' @return A jobj referring to the data source.
 #'
 #' @importFrom sparklyr j_invoke
 #' @noRd
-invoke_stored_datasource <- function(pc, layout_detection, name, ...) {
-  pc %>%
+invoke_datasource <- function(pc, name, ..., schemas = NULL, layout_detection = TRUE) {
+  sources <- pc %>%
     data_sources() %>%
-    j_invoke("withLayoutDetection", as.logical(layout_detection)) %>%
-    j_invoke(name, ...)
+    j_invoke("withLayoutDetection", as.logical(layout_detection))
+  if (length(schemas) > 0) {
+    sources <- sources %>%
+      j_invoke("withSchemas", to_java_schema_map(sparklyr::spark_connection(pc), schemas))
+  }
+  sources %>% j_invoke(name, ...)
 }
 
 to_java_list <- function(sc, elements) {
@@ -88,6 +87,11 @@ SaveMode <- list(
 #' @param extension The file extension to use when searching for files. Defaults to "ndjson".
 #' @param file_name_mapper An optional function that maps a filename to the set of resource types
 #'   that it contains. Currently not implemented.
+#' @param schemas An optional named list of the schema to read each resource type with, keyed by
+#'   resource type code. Each schema is a string holding a struct type's JSON form, as Spark
+#'   writes it. Each resource type the list names is read with its schema, in its order: elements
+#'   the schema lacks are dropped, and elements the data lacks are null. Resource types it does
+#'   not name are read as usual.
 #' @return A DataSource object that can be used to run queries against the data.
 #'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/io#ndjson}{Pathling documentation - Reading NDJSON}
@@ -102,10 +106,14 @@ SaveMode <- list(
 #'   ds_read("Patient") %>%
 #'   sparklyr::sdf_nrow()
 #' }
-pathling_read_ndjson <- function(pc, path, extension = "ndjson", file_name_mapper = NULL) {
+pathling_read_ndjson <- function(pc, path, extension = "ndjson", file_name_mapper = NULL,
+                                 schemas = NULL) {
   # See: issue #1601 (Implement file_name_mappers in R sparkly API)
   stopifnot(file_name_mapper == NULL)
-  pc %>% invoke_datasource("ndjson", as.character(path), as.character(extension))
+  pc %>% invoke_datasource(
+    "ndjson", as.character(path), as.character(extension),
+    schemas = schemas
+  )
 }
 
 #' Create a data source from FHIR bundles
@@ -116,6 +124,11 @@ pathling_read_ndjson <- function(pc, path, extension = "ndjson", file_name_mappe
 #' @param path The URI of the directory containing the bundles.
 #' @param resource_types A sequence of resource type codes that should be extracted from the bundles.
 #' @param mime_type The MIME type of the bundles. Defaults to "application/fhir+json".
+#' @param schemas An optional named list of the schema to read each resource type with, keyed by
+#'   resource type code. Each schema is a string holding a struct type's JSON form, as Spark
+#'   writes it. Each resource type the list names is read with its schema, in its order: elements
+#'   the schema lacks are dropped, and elements the data lacks are null. Resource types it does
+#'   not name are read as usual.
 #' @return A DataSource object that can be used to run queries against the data.
 #'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/io#fhir-bundles}{Pathling documentation - Reading Bundles}
@@ -133,11 +146,13 @@ pathling_read_ndjson <- function(pc, path, extension = "ndjson", file_name_mappe
 #'   ds_read("Observation") %>%
 #'   sparklyr::sdf_nrow()
 #' }
-pathling_read_bundles <- function(pc, path, resource_types, mime_type = MimeType$FHIR_JSON) {
+pathling_read_bundles <- function(pc, path, resource_types, mime_type = MimeType$FHIR_JSON,
+                                  schemas = NULL) {
   pc %>% invoke_datasource(
     "bundles", as.character(path),
     sparklyr::spark_connection(pc) %>% j_to_set(resource_types),
-    as.character(mime_type)
+    as.character(mime_type),
+    schemas = schemas
   )
 }
 
@@ -153,6 +168,11 @@ pathling_read_bundles <- function(pc, path, resource_types, mime_type = MimeType
 #' @param pc The PathlingContext object.
 #' @param resources A name list of Spark datasets, where the keys are resource type codes
 #'   and the values are the data frames containing the resource data.
+#' @param schemas An optional named list of the schema to read each resource type with, keyed by
+#'   resource type code. Each schema is a string holding a struct type's JSON form, as Spark
+#'   writes it. Each resource type the list names is read with its schema, in its order: elements
+#'   the schema lacks are dropped, and elements the data lacks are null. Resource types it does
+#'   not name are read as usual.
 #' @return A DataSource object that can be used to run queries against the data.
 #'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/io#datasets}{Pathling documentation - Reading datasets}
@@ -169,9 +189,9 @@ pathling_read_bundles <- function(pc, path, resource_types, mime_type = MimeType
 #'   ds_read("Patient") %>%
 #'   sparklyr::sdf_nrow()
 #' }
-pathling_read_datasets <- function(pc, resources) {
+pathling_read_datasets <- function(pc, resources, schemas = NULL) {
   resources <- as.list(resources)
-  ds <- pc %>% invoke_datasource("datasets")
+  ds <- pc %>% invoke_datasource("datasets", schemas = schemas)
   for (resource_code in names(resources)) {
     resource_df <- resources[[resource_code]]
     ds %>% j_invoke("dataset", resource_code, spark_dataframe(resource_df))
@@ -186,13 +206,8 @@ pathling_read_datasets <- function(pc, resources) {
 #' Each table must be named according to the name of the resource type that it stores.
 #'
 #' The files of a resource type may carry differing schemas, and are read as one dataset whose
-#' schema is the union of theirs. Merging the schemas reads the footer of every file, so the cost of
-#' it can be avoided by supplying the schema to read a resource type with. A supplied schema is used
-#' as given, so it must cover the union of the type's files: columns it omits are not read, and it
-#' can lose whole rows, not just columns. A view unnesting a repeating element returns none of a
-#' file's rows for that element when the schema omits every field the file carries inside it. The
-#' workable pattern is to merge once and persist the result, or to take the writer's schema, and
-#' supply that.
+#' schema is the union of theirs. A resource type named in \code{schemas} is instead read with the
+#' schema given for it: the data is projected to that schema, keeping every row.
 #'
 #' The layout of each resource type's data is classified as it is read, and data in the layout
 #' written by earlier releases of Pathling is refused with a message naming the remedy, which is to
@@ -203,9 +218,10 @@ pathling_read_datasets <- function(pc, resources) {
 #' @param pc The PathlingContext object.
 #' @param path The URI of the directory containing the Parquet tables.
 #' @param schemas An optional named list of the schema to read each resource type with, keyed by
-#'   resource type code. Each schema is either a Spark schema in its JSON representation, or a Java
-#'   \code{StructType} object. At most ten schemas can be supplied. Resource types the list does
-#'   not name are merged as usual.
+#'   resource type code. Each schema is a string holding a struct type's JSON form, as Spark
+#'   writes it. Each resource type the list names is read with its schema, in its order: elements
+#'   the schema lacks are dropped, and elements the data lacks are null. Resource types it does
+#'   not name are read as usual.
 #' @param layout_detection Whether to classify the layout of each resource type's data as it is
 #'   read, refusing data in the layout written by earlier releases of Pathling. Defaults to
 #'   \code{TRUE}. Set it to \code{FALSE} only for conforming data that the detector misclassifies;
@@ -226,24 +242,20 @@ pathling_read_datasets <- function(pc, resources) {
 #'   sparklyr::sdf_nrow()
 #' }
 pathling_read_parquet <- function(pc, path, schemas = NULL, layout_detection = TRUE) {
-  if (is.null(schemas) || length(schemas) == 0) {
-    return(pc %>% invoke_stored_datasource(layout_detection, "parquet", as.character(path)))
-  }
-  sc <- sparklyr::spark_connection(pc)
-  pc %>%
-    data_sources() %>%
-    j_invoke("withLayoutDetection", as.logical(layout_detection)) %>%
-    j_invoke("withSchemas", to_java_schema_map(sc, schemas)) %>%
-    j_invoke("parquet", as.character(path))
+  pc %>% invoke_datasource(
+    "parquet", as.character(path),
+    schemas = schemas, layout_detection = layout_detection
+  )
 }
 
 #' Build a Java map of resource types to schemas
 #'
-#' Converts a named list of schemas into a \code{java.util.Map} from resource type codes to
-#' \code{StructType} objects. Each schema is either a Spark schema in its JSON representation, or a
-#' Java \code{StructType} object. As \code{java_map_of} records, the map is built by a single call
-#' to \code{Map.of}, because sparklyr can neither pass an R map to a Java method nor build a Java
-#' map up entry by entry, so it can carry at most ten entries.
+#' Converts a named list of schemas, each a string holding a struct type's JSON form, into a
+#' \code{java.util.Map} from resource type codes to \code{StructType} objects, with no limit on the
+#' number of entries. The strings are passed to the JVM unchanged, joined into the JSON object of a
+#' schema set, which the JVM parses. Each string is first checked to be a single JSON value, so
+#' that the joined object holds exactly the given entries and a malformed string is refused with an
+#' error naming its key. The JVM refuses a value that is not a struct type, naming its key.
 #'
 #' @param sc The Spark connection.
 #' @param schemas A named list of schemas.
@@ -253,28 +265,22 @@ pathling_read_parquet <- function(pc, path, schemas = NULL, layout_detection = T
 #' @importFrom sparklyr j_invoke_static
 #' @noRd
 to_java_schema_map <- function(sc, schemas) {
-  stopifnot(!is.null(names(schemas)), all(names(schemas) != ""))
-  if (length(schemas) > 10) {
-    stop(
-      "At most 10 schemas can be supplied from R. Supply the remainder through the Java or ",
-      "Python API, or leave them to be merged."
-    )
-  }
   resource_types <- names(schemas)
-  java_schemas <- lapply(resource_types, function(resource_type) {
+  if (is.null(resource_types) || any(resource_types == "")) {
+    stop("Every schema must be named with the resource type code it is for.")
+  }
+  entries <- vapply(resource_types, function(resource_type) {
     schema <- schemas[[resource_type]]
-    if (is.character(schema)) {
-      j_invoke_static(sc, "org.apache.spark.sql.types.DataType", "fromJson", schema)
-    } else {
-      schema
+    if (!is.character(schema) || length(schema) != 1 || !jsonlite::validate(schema)) {
+      stop("The schema of ", resource_type, " is not a struct type's JSON form.")
     }
-  })
-  # Interleave the resource types and schemas into the key, value, key, value order Map.of takes.
-  interleaved <- unlist(
-    lapply(seq_along(resource_types), function(i) list(resource_types[[i]], java_schemas[[i]])),
-    recursive = FALSE
-  )
-  do.call(j_invoke_static, c(list(sc, "java.util.Map", "of"), interleaved))
+    paste0(jsonlite::toJSON(resource_type, auto_unbox = TRUE), ":", schema)
+  }, character(1))
+  j_invoke_static(
+    sc, "au.csiro.pathling.io.SchemaSet", "parse",
+    paste0("{", paste(entries, collapse = ","), "}")
+  ) %>%
+    j_invoke("schemas")
 }
 
 #' Create a data source from Delta tables
@@ -291,6 +297,11 @@ to_java_schema_map <- function(sc, schemas) {
 #'
 #' @param pc The PathlingContext object.
 #' @param path The URI of the directory containing the Delta tables.
+#' @param schemas An optional named list of the schema to read each resource type with, keyed by
+#'   resource type code. Each schema is a string holding a struct type's JSON form, as Spark
+#'   writes it. Each resource type the list names is read with its schema, in its order: elements
+#'   the schema lacks are dropped, and elements the data lacks are null. Resource types it does
+#'   not name are read as usual.
 #' @param layout_detection Whether to classify the layout of each resource type's data as it is
 #'   read, refusing data in the layout written by earlier releases of Pathling. Defaults to
 #'   \code{TRUE}. Set it to \code{FALSE} only for conforming data that the detector misclassifies;
@@ -310,8 +321,11 @@ to_java_schema_map <- function(sc, schemas) {
 #'   ds_read("Patient") %>%
 #'   sparklyr::sdf_nrow()
 #' }
-pathling_read_delta <- function(pc, path, layout_detection = TRUE) {
-  pc %>% invoke_stored_datasource(layout_detection, "delta", as.character(path))
+pathling_read_delta <- function(pc, path, schemas = NULL, layout_detection = TRUE) {
+  pc %>% invoke_datasource(
+    "delta", as.character(path),
+    schemas = schemas, layout_detection = layout_detection
+  )
 }
 
 #' Create a data source from managed tables
@@ -326,7 +340,14 @@ pathling_read_delta <- function(pc, path, layout_detection = TRUE) {
 #' described in the Pathling documentation on the storage layout.
 #'
 #' @param pc The PathlingContext object.
-#' @param schema An optional schema name that should be used to qualify the table names.
+#' @param schema An optional schema name that should be used to qualify the table names. This is
+#'   the catalog database to read the tables from, not a schema set, which is given by
+#'   \code{schemas}.
+#' @param schemas An optional schema set: a named list of the schema to read each resource type
+#'   with, keyed by resource type code. Each schema is a string holding a struct type's JSON form, as Spark
+#'   writes it. Each resource type the list names is read with its schema, in its order: elements
+#'   the schema lacks are dropped, and elements the data lacks are null. Resource types it does
+#'   not name are read as usual.
 #' @param layout_detection Whether to classify the layout of each resource type's data as it is
 #'   read, refusing data in the layout written by earlier releases of Pathling. Defaults to
 #'   \code{TRUE}. Set it to \code{FALSE} only for conforming data that the detector misclassifies;
@@ -346,11 +367,14 @@ pathling_read_delta <- function(pc, path, layout_detection = TRUE) {
 #'   ds_read("Patient") %>%
 #'   sparklyr::sdf_nrow()
 #' }
-pathling_read_tables <- function(pc, schema = NULL, layout_detection = TRUE) {
+pathling_read_tables <- function(pc, schema = NULL, schemas = NULL, layout_detection = TRUE) {
   if (!is.null(schema)) {
-    pc %>% invoke_stored_datasource(layout_detection, "tables", as.character(schema))
+    pc %>% invoke_datasource(
+      "tables", as.character(schema),
+      schemas = schemas, layout_detection = layout_detection
+    )
   } else {
-    pc %>% invoke_stored_datasource(layout_detection, "tables")
+    pc %>% invoke_datasource("tables", schemas = schemas, layout_detection = layout_detection)
   }
 }
 
@@ -606,6 +630,11 @@ ds_write_tables <- function(ds, schema = NULL, save_mode = SaveMode$OVERWRITE, f
 #'     \item{scope: The scope to request}
 #'     \item{token_expiry_tolerance: The token expiry tolerance in seconds (default: 120)}
 #'   }
+#' @param schemas An optional named list of the schema to read each resource type with, keyed by
+#'   resource type code. Each schema is a string holding a struct type's JSON form, as Spark
+#'   writes it. Each resource type the list names is read with its schema, in its order: elements
+#'   the schema lacks are dropped, and elements the data lacks are null. Resource types it does
+#'   not name are read as usual.
 #' @return A DataSource object that can be used to run queries against the data.
 #'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/io#fhir-bulk-data-api}{Pathling documentation - Reading from Bulk Data API}
@@ -665,7 +694,8 @@ pathling_read_bulk <- function(pc,
                                output_extension = "ndjson",
                                timeout = NULL,
                                max_concurrent_downloads = 10,
-                               auth_config = NULL) {
+                               auth_config = NULL,
+                               schemas = NULL) {
   # Validate required parameters.
   if (missing(fhir_endpoint_url)) {
     stop("argument \"fhir_endpoint_url\" is missing")
@@ -795,5 +825,5 @@ pathling_read_bulk <- function(pc,
   client <- builder %>% j_invoke("build")
 
   # Pass the client to the bulk method.
-  pc %>% invoke_datasource("bulk", client)
+  pc %>% invoke_datasource("bulk", client, schemas = schemas)
 }

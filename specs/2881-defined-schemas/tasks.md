@@ -264,12 +264,12 @@ set and appended to Delta, leave the table's schema equal to the set.
     - a Delta merge of data loaded with a narrower schema nulls the absent elements of matched rows
       (edge case);
     - an append of data whose schema differs from the table's widens it (edge case).
-- [ ] T021 [P] [US1] Test the Python sources with schema sets given as a `dict[str, StructType]`,
+- [x] T021 [P] [US1] Test the Python sources with schema sets given as a `dict[str, StructType]`,
       including more than ten types, and the refusal of a value that is not a `StructType`, such
       as a dict or a JSON string, with an error naming its key (FR-004), in
       `lib/python/tests/test_defined_schemas.py`. Compare output schemas with
       `same_schema_set` from `lib/python/tests/schema_equality.py`.
-- [ ] T022 [P] [US1] Test the R sources with schema sets given as a named list of strings, each a
+- [x] T022 [P] [US1] Test the R sources with schema sets given as a named list of strings, each a
       struct type's JSON form, including more than ten types, and the refusal of a string that is
       not a struct type's JSON form with an error naming its key (FR-004), in
       `lib/R/tests/testthat/test-defined-schemas.R`.
@@ -313,7 +313,7 @@ set and appended to Delta, leave the table's schema equal to the set.
       `library-api/src/main/java/au/csiro/pathling/library/io/source/NdjsonSource.java`,
       `BundlesSource.java` and `BulkDataSource.java` (same directory). These reads do not detect
       or log dropped content (FR-006a).
-- [ ] T027 [US1] Add the `schemas=` keyword, accepting a `dict[str, StructType]`, to every reader in
+- [x] T027 [US1] Add the `schemas=` keyword, accepting a `dict[str, StructType]`, to every reader in
       `lib/python/pathling/datasource.py`, refusing any other value. `parquet(..., schemas=)`
       already takes this form; it now applies to every reader, and its separate path to
       `parquetWithSchemas` is replaced by `withSchemas`.
@@ -323,7 +323,7 @@ set and appended to Delta, leave the table's schema equal to the set.
       that `schema` names the catalog database while `schemas` is the schema set. Migrate
       `test_datasource_parquet_with_supplied_schemas` in `lib/python/tests/test_datasource.py` to
       the projection's semantics.
-- [ ] T028 [US1] Add the `schemas` argument, accepting a named list of strings, each a struct
+- [x] T028 [US1] Add the `schemas` argument, accepting a named list of strings, each a struct
       type's JSON form, to every reader in `lib/R/R/datasource.R`. Replace `to_java_schema_map` and
       its `Map.of` cap with a conversion that passes the strings to the JVM unchanged (research
       R10), with no limit on their number. Place `schemas` before `layout_detection` on the

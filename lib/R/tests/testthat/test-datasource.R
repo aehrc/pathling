@@ -184,7 +184,13 @@ test_that("datasource parquet with supplied schemas", {
       ds_read("Patient")
 
     expect_true(same_schema(patients %>% sparklyr::spark_dataframe() %>% schema_of(), schema))
-    expect_equal(sparklyr::sdf_nrow(patients), 2)
+    expected <- tibble::tibble(
+      id = c("p1", "p2"), gender = c("male", NA), birthDate = c(NA, "1990-01-01")
+    )
+    expect_equal(
+      patients %>% select(all_of(fields)) %>% collect() %>% arrange(id),
+      expected %>% select(all_of(fields))
+    )
   }
 })
 
