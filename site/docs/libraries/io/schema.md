@@ -228,11 +228,11 @@ applies the annotation options the context was created with:
   Pathling computes there, is kept unchanged, unless `drop_unknown_annotations`
   is set.
 
-A streaming dataset cannot be encoded, because the schema is fitted to the
-data. Encode each micro-batch of the stream instead, for example with
-`foreachBatch`, as shown in [Streaming queries](../examples/streaming.md).
-Streaming encode is tracked in
-[#2881](https://github.com/aehrc/pathling/issues/2881).
+A streaming dataset is encoded only with a schema, because a schema fitted to the
+data cannot be fitted to a stream. Give the encode a schema, as described under
+[Defined schemas](#defined-schemas), or encode each micro-batch of the stream
+within `foreachBatch`, as shown in
+[Streaming queries](../examples/streaming.md).
 
 ## Inferred schemas
 
@@ -284,6 +284,12 @@ names is read with its schema, and every other resource type is read with a
 schema fitted to its data, as it is without a set. An empty set is the same as
 no set.
 
+Encoding takes the schema of one resource type in the same way: `encode` and
+`encode_bundle` take it as the `schema` argument, a `StructType` in Python and a
+struct type's JSON form in R, and Java has `encodeWithSchema` and
+`encodeBundleWithSchema`. An encode with a schema gives what a read with the
+schema gives, and a stream encoded with a schema is a stream.
+
 Every load given the same schema gives data with the same fields, in the same
 order, whatever the data populates. Data loaded at different times can then be
 appended to one table without widening it, and a query written against that
@@ -323,8 +329,9 @@ A read of Parquet files, Delta tables, catalog tables or datasets compares the
 stored schema with the given one, without reading any rows, and logs at debug
 level the stored paths that the read drops, through the logger
 `au.csiro.pathling.library.io.source.DefinedSchemaReads`. A read of NDJSON,
-bundles in JSON or XML, or a bulk export would have to examine every resource
-to find what it drops, so it drops content silently and logs nothing about it.
+bundles in JSON or XML, or a bulk export, and an encode with a schema, of a
+dataset or of a stream, would have to examine every resource to find what it
+drops, so it drops content silently and logs nothing about it.
 
 ### Annotations and primitive metadata
 

@@ -14,26 +14,26 @@ independently.
 The work is delivered as slices, each built from the tasks below and merged by a pull request into
 `issue/2881`. A final pull request takes `issue/2881` to `main`.
 
-| Gate   | Status      | Date       | Note                                      |
-| ------ | ----------- | ---------- | ----------------------------------------- |
-| A      | approved    | 2026-11-26 | Intent and design                         |
-| B      | approved    | 2026-11-26 | Decimal read as text, equal in value      |
-| 01 G3  | approved    | 2026-11-26 | #3007, merged                             |
-| 02a G3 | approved    | 2026-11-26 | #3008, merged; split from 02 for size     |
-| 02b G3 | approved    | 2026-11-26 | #3009, merged                             |
-| 03 G2  | approved    | 2026-11-26 | with review fixes; split into 03a/03b/03c |
-| 03a G3 | approved    | 2026-11-27 | #3013, merged; with two Copilot fixes     |
-| 03b G3 | approved    | 2026-11-27 | #3014, to merge once CI is green          |
-| 03c G3 | not started |            |                                           |
-| 04 G2  | approved    | 2026-11-27 | with review fixes; decisions in R21       |
-| 04 G3  | approved    | 2026-11-27 | after /code-review fixes; R22             |
-| 05 G2  | not started |            |                                           |
-| 05 G3  | not started |            |                                           |
-| 06 G2  | not started |            |                                           |
-| 06 G3  | not started |            |                                           |
-| 07 G2  | not started |            |                                           |
-| 07 G3  | not started |            |                                           |
-| Final  | not started |            | `issue/2881` to `main`                    |
+| Gate   | Status      | Date       | Note                                                                                       |
+| ------ | ----------- | ---------- | ------------------------------------------------------------------------------------------ |
+| A      | approved    | 2026-11-26 | Intent and design                                                                          |
+| B      | approved    | 2026-11-26 | Decimal read as text, equal in value                                                       |
+| 01 G3  | approved    | 2026-11-26 | #3007, merged                                                                              |
+| 02a G3 | approved    | 2026-11-26 | #3008, merged; split from 02 for size                                                      |
+| 02b G3 | approved    | 2026-11-26 | #3009, merged                                                                              |
+| 03 G2  | approved    | 2026-11-26 | with review fixes; split into 03a/03b/03c                                                  |
+| 03a G3 | approved    | 2026-11-27 | #3013, merged; with two Copilot fixes                                                      |
+| 03b G3 | approved    | 2026-11-27 | #3014, to merge once CI is green                                                           |
+| 03c G3 | not started |            |                                                                                            |
+| 04 G2  | approved    | 2026-11-27 | with review fixes; decisions in R21                                                        |
+| 04 G3  | approved    | 2026-11-27 | after /code-review fixes; R22                                                              |
+| 05 G2  | approved    | 2026-11-27 | with review fixes (tests for a non-schema argument, multiple micro-batches, bundle column) |
+| 05 G3  | not started |            |                                                                                            |
+| 06 G2  | not started |            |                                                                                            |
+| 06 G3  | not started |            |                                                                                            |
+| 07 G2  | not started |            |                                                                                            |
+| 07 G3  | not started |            |                                                                                            |
+| Final  | not started |            | `issue/2881` to `main`                                                                     |
 
 G2 asks the owner whether the failing tests say what should happen, before the implementation. G3
 asks whether the pull request should merge.
@@ -361,7 +361,7 @@ Parquet with a Pathling sink in `foreachBatch`, is read back through Pathling (T
 
 ### Tests for User Story 2 ⚠️ write first, confirm failing
 
-- [ ] T029 [P] [US2] Test the following in
+- [x] T029 [P] [US2] Test the following in
       `library-api/src/test/java/au/csiro/pathling/library/StreamingEncodeTest.java`:
     - `encode` of streaming JSON and XML, and `encodeBundle` of streaming bundles, with a schema
       return a streaming dataset with the layout schema (FR-012);
@@ -374,27 +374,27 @@ Parquet with a Pathling sink in `foreachBatch`, is read back through Pathling (T
       Delta and to Parquet, is read back through Pathling with the schema's output (US2 independent
       test).
 - [x] T030 Removed with FR-014: the read-back of a raw `writeStream` is not tested.
-- [ ] T031 [P] [US2] Test streaming `encode` and `encode_bundle` with a schema, and the refusal
+- [x] T031 [P] [US2] Test streaming `encode` and `encode_bundle` with a schema, and the refusal
       without one, in `lib/python/tests/test_encoders.py`, together with batch `encode` and
       `encode_bundle` with a schema, for JSON and XML input (FR-002, FR-012).
-- [ ] T032 [P] [US2] Test streaming `pathling_encode` and `pathling_encode_bundle` with a schema,
+- [x] T032 [P] [US2] Test streaming `pathling_encode` and `pathling_encode_bundle` with a schema,
       and the refusal without one, in `lib/R/tests/testthat/test-encoding.R`, together with batch
       `pathling_encode` and `pathling_encode_bundle` with a schema, for JSON and XML input (FR-002,
       FR-012).
 
 ### Implementation for User Story 2
 
-- [ ] T033 [US2] Add `encodeWithSchema` and `encodeBundleWithSchema`, taking a `@Nullable
-  StructType` schema, as methods of their own rather than overloads of `encode` and
+- [x] T033 [US2] Add `encodeWithSchema` and `encodeBundleWithSchema`, taking a `@Nullable
+StructType` schema, as methods of their own rather than overloads of `encode` and
       `encodeBundle` (research R22), route them to the
       defined-schema reader, and allow streams only when a schema is given, keeping
       `UnsupportedOperationException` with the new refusal message, in
       `library-api/src/main/java/au/csiro/pathling/library/PathlingContext.java`.
 - [x] T034 Removed with T030.
-- [ ] T035 [P] [US2] Add the `schema=` keyword, taking a `StructType`, to `encode` and
+- [x] T035 [P] [US2] Add the `schema=` keyword, taking a `StructType`, to `encode` and
       `encode_bundle` in
       `lib/python/pathling/context.py`.
-- [ ] T036 [P] [US2] Add the `schema` argument, taking a struct type's JSON form as a string, to
+- [x] T036 [P] [US2] Add the `schema` argument, taking a struct type's JSON form as a string, to
       `pathling_encode` and `pathling_encode_bundle` in
       `lib/R/R/encoding.R`.
 
@@ -574,7 +574,7 @@ every source.
     - [ ] NDJSON, bundle, XML and streaming reads with a schema drop content the schema has no field
           for silently, where a read without a schema fails fast by the check #2884 adds, while stored
           reads check the stored schema either way. The silent drop of NDJSON, bundle and XML reads:
-          done in 03. Streaming reads: slice 05. The contrast with the #2884 check and the check of
+          done in 03. Streaming reads: done in 05. The contrast with the #2884 check and the check of
           stored schemas: slice 07;
     - [x] output keeps the given field order, canonicalising a set to get canonical order, and a
           read without a schema keeping the stored order. The given order and the stored order: done
@@ -582,19 +582,19 @@ every source.
           slice 04;
     - [x] bootstrapping a set from a sample (FR-022, FR-023).
 
-    Replace the "streaming dataset cannot be encoded" paragraph (slice 05) and the "fitted to the
+    Replace the "streaming dataset cannot be encoded" paragraph (done in 05) and the "fitted to the
     data" section (done in 03, as "Inferred schemas").
 
 - [x] T050 [P] Document the `schemas` option on sources, and that sinks keep the source's schema,
       in `site/docs/libraries/io/index.md`. Replace its Scala and Java `parquetWithSchemas`
       examples (:497-519) with `withSchemas`, and remove the claim that a supplied schema is used
       as given.
-- [ ] T051 [P] Rewrite `site/docs/libraries/examples/streaming.md` with a streaming encode with a
+- [x] T051 [P] Rewrite `site/docs/libraries/examples/streaming.md` with a streaming encode with a
       schema written to Delta and to Parquet through a Pathling sink inside `foreachBatch`, for
       example `pc.read.datasets({...}).write.delta(path, save_mode="merge")`, extending the 10.x
       `foreachBatch` example, in Python and Java. State that a write with Spark's own
       `writeStream` skips the checks a Pathling sink makes (FR-024).
-- [ ] T052 Run the streaming example of T051 against a file-based stream and record that it runs
+- [x] T052 Run the streaming example of T051 against a file-based stream and record that it runs
       in `specs/2881-defined-schemas/evidence/streaming-example.md` (SC-008).
 - [ ] T053 [P] File GitHub issues for the schema generator (including the 10.x shaping options as
       shortcuts) and Delta idempotent writes, with the PoF_line label. Checking a schema against
