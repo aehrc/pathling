@@ -28,6 +28,7 @@ import au.csiro.pathling.schema.SchemaConfiguration;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.yaml.YamlSupport;
 import jakarta.annotation.Nonnull;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -116,6 +117,16 @@ class ArbitraryObjectResolverFactoryTest {
             _i:
               id: iid
             s: text
+            """),
+        arguments(
+            "a repeating primitive with a metadata sibling",
+            """
+            b:
+              - null
+              - true
+            _b:
+              - id: nullId
+              - id: trueId
             """),
         arguments(
             "a Coding with only a code",
@@ -226,8 +237,9 @@ class ArbitraryObjectResolverFactoryTest {
             .first();
     assertThat(row.getString(0)).isEqualTo("text");
     assertThat(row.getBoolean(1)).isTrue();
-    // A decimal keeps the text it was written with.
-    assertThat(row.getString(2)).isEqualTo("1.50");
+    // The text of the decimal, 1.50, is lost when the YAML is parsed, before the subject reaches
+    // either path, so only its value is kept.
+    assertThat(new BigDecimal(row.getString(2))).isEqualByComparingTo("1.5");
     assertThat(row.getInt(3)).isEqualTo(2);
     assertThat(row.<Integer>getList(4)).containsExactly(1, 2);
     assertThat(row.<Integer>getList(5)).containsExactly(1, 2, 3);

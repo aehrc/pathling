@@ -84,6 +84,7 @@ class YamlTestArgumentProviderTest {
   @ParameterizedTest(name = "{0}")
   @MethodSource("suites")
   void everyFhirFactoryOfASuiteSharesOneSuiteSchemas(@Nonnull final Class<?> suiteClass) {
+    // The fhirpath-ptl suite has one FHIR subject, so there this only checks the wiring.
     final Set<SuiteSchemas> shared = Collections.newSetFromMap(new IdentityHashMap<>());
     suiteSchemasOfEveryFactory(suiteClass).forEach(shared::add);
 
