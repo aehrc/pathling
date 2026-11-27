@@ -374,3 +374,83 @@
   maps of structs by name, so it would work, but it is a step on every load in place of one on each
   schema. The cost of the decision is that FR-057 of 001 and ADR-0002 gain an exception, and two
   lakes loaded with schemas in different orders differ physically.
+
+## R15. Nullability of the output
+
+- **Decision** (owner, 2026-11-27): The given schema's nullability is ignored. Each field keeps the
+  nullability that the same source gives without a schema: nullable from JSON, XML, NDJSON,
+  bundles, bulk exports and Parquet files, and the stored flags from Delta tables, catalog tables
+  and datasets. A field that only the given schema has, and the source lacks, is nullable. Field
+  metadata is unchanged from FR-008: the given field metadata is not carried. FR-008 is amended to
+  say so.
+- **Rationale**: Spark's file and JSON readers reset every flag to nullable, while Delta, catalog
+  tables and datasets keep theirs, and the projection of R6 passes the stored flags through. A flag
+  that says `NOT NULL` where the data holds a null gives wrong results: the optimiser folds
+  `isNull` to false, and a null array element can come back as 0 or as another element
+  ([evidence/nullability.md](evidence/nullability.md), sections 2 and 5). Passing the source's own
+  flags through never marks a field `NOT NULL` that the source did not already guarantee.
+- **Alternatives considered**:
+    - Every field nullable, as FR-008 first said. It needs widening on every stored read, with
+      `when(c.isNotNull(), v)` at every depth or a cast of the whole row, and it discards
+      guarantees that Delta tables and datasets give.
+    - Exact nullability taken from the given schema, with a check at load time. The spike shows it is
+      buildable with the public API, batch and streaming, but the check runs only where its column is
+      evaluated, so `count()` or a narrower select skips it and a downstream `filter(isNull)` silently
+      returns nothing. It also needs Delta sinks to create tables with the nullable form, because
+      Delta does not check array elements or map values. A load-time row check for `NOT NULL` in the
+      given schema may follow as a later slice.
+
+## R16. Case-only name differences in stored data
+
+- **Decision** (owner, 2026-11-26, triage of #3007): A stored field whose name differs from the
+  given schema's only in case, or a stored struct holding two fields whose names differ only in
+  case, fails the read with an error naming the resource type and both paths, as the edge case in
+  `spec.md` says. `Projection` makes the check as a separate first step, so the check that #2884
+  adds for undescribed fields can run after it.
+- **Rationale**: FHIR names are case-exact. Without the check, a stored `Family` could be taken for
+  `family`, or dropped as content the schema has no field for. Either way the data would change
+  silently.
+- **Alternatives considered**: Matching case-insensitively, as Spark does, which reads a misnamed
+  field as the FHIR element. Dropping the field as content the schema has no field for, which loses
+  it without a word.
+
+## R17. Case-only duplicate columns in Parquet and Delta files
+
+- **Decision** (owner, 2026-11-26): A Parquet or Delta file whose columns include two names that
+  differ only in case, such as `id` and `ID`, fails with Spark's own `COLUMN_ALREADY_EXISTS` error,
+  untranslated.
+- **Rationale**: Spark refuses such a file while it loads it, before the source sees any data, with
+  or without a schema set. This holds at the top level, in nested structs, in arrays of structs and
+  in map values. Spark's error names only one of the columns.
+- **Alternatives considered**: Translating Spark's error into Pathling's case-only error of R16. It
+  could name only the column Spark reports, unless the source re-read the file footers. Moving the
+  clash into a nested struct to reach R16's check does not help, because Spark refuses it there too.
+
+## R18. Case-only clash in a Delta merge
+
+- **Decision** (owner, 2026-11-26, gate 03 G2): A merge by `DeltaSink` into a table that has a field
+  whose name differs from a field of the resources only in case is an error, with or without a
+  schema set. The message is prefixed "Cannot merge <Type> into its table" and names both paths.
+- **Rationale**: The merge conforms the resources to the table with `Projection`, which makes the
+  check of R16. A case-insensitive match would write a FHIR element into a misnamed column.
+- **Alternatives considered**: Leaving the merge as it was, with no case check.
+
+## R19. Top-level names containing a dot or a backtick
+
+- **Decision** (owner, 2026-11-26, triage of #3007): Won't fix. `Projection` does not support
+  top-level names that contain a dot or a backtick.
+- **Rationale**: FHIR element names and Pathling's annotation names never contain either character,
+  so no FHIR data reaches the case.
+- **Alternatives considered**: Escaping such names, which adds code for data that cannot occur.
+
+## R20. What `Projection.project` leaves as stored
+
+- **Decision** (owner, 2026-11-26, triage of #3007): `Projection.project` does not apply the target's
+  nullability or field metadata, and where a leaf's stored type differs from the target's it keeps
+  the stored type. This is documented in its Javadoc, not changed. For nullability, see R15.
+- **Rationale**: The projection selects and orders fields by name and casts nothing, as the edge
+  case on stored types in `spec.md` says. Field metadata of the output is that of an inferred load
+  (FR-008), which `Annotator` gives after the projection.
+- **Alternatives considered**: Applying the target's flags, metadata and leaf types in the
+  projection. Applying the flags is rejected in R15. Casting leaves would change values, which the
+  specification rules out.

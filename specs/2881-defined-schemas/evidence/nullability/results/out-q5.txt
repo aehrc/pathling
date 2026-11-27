@@ -1,0 +1,51 @@
+
+==================== Q5 false NOT NULL flag ====================
+parquet schema(NN) id nullable=true
+
+### parquet NN: all rows
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+rows: [[a,[1],ArraySeq(1, 2),Map(k -> v)], [null,[1],ArraySeq(1),Map(k -> v)]]
+
+### parquet NN: filter(id isNull)
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+rows: [[null,[1],ArraySeq(1),Map(k -> v)]]
+
+### parquet NN: select id isNull
+root
+ |-- id: string (nullable = true)
+ |-- isnull: boolean (nullable = false)
+rows: [[a,false], [null,true]]
+
+### parquet NN: coalesce(id,'X')
+root
+ |-- c: string (nullable = false)
+rows: [[a], [X]]
+from_json NN id nullable=true
+
+### from_json NN: filter(id isNull)
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+rows: [[null,[1],ArraySeq(1),Map(k -> v)]]

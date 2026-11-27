@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>spike</groupId>
+  <artifactId>nullability-spike</artifactId>
+  <version>1</version>
+  <properties>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+  <dependencies>
+    <!-- Versions from the root pom.xml: pathling.sparkVersion and pathling.deltaVersion. -->
+    <dependency><groupId>org.apache.spark</groupId><artifactId>spark-sql_2.13</artifactId><version>4.0.2</version></dependency>
+    <dependency><groupId>io.delta</groupId><artifactId>delta-spark_2.13</artifactId><version>4.0.1</version></dependency>
+  </dependencies>
+</project>

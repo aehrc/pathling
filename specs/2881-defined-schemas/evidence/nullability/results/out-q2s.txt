@@ -1,0 +1,264 @@
+
+==================== Q2/Q3 streaming ====================
+
+### stream readStream.schema(NN) raw, bad0
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+foreachBatch batch schema: 
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+
+rows: [[a,[1],ArraySeq(1, 2),Map(k -> v)], [null,[1],ArraySeq(1),Map(k -> v)]]
+
+### stream Narrow.apply(NN), bad0
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+ERROR AT STREAM RUN: org.apache.spark.sql.streaming.StreamingQueryException: [STREAM_FAILED] Query [id = 3a9c81f4-7865-479f-9334-ee01aaad3c9e, runId = 1a28fc4e-6d23-4e0a-85c5-510bd36c7f23] terminated with exception: [USER_RAISED_EXCEPTION] NOT NULL field 'id' is null SQLSTATE: P0001 SQLSTATE: XXKST === Streaming Query === Identifier: [id = 3a9c81f4-7865-479f-9334-ee01aaad3c9e, runId = 1a28fc4e-6d23-4e0a-85c5-510bd36c7f23] Current Committed Offsets: {} Current Available Off...
+    ROOT org.apache.spark.SparkRuntimeException: [USER_RAISED_EXCEPTION] NOT NULL field 'id' is null SQLSTATE: P0001
+
+### stream readStream.schema(NN) raw, bad1
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+foreachBatch batch schema: 
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+
+rows: [[a,[1],ArraySeq(1, 2),Map(k -> v)], [b,[null],ArraySeq(1),Map(k -> v)]]
+
+### stream Narrow.apply(NN), bad1
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+ERROR AT STREAM RUN: org.apache.spark.sql.streaming.StreamingQueryException: [STREAM_FAILED] Query [id = d556894d-988c-4036-9e02-caaa6c227960, runId = 67ec74b4-8308-48f3-82a3-182aa37f80a7] terminated with exception: [USER_RAISED_EXCEPTION] NOT NULL field 's.x' is null SQLSTATE: P0001 SQLSTATE: XXKST === Streaming Query === Identifier: [id = d556894d-988c-4036-9e02-caaa6c227960, runId = 67ec74b4-8308-48f3-82a3-182aa37f80a7] Current Committed Offsets: {} Current Available Of...
+    ROOT org.apache.spark.SparkRuntimeException: [USER_RAISED_EXCEPTION] NOT NULL field 's.x' is null SQLSTATE: P0001
+
+### stream readStream.schema(NN) raw, bad2
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+foreachBatch batch schema: 
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+
+rows: [[a,[1],ArraySeq(1, 2),Map(k -> v)], [c,null,ArraySeq(1),Map(k -> v)]]
+
+### stream Narrow.apply(NN), bad2
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+foreachBatch batch schema: 
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+
+rows: [[a,[1],ArraySeq(1, 2),Map(k -> v)], [c,null,ArraySeq(1),Map(k -> v)]]
+
+### stream readStream.schema(NN) raw, bad3
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+foreachBatch batch schema: 
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+
+rows: [[a,[1],ArraySeq(1, 2),Map(k -> v)], [d,[1],ArraySeq(1, null),Map(k -> v)]]
+
+### stream Narrow.apply(NN), bad3
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+ERROR AT STREAM RUN: org.apache.spark.sql.streaming.StreamingQueryException: [STREAM_FAILED] Query [id = 13b9e38b-dced-4152-8df6-46a3131a5f09, runId = 18dc8743-04bc-43b5-898b-7529080583c6] terminated with exception: [USER_RAISED_EXCEPTION] NOT NULL field 'arr[]' is null SQLSTATE: P0001 SQLSTATE: XXKST === Streaming Query === Identifier: [id = 13b9e38b-dced-4152-8df6-46a3131a5f09, runId = 18dc8743-04bc-43b5-898b-7529080583c6] Current Committed Offsets: {} Current Available ...
+    ROOT org.apache.spark.SparkRuntimeException: [USER_RAISED_EXCEPTION] NOT NULL field 'arr[]' is null SQLSTATE: P0001
+
+### stream readStream.schema(NN) raw, bad4
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+foreachBatch batch schema: 
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+
+rows: [[a,[1],ArraySeq(1, 2),Map(k -> v)], [e,[1],ArraySeq(1),Map(k -> null)]]
+
+### stream Narrow.apply(NN), bad4
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+ERROR AT STREAM RUN: org.apache.spark.sql.streaming.StreamingQueryException: [STREAM_FAILED] Query [id = 15304083-12da-42ec-82e4-5074bab3ba37, runId = 2b600df8-c30c-407e-a830-2b31d3cbe34e] terminated with exception: [USER_RAISED_EXCEPTION] NOT NULL field 'm{}' is null SQLSTATE: P0001 SQLSTATE: XXKST === Streaming Query === Identifier: [id = 15304083-12da-42ec-82e4-5074bab3ba37, runId = 2b600df8-c30c-407e-a830-2b31d3cbe34e] Current Committed Offsets: {} Current Available Of...
+    ROOT org.apache.spark.SparkRuntimeException: [USER_RAISED_EXCEPTION] NOT NULL field 'm{}' is null SQLSTATE: P0001
+
+### stream Narrow.apply(NN).to(NN), good
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+foreachBatch batch schema: 
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+
+rows: [[a,[1],ArraySeq(1, 2),Map(k -> v)], [z,[1],ArraySeq(1, 2),Map(k -> v)]]
+
+### stream .to(NN) on nullable, good
+ERROR AT DEFINITION: org.apache.spark.sql.AnalysisException: [NULLABLE_COLUMN_OR_FIELD] Column or field `id` is nullable while it's required to be non-nullable. SQLSTATE: 42000
+
+### stream Widen.apply(Narrow.apply(..), NULLABLE), good
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+foreachBatch batch schema: 
+root
+ |-- id: string (nullable = true)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = true)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = true)
+
+rows: [[a,[1],ArraySeq(1, 2),Map(k -> v)], [z,[1],ArraySeq(1, 2),Map(k -> v)]]
+
+### stream Narrow -> .to(NULLABLE) (widen by to), good
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+foreachBatch batch schema: 
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = true)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+
+rows: [[a,[1],ArraySeq(1, 2),Map(k -> v)], [z,[1],ArraySeq(1, 2),Map(k -> v)]]

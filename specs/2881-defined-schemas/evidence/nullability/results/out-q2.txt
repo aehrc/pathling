@@ -1,0 +1,210 @@
+
+==================== Q2 narrowing (batch) ====================
+
+### raise_error alone (nullability of raise_error)
+root
+ |-- r: void (nullable = true)
+rows: []
+
+### coalesce(id, raise_error)
+root
+ |-- id: string (nullable = true)
+ERROR AT ACTION: org.apache.spark.SparkRuntimeException: [USER_RAISED_EXCEPTION] id is null SQLSTATE: P0001
+
+### when(id isNull, raise_error).otherwise(id)
+root
+ |-- id: string (nullable = true)
+ERROR AT ACTION: org.apache.spark.SparkRuntimeException: [USER_RAISED_EXCEPTION] id is null SQLSTATE: P0001
+
+### Dataset.to(NN) on nullable data, bad0
+ERROR AT DEFINITION: org.apache.spark.sql.AnalysisException: [NULLABLE_COLUMN_OR_FIELD] Column or field `id` is nullable while it's required to be non-nullable. SQLSTATE: 42000
+
+### Dataset.to(NN) on nullable data, good
+ERROR AT DEFINITION: org.apache.spark.sql.AnalysisException: [NULLABLE_COLUMN_OR_FIELD] Column or field `id` is nullable while it's required to be non-nullable. SQLSTATE: 42000
+
+### cast arr to array<int,containsNull=false>
+ERROR AT DEFINITION: org.apache.spark.sql.catalyst.ExtendedAnalysisException: [DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve "arr" due to data type mismatch: cannot cast "ARRAY<INT>" to "ARRAY<INT>". SQLSTATE: 42K09; 'Project [unresolvedalias(cast(arr#38 as array<int>))] +- Relation [id#36,s#37,arr#38,m#39] json 
+
+### ifnull/nvl(id, raise_error)
+root
+ |-- id: string (nullable = true)
+ERROR AT ACTION: org.apache.spark.SparkRuntimeException: [USER_RAISED_EXCEPTION] id is null SQLSTATE: P0001
+
+### createDataFrame(javaRDD, NN) bad0
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+ERROR AT ACTION: org.apache.spark.SparkRuntimeException: [EXPRESSION_ENCODING_FAILED] Failed to encode a value of the expressions: assertnotnull(static_invoke(UTF8String.fromString(validateexternaltype(getexternalrowfield(assertnotnull(input[0, org.apache.spark.sql.Row, true]), 0, id), StringType, ObjectType(class java.lang.String))))) AS id#72 if (invoke(assertnotnull(input[0, org.apache.spark.sql.Row, true]).isNullAt(1))) null else named_struct(x, ass...
+    ROOT java.lang.RuntimeException: The 0th field 'id' of input row cannot be null.
+
+### createDataFrame(javaRDD, NN) bad1
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+ERROR AT ACTION: org.apache.spark.SparkRuntimeException: [EXPRESSION_ENCODING_FAILED] Failed to encode a value of the expressions: assertnotnull(static_invoke(UTF8String.fromString(validateexternaltype(getexternalrowfield(assertnotnull(input[0, org.apache.spark.sql.Row, true]), 0, id), StringType, ObjectType(class java.lang.String))))) AS id#111 if (invoke(assertnotnull(input[0, org.apache.spark.sql.Row, true]).isNullAt(1))) null else named_struct(x, as...
+    ROOT java.lang.RuntimeException: The 0th field 'x' of input row cannot be null.
+
+### createDataFrame(javaRDD, NN) bad2
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+rows: [[a,[1],ArraySeq(1, 2),Map(k -> v)], [c,null,ArraySeq(1),Map(k -> v)]]
+
+### createDataFrame(javaRDD, NN) bad3
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+ERROR AT ACTION: org.apache.spark.SparkRuntimeException: [NOT_NULL_ASSERT_VIOLATION] NULL value appeared in non-nullable field:   If the schema is inferred from a Scala tuple/case class, or a Java bean, please try to use scala.Option[_] or other nullable types (such as java.lang.Integer instead of int/scala.Int). SQLSTATE: 42000
+
+### createDataFrame(javaRDD, NN) bad4
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+ERROR AT ACTION: org.apache.spark.SparkRuntimeException: [EXPRESSION_ENCODING_FAILED] Failed to encode a value of the expressions: assertnotnull(static_invoke(UTF8String.fromString(validateexternaltype(getexternalrowfield(assertnotnull(input[0, org.apache.spark.sql.Row, true]), 0, id), StringType, ObjectType(class java.lang.String))))) AS id#228 if (invoke(assertnotnull(input[0, org.apache.spark.sql.Row, true]).isNullAt(1))) null else named_struct(x, as...
+    ROOT java.lang.NullPointerException: null
+
+### checked coalesce top-level, good
+root
+ |-- id: string (nullable = false)
+rows: [[a], [z]]
+
+### Narrow.apply(NN) bad0
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+ERROR AT ACTION: org.apache.spark.SparkRuntimeException: [USER_RAISED_EXCEPTION] NOT NULL field 'id' is null SQLSTATE: P0001
+
+### Narrow.apply(NN) bad1
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+ERROR AT ACTION: org.apache.spark.SparkRuntimeException: [USER_RAISED_EXCEPTION] NOT NULL field 's.x' is null SQLSTATE: P0001
+
+### Narrow.apply(NN) bad2
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+rows: [[a,[1],ArraySeq(1, 2),Map(k -> v)], [c,null,ArraySeq(1),Map(k -> v)]]
+
+### Narrow.apply(NN) bad3
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+ERROR AT ACTION: org.apache.spark.SparkRuntimeException: [USER_RAISED_EXCEPTION] NOT NULL field 'arr[]' is null SQLSTATE: P0001
+
+### Narrow.apply(NN) bad4
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+ERROR AT ACTION: org.apache.spark.SparkRuntimeException: [USER_RAISED_EXCEPTION] NOT NULL field 'm{}' is null SQLSTATE: P0001
+
+### Narrow.apply(NN) good
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+rows: [[a,[1],ArraySeq(1, 2),Map(k -> v)], [z,[1],ArraySeq(1, 2),Map(k -> v)]]
+
+### Narrow.apply(NN) good then .to(NN) (shape check)
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+rows: [[a,[1],ArraySeq(1, 2),Map(k -> v)], [z,[1],ArraySeq(1, 2),Map(k -> v)]]
+
+### Narrow.apply(NN) bad0 then select only s (id check pruned?)
+root
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+rows: [[[1]], [[1]]]
+
+### Narrow.apply(NN) bad0 then count()
+root
+ |-- count: long (nullable = true)
+rows: [[2]]
+
+### Narrow.apply(NN) bad0 filter(id isNull)
+root
+ |-- id: string (nullable = false)
+ |-- s: struct (nullable = true)
+ |    |-- x: integer (nullable = false)
+ |-- arr: array (nullable = true)
+ |    |-- element: integer (containsNull = false)
+ |-- m: map (nullable = true)
+ |    |-- key: string
+ |    |-- value: string (valueContainsNull = false)
+rows: []
+--- optimised plan of Narrow.apply(NN) ---
+Project [coalesce(CASE WHEN isnull(id#508) THEN cast(raise_error(USER_RAISED_EXCEPTION, map(keys: [errorMessage], values: [NOT NULL field 'id' is null]), NullType) as string) ELSE id#508 END, ) AS id#512, CASE WHEN isnotnull(s#509) THEN struct(x, coalesce(CASE WHEN isnull(s#509.x) THEN cast(raise_error(USER_RAISED_EXCEPTION, map(keys: [errorMessage], values: [NOT NULL field 's.x' is null]), NullType) as int) ELSE s#509.x END, 0)) END AS s#514, CASE WHEN isnotnull(arr#510) THEN transform(arr#510, lambdafunction(coalesce(CASE WHEN isnull(lambda x_31#517) THEN cast(raise_error(USER_RAISED_EXCEPTION, map(keys: [errorMessage], values: [NOT NULL field 'arr[]' is null]), NullType) as int) ELSE lambda x_31#517 END, 0), lambda x_31#517, false)) END AS arr#515, CASE WHEN isnotnull(m#511) THEN transform_values(m#511, lambdafunction(coalesce(CASE WHEN isnull(lambda y_33#519) THEN cast(raise_error(USER_RAISED_EXCEPTION, map(keys: [errorMessage], values: [NOT NULL field 'm{}' is null]), NullType) as string) ELSE lambda y_33#519 END, ), lambda x_32#518, lambda y_33#519, false)) END AS m#516]
++- Relation [id#508,s#509,arr#510,m#511] json
+

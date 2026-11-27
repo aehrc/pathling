@@ -239,9 +239,13 @@ Projection:
 - **FR-008**: The output's base schema MUST equal the given schema's base schema exactly, in the
   given field order, whatever that order is. Fields the configuration adds and the given schema
   lacks are placed as canonical field order places them: annotations last in their struct, and a
-  metadata group that holds only annotations immediately after its primitive. The output's
-  nullability and field metadata are those of an inferred load, whatever the given schema says:
-  every field is nullable, and the given field metadata is not carried.
+  metadata group that holds only annotations immediately after its primitive. The given schema's
+  nullability is ignored: each field keeps the nullability that the same source gives without a
+  schema, which is nullable from JSON, XML, NDJSON, bundles, bulk exports and Parquet files, and
+  the stored flags from Delta tables, catalog tables and datasets. A field that only the given
+  schema has, and the source lacks, is nullable. The output's field metadata is that of an
+  inferred load: the given field metadata is not carried (owner, 2026-11-27; research R15,
+  [evidence/nullability.md](evidence/nullability.md)).
 - **FR-009**: Projection MUST be the same on every input path. JSON, XML and stored Parquet or Delta
   holding the same resources, loaded with the same schema, MUST give equal data. A decimal is
   equal in value, not necessarily in text: XML stores the text it carries, and JSON the text Spark

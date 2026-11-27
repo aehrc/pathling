@@ -332,6 +332,10 @@ set and appended to Delta, leave the table's schema equal to the set.
       `pathling_read_tables` that `schema` names the catalog database while `schemas` is the schema
       set. Migrate the test "datasource parquet with supplied schemas" in
       `lib/R/tests/testthat/test-datasource.R` (:156) to the projection's semantics.
+    - Known gaps accepted at 03b (owner, 2026-11-26): `pathling_read_bulk` has no test, because R
+      has no mock server; `schemas` takes only JSON strings, not Java `StructType` objects; and the
+      strings are parsed with the internal `au.csiro.pathling.io.SchemaSet.parse` until slice 04
+      adds `SchemaSets.fromJson`.
 
 **Checkpoint**: T019–T022 pass. US1 independent test passes.
 
