@@ -93,7 +93,8 @@ public class DeltaSource extends FileSource {
         // transformed, by projecting it onto the set's schema.
         DefinedSchemaReads.of(context, schemaSet)::project,
         resourceType -> true,
-        layoutDetection);
+        layoutDetection,
+        schemaSet);
   }
 
   /**
