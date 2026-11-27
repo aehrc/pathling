@@ -179,7 +179,7 @@ class ArbitraryObjectResolverFactoryTest {
             .json()
             .read(
                 code,
-                spark.createDataset(List.of(YamlSupport.omToJson(subject)), Encoders.STRING()),
+                spark.createDataset(List.of(YamlSupport.subjectToJson(subject)), Encoders.STRING()),
                 YamlSupport.definitionToStruct(definition));
 
     assertThat(resolved.schema()).isEqualTo(expected.schema());
@@ -251,6 +251,28 @@ class ArbitraryObjectResolverFactoryTest {
     // An empty list and a null are empty, whether the schema has a column for them or not.
     assertThat(emptyOrAbsent(resolved, "emptycoll")).isTrue();
     assertThat(emptyOrAbsent(resolved, "i")).isTrue();
+  }
+
+  @Test
+  void resolvedDatasetKeepsThePrecisionOfADecimalAndAQuantity() {
+    final Map<Object, Object> subject =
+        YamlSupport.YAML.load(
+            """
+            d: !fhir.decimal '0.12345678901234567890'
+            q: !fhir.Quantity "0.12345678901234567890 'mg'"
+            """);
+
+    final Row row =
+        ArbitraryObjectResolverFactory.of(subject)
+            .apply(RuntimeContext.of(spark, fhirEncoders))
+            .getDataset()
+            .selectExpr("d", "q.value")
+            .first();
+
+    // The values have more fractional digits than a double holds, so a value read through one
+    // would come back rounded.
+    assertThat(row.getString(0)).isEqualTo("0.12345678901234567890");
+    assertThat(row.getString(1)).isEqualTo("0.12345678901234567890");
   }
 
   @Test

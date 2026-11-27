@@ -540,6 +540,55 @@ public class YamlSupport {
     }
   }
 
+  /**
+   * Returns the JSON of a subject that is not a FHIR resource, with each decimal literal and each
+   * Quantity value written as a JSON string. Spark's JSON reader reads a number token through a
+   * double, so a value with more digits than a double holds would come back rounded, while a string
+   * keeps its text.
+   *
+   * @param subject the subject
+   * @return the JSON of the subject
+   */
+  @Nonnull
+  @SuppressWarnings("unchecked")
+  public static String subjectToJson(@Nonnull final Map<Object, Object> subject) {
+    return omToJson((Map<Object, Object>) withDecimalsAsText(subject));
+  }
+
+  @Nullable
+  private static Object withDecimalsAsText(@Nullable final Object value) {
+    return switch (value) {
+      case final FhirTypedLiteral literal
+          when literal.getType() == FHIRDefinedType.DECIMAL && nonNull(literal.getLiteral()) ->
+          literal.getLiteral();
+      case final FhirTypedLiteral literal
+          when literal.getType() == FHIRDefinedType.QUANTITY && nonNull(literal.getLiteral()) ->
+          quantityWithValueAsText(FhirPathQuantity.parse(requireNonNull(literal.getLiteral())));
+      case final Map<?, ?> map -> {
+        // A map is copied entry by entry, because a subject can hold nulls, which the stream
+        // collectors reject.
+        final Map<Object, Object> copy = new LinkedHashMap<>();
+        map.forEach((key, entry) -> copy.put(key, withDecimalsAsText(entry)));
+        yield copy;
+      }
+      case final List<?> list ->
+          list.stream().map(YamlSupport::withDecimalsAsText).collect(Collectors.toList());
+      case null, default -> value;
+    };
+  }
+
+  @Nonnull
+  private static Map<Object, Object> quantityWithValueAsText(
+      @Nonnull final FhirPathQuantity quantity) {
+    // The fields are those the serializer of a Quantity literal writes, with the value as text.
+    final Map<Object, Object> fields = new LinkedHashMap<>();
+    fields.put("value", quantity.getValue().toPlainString());
+    fields.put("unit", quantity.getUnitName());
+    fields.put("code", quantity.getCode());
+    fields.put("system", quantity.getSystem());
+    return fields;
+  }
+
   @Nonnull
   public static String omToJson(@Nonnull final Map<Object, Object> objectModel) {
     try {
