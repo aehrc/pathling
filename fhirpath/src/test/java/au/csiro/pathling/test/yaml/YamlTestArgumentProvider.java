@@ -142,7 +142,7 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
   }
 
   private Function<RuntimeContext, DatasetEvaluator> createDefaultEvaluatorFactory(
-      final YamlTestDefinition spec, final SuiteSchemas suiteSchemas) {
+      final YamlTestDefinition spec, @Nonnull final SuiteSchemas suiteSchemas) {
     return Optional.ofNullable(spec.subject())
         .map(
             subject -> {
@@ -153,7 +153,7 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
   }
 
   private Function<RuntimeContext, DatasetEvaluator> createEvaluatorFactoryFromSubject(
-      final Map<Object, Object> subject, final SuiteSchemas suiteSchemas) {
+      final Map<Object, Object> subject, @Nonnull final SuiteSchemas suiteSchemas) {
     // The suite inputs pick out the FHIR subjects with the same test, so this subject is one.
     if (SuiteInputs.isFhirResource(subject)) {
       return FhirResolverFactory.of(SuiteInputs.toJson(subject), suiteSchemas);
@@ -165,7 +165,7 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
       final YamlTestDefinition spec,
       final TestConfiguration config,
       final Function<RuntimeContext, DatasetEvaluator> defaultEvaluatorFactory,
-      final SuiteSchemas suiteSchemas) {
+      @Nonnull final SuiteSchemas suiteSchemas) {
 
     final List<Arguments> cases =
         spec.cases().stream()
@@ -191,7 +191,7 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
       final TestCase testCase,
       final TestConfiguration config,
       final Function<RuntimeContext, DatasetEvaluator> defaultEvaluatorFactory,
-      final SuiteSchemas suiteSchemas) {
+      @Nonnull final SuiteSchemas suiteSchemas) {
 
     final Function<RuntimeContext, DatasetEvaluator> evaluatorFactory =
         Optional.ofNullable(testCase.inputFile())
@@ -205,7 +205,7 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
   private Function<RuntimeContext, DatasetEvaluator> createFileBasedEvaluatorFactory(
       final String inputFile,
       final Optional<String> resourceBase,
-      final SuiteSchemas suiteSchemas) {
+      @Nonnull final SuiteSchemas suiteSchemas) {
     final String path = resourceBase.orElse("") + File.separator + inputFile;
     return FhirResolverFactory.of(getResourceAsString(path), suiteSchemas);
   }

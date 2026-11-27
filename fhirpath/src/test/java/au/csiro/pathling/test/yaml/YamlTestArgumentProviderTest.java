@@ -36,6 +36,7 @@ import au.csiro.pathling.test.yaml.resolver.RuntimeContext;
 import au.csiro.pathling.test.yaml.resolver.SuiteSchemas;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Method;
@@ -173,7 +174,7 @@ class YamlTestArgumentProviderTest {
         .toList();
   }
 
-  private static boolean isFhirResourceType(final Object resourceType) {
+  private static boolean isFhirResourceType(@Nullable final Object resourceType) {
     try {
       return resourceType instanceof final String code && FHIRDefinedType.fromCode(code) != null;
     } catch (final Exception e) {

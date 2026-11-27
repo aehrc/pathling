@@ -48,6 +48,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -59,6 +60,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.yaml.snakeyaml.Yaml;
 
+@Slf4j
 @SpringBootUnitTest
 class YamlTestRunnerTest {
 
@@ -100,8 +102,7 @@ class YamlTestRunnerTest {
     final DefaultResourceDefinition subjectDefinition =
         (DefaultResourceDefinition) YamlSupport.yamlToDefinition("Test", subjectYamlModel);
 
-    System.out.println("Yaml definition:");
-    System.out.println(subjectDefinition);
+    log.debug("Yaml definition: {}", subjectDefinition);
 
     final Dataset<Row> inputDS =
         ArbitraryObjectResolverFactory.of(subjectYamlModel)

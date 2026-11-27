@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -89,10 +90,11 @@ public final class SuiteInputs {
 
   @Nonnull
   private static Stream<String> resourceFiles(@Nonnull final Class<?> suiteClass) {
-    final String base = configuration(suiteClass).resourceBase();
-    if (base.isEmpty()) {
-      return Stream.empty();
-    }
+    return resourceBase(suiteClass).map(SuiteInputs::filesIn).orElseGet(Stream::empty);
+  }
+
+  @Nonnull
+  private static Stream<String> filesIn(@Nonnull final String base) {
     try (final Stream<Path> files = Files.list(Path.of(getResourceAsUrl(base).toURI()))) {
       return files.filter(Files::isRegularFile).sorted().map(SuiteInputs::read).toList().stream();
     } catch (final IOException e) {
@@ -119,11 +121,18 @@ public final class SuiteInputs {
     return YamlTestDefinition.fromYaml(getResourceAsString(location)).subject();
   }
 
+  /**
+   * Returns the resource directory of a suite, read as {@code YamlTestArgumentProvider} reads it: a
+   * suite without a {@code YamlTestConfiguration}, or with a blank resource base, has none.
+   *
+   * @param suiteClass the test class
+   * @return the suite's resource directory, if it has one
+   */
   @Nonnull
-  private static YamlTestConfiguration configuration(@Nonnull final Class<?> suiteClass) {
-    return Objects.requireNonNull(
-        suiteClass.getAnnotation(YamlTestConfiguration.class),
-        () -> suiteClass.getSimpleName() + " has no YamlTestConfiguration");
+  static Optional<String> resourceBase(@Nonnull final Class<?> suiteClass) {
+    return Optional.ofNullable(suiteClass.getAnnotation(YamlTestConfiguration.class))
+        .map(YamlTestConfiguration::resourceBase)
+        .filter(base -> !base.isBlank());
   }
 
   @Nonnull
