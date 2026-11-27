@@ -26,6 +26,8 @@ library(purrr)
 #' @param input_type The MIME type of input string encoding. Defaults to "application/fhir+json".
 #' @param column The column in which the resources to encode are stored. If set to NULL, the input
 #'   DataFrame is assumed to have one column of type string.
+#' @param schema The schema to encode the resources with, as the JSON form of a struct type. If
+#'   NULL, the schema is inferred from the data.
 #' @return A Spark DataFrame containing the given type of resources encoded into Spark columns.
 #'
 #' @family encoding functions
@@ -41,7 +43,11 @@ library(purrr)
 #'   ))
 #' pc %>% pathling_encode(json_resources_df, "Condition")
 #' pathling_disconnect(pc)
-pathling_encode <- function(pc, df, resource_name, input_type = NULL, column = NULL) {
+pathling_encode <- function(pc, df, resource_name, input_type = NULL, column = NULL,
+                            schema = NULL) {
+  if (!is.null(schema)) {
+    stop("Encoding with a schema is not implemented yet.")
+  }
   sdf_register(j_invoke(
     pc, "encode", spark_dataframe(df), resource_name,
     input_type %||% MimeType$FHIR_JSON, column
@@ -59,6 +65,8 @@ pathling_encode <- function(pc, df, resource_name, input_type = NULL, column = N
 #' @param input_type The MIME type of the input string encoding. Defaults to 'application/fhir+json'.
 #' @param column The column in which the resources to encode are stored. If 'NULL', then the
 #'   input DataFrame is assumed to have one column of type string.
+#' @param schema The schema to encode the resources with, as the JSON form of a struct type. If
+#'   NULL, the schema is inferred from the data.
 #'
 #' @return A Spark DataFrame containing the given type of resources encoded into Spark columns.
 #'
@@ -78,7 +86,11 @@ pathling_encode <- function(pc, df, resource_name, input_type = NULL, column = N
 #'   input_type = MimeType$FHIR_XML, column = "contents"
 #' )
 #' pathling_disconnect(pc)
-pathling_encode_bundle <- function(pc, df, resource_name, input_type = NULL, column = NULL) {
+pathling_encode_bundle <- function(pc, df, resource_name, input_type = NULL, column = NULL,
+                                   schema = NULL) {
+  if (!is.null(schema)) {
+    stop("Encoding with a schema is not implemented yet.")
+  }
   sdf_register(j_invoke(
     pc, "encodeBundle", spark_dataframe(df), resource_name,
     input_type %||% MimeType$FHIR_JSON, column

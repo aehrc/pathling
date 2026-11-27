@@ -789,6 +789,7 @@ class PathlingContext:
         resource_name: str,
         input_type: Optional[str] = None,
         column: Optional[str] = None,
+        schema: Optional[StructType] = None,
     ) -> DataFrame:
         """
         Takes a dataframe with a string representations of FHIR resources in the given column and
@@ -801,10 +802,14 @@ class PathlingContext:
                `application/fhir+json`.
         :param column: the column in which the resources to encode are stored. If 'None' then the
                input dataframe is assumed to have one column of type string.
+        :param schema: the schema to encode the resources with. If 'None' then the schema is
+               inferred from the data.
         :return: a :class:`DataFrame` containing the given type of resources encoded into Spark
                  columns
         """
 
+        if schema is not None:
+            raise NotImplementedError("Encoding with a schema is not implemented yet.")
         return self._wrap_df(
             self._jpc.encode(
                 df._jdf, resource_name, input_type or MimeType.FHIR_JSON, column
@@ -817,6 +822,7 @@ class PathlingContext:
         resource_name: str,
         input_type: Optional[str] = None,
         column: Optional[str] = None,
+        schema: Optional[StructType] = None,
     ) -> DataFrame:
         """
         Takes a dataframe with a string representations of FHIR bundles  in the given column and
@@ -829,9 +835,13 @@ class PathlingContext:
                `application/fhir+json`.
         :param column: the column in which the resources to encode are stored. If 'None' then the
                input dataframe is assumed to have one column of type string.
+        :param schema: the schema to encode the resources with. If 'None' then the schema is
+               inferred from the data.
         :return: a :class:`DataFrame` containing the given type of resources encoded into Spark
                  columns
         """
+        if schema is not None:
+            raise NotImplementedError("Encoding with a schema is not implemented yet.")
         return self._wrap_df(
             self._jpc.encodeBundle(
                 df._jdf, resource_name, input_type or MimeType.FHIR_JSON, column
