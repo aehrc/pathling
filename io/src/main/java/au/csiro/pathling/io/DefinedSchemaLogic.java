@@ -98,4 +98,16 @@ final class DefinedSchemaLogic {
             observed)
         .schema();
   }
+
+  /**
+   * Returns a schema in canonical field order at every depth, without reading any data (FR-027).
+   *
+   * @param resourceType the type of the resources the schema describes
+   * @param schema the schema, in this layout
+   * @return the schema in canonical order
+   */
+  @Nonnull
+  StructType canonicalSchema(@Nonnull final String resourceType, @Nonnull final StructType schema) {
+    throw new UnsupportedOperationException("Canonicalisation is not implemented yet.");
+  }
 }

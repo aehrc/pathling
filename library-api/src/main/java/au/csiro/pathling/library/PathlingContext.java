@@ -78,6 +78,7 @@ import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import scala.jdk.javaapi.OptionConverters;
@@ -729,6 +730,18 @@ public class PathlingContext {
               + " with a schema fitted to the data, which a stream cannot provide. Encode each"
               + " batch, for example within foreachBatch, instead.");
     }
+  }
+
+  /**
+   * Returns a schema set with each schema in canonical field order at every depth, without reading
+   * any data (FR-027).
+   *
+   * @param schemas the schema set, keyed by resource type code
+   * @return the schema set in canonical order
+   */
+  @Nonnull
+  public Map<String, StructType> canonicalSchemas(@Nonnull final Map<String, StructType> schemas) {
+    throw new UnsupportedOperationException("canonicalSchemas is not implemented yet.");
   }
 
   /**

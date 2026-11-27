@@ -14,7 +14,8 @@
 #  limitations under the License.
 
 # Tests the sources of the R API read with a schema set, given as a named list of strings, each a
-# struct type's JSON form (T022, FR-001, FR-004).
+# struct type's JSON form (T022, FR-001, FR-004), and the schemas a source reports and their
+# canonicalisation (T038, T066, FR-019, FR-027).
 
 # Eleven resource types of the bundles test data, one more than the ten that an earlier binding
 # could pass.
@@ -161,6 +162,61 @@ for (kind in sources) {
       schemas <- list(Patient = defined$Patient, Condition = value)
 
       expect_error(open_source(kind, pc, schemas), "Condition")
+    }
+  })
+}
+
+# The JSON form of a struct type with the fields of every struct within it in reverse order. Field
+# metadata stays a JSON object, empty or not.
+reversed_schema <- function(json) {
+  reverse <- function(type) {
+    if (!is.list(type)) {
+      return(type)
+    }
+    if (identical(type$type, "struct")) {
+      type$fields <- rev(lapply(type$fields, function(field) {
+        field$type <- reverse(field$type)
+        if (length(field$metadata) == 0) {
+          field$metadata <- structure(list(), names = character(0))
+        }
+        field
+      }))
+    } else if (identical(type$type, "array")) {
+      type$elementType <- reverse(type$elementType)
+    }
+    type
+  }
+  jsonlite::toJSON(
+    reverse(jsonlite::fromJSON(json, simplifyVector = FALSE)),
+    auto_unbox = TRUE, digits = NA
+  )
+}
+
+test_that("a set out of order canonicalises to the order an inferred load gives", {
+  canonical <- schemas_of(inferred_source(pc), c("Patient", "Condition"))
+  out_of_order <- lapply(canonical, function(schema) as.character(reversed_schema(schema)))
+  expect_false(identical(out_of_order, canonical))
+
+  expect_equal(pathling_canonical_schemas(pc, out_of_order), canonical)
+})
+
+# The schemas a source reports for Patient and Condition, which every source holds.
+held_schemas <- function(ds) {
+  schemas <- ds_schemas(ds)
+  expect_true(all(c("Patient", "Condition") %in% names(schemas)))
+  schemas[c("Patient", "Condition")]
+}
+
+for (kind in sources) {
+  test_that(paste("the schemas of the", kind, "source round trip through a file into every source"), {
+    path <- tempfile(fileext = ".json")
+    pathling_write_schemas(spark, held_schemas(open_source(kind, pc, NULL, database)), path)
+    read_back <- pathling_read_schemas(spark, path)
+
+    for (target in sources) {
+      reported <- held_schemas(open_source(target, pc, read_back, database))
+
+      expect_true(same_schema_set(reported, read_back), label = paste(kind, "into", target))
     }
   })
 }

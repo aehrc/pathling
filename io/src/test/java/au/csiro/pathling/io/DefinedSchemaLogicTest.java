@@ -18,11 +18,25 @@
 package au.csiro.pathling.io;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.schema.SchemaConfiguration;
 import jakarta.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.spark.SparkContext;
+import org.apache.spark.scheduler.SparkListener;
+import org.apache.spark.scheduler.SparkListenerJobEnd;
+import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.MetadataBuilder;
@@ -32,7 +46,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Tests the derivation of the observed shape and the layout schema from a schema defined up front
- * (T007, FR-007, FR-008, SC-009).
+ * (T007, FR-007, FR-008, SC-009), and its canonicalisation (T057, FR-027).
  */
 class DefinedSchemaLogicTest {
 
@@ -221,5 +235,220 @@ class DefinedSchemaLogicTest {
             "resourceType STRING, id STRING,"
                 + " name ARRAY<STRUCT<family: STRING, given: ARRAY<STRING>>>"),
         logic().layoutSchema("Patient", schema));
+  }
+
+  /**
+   * Patients that between them populate a choice element with two of its types, an open choice at
+   * the top level and inside a primitive metadata group, metadata groups at the top level and
+   * inside an array of structs, and nested complex elements.
+   */
+  @Nonnull
+  private static final List<String> PATIENTS =
+      List.of(
+          "{\"resourceType\":\"Patient\",\"id\":\"a\","
+              + "\"extension\":[{\"url\":\"u1\",\"valueString\":\"x\"}],\"active\":true,"
+              + "\"name\":[{\"family\":\"F\",\"given\":[\"G\"],\"_given\":[{\"id\":\"g1\"}]}],"
+              + "\"gender\":\"male\",\"birthDate\":\"2000-01-01\","
+              + "\"_birthDate\":{\"id\":\"b\",\"extension\":[{\"url\":\"u2\",\"valueCode\":\"c\"}]},"
+              + "\"deceasedBoolean\":false,"
+              + "\"maritalStatus\":{\"coding\":[{\"system\":\"s\",\"code\":\"M\"}],"
+              + "\"text\":\"Married\"},\"multipleBirthInteger\":2}",
+          "{\"resourceType\":\"Patient\",\"id\":\"b\","
+              + "\"extension\":[{\"url\":\"u3\",\"valueInteger\":1}],"
+              + "\"birthDate\":\"2001\","
+              + "\"_birthDate\":{\"extension\":[{\"url\":\"u4\",\"valueString\":\"s\"}]},"
+              + "\"deceasedDateTime\":\"2020-01-01\"}");
+
+  /** An Observation whose quantity and date carry annotations under the default configuration. */
+  @Nonnull
+  private static final List<String> OBSERVATIONS =
+      List.of(
+          "{\"resourceType\":\"Observation\",\"id\":\"o\",\"status\":\"final\","
+              + "\"code\":{\"text\":\"t\"},\"effectiveDateTime\":\"2020-01-01\","
+              + "\"valueQuantity\":{\"value\":1.5,\"unit\":\"mg\","
+              + "\"system\":\"http://unitsofmeasure.org\",\"code\":\"mg\"}}");
+
+  /**
+   * Returns the schema an inferred load of FHIR JSON gives, with primitive metadata stored and the
+   * annotations of the default configuration, which is canonical by construction (SC-009).
+   */
+  @Nonnull
+  private static StructType inferred(
+      @Nonnull final String resourceType, @Nonnull final List<String> documents) {
+    return Annotator.of(TransformFixtures.DEFINITIONS, SchemaConfiguration.builder().build())
+        .annotate(
+            resourceType,
+            TransformFixtures.metadataReader()
+                .json()
+                .read(
+                    resourceType,
+                    TransformFixtures.spark()
+                        .createDataset(new ArrayList<>(documents), Encoders.STRING())))
+        .schema();
+  }
+
+  /** Returns a type with the fields of every struct within it in reverse order. */
+  @Nonnull
+  private static DataType reversed(@Nonnull final DataType type) {
+    if (type instanceof final StructType struct) {
+      final List<StructField> fields = new ArrayList<>();
+      for (final StructField field : struct.fields()) {
+        fields.add(
+            new StructField(
+                field.name(), reversed(field.dataType()), field.nullable(), field.metadata()));
+      }
+      Collections.reverse(fields);
+      return DataTypes.createStructType(fields);
+    }
+    if (type instanceof final ArrayType array) {
+      return DataTypes.createArrayType(reversed(array.elementType()), array.containsNull());
+    }
+    return type;
+  }
+
+  @Nonnull
+  private static StructType reversed(@Nonnull final StructType type) {
+    return (StructType) reversed((DataType) type);
+  }
+
+  @Test
+  void canonicalisesPatientOutOfOrderAtEveryDepth() {
+    final StructType canonical = inferred("Patient", PATIENTS);
+    // The oracle holds every structure the canonical order places.
+    final String catalog = canonical.catalogString();
+    assertTrue(catalog.contains("deceasedBoolean:boolean,deceasedDateTime:"), catalog);
+    assertTrue(catalog.contains("_birthDate:struct<"), catalog);
+    assertTrue(catalog.contains("_given:array<"), catalog);
+    assertTrue(catalog.contains("valueCode:"), catalog);
+
+    final StructType outOfOrder = reversed(canonical);
+
+    assertEquals(canonical, logic().canonicalSchema("Patient", outOfOrder));
+  }
+
+  @Test
+  void canonicalisesAnnotationsToTheirCanonicalPlaces() {
+    final StructType canonical = inferred("Observation", OBSERVATIONS);
+    assertTrue(canonical.catalogString().contains("__canonical_code"), canonical.catalogString());
+
+    assertEquals(canonical, logic().canonicalSchema("Observation", reversed(canonical)));
+  }
+
+  @Test
+  void returnsCanonicalSchemaUnchanged() {
+    final StructType patient = inferred("Patient", PATIENTS);
+    final StructType observation = inferred("Observation", OBSERVATIONS);
+
+    assertEquals(patient, logic().canonicalSchema("Patient", patient));
+    assertEquals(observation, logic().canonicalSchema("Observation", observation));
+  }
+
+  @Test
+  void keepsNullabilityAndFieldMetadataOfEachField() {
+    // Canonicalisation only reorders, so a field keeps its nullability and metadata wherever it
+    // goes.
+    final Metadata metadata = new MetadataBuilder().putString("comment", "given").build();
+    final StructField family =
+        DataTypes.createStructField("family", DataTypes.StringType, false, metadata);
+    final StructField given =
+        DataTypes.createStructField(
+            "given", DataTypes.createArrayType(DataTypes.StringType, false), false);
+    final StructField resourceType =
+        DataTypes.createStructField("resourceType", DataTypes.StringType, false, metadata);
+    final StructField id = DataTypes.createStructField("id", DataTypes.StringType, false);
+    final StructType schema =
+        DataTypes.createStructType(
+            Arrays.asList(
+                DataTypes.createStructField(
+                    "name",
+                    DataTypes.createArrayType(
+                        DataTypes.createStructType(Arrays.asList(given, family)), false),
+                    false),
+                id,
+                resourceType));
+    final StructType expected =
+        DataTypes.createStructType(
+            Arrays.asList(
+                resourceType,
+                id,
+                DataTypes.createStructField(
+                    "name",
+                    DataTypes.createArrayType(
+                        DataTypes.createStructType(Arrays.asList(family, given)), false),
+                    false)));
+
+    assertEquals(expected, logic().canonicalSchema("Patient", schema));
+  }
+
+  @Test
+  void dropsFieldsTheDefinitionsDoNotDescribe() {
+    final StructType schema =
+        StructType.fromDDL(
+            "unknown STRING, name ARRAY<STRUCT<given: ARRAY<STRING>, nickname: STRING,"
+                + " family: STRING>>, id STRING, resourceType STRING");
+
+    assertEquals(
+        StructType.fromDDL(
+            "resourceType STRING, id STRING,"
+                + " name ARRAY<STRUCT<family: STRING, given: ARRAY<STRING>>>"),
+        logic().canonicalSchema("Patient", schema));
+  }
+
+  @Test
+  void refusesFieldWhoseTypeContradictsTheDefinitions() {
+    final StructType schema = StructType.fromDDL("id STRING, resourceType STRING, birthDate INT");
+
+    final IllegalArgumentException error =
+        assertThrows(
+            IllegalArgumentException.class, () -> logic().canonicalSchema("Patient", schema));
+    assertTrue(error.getMessage().contains("Patient"), error.getMessage());
+    assertTrue(error.getMessage().contains("birthDate"), error.getMessage());
+  }
+
+  @Test
+  void refusesFieldWhoseCardinalityContradictsTheDefinitions() {
+    // A repeating element held as a single struct, a single element held as an array, and a
+    // nested repeating element held as a single value.
+    final Map<String, String> pathsByDdl =
+        Map.of(
+            "resourceType STRING, name STRUCT<family: STRING>", "name",
+            "resourceType STRING, gender ARRAY<STRING>", "gender",
+            "resourceType STRING, name ARRAY<STRUCT<given: STRING>>", "name.given");
+    pathsByDdl.forEach(
+        (ddl, path) -> {
+          final StructType schema = StructType.fromDDL(ddl);
+
+          final IllegalArgumentException error =
+              assertThrows(
+                  IllegalArgumentException.class,
+                  () -> logic().canonicalSchema("Patient", schema),
+                  ddl);
+          assertTrue(error.getMessage().contains("Patient"), error.getMessage());
+          assertTrue(error.getMessage().contains(path), error.getMessage());
+        });
+  }
+
+  @Test
+  void canonicalisesWithoutRunningAJob() throws TimeoutException {
+    final StructType outOfOrder = reversed(inferred("Patient", PATIENTS));
+    final AtomicInteger jobs = new AtomicInteger();
+    final SparkListener listener =
+        new SparkListener() {
+          @Override
+          public void onJobEnd(final SparkListenerJobEnd jobEnd) {
+            jobs.incrementAndGet();
+          }
+        };
+    final SparkContext context = TransformFixtures.spark().sparkContext();
+    context.listenerBus().waitUntilEmpty();
+    context.addSparkListener(listener);
+    try {
+      logic().canonicalSchema("Patient", outOfOrder);
+      context.listenerBus().waitUntilEmpty();
+    } finally {
+      context.removeSparkListener(listener);
+    }
+
+    assertEquals(0, jobs.get());
   }
 }
