@@ -20,21 +20,13 @@ import TabItem from "@theme/TabItem";
 
 ```python
 from pathling import PathlingContext
-from pyspark.sql import SparkSession
 
-spark = (
-    SparkSession.builder.config(
-        "spark.jars.packages",
-        "au.csiro.pathling:library-runtime:[some pre-release version]-SNAPSHOT"
-    )
-    .config(
-        "spark.jars.repositories",
-        "https://central.sonatype.com/repository/maven-snapshots",
-    )
-    .getOrCreate()
+pc = PathlingContext.create(
+    spark_conf={
+        "spark.jars.packages": "au.csiro.pathling:library-runtime:[some pre-release version]-SNAPSHOT",
+        "spark.jars.repositories": "https://central.sonatype.com/repository/maven-snapshots",
+    }
 )
-
-pc = PathlingContext.create(spark)
 ```
 
 </TabItem>
@@ -46,9 +38,16 @@ library(pathling)
 
 sc <- spark_connect(
         master = "local",
+        version = pathling_spark_info()$spark_version,
         packages = "au.csiro.pathling:library-runtime:[some pre-release version]-SNAPSHOT",
-        repositories = "https://central.sonatype.com/repository/maven-snapshots",
-        version = "3.5.6"
+        config = list(
+                "sparklyr.shell.repositories" = "https://central.sonatype.com/repository/maven-snapshots",
+                "sparklyr.shell.conf" = c(
+                        "spark.sql.parquet.outputTimestampType=TIMESTAMP_MICROS",
+                        "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
+                        "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
+                )
+        )
 )
 
 pc <- pathling_connect(sc)
