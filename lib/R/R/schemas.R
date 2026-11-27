@@ -54,7 +54,7 @@ pathling_canonical_schemas <- function(pc, schemas) {
 #'
 #' @family schema set functions
 #'
-#' @importFrom sparklyr j_invoke_static spark_connection
+#' @importFrom sparklyr invoke_static spark_connection
 #'
 #' @export
 #'
@@ -63,7 +63,7 @@ pathling_canonical_schemas <- function(pc, schemas) {
 #' }
 pathling_write_schemas <- function(sc, schemas, path) {
   java_schemas <- to_java_schema_map(spark_connection(sc), schemas)
-  content <- j_invoke_static(
+  content <- invoke_static(
     spark_connection(sc), "au.csiro.pathling.library.SchemaSets", "toJson", java_schemas
   )
   writeLines(content, path)
@@ -105,22 +105,30 @@ pathling_read_schemas <- function(sc, path) {
 
 #' Convert a Java map of resource types to schemas into a named list
 #'
+#' The map Java returns is an instance of a class internal to the JDK, whose methods sparklyr
+#' cannot call, and so are its key set and iterators. The map and its keys are therefore first
+#' copied into a \code{LinkedHashMap} and an \code{ArrayList}, which are public classes, keeping
+#' their order. The keys and the JSON forms are fetched with \code{invoke}, which converts them to R
+#' values, where \code{j_invoke} would return references to them.
+#'
 #' @param java_schemas A jobj referring to a \code{java.util.Map} from resource type codes to
 #'   \code{StructType} objects.
 #'
 #' @return A named list of the JSON forms of the schemas, in the order of the map.
 #'
-#' @importFrom sparklyr j_invoke
+#' @importFrom sparklyr invoke j_invoke j_invoke_new spark_connection
 #' @noRd
 from_java_schema_map <- function(java_schemas) {
+  sc <- spark_connection(java_schemas)
+  copy <- j_invoke_new(sc, "java.util.LinkedHashMap", java_schemas)
   resource_types <- as.character(unlist(
-    java_schemas %>% j_invoke("keySet") %>% j_invoke("toArray")
+    j_invoke_new(sc, "java.util.ArrayList", j_invoke(copy, "keySet")) %>% invoke("toArray")
   ))
   stats::setNames(
     lapply(resource_types, function(resource_type) {
-      java_schemas %>%
+      copy %>%
         j_invoke("get", resource_type) %>%
-        j_invoke("json")
+        invoke("json")
     }),
     resource_types
   )
