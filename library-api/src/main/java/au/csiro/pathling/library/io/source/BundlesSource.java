@@ -17,12 +17,16 @@
 
 package au.csiro.pathling.library.io.source;
 
+import au.csiro.pathling.io.SchemaSet;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 
 /**
  * A class for making data within a set of FHIR Bundles available for query.
@@ -53,18 +57,47 @@ public class BundlesSource extends FileSource {
       @Nonnull final String path,
       @Nonnull final String mimeType,
       @Nonnull final Set<String> resourceTypes) {
+    this(context, path, mimeType, resourceTypes, DefinedSchemaReads.noSchemas());
+  }
+
+  /**
+   * Constructs a BundlesSource with the specified PathlingContext, path, MIME type, and resource
+   * types, reading each resource type a schema set names with its schema.
+   *
+   * @param context the PathlingContext to use
+   * @param path the path to the files containing FHIR Bundles
+   * @param mimeType the MIME type of the FHIR data (e.g., "application/fhir+json")
+   * @param resourceTypes the set of FHIR resource types that are expected in the bundles
+   * @param schemaSet the schema set, which may be empty
+   */
+  BundlesSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final String path,
+      @Nonnull final String mimeType,
+      @Nonnull final Set<String> resourceTypes,
+      @Nonnull final SchemaSet schemaSet) {
     super(
         context,
-        path,
         // Map to the fixed set of resource types for all files.
-        p -> new HashSet<>(resourceTypes),
+        retrieveFilesFromPath(path, context, p -> new HashSet<>(resourceTypes)),
         // Use the file extension that matches the FHIR MIME type.
         MIME_TYPE_TO_EXTENSION.get(mimeType),
         // Treat the whole file as a record, rather than individual lines.
         context.getSpark().read().option("wholetext", true).format("text"),
         // Extract the nominated resource types from each file and encode using the specified MIME
-        // type.
-        (sourceData, resourceType) -> context.encodeBundle(sourceData, resourceType, mimeType),
-        resourceType -> true);
+        // type, with the schema of the type if the set has one.
+        reads(context, schemaSet, mimeType),
+        resourceType -> true,
+        false,
+        schemaSet);
+  }
+
+  @Nonnull
+  private static BiFunction<Dataset<Row>, String, Dataset<Row>> reads(
+      @Nonnull final PathlingContext context,
+      @Nonnull final SchemaSet schemaSet,
+      @Nonnull final String mimeType) {
+    final DefinedSchemaReads reads = DefinedSchemaReads.of(context, schemaSet);
+    return (sourceData, resourceType) -> reads.encodeBundles(sourceData, resourceType, mimeType);
   }
 }

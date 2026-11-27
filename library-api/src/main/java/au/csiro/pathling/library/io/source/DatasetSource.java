@@ -19,6 +19,7 @@ package au.csiro.pathling.library.io.source;
 
 import static java.util.Objects.requireNonNull;
 
+import au.csiro.pathling.io.SchemaSet;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -50,34 +51,58 @@ public class DatasetSource extends AbstractSource {
    */
   @Nonnull protected Map<String, Dataset<Row>> resourceMap = new HashMap<>();
 
+  /** Projects each dataset added of a type the schema set names onto the set's schema. */
+  @Nonnull private final DefinedSchemaReads reads;
+
   /**
    * Constructs a DatasetSource with the specified PathlingContext.
    *
    * @param context the PathlingContext to use
    */
   public DatasetSource(@Nonnull final PathlingContext context) {
-    super(context);
+    this(context, DefinedSchemaReads.noSchemas());
   }
 
+  /**
+   * Constructs a DatasetSource with the specified PathlingContext, projecting each dataset added of
+   * a resource type a schema set names onto its schema.
+   *
+   * @param context the PathlingContext to use
+   * @param schemaSet the schema set, which may be empty
+   */
+  DatasetSource(@Nonnull final PathlingContext context, @Nonnull final SchemaSet schemaSet) {
+    super(context);
+    this.reads = DefinedSchemaReads.of(context, schemaSet);
+  }
+
+  /**
+   * Constructs a DatasetSource holding datasets already added, which projects each dataset added to
+   * it later as the source it was derived from does.
+   */
   private DatasetSource(
       @Nonnull final PathlingContext context,
-      @Nonnull final Map<String, Dataset<Row>> resourceMap) {
+      @Nonnull final Map<String, Dataset<Row>> resourceMap,
+      @Nonnull final DefinedSchemaReads reads) {
     super(context);
+    this.reads = reads;
     this.resourceMap = resourceMap;
   }
 
   /**
-   * Add a dataset to this source.
+   * Add a dataset to this source. A dataset of a resource type the source's schema set names is
+   * projected onto the set's schema as it is added.
    *
    * @param resourceType the resource code
    * @param dataset the dataset
    * @return this data source, for chaining
+   * @throws IllegalArgumentException if a field of the dataset differs from a field of the set's
+   *     schema only in case, or a struct of it holds two fields differing only in case
    */
   public DatasetSource dataset(
       @Nullable final String resourceType, @Nullable final Dataset<Row> dataset) {
     requireNonNull(resourceType);
     requireNonNull(dataset);
-    resourceMap.put(resourceType, dataset);
+    resourceMap.put(resourceType, reads.project(dataset, resourceType));
     return this;
   }
 
@@ -105,7 +130,7 @@ public class DatasetSource extends AbstractSource {
       final Dataset<Row> dataset = entry.getValue();
       transformedMap.put(resourceType, operator.apply(entry.getKey(), dataset));
     }
-    return new DatasetSource(context, transformedMap);
+    return new DatasetSource(context, transformedMap, reads);
   }
 
   @Override
@@ -115,7 +140,7 @@ public class DatasetSource extends AbstractSource {
         resourceMap.entrySet().stream()
             .filter(entry -> resourceTypePredicate.test(entry.getKey()))
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    return new DatasetSource(context, filteredMap);
+    return new DatasetSource(context, filteredMap, reads);
   }
 
   @Override

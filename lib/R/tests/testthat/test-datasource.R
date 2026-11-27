@@ -158,23 +158,34 @@ test_that("datasource parquet with supplied schemas", {
   pc <- def_pathling_context(spark)
   warehouse <- file.path(tempdir(), "parquet-supplied")
   table <- write_divergent_parquet(spark, warehouse)
-  union <- spark %>%
+  merged <- spark %>%
     sparklyr::spark_session() %>%
     sparklyr::invoke("read") %>%
     sparklyr::invoke("format", "parquet") %>%
     sparklyr::invoke("option", "mergeSchema", "true") %>%
     sparklyr::invoke("load", table) %>%
-    sparklyr::invoke("schema")
+    sparklyr::sdf_register()
+  schema_of <- function(df) {
+    df %>%
+      sparklyr::invoke("schema") %>%
+      sparklyr::invoke("json")
+  }
 
-  patients <- pc %>%
-    pathling_read_parquet(warehouse, schemas = list(Patient = union %>% sparklyr::invoke("json"))) %>%
-    ds_read("Patient")
+  # A supplied schema, the union of the files' schemas or one narrower than it, is projected to:
+  # the read has that schema, and keeps every row.
+  for (fields in list(c("birthDate", "gender", "id"), c("gender", "id"))) {
+    schema <- merged %>%
+      select(all_of(fields)) %>%
+      sparklyr::spark_dataframe() %>%
+      schema_of()
 
-  expect_equal(
-    patients %>% sparklyr::spark_dataframe() %>% sparklyr::invoke("schema") %>% sparklyr::invoke("json"),
-    union %>% sparklyr::invoke("json")
-  )
-  expect_equal(sparklyr::sdf_nrow(patients), 2)
+    patients <- pc %>%
+      pathling_read_parquet(warehouse, schemas = list(Patient = schema)) %>%
+      ds_read("Patient")
+
+    expect_true(same_schema(patients %>% sparklyr::spark_dataframe() %>% schema_of(), schema))
+    expect_equal(sparklyr::sdf_nrow(patients), 2)
+  }
 })
 
 test_that("datasource delta", {

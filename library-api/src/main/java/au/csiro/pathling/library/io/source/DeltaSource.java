@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.library.io.source;
 
+import au.csiro.pathling.io.SchemaSet;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import java.util.Collection;
@@ -62,6 +63,24 @@ public class DeltaSource extends FileSource {
       @Nonnull final PathlingContext context,
       @Nonnull final String path,
       final boolean layoutDetection) {
+    this(context, path, DefinedSchemaReads.noSchemas(), layoutDetection);
+  }
+
+  /**
+   * Constructs a DeltaSource with the specified PathlingContext and path, projecting each table of
+   * a resource type a schema set names onto its schema as it is read. See {@link
+   * #DeltaSource(PathlingContext, String, boolean)} for what layout detection does.
+   *
+   * @param context the PathlingContext to use
+   * @param path the path to the Delta table directory
+   * @param schemaSet the schema set, which may be empty
+   * @param layoutDetection whether the layout of each table is classified as it is read
+   */
+  DeltaSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final String path,
+      @Nonnull final SchemaSet schemaSet,
+      final boolean layoutDetection) {
     super(
         context,
         // Use the "resource name with qualifier" mapper by default, which takes the resource name
@@ -70,11 +89,12 @@ public class DeltaSource extends FileSource {
         // Delta tables store data in parquet format internally, so we use the parquet extension.
         "parquet",
         context.getSpark().read().format("delta"),
-        // Apply no transformations on the data - we assume it has already been processed using the
-        // Pathling FHIR encoders.
-        (sourceData, resourceType) -> sourceData,
+        // The data is assumed to be in this layout already, so only a type the schema set names is
+        // transformed, by projecting it onto the set's schema.
+        DefinedSchemaReads.of(context, schemaSet)::project,
         resourceType -> true,
-        layoutDetection);
+        layoutDetection,
+        schemaSet);
   }
 
   /**

@@ -250,9 +250,9 @@ final class DeltaSink implements DataSink {
               dataset.schema(),
               DefinitionCanonicalStructure.forResource(
                   FhirDefinitionContext.of(context.getFhirContext()), resourceType));
-      updates = Projection.project(dataset, union);
+      updates = projectForMerge(resourceType, dataset, union);
     } else if (!sourcePaths.containsAll(targetPaths)) {
-      updates = Projection.project(dataset, targetSchema);
+      updates = projectForMerge(resourceType, dataset, targetSchema);
     } else {
       updates = dataset;
     }
@@ -310,5 +310,19 @@ final class DeltaSink implements DataSink {
    */
   private boolean deltaTableExists(@Nonnull final String tablePath) {
     return DeltaTable.isDeltaTable(context.getSpark(), tablePath);
+  }
+
+  /** Projects the data of a merge onto a schema, naming the resource type in a refusal. */
+  @Nonnull
+  private static Dataset<Row> projectForMerge(
+      @Nonnull final String resourceType,
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final StructType schema) {
+    try {
+      return Projection.project(dataset, schema);
+    } catch (final IllegalArgumentException e) {
+      throw new IllegalArgumentException(
+          "Cannot merge " + resourceType + " into its table: " + e.getMessage(), e);
+    }
   }
 }

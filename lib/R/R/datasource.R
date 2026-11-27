@@ -230,9 +230,11 @@ pathling_read_parquet <- function(pc, path, schemas = NULL, layout_detection = T
     return(pc %>% invoke_stored_datasource(layout_detection, "parquet", as.character(path)))
   }
   sc <- sparklyr::spark_connection(pc)
-  pc %>% invoke_stored_datasource(
-    layout_detection, "parquetWithSchemas", as.character(path), to_java_schema_map(sc, schemas)
-  )
+  pc %>%
+    data_sources() %>%
+    j_invoke("withLayoutDetection", as.logical(layout_detection)) %>%
+    j_invoke("withSchemas", to_java_schema_map(sc, schemas)) %>%
+    j_invoke("parquet", as.character(path))
 }
 
 #' Build a Java map of resource types to schemas

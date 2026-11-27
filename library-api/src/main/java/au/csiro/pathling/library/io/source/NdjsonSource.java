@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.library.io.source;
 
+import au.csiro.pathling.io.SchemaSet;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import java.util.Collection;
@@ -110,16 +111,35 @@ public class NdjsonSource extends FileSource {
       @Nonnull final String path,
       @Nonnull final String extension,
       @Nonnull final Function<String, Set<String>> fileNameMapper) {
+    this(context, path, extension, fileNameMapper, DefinedSchemaReads.noSchemas());
+  }
+
+  /**
+   * Constructs an NdjsonSource with the specified PathlingContext, path, extension, and file name
+   * mapper, reading each resource type a schema set names with its schema.
+   *
+   * @param context the PathlingContext to use
+   * @param path the path to the NDJSON file or directory
+   * @param extension the file extension to recognize as NDJSON files
+   * @param fileNameMapper a function that maps a file name to a set of resource types
+   * @param schemaSet the schema set, which may be empty
+   */
+  NdjsonSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final String path,
+      @Nonnull final String extension,
+      @Nonnull final Function<String, Set<String>> fileNameMapper,
+      @Nonnull final SchemaSet schemaSet) {
     super(
         context,
-        path,
-        fileNameMapper,
+        retrieveFilesFromPath(path, context, fileNameMapper),
         extension,
         // Read each line of input separately.
         context.getSpark().read().format("text"),
-        // Encode each line of input as a JSON FHIR resource.
-        (sourceData, resourceType) ->
-            context.encode(sourceData, resourceType, PathlingContext.FHIR_JSON),
-        resourceType -> true);
+        // Encode each line of input as a JSON FHIR resource, with its schema if the set has one.
+        DefinedSchemaReads.of(context, schemaSet)::encode,
+        resourceType -> true,
+        false,
+        schemaSet);
   }
 }

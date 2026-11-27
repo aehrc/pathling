@@ -23,9 +23,11 @@ from uuid import uuid4
 from flask import Response
 from py4j.protocol import Py4JJavaError
 from pyspark.sql import DataFrame, Row
+from pyspark.sql.types import StructType
 from pytest import fixture, mark, raises
 
 from pathling.datasource import DataSource
+from tests.schema_equality import same_schema
 
 
 @fixture(scope="function", autouse=True)
@@ -215,15 +217,21 @@ def test_datasource_parquet_merges_divergent_files(func_temp_dir, pathling_ctx):
     assert patients.count() == 2
 
 
-def test_datasource_parquet_with_supplied_schemas(func_temp_dir, pathling_ctx):
+@mark.parametrize("fields", [["birthDate", "gender", "id"], ["gender", "id"]])
+def test_datasource_parquet_with_supplied_schemas(fields, func_temp_dir, pathling_ctx):
+    """
+    A supplied schema, the union of the files' schemas or one narrower than it, is projected to:
+    the read has that schema, and keeps every row.
+    """
     table = write_divergent_parquet(pathling_ctx.spark, func_temp_dir)
     union = pathling_ctx.spark.read.option("mergeSchema", "true").parquet(table).schema
+    schema = StructType([union[field] for field in fields])
 
     patients = pathling_ctx.read.parquet(
-        func_temp_dir, schemas={"Patient": union}
+        func_temp_dir, schemas={"Patient": schema}
     ).read("Patient")
 
-    assert patients.schema == union
+    assert same_schema(patients.schema, schema)
     assert patients.count() == 2
 
 

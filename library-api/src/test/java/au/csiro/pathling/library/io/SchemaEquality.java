@@ -20,6 +20,7 @@ package au.csiro.pathling.library.io;
 import au.csiro.pathling.utilities.AnnotationNames;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.apache.spark.sql.types.ArrayType;
@@ -62,6 +63,40 @@ public final class SchemaEquality {
       @Nonnull final Map<String, StructType> left, @Nonnull final Map<String, StructType> right) {
     return left.keySet().equals(right.keySet())
         && left.keySet().stream().allMatch(type -> same(left.get(type), right.get(type)));
+  }
+
+  /**
+   * Returns the dotted path of every annotation field of a schema, at any depth, sorted. Arrays and
+   * maps add nothing to a path.
+   *
+   * @param schema the schema
+   * @return the paths of its annotation fields
+   */
+  @Nonnull
+  public static List<String> annotationPaths(@Nonnull final StructType schema) {
+    return annotationPaths(schema, "").sorted().toList();
+  }
+
+  @Nonnull
+  private static Stream<String> annotationPaths(
+      @Nonnull final DataType type, @Nonnull final String prefix) {
+    if (type instanceof final StructType struct) {
+      return Arrays.stream(struct.fields()).flatMap(field -> annotationPaths(field, prefix));
+    } else if (type instanceof final ArrayType array) {
+      return annotationPaths(array.elementType(), prefix);
+    } else if (type instanceof final MapType map) {
+      return annotationPaths(map.valueType(), prefix);
+    }
+    return Stream.empty();
+  }
+
+  @Nonnull
+  private static Stream<String> annotationPaths(
+      @Nonnull final StructField field, @Nonnull final String prefix) {
+    final String path = prefix + field.name();
+    return AnnotationNames.isAnnotation(field.name())
+        ? Stream.of(path)
+        : annotationPaths(field.dataType(), path + ".");
   }
 
   /**
