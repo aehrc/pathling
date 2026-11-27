@@ -517,9 +517,10 @@ public class PathlingContext {
    * Takes a dataframe with string representations of FHIR resources and encodes the resources of
    * the given type as a Spark dataframe, in the Parquet on FHIR layout.
    *
-   * <p>Documents of other resource types are left out. A streaming dataframe cannot be encoded,
-   * because the Parquet on FHIR layout fits its schema to the data. The resources are annotated as
-   * the schema configuration says (see {@link #annotate}).
+   * <p>Documents of other resource types are left out. The schema is inferred from the data, so a
+   * streaming dataframe is refused with {@link UnsupportedOperationException}: encode a stream with
+   * {@link #encodeWithSchema}, or encode each batch within {@code foreachBatch}. The resources are
+   * annotated as the schema configuration says (see {@link #annotate}).
    *
    * @param stringResourcesDf the dataframe with the string representation of the resources.
    * @param resourceName the name of the resources to encode.
@@ -536,7 +537,7 @@ public class PathlingContext {
       @Nullable final String maybeColumnName) {
 
     final Dataset<String> stringResources = documents(stringResourcesDf, maybeColumnName);
-    requireEncodable(stringResources, resourceName);
+    requireEncodable(stringResources, resourceName, null);
     return annotator.annotate(
         resourceName,
         fhirReader
@@ -586,6 +587,10 @@ public class PathlingContext {
    * <p>It has a name of its own, rather than overloading {@code encode}, because the overload
    * taking a column name also takes a null as its fourth argument (research R22).
    *
+   * <p>With a schema, a streaming dataframe is encoded as a streaming dataframe, since nothing has
+   * to be read from the data to give its schema (FR-012). Without one, a stream is refused as
+   * {@code encode} refuses it.
+   *
    * @param stringResourcesDf the dataframe with the string representation of the resources. The
    *     dataframe must have a single column of type string.
    * @param resourceName the name of the resources to encode
@@ -604,7 +609,7 @@ public class PathlingContext {
       return encode(stringResourcesDf, resourceName, inputMimeType);
     }
     final Dataset<String> stringResources = documents(stringResourcesDf, null);
-    requireEncodable(stringResources, resourceName);
+    requireEncodable(stringResources, resourceName, schema);
     return annotator.annotate(
         resourceName,
         fhirReader
@@ -665,9 +670,10 @@ public class PathlingContext {
    * Takes a dataframe with string representations of FHIR bundles and encodes the resources of the
    * given type as a Spark dataframe, in the Parquet on FHIR layout.
    *
-   * <p>A streaming dataframe cannot be encoded, because the Parquet on FHIR layout fits its schema
-   * to the data. The resources are annotated as the schema configuration says (see {@link
-   * #annotate}).
+   * <p>The schema is inferred from the data, so a streaming dataframe is refused with {@link
+   * UnsupportedOperationException}: encode a stream with {@link #encodeBundleWithSchema}, or encode
+   * each batch within {@code foreachBatch}. The resources are annotated as the schema configuration
+   * says (see {@link #annotate}).
    *
    * @param stringBundlesDf the dataframe with the string representation of the resources
    * @param resourceName the name of the resources to encode
@@ -684,7 +690,7 @@ public class PathlingContext {
       @Nullable final String maybeColumnName) {
 
     final Dataset<String> stringBundles = documents(stringBundlesDf, maybeColumnName);
-    requireEncodable(stringBundles, resourceName);
+    requireEncodable(stringBundles, resourceName, null);
     return annotator.annotate(
         resourceName, fhirReader.format(inputMimeType).readBundles(resourceName, stringBundles));
   }
@@ -730,6 +736,10 @@ public class PathlingContext {
    * <p>It has a name of its own, rather than overloading {@code encodeBundle}, because the overload
    * taking a column name also takes a null as its fourth argument (research R22).
    *
+   * <p>With a schema, a streaming dataframe is encoded as a streaming dataframe, since nothing has
+   * to be read from the data to give its schema (FR-012). Without one, a stream is refused as
+   * {@code encodeBundle} refuses it.
+   *
    * @param stringBundlesDf the dataframe with the string representation of the bundles. The
    *     dataframe must have a single column of type string.
    * @param resourceName the name of the resources to encode
@@ -748,7 +758,7 @@ public class PathlingContext {
       return encodeBundle(stringBundlesDf, resourceName, inputMimeType);
     }
     final Dataset<String> stringBundles = documents(stringBundlesDf, null);
-    requireEncodable(stringBundles, resourceName);
+    requireEncodable(stringBundles, resourceName, schema);
     return annotator.annotate(
         resourceName,
         fhirReader.format(inputMimeType).readBundles(resourceName, stringBundles, schema));
@@ -784,19 +794,23 @@ public class PathlingContext {
 
   /**
    * Refuses what encoding cannot store: {@code Bundle} as a resource type, with the error the
-   * previous encoder raised (FR-007), and a streaming dataset, which cannot be scanned to fit a
-   * schema to its data. Streaming encoding returns with the dense schema (decision 87).
+   * previous encoder raised (FR-007), and a streaming dataset without a schema, whose schema would
+   * have to be inferred from data a stream cannot provide (FR-013, research R12). A stream with a
+   * schema is encoded, since the schema is known before any data arrives (FR-012).
    */
   private static void requireEncodable(
-      @Nonnull final Dataset<String> documents, @Nonnull final String resourceName) {
+      @Nonnull final Dataset<String> documents,
+      @Nonnull final String resourceName,
+      @Nullable final StructType schema) {
     if (BUNDLE.equals(resourceName)) {
       throw new UnsupportedResourceError("Encoding is not supported for resource: " + BUNDLE);
     }
-    if (documents.isStreaming()) {
+    if (schema == null && documents.isStreaming()) {
       throw new UnsupportedOperationException(
-          "Encoding a streaming dataset is not supported in this release: resources are stored"
-              + " with a schema fitted to the data, which a stream cannot provide. Encode each"
-              + " batch, for example within foreachBatch, instead.");
+          "Encoding a streaming dataset needs a schema: resources are otherwise stored with a"
+              + " schema inferred from the data, which a stream cannot provide. Pass a schema, for"
+              + " example one taken from an existing table's schemas(), or encode each batch"
+              + " within foreachBatch instead.");
     }
   }
 

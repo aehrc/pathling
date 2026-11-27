@@ -68,16 +68,25 @@ def _java_schema_set(jvm, schemas: Dict[str, StructType]) -> JavaObject:
     """
     java_schemas = jvm.java.util.LinkedHashMap()
     for resource_type, schema in schemas.items():
-        if not isinstance(schema, StructType):
-            raise TypeError(
-                f"The schema for {resource_type} is not a StructType: "
-                f"{type(schema).__name__}"
-            )
-        java_schemas.put(
-            resource_type,
-            jvm.org.apache.spark.sql.types.DataType.fromJson(schema.json()),
-        )
+        java_schemas.put(resource_type, _java_schema(jvm, resource_type, schema))
     return java_schemas
+
+
+def _java_schema(jvm, resource_type: str, schema: StructType) -> JavaObject:
+    """Converts the schema of one resource type to the Spark struct type the library API takes.
+
+    :param jvm: the Py4J JVM view used to construct the struct type
+    :param resource_type: the resource type code the schema is for, named in any error
+    :param schema: the schema
+    :return: the schema as a Java ``StructType``
+    :raises TypeError: if the schema is not a StructType, naming the resource type
+    """
+    if not isinstance(schema, StructType):
+        raise TypeError(
+            f"The schema for {resource_type} is not a StructType: "
+            f"{type(schema).__name__}"
+        )
+    return jvm.org.apache.spark.sql.types.DataType.fromJson(schema.json())
 
 
 def _python_schema_set(java_schemas: JavaObject) -> Dict[str, StructType]:
@@ -789,6 +798,7 @@ class PathlingContext:
         resource_name: str,
         input_type: Optional[str] = None,
         column: Optional[str] = None,
+        schema: Optional[StructType] = None,
     ) -> DataFrame:
         """
         Takes a dataframe with a string representations of FHIR resources in the given column and
@@ -801,10 +811,23 @@ class PathlingContext:
                `application/fhir+json`.
         :param column: the column in which the resources to encode are stored. If 'None' then the
                input dataframe is assumed to have one column of type string.
+        :param schema: the schema to encode the resources with, as a :class:`StructType`, such
+               as one taken from an existing table's schemas. If 'None' then the schema is inferred
+               from the data, and a streaming dataframe is refused. With a schema, a streaming
+               dataframe is encoded as a streaming dataframe.
         :return: a :class:`DataFrame` containing the given type of resources encoded into Spark
                  columns
         """
 
+        if schema is not None:
+            return self._wrap_df(
+                self._jpc.encodeWithSchema(
+                    (df.select(column) if column is not None else df)._jdf,
+                    resource_name,
+                    input_type or MimeType.FHIR_JSON,
+                    _java_schema(self.spark._jvm, resource_name, schema),
+                )
+            )
         return self._wrap_df(
             self._jpc.encode(
                 df._jdf, resource_name, input_type or MimeType.FHIR_JSON, column
@@ -817,6 +840,7 @@ class PathlingContext:
         resource_name: str,
         input_type: Optional[str] = None,
         column: Optional[str] = None,
+        schema: Optional[StructType] = None,
     ) -> DataFrame:
         """
         Takes a dataframe with a string representations of FHIR bundles  in the given column and
@@ -829,9 +853,22 @@ class PathlingContext:
                `application/fhir+json`.
         :param column: the column in which the resources to encode are stored. If 'None' then the
                input dataframe is assumed to have one column of type string.
+        :param schema: the schema to encode the resources with, as a :class:`StructType`, such
+               as one taken from an existing table's schemas. If 'None' then the schema is inferred
+               from the data, and a streaming dataframe is refused. With a schema, a streaming
+               dataframe is encoded as a streaming dataframe.
         :return: a :class:`DataFrame` containing the given type of resources encoded into Spark
                  columns
         """
+        if schema is not None:
+            return self._wrap_df(
+                self._jpc.encodeBundleWithSchema(
+                    (df.select(column) if column is not None else df)._jdf,
+                    resource_name,
+                    input_type or MimeType.FHIR_JSON,
+                    _java_schema(self.spark._jvm, resource_name, schema),
+                )
+            )
         return self._wrap_df(
             self._jpc.encodeBundle(
                 df._jdf, resource_name, input_type or MimeType.FHIR_JSON, column

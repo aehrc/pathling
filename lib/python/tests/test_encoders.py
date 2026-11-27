@@ -18,14 +18,16 @@
 import logging
 import os
 from tempfile import mkdtemp
+from uuid import uuid4
 
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import lit
-from pytest import fixture
+from pytest import fixture, mark, raises
 
 from pathling import PathlingContext
 from pathling._version import __java_version__
 from pathling.fhir import MimeType
+from tests.schema_equality import same_schema
 
 PROJECT_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir)
@@ -306,3 +308,198 @@ def test_resolves_references_in_an_xml_bundle(spark_session, def_pathling):
     assert [row["subject"]["reference"] for row in observations.collect()] == [
         "Patient/p1"
     ]
+
+
+# Encoding with a schema defined up front (T031, FR-002, FR-012, FR-013, US2). The schema has
+# gender, birthDate and name.family. The first Patient carries active and name.given, which the
+# schema lacks, and lacks birthDate. The second lacks gender and name.
+SCHEMA_DONOR_JSON = (
+    '{"resourceType":"Patient","id":"d","gender":"male","birthDate":"2000-01-01",'
+    '"name":[{"family":"Smith"}]}'
+)
+
+PATIENT_JSON = [
+    '{"resourceType":"Patient","id":"p1","active":true,"gender":"female",'
+    '"name":[{"family":"Ash","given":["Ann"]}]}',
+    '{"resourceType":"Patient","id":"p2","birthDate":"1990-01-01"}',
+]
+
+PATIENT_XML = [
+    '<Patient xmlns="http://hl7.org/fhir"><id value="p1"/><active value="true"/>'
+    '<name><family value="Ash"/><given value="Ann"/></name>'
+    '<gender value="female"/></Patient>',
+    '<Patient xmlns="http://hl7.org/fhir"><id value="p2"/>'
+    '<birthDate value="1990-01-01"/></Patient>',
+]
+
+BUNDLE_JSON = (
+    '{"resourceType":"Bundle","type":"collection","entry":['
+    + ",".join('{"resource":' + p + "}" for p in PATIENT_JSON)
+    + "]}"
+)
+
+BUNDLE_XML = (
+    '<Bundle xmlns="http://hl7.org/fhir"><type value="collection"/>'
+    + "".join("<entry><resource>" + p + "</resource></entry>" for p in PATIENT_XML)
+    + "</Bundle>"
+)
+
+# Each case names the method, the MIME type and the text it reads, one document or bundle per line.
+SCHEMA_CASES = {
+    "encode JSON": ("encode", MimeType.FHIR_JSON, PATIENT_JSON),
+    "encode XML": ("encode", MimeType.FHIR_XML, PATIENT_XML),
+    "encode_bundle JSON": ("encode_bundle", MimeType.FHIR_JSON, [BUNDLE_JSON]),
+    "encode_bundle XML": ("encode_bundle", MimeType.FHIR_XML, [BUNDLE_XML]),
+}
+
+REFUSAL = (
+    "Encoding a streaming dataset needs a schema: resources are otherwise stored with a schema"
+    " inferred from the data, which a stream cannot provide. Pass a schema, for example one"
+    " taken from an existing table's schemas(), or encode each batch within foreachBatch"
+    " instead."
+)
+
+
+@fixture(scope="module")
+def patient_schema(spark_session, def_pathling):
+    """The defined Patient schema, taken from an encoded table, as a user would take it."""
+    return def_pathling.encode(
+        _documents(spark_session, [SCHEMA_DONOR_JSON]), "Patient"
+    ).schema
+
+
+def _stream(spark_session, tmp_path, lines):
+    """Return lines of text as a streaming dataframe, read from a directory of their own."""
+    directory = tmp_path / f"stream-{uuid4().hex}"
+    directory.mkdir()
+    (directory / "input.txt").write_text("\n".join(lines) + "\n")
+    return spark_session.readStream.text(str(directory))
+
+
+def _drain(spark_session, stream):
+    """Run a stream to the end of its input into a memory sink and return what it wrote."""
+    name = f"drained_{uuid4().hex}"
+    stream.writeStream.format("memory").queryName(name).trigger(
+        availableNow=True
+    ).start().awaitTermination()
+    return spark_session.table(name)
+
+
+def _sorted_json(df):
+    return sorted(df.toJSON().collect())
+
+
+@mark.parametrize("case", SCHEMA_CASES.keys())
+def test_stream_encoded_with_schema_is_a_stream_with_the_schema(
+    spark_session, def_pathling, patient_schema, tmp_path, case
+):
+    # A streaming encode with a schema returns a stream with the schema, whose rows are those of
+    # a batch encode of the same text (FR-012, US2 scenarios 1 and 2).
+    method, mime_type, lines = SCHEMA_CASES[case]
+    encode = getattr(def_pathling, method)
+    stream = _stream(spark_session, tmp_path, lines)
+
+    encoded = encode(stream, "Patient", mime_type, schema=patient_schema)
+
+    assert encoded.isStreaming
+    assert same_schema(patient_schema, encoded.schema)
+    batch = encode(
+        _documents(spark_session, lines), "Patient", mime_type, schema=patient_schema
+    )
+    assert _sorted_json(_drain(spark_session, encoded)) == _sorted_json(batch)
+
+
+@mark.parametrize("method", ["encode", "encode_bundle"])
+@mark.parametrize("schema_given", [False, True])
+def test_stream_encoded_without_schema_is_refused(
+    spark_session, def_pathling, tmp_path, method, schema_given
+):
+    # A streaming encode without a schema is refused with UnsupportedOperationException and a
+    # message telling the user to pass a schema or encode each batch within foreachBatch (FR-013,
+    # US2 scenario 3). An explicit None is no schema.
+    lines = PATIENT_JSON if method == "encode" else [BUNDLE_JSON]
+    stream = _stream(spark_session, tmp_path, lines)
+    arguments = {"schema": None} if schema_given else {}
+    with raises(Exception) as refusal:
+        getattr(def_pathling, method)(stream, "Patient", **arguments)
+    assert _java_class(refusal.value) == "java.lang.UnsupportedOperationException"
+    assert REFUSAL in str(refusal.value)
+
+
+def _java_class(error: Exception) -> str:
+    # The class of the Java exception behind an error. PySpark converts some Java exceptions, such
+    # as UnsupportedOperationException, to Python exceptions that keep the original as _origin,
+    # and raises the others as a Py4JJavaError, which keeps it as java_exception.
+    original = getattr(error, "java_exception", None) or getattr(error, "_origin", None)
+    assert original is not None, f"not an error from Java: {error!r}"
+    return original.getClass().getName()
+
+
+@mark.parametrize("method", ["encode", "encode_bundle"])
+def test_encode_with_something_other_than_a_schema_is_refused(
+    spark_session, def_pathling, patient_schema, method
+):
+    # A schema argument that is not a StructType, such as the schema's JSON form, is refused with
+    # an error naming the resource type.
+    lines = PATIENT_JSON if method == "encode" else [BUNDLE_JSON]
+    with raises(TypeError, match="Patient"):
+        getattr(def_pathling, method)(
+            _documents(spark_session, lines), "Patient", schema=patient_schema.json()
+        )
+
+
+@mark.parametrize("case", SCHEMA_CASES.keys())
+def test_batch_encoded_with_schema_gives_the_schemas_output(
+    spark_session, def_pathling, patient_schema, case
+):
+    # A batch encode with a schema gives the schema, with the values the documents hold for its
+    # fields, and without the content it has no field for (FR-002).
+    method, mime_type, lines = SCHEMA_CASES[case]
+    encoded = getattr(def_pathling, method)(
+        _documents(spark_session, lines), "Patient", mime_type, schema=patient_schema
+    )
+
+    assert not encoded.isStreaming
+    assert same_schema(patient_schema, encoded.schema)
+    rows = sorted(
+        (row["id"], row["gender"], row["birthDate"], row["name"])
+        for row in encoded.select("id", "gender", "birthDate", "name.family")
+        .toDF("id", "gender", "birthDate", "name")
+        .collect()
+    )
+    assert rows == [("p1", "female", None, ["Ash"]), ("p2", None, "1990-01-01", None)]
+
+
+@mark.parametrize("method", ["encode", "encode_bundle"])
+def test_encode_with_schema_reads_the_given_column(
+    spark_session, def_pathling, patient_schema, method
+):
+    # With a schema, the documents are read from the named column, as they are without one.
+    lines = PATIENT_JSON if method == "encode" else [BUNDLE_JSON]
+    documents = spark_session.createDataFrame(
+        [("x", d) for d in lines], ["other", "resource"]
+    )
+    encoded = getattr(def_pathling, method)(
+        documents, "Patient", column="resource", schema=patient_schema
+    )
+    assert same_schema(patient_schema, encoded.schema)
+    assert sorted(row["id"] for row in encoded.select("id").collect()) == ["p1", "p2"]
+
+
+@mark.parametrize("method", ["encode", "encode_bundle"])
+def test_encode_with_schema_refuses_an_empty_column_name_as_without_one(
+    spark_session, def_pathling, patient_schema, method
+):
+    # An empty column name names no column, with a schema as without one, so both encodes fail with
+    # the same error rather than the one with a schema reading the whole dataframe.
+    lines = PATIENT_JSON if method == "encode" else [BUNDLE_JSON]
+    documents = spark_session.createDataFrame(
+        [("x", d) for d in lines], ["other", "resource"]
+    )
+    encode = getattr(def_pathling, method)
+    with raises(Exception) as without_schema:
+        encode(documents, "Patient", column="").count()
+    with raises(Exception) as with_schema:
+        encode(documents, "Patient", column="", schema=patient_schema).count()
+    assert type(with_schema.value) is type(without_schema.value)
+    assert _java_class(with_schema.value) == _java_class(without_schema.value)

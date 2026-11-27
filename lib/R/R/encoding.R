@@ -26,11 +26,15 @@ library(purrr)
 #' @param input_type The MIME type of input string encoding. Defaults to "application/fhir+json".
 #' @param column The column in which the resources to encode are stored. If set to NULL, the input
 #'   DataFrame is assumed to have one column of type string.
+#' @param schema The schema to encode the resources with, as the JSON form of a struct type, such
+#'   as one taken from an existing table's schemas. If NULL, the schema is inferred from the data,
+#'   and a streaming dataframe is refused. With a schema, a streaming dataframe is encoded as a
+#'   streaming dataframe.
 #' @return A Spark DataFrame containing the given type of resources encoded into Spark columns.
 #'
 #' @family encoding functions
 #'
-#' @importFrom sparklyr sdf_register spark_dataframe j_invoke
+#' @importFrom sparklyr sdf_register spark_dataframe spark_connection j_invoke
 #'
 #' @export
 #' @examplesIf pathling_is_spark_installed()
@@ -41,7 +45,15 @@ library(purrr)
 #'   ))
 #' pc %>% pathling_encode(json_resources_df, "Condition")
 #' pathling_disconnect(pc)
-pathling_encode <- function(pc, df, resource_name, input_type = NULL, column = NULL) {
+pathling_encode <- function(pc, df, resource_name, input_type = NULL, column = NULL,
+                            schema = NULL) {
+  if (!is.null(schema)) {
+    return(sdf_register(j_invoke(
+      pc, "encodeWithSchema", select_documents(df, column), resource_name,
+      input_type %||% MimeType$FHIR_JSON,
+      to_java_schema(spark_connection(df), resource_name, schema)
+    )))
+  }
   sdf_register(j_invoke(
     pc, "encode", spark_dataframe(df), resource_name,
     input_type %||% MimeType$FHIR_JSON, column
@@ -59,12 +71,16 @@ pathling_encode <- function(pc, df, resource_name, input_type = NULL, column = N
 #' @param input_type The MIME type of the input string encoding. Defaults to 'application/fhir+json'.
 #' @param column The column in which the resources to encode are stored. If 'NULL', then the
 #'   input DataFrame is assumed to have one column of type string.
+#' @param schema The schema to encode the resources with, as the JSON form of a struct type, such
+#'   as one taken from an existing table's schemas. If NULL, the schema is inferred from the data,
+#'   and a streaming dataframe is refused. With a schema, a streaming dataframe is encoded as a
+#'   streaming dataframe.
 #'
 #' @return A Spark DataFrame containing the given type of resources encoded into Spark columns.
 #'
 #' @family encoding functions
 #'
-#' @importFrom sparklyr sdf_register spark_dataframe j_invoke
+#' @importFrom sparklyr sdf_register spark_dataframe spark_connection j_invoke
 #'
 #' @export
 #' @examplesIf pathling_is_spark_installed()
@@ -78,7 +94,15 @@ pathling_encode <- function(pc, df, resource_name, input_type = NULL, column = N
 #'   input_type = MimeType$FHIR_XML, column = "contents"
 #' )
 #' pathling_disconnect(pc)
-pathling_encode_bundle <- function(pc, df, resource_name, input_type = NULL, column = NULL) {
+pathling_encode_bundle <- function(pc, df, resource_name, input_type = NULL, column = NULL,
+                                   schema = NULL) {
+  if (!is.null(schema)) {
+    return(sdf_register(j_invoke(
+      pc, "encodeBundleWithSchema", select_documents(df, column), resource_name,
+      input_type %||% MimeType$FHIR_JSON,
+      to_java_schema(spark_connection(df), resource_name, schema)
+    )))
+  }
   sdf_register(j_invoke(
     pc, "encodeBundle", spark_dataframe(df), resource_name,
     input_type %||% MimeType$FHIR_JSON, column
@@ -119,4 +143,37 @@ pathling_encode_bundle <- function(pc, df, resource_name, input_type = NULL, col
 #' pathling_disconnect(pc)
 pathling_annotate <- function(pc, df, resource_name) {
   sdf_register(j_invoke(pc, "annotate", spark_dataframe(df), resource_name))
+}
+
+#' Select the column of documents to encode
+#'
+#' @param df A Spark dataframe.
+#' @param column The column holding the documents, or NULL if the dataframe has only that column.
+#'
+#' @return A jobj referring to a Spark dataset with only the column of documents.
+#'
+#' @importFrom sparklyr spark_dataframe j_invoke
+#' @noRd
+select_documents <- function(df, column) {
+  documents <- spark_dataframe(df)
+  if (is.null(column)) documents else j_invoke(documents, "select", column, list())
+}
+
+#' Convert the schema of one resource type to a Java struct type
+#'
+#' The schema is converted as a schema set of one entry, so that it is refused with an error naming
+#' the resource type when it is not a struct type's JSON form.
+#'
+#' @param sc The Spark connection.
+#' @param resource_name The resource type code the schema is for.
+#' @param schema A string holding the JSON form of a struct type.
+#'
+#' @return A jobj referring to a \code{StructType}.
+#'
+#' @importFrom sparklyr j_invoke j_invoke_new
+#' @noRd
+to_java_schema <- function(sc, resource_name, schema) {
+  java_schemas <- to_java_schema_map(sc, stats::setNames(list(schema), resource_name))
+  j_invoke_new(sc, "java.util.LinkedHashMap", java_schemas) %>%
+    j_invoke("get", resource_name)
 }

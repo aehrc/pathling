@@ -8,22 +8,107 @@ description: Examples of running streaming queries over FHIR data using the Path
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/e-hFKckQITw?si=fzgfFzdB8C0X4RIX" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
-Pathling's query operations, including terminology functions, FHIRPath columns
-and SQL on FHIR views, can run continuously across a stream of data that has
-already been encoded.
+Pathling can encode a stream of FHIR resources as it arrives, and its query
+operations, including terminology functions, FHIRPath columns and SQL on FHIR
+views, can run continuously across the encoded stream.
 
-:::note
+## Encoding a stream
 
-Encoding a streaming dataset with `encode` or `encode_bundle` is not available
-in this release. Resources are stored with a schema fitted to the data they
-contain, and a stream cannot be scanned to fit one, so encoding a streaming
-dataset fails with an error. Streaming encoding will return when a schema
-derived from the FHIR definitions, rather than from the data, is available.
+A stream is encoded with a schema: the schema of each resource type, given to
+`encode` or `encode_bundle` with the `schema` argument (`encodeWithSchema` and
+`encodeBundleWithSchema` in Java). Without one, resources are stored with a
+schema fitted to the data they contain, which a stream cannot provide, so
+encoding a stream without a schema fails with an error. A schema can be taken
+from an existing table, or from a sample of the data, and saved to a file, as
+described under [Defined schemas](../io/schema.md#defined-schemas).
 
-Until then, encode each micro-batch of a stream within `foreachBatch`, where it
-is an ordinary dataset, as the example below does.
+Content that the schema has no field for is dropped from the stream silently.
+Give a schema that names every element the data could populate to keep it all.
 
-:::
+Write each micro-batch of the encoded stream through a Pathling sink within
+`foreachBatch`, as the examples below do, to Delta and to Parquet. A write with
+Spark's own streaming writer, such as `writeStream.format("delta")`, skips the
+checks that a Pathling sink makes on what it writes.
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+<!--suppress CheckEmptyScriptTag -->
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+from pathling import PathlingContext, read_schemas
+
+pc = PathlingContext.create()
+
+# The schema of Patient, saved earlier from an existing table.
+schema = read_schemas("/usr/share/schemas.json")["Patient"]
+
+# A stream of NDJSON files, with one Patient resource on each line.
+patients = pc.encode(
+    pc.spark.readStream.text("/usr/share/staging/patients"),
+    "Patient",
+    schema=schema,
+)
+
+
+def write_batch(batch, batch_id):
+    # Persist the micro-batch so that the two writes do not each read and encode it again.
+    batch.persist()
+    data = pc.read.datasets({"Patient": batch})
+    data.write.delta("/usr/share/warehouse/delta", save_mode="merge")
+    data.write.parquet("/usr/share/warehouse/parquet", save_mode="append")
+    batch.unpersist()
+
+
+query = (
+    patients.writeStream.option("checkpointLocation", "/usr/share/checkpoints")
+    .foreachBatch(write_batch)
+    .start()
+)
+```
+
+</TabItem>
+<TabItem value="java" label="Java">
+
+```java
+PathlingContext pc = PathlingContext.create();
+
+// The schema of Patient, saved earlier from an existing table.
+StructType schema = SchemaSets.fromJson(Files.readString(Path.of("/usr/share/schemas.json")))
+        .get("Patient");
+
+// A stream of NDJSON files, with one Patient resource on each line.
+Dataset<Row> patients = pc.encodeWithSchema(
+        pc.getSpark().readStream().text("/usr/share/staging/patients"),
+        "Patient", PathlingContext.FHIR_JSON, schema);
+
+StreamingQuery query = patients.writeStream()
+        .option("checkpointLocation", "/usr/share/checkpoints")
+        .foreachBatch((VoidFunction2<Dataset<Row>, Long>) (batch, batchId) -> {
+            // Persist the micro-batch so that the two writes do not each read and encode it again.
+            batch.persist();
+            DatasetSource data = pc.read().datasets().dataset("Patient", batch);
+            data.write().saveMode("merge").delta("/usr/share/warehouse/delta");
+            data.write().saveMode("append").parquet("/usr/share/warehouse/parquet");
+            batch.unpersist();
+        })
+        .start();
+```
+
+</TabItem>
+</Tabs>
+
+`encode_bundle` encodes a stream of bundles in the same way, and both encode
+XML as well as JSON. sparklyr offers no `foreachBatch`, so R can encode a
+stream with a schema but has no way to write it through a Pathling sink.
+
+## Encoding each micro-batch
+
+A stream can also be encoded one micro-batch at a time, within `foreachBatch`,
+where each micro-batch is an ordinary dataset. This needs no schema, and each
+micro-batch is stored with a schema fitted to its own data.
 
 The following demonstrates consuming FHIR bundles
 from [Kafka](https://kafka.apache.org/), encoding each micro-batch, and
@@ -77,8 +162,8 @@ This implementation shows an ETL (Extract, Transform, Load) pipeline that
 consumes FHIR resources from Kafka, transforms them using SQL on FHIR queries
 with terminology operations, and stores the results to PostgreSQL. This
 example illustrates how Pathling enables streaming analytics over clinical data.
-Because a streaming dataset cannot be encoded in this release, each micro-batch
-is encoded and transformed within `foreachBatch`.
+Each micro-batch is encoded and transformed within `foreachBatch`, so no schema
+is needed.
 
 ## Overview
 

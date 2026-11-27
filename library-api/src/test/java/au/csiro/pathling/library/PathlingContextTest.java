@@ -292,36 +292,6 @@ public class PathlingContextTest {
     assertEquals(Set.of("boolean", "string", "Address"), retrievedConfig2.getOpenTypes());
   }
 
-  /**
-   * A streaming dataset cannot be scanned to fit a schema, so encoding one fails with a message
-   * saying so until the dense schema arrives (decision 87), rather than storing the previous
-   * layout.
-   */
-  @Test
-  void testEncodeResourceStream() {
-    final PathlingContext pathling = PathlingContext.create(spark);
-
-    final Dataset<Row> jsonResources =
-        spark.readStream().text(TEST_DATA_URL + "/resources/R4/json");
-    assertTrue(jsonResources.isStreaming());
-
-    final UnsupportedOperationException encodeFailure =
-        assertThrows(
-            UnsupportedOperationException.class,
-            () -> pathling.encode(jsonResources, "Patient", PathlingContext.FHIR_JSON));
-    assertTrue(
-        encodeFailure.getMessage().contains("streaming"),
-        "unexpected message: " + encodeFailure.getMessage());
-
-    final UnsupportedOperationException bundleFailure =
-        assertThrows(
-            UnsupportedOperationException.class,
-            () -> pathling.encodeBundle(jsonResources, "Patient", PathlingContext.FHIR_JSON));
-    assertTrue(
-        bundleFailure.getMessage().contains("streaming"),
-        "unexpected message: " + bundleFailure.getMessage());
-  }
-
   @Test
   void testBuildContextWithTerminologyDefaults() {
     final String terminologyServerUrl = "https://tx.ontoserver.csiro.au/fhir";

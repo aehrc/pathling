@@ -234,9 +234,11 @@ different columns. See
 FHIRPath expressions and SQL on FHIR views work over any such schema, as
 described under [FHIRPath](../fhirpath.md#absent-elements).
 
-Because the schema has to be fitted to the data, a streaming dataset cannot be
-encoded: `encode` and `encode_bundle` fail with an error when given one. Encode
-each micro-batch of the stream instead, as shown in
+Because the schema has to be fitted to the data, a streaming dataset can be
+encoded only with a schema given up front, as described under
+[Defined schemas](./schema.md#defined-schemas): without one, `encode` and
+`encode_bundle` fail with an error. Otherwise encode the stream one micro-batch
+at a time within `foreachBatch`. Both are shown in
 [Streaming queries](../examples/streaming.md).
 
 ### Decimals
