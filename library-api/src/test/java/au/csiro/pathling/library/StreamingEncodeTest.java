@@ -27,6 +27,7 @@ import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.io.FhirReader;
 import au.csiro.pathling.library.io.SchemaEquality;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -109,13 +110,13 @@ class StreamingEncodeTest {
       "{\"resourceType\":\"Patient\",\"id\":\"d\",\"gender\":\"male\","
           + "\"birthDate\":\"2000-01-01\",\"name\":[{\"family\":\"Smith\"}]}";
 
-  private static SparkSession spark;
-  private static PathlingContext context;
+  @Nullable private static SparkSession spark;
+  @Nullable private static PathlingContext context;
 
   /** The defined Patient schema, without annotations. */
-  private static StructType schema;
+  @Nullable private static StructType schema;
 
-  @TempDir Path directory;
+  @Nullable @TempDir Path directory;
 
   /** Set up Spark, the Pathling context and the defined schema. */
   @BeforeAll

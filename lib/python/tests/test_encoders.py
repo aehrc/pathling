@@ -484,3 +484,22 @@ def test_encode_with_schema_reads_the_given_column(
     )
     assert same_schema(patient_schema, encoded.schema)
     assert sorted(row["id"] for row in encoded.select("id").collect()) == ["p1", "p2"]
+
+
+@mark.parametrize("method", ["encode", "encode_bundle"])
+def test_encode_with_schema_refuses_an_empty_column_name_as_without_one(
+    spark_session, def_pathling, patient_schema, method
+):
+    # An empty column name names no column, with a schema as without one, so both encodes fail with
+    # the same error rather than the one with a schema reading the whole dataframe.
+    lines = PATIENT_JSON if method == "encode" else [BUNDLE_JSON]
+    documents = spark_session.createDataFrame(
+        [("x", d) for d in lines], ["other", "resource"]
+    )
+    encode = getattr(def_pathling, method)
+    with raises(Exception) as without_schema:
+        encode(documents, "Patient", column="").count()
+    with raises(Exception) as with_schema:
+        encode(documents, "Patient", column="", schema=patient_schema).count()
+    assert type(with_schema.value) is type(without_schema.value)
+    assert _java_class(with_schema.value) == _java_class(without_schema.value)

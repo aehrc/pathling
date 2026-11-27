@@ -822,7 +822,7 @@ class PathlingContext:
         if schema is not None:
             return self._wrap_df(
                 self._jpc.encodeWithSchema(
-                    (df.select(column) if column else df)._jdf,
+                    (df.select(column) if column is not None else df)._jdf,
                     resource_name,
                     input_type or MimeType.FHIR_JSON,
                     _java_schema(self.spark._jvm, resource_name, schema),
@@ -863,7 +863,7 @@ class PathlingContext:
         if schema is not None:
             return self._wrap_df(
                 self._jpc.encodeBundleWithSchema(
-                    (df.select(column) if column else df)._jdf,
+                    (df.select(column) if column is not None else df)._jdf,
                     resource_name,
                     input_type or MimeType.FHIR_JSON,
                     _java_schema(self.spark._jvm, resource_name, schema),
