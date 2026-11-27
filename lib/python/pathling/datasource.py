@@ -25,6 +25,7 @@ from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType
 
 from pathling import PathlingContext
+from pathling.context import _java_schema_set, _python_schema_set
 from pathling.core import SparkConversionsMixin, StringToStringSetMapper
 from pathling.fhir import MimeType
 from pathling.spark import Dfs
@@ -60,6 +61,19 @@ class DataSource(SparkConversionsMixin):
         :return: A list of strings representing the resource types.
         """
         return list(self._jds.getResourceTypes())
+
+    def schemas(self) -> Dict[str, StructType]:
+        """
+        Returns the schema of each resource type the data source holds, as a schema set.
+
+        The set can be saved with :func:`pathling.write_schemas` and given to any source to read
+        the same resource types with. Getting it runs no job of its own, but a resource type that
+        has not been read yet is read first, which for NDJSON, bundles or XML read without a
+        schema set means fitting its schema to the data.
+
+        :return: A dictionary of schemas, keyed by resource type code.
+        """
+        return _python_schema_set(self._jds.schemas())
 
     @property
     def write(self) -> "DataSinks":
@@ -153,19 +167,7 @@ class DataSources(SparkConversionsMixin):
         :return: A Java map of the same schemas, as Spark struct types.
         :raises TypeError: If a schema in the set is not a StructType, naming its key.
         """
-        jvm = self.spark._jvm
-        jschemas = jvm.java.util.HashMap()
-        for resource_type, schema in schemas.items():
-            if not isinstance(schema, StructType):
-                raise TypeError(
-                    f"The schema for {resource_type} is not a StructType: "
-                    f"{type(schema).__name__}"
-                )
-            jschemas.put(
-                resource_type,
-                jvm.org.apache.spark.sql.types.DataType.fromJson(schema.json()),
-            )
-        return jschemas
+        return _java_schema_set(self.spark._jvm, schemas)
 
     def ndjson(
         self,

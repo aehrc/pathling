@@ -32,11 +32,16 @@ final class DefinedSchemaLogic {
 
   @Nonnull private final SparkSession spark;
 
+  @Nonnull private final DefinitionContext definitions;
+
   @Nonnull private final ResourceTransformer transformer;
 
   private DefinedSchemaLogic(
-      @Nonnull final SparkSession spark, @Nonnull final ResourceTransformer transformer) {
+      @Nonnull final SparkSession spark,
+      @Nonnull final DefinitionContext definitions,
+      @Nonnull final ResourceTransformer transformer) {
     this.spark = spark;
+    this.definitions = definitions;
     this.transformer = transformer;
   }
 
@@ -51,7 +56,7 @@ final class DefinedSchemaLogic {
   static DefinedSchemaLogic of(
       @Nonnull final SparkSession spark, @Nonnull final DefinitionContext definitions) {
     // A metadata group is stored where the observed shape has one, which is where the schema does.
-    return new DefinedSchemaLogic(spark, ResourceTransformer.of(definitions, true));
+    return new DefinedSchemaLogic(spark, definitions, ResourceTransformer.of(definitions, true));
   }
 
   /**
@@ -97,5 +102,17 @@ final class DefinedSchemaLogic {
             transformer.toLayout(resourceType, spark.createDataFrame(List.<Row>of(), observed)),
             observed)
         .schema();
+  }
+
+  /**
+   * Returns a schema in canonical field order at every depth, without reading any data (FR-027).
+   *
+   * @param resourceType the type of the resources the schema describes
+   * @param schema the schema, in this layout
+   * @return the schema in canonical order
+   */
+  @Nonnull
+  StructType canonicalSchema(@Nonnull final String resourceType, @Nonnull final StructType schema) {
+    return SchemaCanonicalisation.canonicalSchema(definitions, resourceType, schema);
   }
 }

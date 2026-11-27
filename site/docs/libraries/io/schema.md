@@ -382,13 +382,108 @@ the resource carried it.
 ### Taking a schema set from a sample
 
 To build a schema set, read a sample of data that is representative of the
-data you will load, without a schema, and take the schema of each resource type
-from it. Use that set for every later load, as shown under
+data you will load, without a schema, and take the schema set of the source
+that reads it, with `schemas()` in Python, Java and Scala or `ds_schemas` in R.
+Getting the set of NDJSON, bundles or XML reads the data to fit each schema to
+it, while getting the set of stored data reads only the stored schemas. Use that
+set for every later load, as shown under
 [Defined schemas](./index.md#defined-schemas). An element that the sample does
 not populate is not in its schema, so it is dropped from every later load that
 carries it. Choose a sample that populates every element you need, or take the
 schemas from data that has accumulated all of them, such as a Delta table that
 earlier loads have widened.
+
+### Saving a schema set
+
+A schema set can be saved to a file and read back, so that every later load,
+in any binding, uses the same set. The file holds one JSON object, which maps
+each resource type code to the JSON form that Spark gives a struct type. Reading
+the file keeps the order of its resource types. Reading refuses a file that is
+not a JSON object, a value that is not a struct type, and a resource type that
+appears more than once, naming the file or the resource type.
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+<!--suppress CheckEmptyScriptTag -->
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+from pathling import read_schemas, write_schemas
+
+sample = pc.read.ndjson("/usr/share/staging/sample")
+write_schemas(sample.schemas(), "/usr/share/schemas.json")
+
+schemas = read_schemas("/usr/share/schemas.json")
+data = pc.read.ndjson("/usr/share/staging/ndjson", schemas=schemas)
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+sc <- pathling_spark(pc)
+sample <- pc %>% pathling_read_ndjson("/usr/share/staging/sample")
+pathling_write_schemas(sc, ds_schemas(sample), "/usr/share/schemas.json")
+
+schemas <- pathling_read_schemas(sc, "/usr/share/schemas.json")
+data <- pc %>% pathling_read_ndjson("/usr/share/staging/ndjson", schemas = schemas)
+```
+
+</TabItem>
+<TabItem value="scala" label="Scala">
+
+```scala
+import au.csiro.pathling.library.SchemaSets
+import java.nio.file.{Files, Path}
+
+val sample = pc.read().ndjson("/usr/share/staging/sample")
+Files.writeString(Path.of("/usr/share/schemas.json"), SchemaSets.toJson(sample.schemas()))
+
+val schemas = SchemaSets.fromJson(Files.readString(Path.of("/usr/share/schemas.json")))
+val data = pc.read().withSchemas(schemas).ndjson("/usr/share/staging/ndjson")
+```
+
+</TabItem>
+<TabItem value="java" label="Java">
+
+```java
+QueryableDataSource sample = pc.read().ndjson("/usr/share/staging/sample");
+Files.writeString(Path.of("/usr/share/schemas.json"), SchemaSets.toJson(sample.schemas()));
+
+Map<String, StructType> schemas =
+        SchemaSets.fromJson(Files.readString(Path.of("/usr/share/schemas.json")));
+QueryableDataSource data = pc.read().withSchemas(schemas)
+        .ndjson("/usr/share/staging/ndjson");
+```
+
+</TabItem>
+</Tabs>
+
+### Putting a schema set into canonical order
+
+A read with a schema gives its fields in the order of the schema, and the set
+of a source keeps the order in which the source stores its fields. The set of a
+Parquet, Delta or catalog table source may therefore come back in another order
+than the canonical one described under [Field order](#field-order), where its
+files differ or the table has been widened.
+
+To get canonical order, canonicalise the set with `canonical_schemas` on the
+context in Python, `pathling_canonical_schemas` in R, or `canonicalSchemas` in
+Java and Scala. Each schema in the set it returns has its fields in the order
+that a read without a schema writes them, at every depth. Canonicalising reads
+no data, and changes the set in these ways only:
+
+- Each field keeps its nullability and metadata.
+- A field that the FHIR definitions do not describe is left out.
+- A schema that contradicts the definitions, such as an element of the wrong
+  type or cardinality, is refused, with an error naming the resource type and
+  the path of the element.
+
+```python
+schemas = pc.canonical_schemas(lake.schemas())
+```
 
 ## Files within a table may differ
 

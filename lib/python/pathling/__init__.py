@@ -45,6 +45,7 @@ if TYPE_CHECKING:
         to_loinc_coding,
         to_snomed_coding,
     )
+    from .schemas import read_schemas, write_schemas
     from .udfs import (
         Equivalence,
         PropertyType,
@@ -81,6 +82,8 @@ _LAZY_EXPORTS = {
     "designation": "pathling.udfs",
     "PropertyType": "pathling.udfs",
     "Equivalence": "pathling.udfs",
+    "read_schemas": "pathling.schemas",
+    "write_schemas": "pathling.schemas",
 }
 
 __all__ = list(_LAZY_EXPORTS)
@@ -97,6 +100,7 @@ _LAZY_SUBMODULES = (
     "datasource",
     "fhir",
     "functions",
+    "schemas",
     "udfs",
 )
 

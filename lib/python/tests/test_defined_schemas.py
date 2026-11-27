@@ -15,7 +15,10 @@
 # limitations under the License.
 #
 
-"""Tests the sources of the Python API read with a schema set (T021, FR-001, FR-004)."""
+"""Tests the sources of the Python API read with a schema set (T021, FR-001, FR-004).
+
+Also tests the schemas a source reports and their canonicalisation (T038, T066, FR-019, FR-027).
+"""
 
 import os
 from typing import Dict, List
@@ -25,6 +28,7 @@ from flask import Response
 from pyspark.sql.types import ArrayType, StructField, StructType
 from pytest import fixture, mark, raises
 
+from pathling import read_schemas, write_schemas
 from pathling.datasource import DataSource
 from tests.schema_equality import _annotation_prefix, same_schema_set
 
@@ -288,3 +292,74 @@ def test_value_that_is_not_a_struct_type_is_refused(
             lambda: "default",
             schemas,
         )
+
+
+def reversed_at_every_depth(type_):
+    """Return a type with the fields of every struct within it in reverse order."""
+    if isinstance(type_, StructType):
+        return StructType(
+            [
+                StructField(
+                    field.name,
+                    reversed_at_every_depth(field.dataType),
+                    field.nullable,
+                    field.metadata,
+                )
+                for field in reversed(type_.fields)
+            ]
+        )
+    if isinstance(type_, ArrayType):
+        return ArrayType(reversed_at_every_depth(type_.elementType), type_.containsNull)
+    return type_
+
+
+def test_canonical_schemas_gives_the_order_of_an_inferred_load(pathling_ctx, inferred):
+    """A set out of order canonicalises to the order an inferred load gives (FR-027, SC-009)."""
+    canonical = schemas_of(inferred, ["Patient", "Condition"])
+    out_of_order = {
+        type_: reversed_at_every_depth(schema) for type_, schema in canonical.items()
+    }
+    assert out_of_order != canonical
+
+    assert pathling_ctx.canonical_schemas(out_of_order) == canonical
+
+
+ROUND_TRIP_TYPES = ["Patient", "Condition"]
+
+
+@mark.parametrize("kind", SOURCES + ["bulk"])
+def test_schemas_round_trip_through_a_file_into_every_source(
+    kind, pathling_ctx, inferred, test_data_dir, bulk_server, tmp_path, request
+):
+    """The schemas of every source, saved to a file and read back, are accepted by every source.
+
+    Each source then reports the same set by schema equality (FR-019, SC-007).
+    """
+
+    def open_any(source_kind, schemas):
+        if source_kind == "bulk":
+            return pathling_ctx.read.bulk(
+                fhir_endpoint_url=bulk_server.url("/fhir"), schemas=schemas
+            )
+        return open_source(
+            source_kind,
+            pathling_ctx,
+            inferred,
+            test_data_dir,
+            lambda: request.getfixturevalue("tables_database"),
+            schemas,
+        )
+
+    def held(data_source):
+        schemas = data_source.schemas()
+        assert set(ROUND_TRIP_TYPES) <= set(schemas)
+        return {type_: schemas[type_] for type_ in ROUND_TRIP_TYPES}
+
+    path = str(tmp_path / "schemas.json")
+    with bulk_server.run():
+        write_schemas(held(open_any(kind, None)), path)
+        read_back = read_schemas(path)
+
+        for target in SOURCES + ["bulk"]:
+            reported = held(open_any(target, read_back))
+            assert same_schema_set(reported, read_back), f"{kind} into {target}"

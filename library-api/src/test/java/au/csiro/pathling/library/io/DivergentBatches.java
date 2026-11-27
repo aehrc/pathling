@@ -21,6 +21,7 @@ import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.io.FhirReader;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -108,6 +109,20 @@ public final class DivergentBatches {
   @Nonnull
   public static Dataset<Row> second(@Nonnull final PathlingContext context) {
     return toLayout(context, SECOND);
+  }
+
+  /**
+   * Returns both batches read together, as an inferred load of FHIR JSON reads them, in the new
+   * layout. Its schema is in canonical order (SC-009).
+   *
+   * @param context the Pathling context
+   * @return both batches
+   */
+  @Nonnull
+  public static Dataset<Row> both(@Nonnull final PathlingContext context) {
+    final List<String> json = new ArrayList<>(FIRST);
+    json.addAll(SECOND);
+    return toLayout(context, json);
   }
 
   /**

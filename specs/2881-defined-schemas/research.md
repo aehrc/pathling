@@ -170,7 +170,9 @@
     - **Java**:
         - `DataSourceBuilder.withSchemas(Map<String, StructType>)` returns a builder whose every
           source method applies the set.
-        - `encode` and `encodeBundle` overloads with a trailing `@Nullable StructType schema`.
+        - `encodeWithSchema` and `encodeBundleWithSchema`, taking a trailing
+          `@Nullable StructType schema`. They were first overloads of `encode` and
+          `encodeBundle`, renamed by R22.
         - `QueryableDataSource.schemas()` returns `Map<String, StructType>`.
         - `PathlingContext.canonicalSchemas(Map<String, StructType>)` returns the same type
           (FR-027).
@@ -464,3 +466,43 @@
 - **Alternatives considered**: Applying the target's flags, metadata and leaf types in the
   projection. Applying the flags is rejected in R15. Casting leaves would change values, which the
   specification rules out.
+
+## R21. Schema sets from data: decisions at gate 04 G2
+
+- **Decision** (owner, 2026-11-27, gate 04 G2):
+    - Canonicalisation keeps the nullability and field metadata of each field it is given, and
+      changes only the order of the fields and which it drops.
+    - `SchemaSets.fromJson` keeps the order of the keys of the file, and so does `SchemaSet`.
+    - `QueryableDataSource.schemas()` is a default method, not abstract as
+      `contracts/java-api.md` first said: it reads the schema of each type `getResourceTypes()`
+      names, in that order, into a `LinkedHashMap`. It throws nothing of its own.
+    - The refusal by canonicalisation of a field whose type or cardinality contradicts the
+      definitions (FR-027) is made in slice 04, as a by-product of the walk that orders the
+      fields. It is used only by `canonicalSchemas` and is never part of a read. Slice 07
+      reconciles it with the check that #2884 adds.
+    - A schema set file that names a resource type twice is refused in every binding, naming the
+      type, as the edge case in `spec.md` says. Python's `json` keeps the last value of a
+      repeated key, so `read_schemas` detects the repeat itself.
+- **Rationale**: Canonicalisation is asked for order, so it changes nothing else. A file is the
+  user's, and its order is kept as the order of a set given in code is (R14). A default method
+  serves every implementation of the interface, including the server's, without each repeating
+  it. The contradiction refusal costs nothing in the walk, and a check made in a read is what
+  slice 07 is for.
+- **Alternatives considered**: An abstract `schemas()` implemented in `AbstractSource`, which
+  breaks every other implementation of the interface. Leaving the contradiction refusal to slice
+  07, which would leave canonicalisation to keep or drop a field it cannot place.
+
+## R22. Encoding with a schema: methods of their own
+
+- **Decision** (owner, 2026-11-27): The Java methods that encode with a schema are named
+  `encodeWithSchema(df, resourceType, inputMimeType, StructType schema)` and
+  `encodeBundleWithSchema(df, resourceType, inputMimeType, StructType schema)`, rather than
+  overloading `encode` and `encodeBundle`.
+- **Rationale**: The existing `encode` and `encodeBundle` take a `@Nullable String` column name as
+  their fourth argument. An overload taking a `StructType` there made a literal null ambiguous in
+  Java and Scala, which then needed a `(String) null` cast, and in Py4J and sparklyr, which choose
+  an overload from the runtime arguments and so cannot tell the two apart from a null. Distinct
+  names leave every existing call, including those that pass a null column, as it was.
+- **Alternatives considered**: Keeping the overloads and casting the null in Java, and calling the
+  three-argument overload from Python and R when no column is given. That works, but every caller
+  that passes a null column has to know to do it.

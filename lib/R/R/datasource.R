@@ -827,3 +827,30 @@ pathling_read_bulk <- function(pc,
   # Pass the client to the bulk method.
   pc %>% invoke_datasource("bulk", client, schemas = schemas)
 }
+
+#' Get the schemas of a data source
+#'
+#' Returns the schema of each resource type a data source holds, as a schema set: a named list
+#' keyed by resource type code, each value a string holding a struct type's JSON form. The set can
+#' be saved with \code{\link{pathling_write_schemas}} and given to any source to read the same
+#' resource types with. Getting it runs no job of its own, but a resource type that has not been
+#' read yet is read first, which for NDJSON, bundles or XML read without a schema set means fitting
+#' its schema to the data.
+#'
+#' @param ds The DataSource object.
+#'
+#' @return A named list of schemas, keyed by resource type code.
+#'
+#' @family schema set functions
+#'
+#' @importFrom sparklyr j_invoke
+#'
+#' @export
+#'
+#' @examples \dontrun{
+#' data_source <- pc %>% pathling_read_ndjson(pathling_examples("ndjson"))
+#' schemas <- data_source %>% ds_schemas()
+#' }
+ds_schemas <- function(ds) {
+  from_java_schema_map(j_invoke(ds, "schemas"))
+}
