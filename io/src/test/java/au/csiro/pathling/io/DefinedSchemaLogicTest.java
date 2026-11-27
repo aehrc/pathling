@@ -405,12 +405,15 @@ class DefinedSchemaLogicTest {
   @Test
   void refusesResourceTypeAndMetadataGroupFieldsThatContradictTheDefinitions() {
     // The resource type held as a number, the id of a metadata group held as a number, its
-    // extensions held as a single struct, and the url of one of its extensions held as a number.
+    // extensions held as a single struct or as an array of strings, and the url of one of its
+    // extensions held as a number.
     final Map<String, String> pathsByDdl =
         Map.of(
             "resourceType INT", "resourceType",
             "resourceType STRING, _birthDate STRUCT<id: INT>", "_birthDate.id",
             "resourceType STRING, _birthDate STRUCT<extension: STRUCT<url: STRING>>",
+                "_birthDate.extension",
+            "resourceType STRING, _birthDate STRUCT<extension: ARRAY<STRING>>",
                 "_birthDate.extension",
             "resourceType STRING, _birthDate STRUCT<extension: ARRAY<STRUCT<url: INT>>>",
                 "_birthDate.extension.url");
@@ -425,6 +428,43 @@ class DefinedSchemaLogicTest {
                   ddl);
           assertTrue(error.getMessage().contains("Patient"), error.getMessage());
           assertTrue(error.getMessage().contains(path), error.getMessage());
+        });
+  }
+
+  @Test
+  void refusesStructureThatNamesAFieldMoreThanOnce() {
+    // A field named twice at the top level, within an element, and within a metadata group.
+    final StructType gender = new StructType().add("gender", DataTypes.StringType);
+    final Map<StructType, String> pathsBySchema =
+        Map.of(
+            gender.add("resourceType", DataTypes.StringType).add("gender", DataTypes.StringType),
+            "gender",
+            new StructType()
+                .add("resourceType", DataTypes.StringType)
+                .add(
+                    "name",
+                    DataTypes.createArrayType(
+                        new StructType()
+                            .add("family", DataTypes.StringType)
+                            .add("family", DataTypes.StringType))),
+            "name.family",
+            new StructType()
+                .add("resourceType", DataTypes.StringType)
+                .add(
+                    "_birthDate",
+                    new StructType()
+                        .add("id", DataTypes.StringType)
+                        .add("id", DataTypes.StringType)),
+            "_birthDate.id");
+    pathsBySchema.forEach(
+        (schema, path) -> {
+          final IllegalArgumentException error =
+              assertThrows(
+                  IllegalArgumentException.class,
+                  () -> logic().canonicalSchema("Patient", schema),
+                  schema.simpleString());
+          assertTrue(error.getMessage().contains("Patient"), error.getMessage());
+          assertTrue(error.getMessage().contains(path + " more than once"), error.getMessage());
         });
   }
 

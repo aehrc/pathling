@@ -148,6 +148,26 @@ def test_value_that_is_not_a_struct_is_refused_naming_its_key(value, tmp_path):
         read_schemas(str(path))
 
 
+@mark.parametrize(
+    "schemas, key",
+    [
+        ({"Condition": "not a schema"}, "Condition"),
+        ({"Condition": StringType()}, "Condition"),
+        ({7: StructType([])}, "7"),
+    ],
+)
+def test_writing_a_key_or_schema_of_the_wrong_type_is_refused_naming_the_key(
+    schemas, key, tmp_path
+):
+    """A key that is not a string or a schema that is not a struct type is refused, naming the
+    key, and no file is written."""
+    path = tmp_path / "schemas.json"
+
+    with raises(TypeError, match=key):
+        write_schemas(schemas, str(path))
+    assert not path.exists()
+
+
 def test_repeated_resource_type_is_refused_naming_it(tmp_path):
     """A file that names a resource type twice is refused with an error naming the type."""
     struct = '{"type": "struct", "fields": []}'
