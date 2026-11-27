@@ -12,7 +12,7 @@ binaries to run on Windows.
 To solve this problem, you can do the following:
 
 1. Go to the [winutils](https://github.com/steveloughran/winutils) repository,
-   click the "Code" button and download the latest release as a ZIP file.
+   click the "Code" button and download the repository as a ZIP file.
 2. Extract the downloaded archive to a directory of your choice. For example,
    you can extract it to `C:\hadoop`.
 3. Set the `HADOOP_HOME` environment variable to the `hadoop-3.0.0` subdirectory
@@ -40,3 +40,19 @@ As with other operating systems, you also need to have Java 21 installed and
 the `JAVA_HOME` environment variable set to its installation location. We
 recommend
 the [Azul Zulu installer for Windows](https://www.azul.com/downloads/?version=java-21-lts&os=windows&package=jdk#zulu).
+
+## R
+
+When it starts Spark, sparklyr sets `HADOOP_HOME` to a directory within its own
+Spark installation and ignores the variable you set above. After running
+`pathling::pathling_install_spark()`, create that directory and copy
+`winutils.exe` from `%HADOOP_HOME%\bin` into it:
+
+```cmd
+mkdir %LOCALAPPDATA%\spark\spark-4.1.0-bin-hadoop3\tmp\hadoop\bin
+copy %HADOOP_HOME%\bin\winutils.exe %LOCALAPPDATA%\spark\spark-4.1.0-bin-hadoop3\tmp\hadoop\bin\
+```
+
+The Spark version in this path is the one returned by
+`pathling::pathling_spark_info()$spark_version`. Without this file,
+`pathling_connect` fails with an error asking for a copy of `winutils.exe`.
