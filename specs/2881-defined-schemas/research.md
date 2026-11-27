@@ -380,15 +380,23 @@
 - **Decision** (owner, 2026-11-27): The given schema's nullability is ignored. Each field keeps the
   nullability that the same source gives without a schema: nullable from JSON, XML, NDJSON,
   bundles, bulk exports and Parquet files, and the stored flags from Delta tables, catalog tables
-  and datasets. A field that only the given schema has, and the source lacks, is nullable. Field
-  metadata is unchanged from FR-008: the given field metadata is not carried. FR-008 is amended to
-  say so.
+  and datasets. Stored flags pass through subtrees that the projection rebuilds to match the
+  given schema: a struct that cannot be null is rebuilt without a null branch, so it stays
+  `NOT NULL`, and so do the elements of an array with `containsNull=false` and the values of a map
+  with `valueContainsNull=false` (PR #3017 review). The one widening is a `NOT NULL` field inside a
+  nullable struct that is rebuilt, which comes out nullable, because Spark makes any field reached
+  through a nullable struct nullable. A field that only the given schema has, and the source lacks,
+  is nullable. Field metadata is unchanged from FR-008: the given field metadata is not carried.
+  FR-008 is amended to say so.
 - **Rationale**: Spark's file and JSON readers reset every flag to nullable, while Delta, catalog
   tables and datasets keep theirs, and the projection of R6 passes the stored flags through. A flag
   that says `NOT NULL` where the data holds a null gives wrong results: the optimiser folds
   `isNull` to false, and a null array element can come back as 0 or as another element
   ([evidence/nullability.md](evidence/nullability.md), sections 2 and 5). Passing the source's own
-  flags through never marks a field `NOT NULL` that the source did not already guarantee.
+  flags through never marks a field `NOT NULL` that the source did not already guarantee. The
+  spike measured the native readers and its own `Conform` projection, not the projection of R6;
+  that the projection keeps the stored flags, including in rebuilt subtrees, is established by the
+  nullability cases of `ProjectionTest`.
 - **Alternatives considered**:
     - Every field nullable, as FR-008 first said. It needs widening on every stored read, with
       `when(c.isNotNull(), v)` at every depth or a cast of the whole row, and it discards
@@ -405,7 +413,9 @@
 - **Decision** (owner, 2026-11-26, triage of #3007): A stored field whose name differs from the
   given schema's only in case, or a stored struct holding two fields whose names differ only in
   case, fails the read with an error naming the resource type and both paths, as the edge case in
-  `spec.md` says. `Projection` makes the check as a separate first step, so the check that #2884
+  `spec.md` says. The check covers the structs the given schema keeps. A stored subtree that the
+  schema drops is not inspected, so a dataset with both `name.family` and `name.Family`, read with
+  a schema that omits `name`, is accepted. `Projection` makes the check as a separate first step, so the check that #2884
   adds for undescribed fields can run after it.
 - **Rationale**: FHIR names are case-exact. Without the check, a stored `Family` could be taken for
   `family`, or dropped as content the schema has no field for. Either way the data would change

@@ -3,7 +3,15 @@
 Decision taken on this evidence: research R15 (owner, 2026-11-27). The given schema's nullability
 is ignored and each source's own nullability passes through, so no narrowing check is built.
 
-Issue #2881. Spark 4.0.2, Delta 4.0.1, Java 21, `local[2]`, ANSI on. Run 2026-11-27 by a subagent; the
+Stored flags pass through the projection of a stored read too, including in subtrees it rebuilds,
+except that a `NOT NULL` field inside a nullable struct that is rebuilt comes out nullable. This
+spike measured the native readers and its own `Conform` projection, not that projection; the
+guarantee for it is established by the nullability cases of `ProjectionTest` in `io`.
+
+Issue #2881. Spark 4.1.0, Delta 4.2.0 (the runtime's `pathling.sparkVersion` and
+`pathling.deltaVersion`), Java 21, `local[2]`, ANSI on. First run 2026-11-27 on Spark 4.0.2 and
+Delta 4.0.1; re-run the same day on the runtime versions, with no behavioural difference (only query
+ids, temporary paths, a stack-trace line number and the order of an unordered `collect` changed). The
 harness and captured output are in [`nullability/`](nullability/) (`./run.sh q1|q2|q2s|q3|q4|q5|q6|all`, output in
 `nullability/results/out-*.txt`). [M] = measured, [I] = inferred.
 

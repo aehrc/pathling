@@ -83,7 +83,7 @@ root
 OK
 
 ### append Narrow(bad0) into t_builder
-ERROR: org.apache.spark.SparkException: [TASK_WRITE_FAILED] Task failed while writing rows to file:/var/folders/kz/w4s1f9vs6px391nln_y532cm0000gp/T/nullspike16203660194742484342/wh/t_builder. SQLSTATE: 58030
+ERROR: org.apache.spark.SparkException: [TASK_WRITE_FAILED] Task failed while writing rows to file:/var/folders/kz/w4s1f9vs6px391nln_y532cm0000gp/T/nullspike16327314173995679337/wh/t_builder. SQLSTATE: 58030
     ROOT org.apache.spark.SparkRuntimeException: [USER_RAISED_EXCEPTION] NOT NULL field 'id' is null SQLSTATE: P0001
 
 ### append Narrow(bad2) (s absent, valid) into t_builder
@@ -119,7 +119,7 @@ root
  |-- m: map (nullable = true)
  |    |-- key: string
  |    |-- value: string (valueContainsNull = false)
-ERROR AT ACTION: org.apache.spark.SparkException: Job aborted due to stage failure: Task 1 in stage 41.0 failed 1 times, most recent failure: Lost task 1.0 in stage 41.0 (TID 525) (192.168.1.107 executor driver): java.lang.NullPointerException: Cannot invoke "org.apache.spark.unsafe.types.UTF8String.getBaseObject()" because "input" is null 	at org.apache.spark.sql.catalyst.expressions.codegen.UnsafeWriter.write(UnsafeWriter.java:111) 	at org.apac...
+ERROR AT ACTION: org.apache.spark.SparkException: Job aborted due to stage failure: Task 1 in stage 41.0 failed 1 times, most recent failure: Lost task 1.0 in stage 41.0 (TID 525) (192.168.1.116 executor driver): java.lang.NullPointerException: Cannot invoke "org.apache.spark.unsafe.types.UTF8String.getBaseObject()" because "input" is null 	at org.apache.spark.sql.catalyst.expressions.codegen.UnsafeWriter.write(UnsafeWriter.java:113) 	at org.apac...
     ROOT java.lang.NullPointerException: null
 
 ### t_builder read back (arr only)
@@ -127,7 +127,7 @@ root
  |-- id: string (nullable = false)
  |-- arr: array (nullable = true)
  |    |-- element: integer (containsNull = false)
-rows: [[a,ArraySeq(1, 2)], [z,ArraySeq(1, 2)], [a,ArraySeq(1, 2)], [d,ArraySeq(1, 1)], [a,ArraySeq(1, 2)], [z,ArraySeq(1, 2)], [a,ArraySeq(1, 2)], [e,ArraySeq(1)]]
+rows: [[a,ArraySeq(1, 2)], [d,ArraySeq(1, 1)], [a,ArraySeq(1, 2)], [z,ArraySeq(1, 2)], [a,ArraySeq(1, 2)], [z,ArraySeq(1, 2)], [a,ArraySeq(1, 2)], [e,ArraySeq(1)]]
 
 ### t_builder exists(arr, x -> x is null)
 root
@@ -210,5 +210,5 @@ root
 OK
 
 ### streaming append nullable bad0 into DDL NOT NULL t_b
-ERROR: org.apache.spark.sql.streaming.StreamingQueryException: [STREAM_FAILED] Query [id = 79d9bb02-50dc-4d90-ae60-e2f9da61c85c, runId = e543528e-c1d7-4770-88f2-18294c4aeba6] terminated with exception: [DELTA_NOT_NULL_CONSTRAINT_VIOLATED] NOT NULL constraint violated for column: id.  SQLSTATE: XXKST === Streaming Query === Identifier: [id = 79d9bb02-50dc-4d90-ae60-e2f9da61c85c, runId = e543528e-c1d7-4770-88f2-18294c4aeba6] Current Committed Offsets: {} Curren...
+ERROR: org.apache.spark.sql.streaming.StreamingQueryException: [STREAM_FAILED] Query [id = d7ccd758-2822-4c3a-872b-701525e6ba3f, runId = cc8b0248-1cd0-4a72-a24f-875f476cd5f8] terminated with exception: [DELTA_NOT_NULL_CONSTRAINT_VIOLATED] NOT NULL constraint violated for column: id.  SQLSTATE: XXKST === Streaming Query === Identifier: [id = d7ccd758-2822-4c3a-872b-701525e6ba3f, runId = cc8b0248-1cd0-4a72-a24f-875f476cd5f8] Current Committed Offsets: {} Curren...
     ROOT org.apache.spark.sql.delta.schema.DeltaInvariantViolationException: [DELTA_NOT_NULL_CONSTRAINT_VIOLATED] NOT NULL constraint violated for column: id. 

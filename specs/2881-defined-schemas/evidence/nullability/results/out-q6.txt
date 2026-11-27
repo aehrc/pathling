@@ -63,7 +63,7 @@ root
  |-- m: map (nullable = true)
  |    |-- key: string
  |    |-- value: string (valueContainsNull = false)
-ERROR AT STREAM RUN: org.apache.spark.sql.streaming.StreamingQueryException: [STREAM_FAILED] Query [id = afafb403-4808-4126-97d0-a5003f266088, runId = 57c27471-3615-41a2-a015-dd6823d7410f] terminated with exception: [USER_RAISED_EXCEPTION] NOT NULL field 's.x' is null SQLSTATE: P0001 SQLSTATE: XXKST === Streaming Query === Identifier: [id = afafb403-4808-4126-97d0-a5003f266088, runId = 57c27471-3615-41a2-a015-dd6823d7410f] Current Committed Offsets: {} Current Available Of...
+ERROR AT STREAM RUN: org.apache.spark.sql.streaming.StreamingQueryException: [STREAM_FAILED] Query [id = db3aa3b4-581b-4444-80a6-8fa8b6bbc774, runId = 87854c9e-cf3c-417c-9788-06e1c1bd536c] terminated with exception: [USER_RAISED_EXCEPTION] NOT NULL field 's.x' is null SQLSTATE: P0001 SQLSTATE: XXKST === Streaming Query === Identifier: [id = db3aa3b4-581b-4444-80a6-8fa8b6bbc774, runId = 87854c9e-cf3c-417c-9788-06e1c1bd536c] Current Committed Offsets: {} Current Available Of...
     ROOT org.apache.spark.SparkRuntimeException: [USER_RAISED_EXCEPTION] NOT NULL field 's.x' is null SQLSTATE: P0001
 --- optimised plan of Guard+Narrow(...).select(s) ---
 Project [CASE WHEN isnotnull(s#325) THEN struct(x, coalesce(CASE WHEN isnull(s#325.x) THEN cast(raise_error(USER_RAISED_EXCEPTION, map(keys: [errorMessage], values: [NOT NULL field 's.x' is null]), NullType) as int) ELSE s#325.x END, 0)) END AS s#339]

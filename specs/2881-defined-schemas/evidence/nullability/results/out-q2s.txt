@@ -34,7 +34,7 @@ root
  |-- m: map (nullable = true)
  |    |-- key: string
  |    |-- value: string (valueContainsNull = false)
-ERROR AT STREAM RUN: org.apache.spark.sql.streaming.StreamingQueryException: [STREAM_FAILED] Query [id = 3a9c81f4-7865-479f-9334-ee01aaad3c9e, runId = 1a28fc4e-6d23-4e0a-85c5-510bd36c7f23] terminated with exception: [USER_RAISED_EXCEPTION] NOT NULL field 'id' is null SQLSTATE: P0001 SQLSTATE: XXKST === Streaming Query === Identifier: [id = 3a9c81f4-7865-479f-9334-ee01aaad3c9e, runId = 1a28fc4e-6d23-4e0a-85c5-510bd36c7f23] Current Committed Offsets: {} Current Available Off...
+ERROR AT STREAM RUN: org.apache.spark.sql.streaming.StreamingQueryException: [STREAM_FAILED] Query [id = ffc53847-723f-45d6-85be-bd88cea3493a, runId = cc1453d1-743f-4e62-83da-bf31b2475e8d] terminated with exception: [USER_RAISED_EXCEPTION] NOT NULL field 'id' is null SQLSTATE: P0001 SQLSTATE: XXKST === Streaming Query === Identifier: [id = ffc53847-723f-45d6-85be-bd88cea3493a, runId = cc1453d1-743f-4e62-83da-bf31b2475e8d] Current Committed Offsets: {} Current Available Off...
     ROOT org.apache.spark.SparkRuntimeException: [USER_RAISED_EXCEPTION] NOT NULL field 'id' is null SQLSTATE: P0001
 
 ### stream readStream.schema(NN) raw, bad1
@@ -70,7 +70,7 @@ root
  |-- m: map (nullable = true)
  |    |-- key: string
  |    |-- value: string (valueContainsNull = false)
-ERROR AT STREAM RUN: org.apache.spark.sql.streaming.StreamingQueryException: [STREAM_FAILED] Query [id = d556894d-988c-4036-9e02-caaa6c227960, runId = 67ec74b4-8308-48f3-82a3-182aa37f80a7] terminated with exception: [USER_RAISED_EXCEPTION] NOT NULL field 's.x' is null SQLSTATE: P0001 SQLSTATE: XXKST === Streaming Query === Identifier: [id = d556894d-988c-4036-9e02-caaa6c227960, runId = 67ec74b4-8308-48f3-82a3-182aa37f80a7] Current Committed Offsets: {} Current Available Of...
+ERROR AT STREAM RUN: org.apache.spark.sql.streaming.StreamingQueryException: [STREAM_FAILED] Query [id = 5c24119f-1ee6-4b6a-b01e-2b2d6c52c125, runId = 86f66c77-18c7-4f30-a61b-fec3b7313054] terminated with exception: [USER_RAISED_EXCEPTION] NOT NULL field 's.x' is null SQLSTATE: P0001 SQLSTATE: XXKST === Streaming Query === Identifier: [id = 5c24119f-1ee6-4b6a-b01e-2b2d6c52c125, runId = 86f66c77-18c7-4f30-a61b-fec3b7313054] Current Committed Offsets: {} Current Available Of...
     ROOT org.apache.spark.SparkRuntimeException: [USER_RAISED_EXCEPTION] NOT NULL field 's.x' is null SQLSTATE: P0001
 
 ### stream readStream.schema(NN) raw, bad2
@@ -152,7 +152,7 @@ root
  |-- m: map (nullable = true)
  |    |-- key: string
  |    |-- value: string (valueContainsNull = false)
-ERROR AT STREAM RUN: org.apache.spark.sql.streaming.StreamingQueryException: [STREAM_FAILED] Query [id = 13b9e38b-dced-4152-8df6-46a3131a5f09, runId = 18dc8743-04bc-43b5-898b-7529080583c6] terminated with exception: [USER_RAISED_EXCEPTION] NOT NULL field 'arr[]' is null SQLSTATE: P0001 SQLSTATE: XXKST === Streaming Query === Identifier: [id = 13b9e38b-dced-4152-8df6-46a3131a5f09, runId = 18dc8743-04bc-43b5-898b-7529080583c6] Current Committed Offsets: {} Current Available ...
+ERROR AT STREAM RUN: org.apache.spark.sql.streaming.StreamingQueryException: [STREAM_FAILED] Query [id = 5a895209-d371-4149-80c7-c7df6e6acdac, runId = f860b8d9-0e9b-462b-b5f2-01485152a130] terminated with exception: [USER_RAISED_EXCEPTION] NOT NULL field 'arr[]' is null SQLSTATE: P0001 SQLSTATE: XXKST === Streaming Query === Identifier: [id = 5a895209-d371-4149-80c7-c7df6e6acdac, runId = f860b8d9-0e9b-462b-b5f2-01485152a130] Current Committed Offsets: {} Current Available ...
     ROOT org.apache.spark.SparkRuntimeException: [USER_RAISED_EXCEPTION] NOT NULL field 'arr[]' is null SQLSTATE: P0001
 
 ### stream readStream.schema(NN) raw, bad4
@@ -188,7 +188,7 @@ root
  |-- m: map (nullable = true)
  |    |-- key: string
  |    |-- value: string (valueContainsNull = false)
-ERROR AT STREAM RUN: org.apache.spark.sql.streaming.StreamingQueryException: [STREAM_FAILED] Query [id = 15304083-12da-42ec-82e4-5074bab3ba37, runId = 2b600df8-c30c-407e-a830-2b31d3cbe34e] terminated with exception: [USER_RAISED_EXCEPTION] NOT NULL field 'm{}' is null SQLSTATE: P0001 SQLSTATE: XXKST === Streaming Query === Identifier: [id = 15304083-12da-42ec-82e4-5074bab3ba37, runId = 2b600df8-c30c-407e-a830-2b31d3cbe34e] Current Committed Offsets: {} Current Available Of...
+ERROR AT STREAM RUN: org.apache.spark.sql.streaming.StreamingQueryException: [STREAM_FAILED] Query [id = 60f3f7c2-f5fd-4d04-bb27-ecd2e0becb53, runId = a2a9d885-a501-43f7-80de-1764246c3860] terminated with exception: [USER_RAISED_EXCEPTION] NOT NULL field 'm{}' is null SQLSTATE: P0001 SQLSTATE: XXKST === Streaming Query === Identifier: [id = 60f3f7c2-f5fd-4d04-bb27-ecd2e0becb53, runId = a2a9d885-a501-43f7-80de-1764246c3860] Current Committed Offsets: {} Current Available Of...
     ROOT org.apache.spark.SparkRuntimeException: [USER_RAISED_EXCEPTION] NOT NULL field 'm{}' is null SQLSTATE: P0001
 
 ### stream Narrow.apply(NN).to(NN), good

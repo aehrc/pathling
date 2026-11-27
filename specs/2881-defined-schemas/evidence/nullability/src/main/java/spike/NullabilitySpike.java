@@ -21,7 +21,7 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
 /**
- * Throwaway spike for issue #2881: Spark 4.0.2 / Delta 4.0.1 nullability behaviour, using only the
+ * Throwaway spike for issue #2881: Spark 4.1.0 / Delta 4.2.0 nullability behaviour, using only the
  * public API (Dataset, Column, functions, DataFrameReader/Writer). Each experiment prints its
  * label, the resulting schema (treeString shows nullable / containsNull / valueContainsNull), and
  * either the collected rows or the exception class and message.
@@ -61,7 +61,7 @@ public class NullabilitySpike {
           "{\"id\":\"b\",\"s\":{},\"arr\":[1],\"m\":{\"k\":\"v\"}}", // s.x null, s present
           "{\"id\":\"c\",\"arr\":[1],\"m\":{\"k\":\"v\"}}", // s absent: must be allowed
           "{\"id\":\"d\",\"s\":{\"x\":1},\"arr\":[1,null],\"m\":{\"k\":\"v\"}}", // array element
-                                                                                 // null
+          // null
           "{\"id\":\"e\",\"s\":{\"x\":1},\"arr\":[1],\"m\":{\"k\":null}}" // map value null
           );
 

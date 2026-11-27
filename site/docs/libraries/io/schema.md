@@ -300,10 +300,14 @@ schema runs on every load.
   keep everything your data might carry, give a wide schema: one that names
   every element the data could populate.
 - The nullability of the given schema is ignored, and the data's own nullability
-  passes through. Every field read from JSON, XML, NDJSON, bundles, a bulk export
-  or Parquet files is nullable, while Delta tables, catalog tables and datasets
-  keep the nullability they store. A field that only the schema has, and the data
-  lacks, is nullable.
+  passes through, including inside structures that the read rebuilds to drop,
+  add or reorder their fields. Every field read from JSON, XML, NDJSON, bundles, a
+  bulk export or Parquet files is nullable, while Delta tables, catalog tables and
+  datasets keep the nullability they store. A field that only the schema has, and
+  the data lacks, is nullable. One exception: where the read rebuilds a nullable
+  structure, the fields inside it come out nullable even if the data marks them
+  not nullable, because Spark makes any field reached through a nullable
+  structure nullable.
 - The field metadata of the given schema is not carried over.
 
 For example, a Delta table of `Patient` resources whose `id` is `NOT NULL`,
@@ -348,7 +352,10 @@ set.
 A read of Parquet files, Delta tables, catalog tables or datasets with a schema
 refuses data that has a field whose name differs only in case from a field of
 the schema, and data that has a structure with two fields whose names differ
-only in case. The error names the resource type and both paths, for example:
+only in case. The check covers the structures the schema keeps. A structure that
+the schema drops is not inspected, so a dataset with both `name.family` and
+`name.Family`, read with a schema that omits `name`, is accepted. The error names
+the resource type and both paths, for example:
 
 ```
 Cannot read Patient with its schema: The field `name.Family` differs only in
