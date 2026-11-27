@@ -603,10 +603,11 @@ every source.
 - [ ] T068 Measure the regular build time of `fhirpath` before and after Phase 6, on the same
       machine, and record the growth, with the time the new tests and the derivation of each YAML
       suite's schemas take, in `specs/2881-defined-schemas/evidence/build-time.md` (SC-005).
-- [ ] T069 [P] Write the release note that FR-022a requires: a Parquet read with a defined schema
+- [x] T069 [P] Write the release note that FR-022a requires: a Parquet read with a defined schema
       merges every file's footer, as a read without a schema does, so it loses the saving that the
       former `schemas` option of the Parquet source gave. Put it in the pull request description
-      under a release-note heading, from which the release notes are drafted (FR-022a).
+      under a release-note heading, from which the release notes are drafted (FR-022a). Written in
+      #3017; carry it into the final pull request to `main`.
 - [ ] T055 Run `mvn install -pl lib/python,lib/R -am` through `scripts/mvn-isolated.sh`, so that
       every existing test passing no schema passes unchanged (FR-020, SC-006).
 - [ ] T056 Run the scenarios of `specs/2881-defined-schemas/quickstart.md`.
