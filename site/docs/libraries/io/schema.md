@@ -299,7 +299,21 @@ schema runs on every load.
   that names only some elements therefore loses the others without warning. To
   keep everything your data might carry, give a wide schema: one that names
   every element the data could populate.
+- The nullability of the given schema is ignored, and the data's own nullability
+  passes through. Every field read from JSON, XML, NDJSON, bundles, a bulk export
+  or Parquet files is nullable, while Delta tables, catalog tables and datasets
+  keep the nullability they store. A field that only the schema has, and the data
+  lacks, is nullable.
 - The field metadata of the given schema is not carried over.
+
+For example, a Delta table of `Patient` resources whose `id` is `NOT NULL`,
+read with a schema, keeps `id` as not nullable. The same resources read from
+NDJSON with the same schema give `id` as nullable:
+
+```
+Delta:  |-- id: string (nullable = false)
+NDJSON: |-- id: string (nullable = true)
+```
 
 A read of Parquet files, Delta tables, catalog tables or datasets compares the
 stored schema with the given one, without reading any rows, and logs at debug
