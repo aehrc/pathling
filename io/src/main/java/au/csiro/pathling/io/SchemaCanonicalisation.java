@@ -41,7 +41,8 @@ import org.apache.spark.sql.types.StructType;
  * types of a choice in place, each metadata group after its primitive, and each annotation in the
  * place the annotation step puts it. A field keeps its nullability and its metadata, and an array
  * keeps whether it holds nulls. A field the definitions do not describe is dropped, as a read with
- * the schema drops it. A field whose type or cardinality contradicts the definitions is refused.
+ * the schema drops it. A field whose type or cardinality contradicts the definitions is refused,
+ * and so is a structure that names a field more than once.
  */
 final class SchemaCanonicalisation {
 
@@ -58,9 +59,9 @@ final class SchemaCanonicalisation {
    * @param resourceType the type of the resources the schema describes
    * @param schema the schema, in this layout
    * @return the schema in canonical order
-   * @throws IllegalArgumentException if the type is {@code Bundle} or is not a resource type, or if
-   *     a field contradicts the definitions in its type or cardinality, naming the type and the
-   *     path of the field
+   * @throws IllegalArgumentException if the type is {@code Bundle} or is not a resource type, if a
+   *     field contradicts the definitions in its type or cardinality, or if a structure names a
+   *     field more than once, naming the type and the path of the field
    */
   @Nonnull
   static StructType canonicalSchema(
@@ -78,7 +79,7 @@ final class SchemaCanonicalisation {
       @Nonnull final DefinitionCanonicalStructure node,
       @Nonnull final StructType schema,
       @Nonnull final String path) {
-    final Map<String, StructField> given = byName(schema);
+    final Map<String, StructField> given = byName(schema, path);
     return DataTypes.createStructType(
         node.entries().stream()
             .filter(entry -> given.containsKey(entry.getName()))
@@ -173,7 +174,7 @@ final class SchemaCanonicalisation {
     if (structureHere instanceof final DefinitionCanonicalStructure node) {
       return described(node, structure, path);
     }
-    final Map<String, StructField> given = byName(structure);
+    final Map<String, StructField> given = byName(structure, path);
     return DataTypes.createStructType(
         structureHere.fieldOrder().stream()
             .filter(given::containsKey)
@@ -192,18 +193,21 @@ final class SchemaCanonicalisation {
   }
 
   /**
-   * Refuses a metadata group whose id is not a string or whose extensions are not an array. The
-   * fields of each extension are checked as the group is ordered.
+   * Refuses a metadata group whose id is not a string or whose extensions are not an array of
+   * structures. The fields of each extension are checked as the group is ordered.
    */
   @Nonnull
   private StructType requireGroupFields(
       @Nonnull final StructType group, @Nonnull final String path) {
-    final StructField id = byName(group).get(LayoutFields.METADATA_GROUP_ID);
+    final Map<String, StructField> fields = byName(group, path);
+    final StructField id = fields.get(LayoutFields.METADATA_GROUP_ID);
     if (id != null && !DataTypes.StringType.equals(id.dataType())) {
       throw contradiction(path + "." + id.name(), id.dataType());
     }
-    final StructField extension = byName(group).get(LayoutFields.METADATA_GROUP_EXTENSION);
-    if (extension != null && !(extension.dataType() instanceof ArrayType)) {
+    final StructField extension = fields.get(LayoutFields.METADATA_GROUP_EXTENSION);
+    if (extension != null
+        && !(extension.dataType() instanceof final ArrayType array
+            && array.elementType() instanceof StructType)) {
       throw contradiction(path + "." + extension.name(), extension.dataType());
     }
     return group;
@@ -238,10 +242,25 @@ final class SchemaCanonicalisation {
         : function.apply(type);
   }
 
+  /**
+   * Returns the fields of a structure by name, refusing a structure that names a field more than
+   * once, because there is then no telling which of them is meant.
+   */
   @Nonnull
-  private static Map<String, StructField> byName(@Nonnull final StructType structure) {
+  private Map<String, StructField> byName(
+      @Nonnull final StructType structure, @Nonnull final String path) {
     return Stream.of(structure.fields())
         .collect(
-            Collectors.toMap(StructField::name, Function.identity(), (first, second) -> first));
+            Collectors.toMap(
+                StructField::name,
+                Function.identity(),
+                (first, second) -> {
+                  throw new IllegalArgumentException(
+                      "The schema of "
+                          + resourceType
+                          + " names "
+                          + (path.isEmpty() ? first.name() : path + "." + first.name())
+                          + " more than once");
+                }));
   }
 }

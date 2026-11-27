@@ -32,7 +32,20 @@ def write_schemas(schemas: Dict[str, StructType], path: str) -> None:
 
     :param schemas: the schema set, keyed by resource type code.
     :param path: the path of the file to write.
+    :raises TypeError: if a key is not a string, or if a schema is not a StructType, naming the
+        key. Nothing is written.
     """
+    for resource_type, schema in schemas.items():
+        if not isinstance(resource_type, str):
+            raise TypeError(
+                f"The resource type {resource_type!r} is not a string: "
+                f"{type(resource_type).__name__}"
+            )
+        if not isinstance(schema, StructType):
+            raise TypeError(
+                f"The schema for {resource_type} is not a StructType: "
+                f"{type(schema).__name__}"
+            )
     content = {
         resource_type: schema.jsonValue() for resource_type, schema in schemas.items()
     }
